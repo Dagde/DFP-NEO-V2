@@ -4403,21 +4403,21 @@ const normaliseSctTerminology = (input) => ({
   shortLabel: String(input?.shortLabel || "").trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.shortLabel,
   longLabel: String(input?.longLabel || "").trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.longLabel
 });
-const normaliseUnitCode$3 = (value) => String(value || "").trim().toUpperCase();
+const normaliseUnitCode$4 = (value) => String(value || "").trim().toUpperCase();
 const getSctTerminology = (config, unitCode) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const units = Array.isArray(config?.units) ? config.units : [];
-  const activeUnitCodes = normaliseUnitCode$3(unitCode).split("+").map((code) => normaliseUnitCode$3(code)).filter(Boolean);
-  const activeUnit = activeUnitCodes.length > 0 ? units.find((unit) => activeUnitCodes.includes(normaliseUnitCode$3(unit.code))) : null;
+  const activeUnitCodes = normaliseUnitCode$4(unitCode).split("+").map((code) => normaliseUnitCode$4(code)).filter(Boolean);
+  const activeUnit = activeUnitCodes.length > 0 ? units.find((unit) => activeUnitCodes.includes(normaliseUnitCode$4(unit.code))) : null;
   const unitTerminology = activeUnit?.settings?.sctTerminology;
   if (unitTerminology) return normaliseSctTerminology(unitTerminology);
-  const activeOrganisationCode = normaliseUnitCode$3(activeUnit?.organisationCode);
-  const activeOrganisation = activeOrganisationCode ? organisations.find((org) => normaliseUnitCode$3(org.code) === activeOrganisationCode) : null;
+  const activeOrganisationCode = normaliseUnitCode$4(activeUnit?.organisationCode);
+  const activeOrganisation = activeOrganisationCode ? organisations.find((org) => normaliseUnitCode$4(org.code) === activeOrganisationCode) : null;
   const fallbackOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   return normaliseSctTerminology((activeOrganisation || fallbackOrganisation)?.settings?.sctTerminology || null);
 };
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
-const normaliseCode$3 = (value, fallback) => {
+const normaliseCode$4 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
   return token || fallback.slice(0, 3);
 };
@@ -4452,7 +4452,7 @@ const normaliseCurrencyProfileCode = (value, fallback) => {
   if (token) return token;
   return String(fallback || "CURR").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CURR";
 };
-const normaliseAircraftCount = (value) => Math.max(1, Math.min(24, Math.round(Number(value) || 1)));
+const normaliseAircraftCount$1 = (value) => Math.max(1, Math.min(24, Math.round(Number(value) || 1)));
 const normaliseDayNight = (value) => {
   const text = String(value || "").trim().toLowerCase();
   if (text === "night") return "Night";
@@ -4477,7 +4477,7 @@ const normaliseCrewCompositionSettings = (value) => {
     const codeScope = unitCode || compositeUnitCode || "GLOBAL";
     const usedCodes = usedCodesByScope.get(codeScope) || /* @__PURE__ */ new Set();
     usedCodesByScope.set(codeScope, usedCodes);
-    let code = normaliseCode$3(row?.code || row?.name, fallbackCode);
+    let code = normaliseCode$4(row?.code || row?.name, fallbackCode);
     code = nextAvailableThreeLetterCode(code, usedCodes);
     usedCodes.add(code);
     const operationalModels = Array.isArray(row?.operationalModels) ? Array.from(new Set(row.operationalModels.map((model) => normaliseOperationalModel(model)).filter((model) => SUPPORTED_MODELS.includes(model)))) : SUPPORTED_MODELS;
@@ -4515,7 +4515,7 @@ const normaliseCrewCompositionSettings = (value) => {
       currency: String(row?.currency || row?.event || `Currency ${index + 1}`).trim(),
       dayNight: normaliseDayNight(row?.dayNight),
       flightType: normaliseFlightType(row?.flightType || row?.soloOrDual),
-      aircraftCount: normaliseAircraftCount(row?.aircraftCount ?? row?.numberOfAircraft ?? row?.aircraft),
+      aircraftCount: normaliseAircraftCount$1(row?.aircraftCount ?? row?.numberOfAircraft ?? row?.aircraft),
       status: String(row?.status || "ACTIVE").trim().toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
     };
   }).filter((profile) => profile.currency);
@@ -4523,9 +4523,90 @@ const normaliseCrewCompositionSettings = (value) => {
 };
 const createAlternateCrewCompositionCode = (existingProfiles, name) => {
   const usedCodes = new Set(existingProfiles.map((profile) => profile.code.toUpperCase()));
-  const base = normaliseCode$3(name, `ALT-${existingProfiles.length + 1}`);
+  const base = normaliseCode$4(name, `ALT-${existingProfiles.length + 1}`);
   return nextAvailableThreeLetterCode(base, usedCodes);
 };
+const normaliseText = (value) => String(value || "").trim();
+const normaliseUnitCode$3 = (value) => normaliseText(value).toUpperCase();
+const normaliseCode$3 = (value, fallback) => {
+  const token = normaliseText(value).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  if (token) return token;
+  return normaliseText(fallback).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT";
+};
+const normaliseContinuationDayNight = (value, fallbackName = "") => {
+  const text = normaliseText(value).toLowerCase();
+  if (text === "night") return "Night";
+  if (text === "day/night" || text === "daynight" || text === "day and night") return "Day/Night";
+  return /\bnight\b/i.test(fallbackName) ? "Night" : "Day";
+};
+const normaliseContinuationFlightType = (value) => normaliseText(value).toLowerCase() === "solo" ? "Solo" : "Dual";
+const normaliseAircraftCount = (value) => Math.max(1, Math.min(24, Math.round(Number(value) || 1)));
+const normaliseConfigs = (value, fallback) => {
+  const rows = Array.isArray(value) ? value : [];
+  const configs = rows.map((item) => normaliseText(item)).filter(Boolean);
+  return Array.from(new Set(configs.length > 0 ? configs : [fallback]));
+};
+const normaliseContinuationEventSettings = (events) => {
+  const rows = Array.isArray(events) ? events : [];
+  return rows.map((row, index) => {
+    if (typeof row === "string") {
+      const name2 = normaliseText(row);
+      if (!name2) return null;
+      return {
+        id: `continuation-event-${index + 1}`,
+        name: name2,
+        code: normaliseCode$3("", name2),
+        config: "ANY",
+        acceptableAircraftConfigs: ["ANY"],
+        dayNight: normaliseContinuationDayNight("", name2),
+        flightType: "Dual",
+        aircraftCount: 1,
+        status: "ACTIVE"
+      };
+    }
+    if (!row || typeof row !== "object") return null;
+    const source = row;
+    const name = normaliseText(source.name || source.currency || source.code);
+    if (!name) return null;
+    const config = normaliseText(source.config) || "ANY";
+    return {
+      id: normaliseText(source.id) || `continuation-event-${index + 1}`,
+      name,
+      code: normaliseCode$3(source.code, name),
+      unitCode: normaliseUnitCode$3(source.unitCode),
+      compositeUnitCode: normaliseUnitCode$3(source.compositeUnitCode),
+      aircraftTypeCode: normaliseUnitCode$3(source.aircraftTypeCode),
+      crew: normaliseText(source.crew),
+      config,
+      acceptableAircraftConfigs: normaliseConfigs(source.acceptableAircraftConfigs, config),
+      currency: normaliseText(source.currency || name),
+      dayNight: normaliseContinuationDayNight(source.dayNight, name),
+      flightType: normaliseContinuationFlightType(source.flightType),
+      aircraftCount: normaliseAircraftCount(source.aircraftCount),
+      status: normaliseText(source.status).toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
+    };
+  }).filter((event) => Boolean(event));
+};
+const getContinuationEventNames = (events) => Array.from(new Set(
+  normaliseContinuationEventSettings(events).filter((event) => event.status !== "INACTIVE").map((event) => event.name).filter(Boolean)
+));
+const continuationEventToCurrencyProfile = (event) => ({
+  id: event.id || event.name,
+  unitCode: event.unitCode || "",
+  compositeUnitCode: event.compositeUnitCode || "",
+  aircraftTypeCode: event.aircraftTypeCode || "",
+  name: event.name,
+  code: normaliseCode$3(event.code, event.name),
+  crew: event.crew || "",
+  config: event.config || event.acceptableAircraftConfigs?.[0] || "ANY",
+  acceptableAircraftConfigs: event.acceptableAircraftConfigs?.length ? event.acceptableAircraftConfigs : [event.config || "ANY"],
+  currency: event.currency || event.name,
+  dayNight: event.dayNight || normaliseContinuationDayNight("", event.name),
+  flightType: event.flightType || "Dual",
+  aircraftCount: normaliseAircraftCount(event.aircraftCount),
+  status: event.status || "ACTIVE"
+});
+const getContinuationEventCurrencyProfiles = (events) => normaliseContinuationEventSettings(events).filter((event) => event.status !== "INACTIVE").map(continuationEventToCurrencyProfile);
 const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 const DEFAULT_STAFF_QUALIFICATIONS = {
   qualifications: [
@@ -11012,11 +11093,6 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
       alternateCompositions: crewCompositionSettings.alternateCompositions.map((candidate) => candidate.id === profile.id ? { ...candidate, ...patch } : candidate)
     });
   };
-  const updateCurrencyProfile = (profile, patch) => {
-    updateCrewCompositionSettings({
-      currencyProfiles: crewCompositionSettings.currencyProfiles.map((candidate) => candidate.id === profile.id ? { ...candidate, ...patch } : candidate)
-    });
-  };
   const updateStandardMissionProfile = (profile, patch) => {
     const source = Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : [];
     const nextProfiles = source.map((candidate) => candidate === profile || String(candidate?.id || candidate?.code || candidate?.missionName || "") === String(profile?.id || profile?.code || profile?.missionName || "") ? { ...candidate, ...patch } : candidate);
@@ -11229,14 +11305,10 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Missions", value: "No standard missions are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Currency Builder", description: "Preset crew, aircraft configuration and currency selections for requests.", action: settingsLink("currency-profiles", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: "platform-currency-profile-records" }), children: currencyProfiles.length > 0 ? currencyProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateCurrencyProfile(profile, { code: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateCurrencyProfile(profile, { name: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Currency", value: profile.currency || "", onChange: (value) => updateCurrencyProfile(profile, { currency: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Crew", value: profile.crew || "", onChange: (value) => updateCurrencyProfile(profile, { crew: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Config", value: profile.config || "ANY", onChange: (value) => updateCurrencyProfile(profile, { config: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Aircraft count", value: Number(profile.aircraftCount ?? 0), onChange: (value) => updateCurrencyProfile(profile, { aircraftCount: value }), disabled: true })
-        ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Currency builder", value: "No currency profiles match this unit.", muted: true }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build defaults are configured under Training & Standards.", action: settingsLink("sct-events", "Take me there"), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: "Continuation and currency event rows are edited in one place." })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Reports Builder", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template", "Take me there", { unitCode: unit.code, focusSubsectionId: "platform-unit-training-report-template" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings2({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Display name", value: trainingReportTemplate.displayName, onChange: (value) => updateUnitTrainingReportTemplate({ displayName: value.slice(0, 20) }), disabled: true }),
@@ -27402,7 +27474,7 @@ ${swapNote}` : swapNote
   const filteredSyllabusOptions = reactExports.useMemo(() => {
     let options = [];
     if (eventCategory === "sct") {
-      options = sctEvents;
+      options = getContinuationEventNames(sctEvents);
     } else if (eventCategory === "lmp_event" || eventCategory === "lmp_currency") {
       const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
       options = lmpSource.map((item) => item.code || item.id).filter(Boolean);
@@ -31367,7 +31439,7 @@ const AddFlightTileModal = ({
     activeFixedCrewUnitCodes.join("/")
   ].filter(Boolean)), [activeFixedCrewUnitCodes, activeUnitCode]);
   const fixedCrewCurrencyProfileOptions = reactExports.useMemo(() => {
-    const profiles = Array.isArray(crewCompositionSettings?.currencyProfiles) ? crewCompositionSettings.currencyProfiles : [];
+    const profiles = getContinuationEventCurrencyProfiles(sctEvents);
     return profiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((profile) => {
       const unit = normaliseFixedCrewUnitCode2(profile.unitCode);
       const composite = normaliseFixedCrewUnitCode2(profile.compositeUnitCode);
@@ -31379,7 +31451,7 @@ const AddFlightTileModal = ({
       if (unitCompare !== 0) return unitCompare;
       return String(a.code || a.name || a.currency).localeCompare(String(b.code || b.name || b.currency), void 0, { numeric: true });
     });
-  }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, crewCompositionSettings]);
+  }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, sctEvents]);
   const unitCallsignEntries = reactExports.useMemo(() => {
     const seen = /* @__PURE__ */ new Set();
     return activeCallsignUnitCodes.flatMap((unitCode) => getUnitCallsignEntries(unitCallsignSettings, unitCode)).filter((entry) => {
@@ -31711,8 +31783,8 @@ const AddFlightTileModal = ({
   };
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return sctEvents.length > 0 ? ["SCT", ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
-  }, [sctEvents.length, syllabusByCourse]);
+    return getContinuationEventNames(sctEvents).length > 0 ? ["SCT", ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
+  }, [sctEvents, syllabusByCourse]);
   const getEventsForCourse = (course) => course === "SCT" ? [] : syllabusByCourse.get(course) || [];
   const getCourseDisplayLabel = reactExports.useCallback((course) => course === "SCT" ? sctShortLabel : course, [sctShortLabel]);
   const nextLMPEvent = reactExports.useMemo(() => {
@@ -32639,7 +32711,7 @@ const AddFlightTileModal = ({
                     eventCategory,
                     getCourseDisplayLabel,
                     getEventDisplayLabel: getContinuationDisplayLabel,
-                    continuationEventOptions: sctEvents,
+                    continuationEventOptions: getContinuationEventNames(sctEvents),
                     onFlightTypeChange: setFlightType,
                     onStartTimeChange: (value) => {
                       setStartTime(value);
@@ -37939,6 +38011,7 @@ const PrioritiesView = ({
   onUpdateInstructorPriority,
   sctFlights,
   sctFtds,
+  sctEvents: continuationEvents = [],
   onAddSctRequest,
   onRemoveSctRequest,
   onUpdateSctRequest,
@@ -38204,7 +38277,7 @@ const PrioritiesView = ({
     return groups;
   }, /* @__PURE__ */ new Map()), [unitCallsignEntries]);
   const currencyProfilesForContext = reactExports.useMemo(() => {
-    const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
+    const profiles = getContinuationEventCurrencyProfiles(continuationEvents);
     const contextCodes = Array.from(activeUnitCodeSet);
     const activeAircraftTypeCode = String(aircraftTypeCode || "").trim().toUpperCase();
     const activeCompositeCodes = new Set([
@@ -38224,13 +38297,13 @@ const PrioritiesView = ({
       return profileCompositeParts.length > 0 && profileCompositeParts.every((code) => contextCodes.includes(code));
     };
     const seen = /* @__PURE__ */ new Set();
-    return settings.currencyProfiles.filter((profile) => profile.status !== "INACTIVE").filter(appliesToContext).filter((profile) => {
+    return profiles.filter((profile) => profile.status !== "INACTIVE").filter(appliesToContext).filter((profile) => {
       const key = profile.compositeProfileId || profile.id;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-  }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, crewCompositionSettings]);
+  }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, continuationEvents]);
   const sctEvents = reactExports.useMemo(() => {
     const profileNames = currencyProfilesForContext.map((profile) => String(profile.name || profile.currency || "").trim()).filter(Boolean);
     return Array.from(new Set(profileNames));
@@ -60742,7 +60815,11 @@ const SettingsView = ({
   dayFlyingEnd = "17:00",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
-  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  aircraftConfigurationDefinitions = [],
+  activeUnitCode = "",
+  activeUnitCodes = [],
+  activeCompositeUnitCode = ""
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
@@ -60794,6 +60871,36 @@ const SettingsView = ({
   const visibleCurrencies = reactExports.useMemo(() => {
     return [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort(safeNameSort);
   }, [masterCurrencies, currencyRequirements]);
+  const configuredSctEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
+  const activeCurrencyNames = reactExports.useMemo(() => Array.from(new Set(
+    visibleCurrencies.map((currency) => String(currency.name || "").trim()).filter(Boolean)
+  )), [visibleCurrencies]);
+  const aircraftConfigOptions = reactExports.useMemo(() => {
+    const definitions = Array.isArray(aircraftConfigurationDefinitions) && aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
+    return Array.from(new Map([
+      ["ANY", { id: "ANY", label: "ANY" }],
+      ...definitions.map((definition) => [definition.id, { id: definition.id, label: definition.label || definition.id }])
+    ]).values());
+  }, [aircraftConfigurationDefinitions]);
+  const activeUnitCodeList = reactExports.useMemo(() => Array.from(new Set([
+    activeUnitCode,
+    ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
+  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+  const updateTempSctEvent = (eventId, updates) => {
+    setTempSctEvents((current) => current.map((event) => (event.id || event.name) === eventId ? { ...event, ...updates } : event));
+  };
+  const toggleTempSctConfig = (eventId, configId) => {
+    setTempSctEvents((current) => current.map((event) => {
+      if ((event.id || event.name) !== eventId) return event;
+      const currentConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0 ? event.acceptableAircraftConfigs : [event.config || "ANY"];
+      const selected = new Set(currentConfigs);
+      if (selected.has(configId)) selected.delete(configId);
+      else selected.add(configId);
+      const nextConfigs = Array.from(selected);
+      const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ["ANY"];
+      return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || "ANY" };
+    }));
+  };
   reactExports.useEffect(() => {
     if (activeSection && activeSection !== "data-loaders") return;
     const initAndFetch = async () => {
@@ -60931,13 +61038,14 @@ const SettingsView = ({
     setIsEditingBusinessRules(false);
   };
   const handleEditSctEvents = () => {
-    setTempSctEvents([...sctEvents]);
+    setTempSctEvents(normaliseContinuationEventSettings(sctEvents));
     setIsEditingSctEvents(true);
   };
   const handleSaveSctEvents = () => {
-    const oldEvents = sctEvents.join(", ");
-    const newEvents = tempSctEvents.join(", ");
-    onUpdateSctEvents(tempSctEvents);
+    const cleanedEvents = normaliseContinuationEventSettings(tempSctEvents);
+    const oldEvents = configuredSctEvents.map((event) => event.name).join(", ");
+    const newEvents = cleanedEvents.map((event) => event.name).join(", ");
+    onUpdateSctEvents(cleanedEvents);
     setIsEditingSctEvents(false);
     logAudit({
       page: `Settings - ${sctShortLabel} Events`,
@@ -60951,13 +61059,32 @@ const SettingsView = ({
     setIsEditingSctEvents(false);
   };
   const handleAddSctEvent = () => {
-    if (newSctEvent && !tempSctEvents.includes(newSctEvent)) {
-      setTempSctEvents([...tempSctEvents, newSctEvent]);
+    const name = newSctEvent.trim();
+    if (name && !tempSctEvents.some((event) => event.name.toUpperCase() === name.toUpperCase())) {
+      setTempSctEvents([
+        ...tempSctEvents,
+        {
+          id: `continuation-event-${Date.now()}`,
+          name,
+          code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
+          unitCode: activeUnitCodeList[0] || "",
+          compositeUnitCode: activeCompositeUnitCode || "",
+          aircraftTypeCode: "",
+          crew: "",
+          config: "ANY",
+          acceptableAircraftConfigs: ["ANY"],
+          currency: activeCurrencyNames[0] || name,
+          dayNight: /\bnight\b/i.test(name) ? "Night" : "Day",
+          flightType: "Dual",
+          aircraftCount: 1,
+          status: "ACTIVE"
+        }
+      ]);
       setNewSctEvent("");
     }
   };
   const handleRemoveSctEvent = (eventToRemove) => {
-    setTempSctEvents(tempSctEvents.filter((evt) => evt !== eventToRemove));
+    setTempSctEvents(tempSctEvents.filter((evt) => (evt.id || evt.name) !== eventToRemove));
   };
   const handleEditLimits = () => {
     setTempLimits(JSON.parse(JSON.stringify(eventLimits)));
@@ -61093,11 +61220,11 @@ const SettingsView = ({
           resourceDisplayNames
         }
       ),
-      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[600px] flex flex-col", children: [
+      shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-gray-200", children: [
             sctShortLabel,
-            " Events"
+            " / Currency Events"
           ] }),
           isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSaveSctEvents, className: standardSettingsButtonClass, children: "Save" }),
@@ -61114,15 +61241,162 @@ const SettingsView = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
-            "Manage ",
-            sctShortLabel,
-            " event types."
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: tempSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: evt }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSctEvent(evt), className: "p-1 text-gray-400 hover:text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) }) })
-          ] }, evt)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build defaults." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: tempSctEvents.map((evt) => {
+            const eventKey = evt.id || evt.name;
+            const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_90px_110px_110px_minmax(0,1fr)_minmax(0,1fr)_80px_auto]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Event",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: evt.name,
+                      onChange: (e) => updateTempSctEvent(eventKey, { name: e.target.value }),
+                      onKeyDownCapture: stopEditableKeyPropagation,
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Code",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: evt.code || "",
+                      maxLength: 8,
+                      onChange: (e) => updateTempSctEvent(eventKey, { code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) }),
+                      onKeyDownCapture: stopEditableKeyPropagation,
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Day/Night",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: evt.dayNight || "Day",
+                      onChange: (e) => updateTempSctEvent(eventKey, { dayNight: e.target.value }),
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Night" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Day/Night" })
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Dual/Solo",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: evt.flightType || "Dual",
+                      onChange: (e) => updateTempSctEvent(eventKey, { flightType: e.target.value }),
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Dual" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Solo" })
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Currency",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: evt.currency || "",
+                      onChange: (e) => updateTempSctEvent(eventKey, { currency: e.target.value }),
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
+                        activeCurrencyNames.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: currency, children: currency }, currency))
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Crew",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: evt.crew || "",
+                      onChange: (e) => updateTempSctEvent(eventKey, { crew: e.target.value }),
+                      onKeyDownCapture: stopEditableKeyPropagation,
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "A/C",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "number",
+                      min: 1,
+                      max: 24,
+                      value: Math.max(1, Number(evt.aircraftCount) || 1),
+                      onChange: (e) => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(e.target.value) || 1))) }),
+                      onKeyDownCapture: stopEditableKeyPropagation,
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleRemoveSctEvent(eventKey), className: "mt-[18px] flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50", children: "Delete" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Unit",
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "select",
+                    {
+                      value: evt.unitCode || "",
+                      onChange: (e) => updateTempSctEvent(eventKey, { unitCode: e.target.value }),
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All applicable units" }),
+                        activeUnitCodeList.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-[10px] font-black uppercase tracking-wide text-gray-400", children: [
+                  "Aircraft Type",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: evt.aircraftTypeCode || "",
+                      onChange: (e) => updateTempSctEvent(eventKey, { aircraftTypeCode: e.target.value.toUpperCase() }),
+                      onKeyDownCapture: stopEditableKeyPropagation,
+                      className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400", children: "Acceptable CONFIG" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2", children: aircraftConfigOptions.map((config) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: selectedConfigs.includes(config.id),
+                        onChange: () => toggleTempSctConfig(eventKey, config.id),
+                        className: "h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: config.label })
+                  ] }, `${eventKey}-${config.id}`)) })
+                ] })
+              ] })
+            ] }, eventKey);
+          }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -61145,9 +61419,22 @@ const SettingsView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
             "Configured ",
             sctShortLabel,
-            " event types."
+            " and currency event defaults."
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: sctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "p-2 bg-gray-700/50 rounded text-white", children: evt }, evt)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: configuredSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "rounded bg-gray-700/50 p-3 text-white", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: evt.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.dayNight || "Day" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300", children: evt.flightType || "Dual" }),
+              evt.currency && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-sky-950/60 px-2 py-0.5 text-[11px] text-sky-100", children: evt.currency })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
+              "CONFIG ",
+              (evt.acceptableAircraftConfigs?.length ? evt.acceptableAircraftConfigs : [evt.config || "ANY"]).join(", "),
+              " · A/C ",
+              Math.max(1, Number(evt.aircraftCount) || 1)
+            ] })
+          ] }, evt.id || evt.name)) })
         ] }) })
       ] }),
       shouldShowSection("currencies") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
@@ -73075,7 +73362,7 @@ const sectionLabels = {
   "scoring-matrix": "Scoring Matrix",
   "training-report-template": "Training Reports",
   "currencies": "Currency Requirements",
-  "sct-events": "SCT Events",
+  "sct-events": "Continuation & Currency Events",
   "people-profile": "NEO Build Course Exclusions",
   "scheduling-rules": "Scheduling Rules",
   "event-limits": "Daily Event Limits",
@@ -73089,7 +73376,7 @@ const sectionLabels = {
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
   "standard-missions": "Standard Missions",
-  "currency-profiles": "Currency Profiles",
+  "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
@@ -73319,8 +73606,7 @@ const sectionGroups = [
     defaultSection: "crew-composition",
     sections: [
       "crew-composition",
-      "standard-missions",
-      "currency-profiles"
+      "standard-missions"
     ]
   },
   {
@@ -73405,8 +73691,8 @@ const SettingsViewWithMenu = (props) => {
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
-  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} Events` : sectionLabels[section];
-  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} event standards` : sectionDescriptions[section];
+  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events` : sectionLabels[section];
+  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} and currency event defaults` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -73785,29 +74071,10 @@ const SettingsViewWithMenu = (props) => {
           }
         ),
         activeSection === "currency-profiles" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          PlatformConfigurationSettings,
+          SettingsView,
           {
-            currentUserPermission: props.currentUserPermission,
-            onShowSuccess: props.onShowSuccess,
-            scrollTarget: "platform-currency-profiles",
-            sectionOnly: true,
-            canUsePlatformPermission: props.canUsePlatformPermission,
-            activeUnitCode: props.activeUnitCode,
-            focusUnitCode: settingsFocusTarget?.unitCode,
-            focusLocationCode: settingsFocusTarget?.locationCode,
-            focusResourcePoolCode: settingsFocusTarget?.resourcePoolCode,
-            focusAircraftTypeCode: settingsFocusTarget?.aircraftTypeCode,
-            focusUserId: settingsFocusTarget?.userId,
-            focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
-            onNavigateToSettingsSection: navigateToSettingsSection,
-            activeUnitCodes: props.activeUnitCodes,
-            activeCompositeUnitCode: props.activeCompositeUnitCode,
-            activeOperationalModel: props.activeOperationalModel,
-            phraseBank: props.phraseBank,
-            masterCurrencies: props.masterCurrencies,
-            currencyRequirements: props.currencyRequirements,
-            syllabusDetails: props.syllabusDetails,
-            unitCurrencyDefinitions: props.unitCurrencyDefinitions
+            ...props,
+            activeSection: "sct-events"
           }
         ),
         activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -79894,7 +80161,8 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
-  const sctEvents = reactExports.useMemo(() => Array.isArray(sctEventsProp) ? sctEventsProp.filter(Boolean) : [], [sctEventsProp]);
+  const continuationProfiles = reactExports.useMemo(() => getContinuationEventCurrencyProfiles(sctEventsProp), [sctEventsProp]);
+  const sctEvents = reactExports.useMemo(() => continuationProfiles.map((profile) => profile.name).filter(Boolean), [continuationProfiles]);
   const normaliseRequestedTime = (value, fallback) => /^\d{2}:\d{2}$/.test(value) ? value : fallback;
   const isNightContinuationEvent = (value) => /\bnight\b/i.test(value);
   const defaultDayRequestedTime = "15:00";
@@ -79920,6 +80188,16 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     if (requestedTimeTouchedRef.current) return;
     setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
   }, [defaultNightRequestedTime, event]);
+  reactExports.useEffect(() => {
+    const profile = continuationProfiles.find((candidate) => candidate.name === event || candidate.code === event || candidate.currency === event);
+    if (!profile) return;
+    setFlightType(profile.flightType || "Dual");
+    setCurrency(profile.currency || "");
+    setAircraftConfigId(profile.acceptableAircraftConfigs?.[0] || profile.config || BASE_AIRCRAFT_CONFIG.id);
+    if (!requestedTimeTouchedRef.current) {
+      setRequestedTime(profile.dayNight === "Night" ? defaultNightRequestedTime : defaultDayRequestedTime);
+    }
+  }, [continuationProfiles, defaultNightRequestedTime, event]);
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
@@ -79940,20 +80218,23 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       alert("Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.");
       return;
     }
+    const profile = continuationProfiles.find((candidate) => candidate.name === event || candidate.code === event || candidate.currency === event);
     const newRequest = {
       id: v4(),
       name: instructor.name,
       event,
+      eventCode: profile?.code || event,
       flightType,
-      currency,
+      currency: profile?.currency || currency,
       currencyExpire,
       priority,
       notes,
       dateRequested: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
       requestedTime,
-      dayNight: isNightContinuationEvent(event) ? "Night" : "Day",
+      dayNight: profile?.dayNight || (isNightContinuationEvent(event) ? "Night" : "Day"),
       aircraftConfigId,
-      acceptableAircraftConfigs: [aircraftConfigId]
+      acceptableAircraftConfigs: profile?.acceptableAircraftConfigs?.length ? profile.acceptableAircraftConfigs : [aircraftConfigId],
+      aircraftCount: Math.max(1, Number(profile?.aircraftCount) || 1)
     };
     onSave(newRequest);
   };
@@ -88478,11 +88759,9 @@ const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
   if (event.flightNumber === "Duty Sup") {
     return "Day";
   }
-  if (sctEvents && sctEvents.includes(event.flightNumber)) {
-    if (/\bnight\b/i.test(event.flightNumber)) {
-      return "Night";
-    }
-    return "Day";
+  const continuationEvent = normaliseContinuationEventSettings(sctEvents).find((candidate) => candidate.name === event.flightNumber || candidate.code === event.flightNumber);
+  if (continuationEvent) {
+    return continuationEvent.dayNight || "Day";
   }
   const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   if (syllabusItem && syllabusItem.dayNight) {
@@ -115135,7 +115414,7 @@ ${conflictLines.join("\n")}${moreText}`,
       (item) => item.type === "Flight" || item.type === "FTD" || item.type === "Ground School" && item.code.includes("CPT")
     );
     console.log("Filtered items:", filtered);
-    const configuredContinuationOptions = sctEvents.map((eventCode2) => String(eventCode2 || "").trim()).filter(Boolean);
+    const configuredContinuationOptions = getContinuationEventNames(sctEvents);
     const options = [...filtered.map((item) => item.id), ...configuredContinuationOptions];
     return options;
   }, [sctEvents, visibleSyllabusDetails]);
@@ -118300,6 +118579,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateInstructorPriority: setInstructorPriority,
             sctFlights,
             sctFtds,
+            sctEvents,
             onAddSctRequest: async (type) => {
               console.log("[SCT] onAddSctRequest called with type:", type);
               const newReq = {
@@ -119185,6 +119465,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onDeleteCurrency: handleDeleteCurrency,
             onImportCurrenciesFromUnit: importCurrencyDefinitionsFromUnit,
             aircraftCrewComposition: activeAircraftCrewComposition,
+            aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
             crewPositionTerminology: activeCrewPositionTerminology,
             unitCurrencyDefinitions,
             sctEvents,

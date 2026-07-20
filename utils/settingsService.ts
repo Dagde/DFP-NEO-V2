@@ -72,7 +72,7 @@ export interface AppSettingsData {
   tileStatusSettings: TileStatusSettings;
 
   // SCT Events
-  sctEvents: string[];
+  sctEvents: any[];
 
   // Formation Callsigns
   formationCallsigns: Array<{

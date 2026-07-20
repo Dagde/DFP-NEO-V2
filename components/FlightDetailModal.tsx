@@ -30,6 +30,7 @@ import {
 } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
+import { getContinuationEventNames } from '../utils/continuationEvents';
 import {
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
@@ -423,7 +424,7 @@ interface EventDetailModalProps {
       availableTraineesAnalysis: OracleTraineeAnalysis[];
   } | null;
   sctRequests?: SctRequest[];
-  sctEvents?: string[];
+  sctEvents?: any[];
      eventsForDate?: ScheduleEvent[];
   // New props for deployment functionality
   publishedSchedules?: Record<string, ScheduleEvent[]>;
@@ -1362,7 +1363,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         let options: string[] = [];
         
         if (eventCategory === 'sct') {
-            options = sctEvents;
+            options = getContinuationEventNames(sctEvents);
         } else if (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency') {
             const lmpSource = selectedIndividualLmp?.length
                 ? selectedIndividualLmp

@@ -67,6 +67,7 @@ interface PrioritiesViewWithMenuProps {
   onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
+  sctEvents?: any[];
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;

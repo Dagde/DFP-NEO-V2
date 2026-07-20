@@ -13,6 +13,10 @@ import {
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_AIRCRAFT_CREW_COMPOSITION, normaliseAircraftCrewComposition, type AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewCompositionSettings, CurrencyProfile } from '../utils/crewCompositionProfiles';
+import {
+  getContinuationEventCurrencyProfiles,
+  getContinuationEventNames,
+} from '../utils/continuationEvents';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import {
@@ -66,7 +70,7 @@ interface AddFlightTileModalProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   sctTerminology?: SctTerminology;
-  sctEvents?: string[];
+  sctEvents?: any[];
   nightContinuationDefaultStartTime?: number;
 }
 
@@ -1753,9 +1757,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     activeFixedCrewUnitCodes.join('/'),
   ].filter(Boolean)), [activeFixedCrewUnitCodes, activeUnitCode]);
   const fixedCrewCurrencyProfileOptions = useMemo<CurrencyProfile[]>(() => {
-    const profiles = Array.isArray(crewCompositionSettings?.currencyProfiles)
-      ? crewCompositionSettings.currencyProfiles
-      : [];
+    const profiles = getContinuationEventCurrencyProfiles(sctEvents);
     return profiles
       .filter(profile => String(profile.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
       .filter(profile => {
@@ -1771,7 +1773,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         if (unitCompare !== 0) return unitCompare;
         return String(a.code || a.name || a.currency).localeCompare(String(b.code || b.name || b.currency), undefined, { numeric: true });
       });
-  }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, crewCompositionSettings]);
+  }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, sctEvents]);
   const unitCallsignEntries = useMemo(() => {
     const seen = new Set<string>();
     return activeCallsignUnitCodes.flatMap(unitCode => getUnitCallsignEntries(unitCallsignSettings, unitCode))
@@ -2185,8 +2187,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return sctEvents.length > 0 ? ['SCT', ...courses.filter(c => c !== 'SCT')] : courses.filter(c => c !== 'SCT');
-  }, [sctEvents.length, syllabusByCourse]);
+    return getContinuationEventNames(sctEvents).length > 0 ? ['SCT', ...courses.filter(c => c !== 'SCT')] : courses.filter(c => c !== 'SCT');
+  }, [sctEvents, syllabusByCourse]);
 
   const getEventsForCourse = (course: string): SyllabusItemDetail[] =>
     course === 'SCT' ? [] : (syllabusByCourse.get(course) || []);
@@ -3209,7 +3211,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   eventCategory={eventCategory}
                   getCourseDisplayLabel={getCourseDisplayLabel}
                   getEventDisplayLabel={getContinuationDisplayLabel}
-                  continuationEventOptions={sctEvents}
+                  continuationEventOptions={getContinuationEventNames(sctEvents)}
                   onFlightTypeChange={setFlightType}
                   onStartTimeChange={(value) => {
                     setStartTime(value);

@@ -2104,17 +2104,9 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Missions" value="No standard missions are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Currency Builder" description="Preset crew, aircraft configuration and currency selections for requests." action={settingsLink('currency-profiles', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-currency-profile-records' })}>
-                        {currencyProfiles.length > 0 ? currencyProfiles.map((profile) => (
-                            <div key={profile.id} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateCurrencyProfile(profile, { code: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Profile name" value={profile.name || ''} onChange={(value) => updateCurrencyProfile(profile, { name: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Currency" value={profile.currency || ''} onChange={(value) => updateCurrencyProfile(profile, { currency: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Crew" value={profile.crew || ''} onChange={(value) => updateCurrencyProfile(profile, { crew: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Config" value={profile.config || 'ANY'} onChange={(value) => updateCurrencyProfile(profile, { config: value })} disabled={!canEdit} />
-                                <UnitSettingsNumberField label="Aircraft count" value={Number(profile.aircraftCount ?? 0)} onChange={(value) => updateCurrencyProfile(profile, { aircraftCount: value })} disabled={!canEdit} />
-                            </div>
-                        )) : <UnitSettingsReadRow label="Currency builder" value="No currency profiles match this unit." muted />}
+                    <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build defaults are configured under Training & Standards." action={settingsLink('sct-events', 'Take me there')}>
+                        <UnitSettingsReadRow label="Source" value="Training & Standards" />
+                        <UnitSettingsReadRow label="Events" value="Continuation and currency event rows are edited in one place." />
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Training Reports Builder" description="Unit report naming, pass/fail wording, grading and module labels." action={settingsLink('training-report-template', 'Take me there', { unitCode: unit.code, focusSubsectionId: 'platform-unit-training-report-template' })}>
                         <UnitSettingsField label="Report short name" value={trainingReportTerminology.name} onChange={(value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } })} disabled={!canEdit} />

@@ -18,6 +18,7 @@ import type { TileStatusSettings } from '../utils/tileStatusSettings';
 import type { FixedCrewTileColourMode } from '../utils/fixedCrewTileColours';
 import type { DispatchStaggerSettings } from '../utils/dispatchStagger';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
+import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
@@ -72,13 +73,14 @@ interface SettingsViewWithMenuProps {
     onDeleteCurrency?: (id: string) => void;
     onImportCurrenciesFromUnit?: (unitCode: string) => void;
     aircraftCrewComposition?: AircraftCrewComposition;
+    aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
     crewPositionTerminology?: CrewPositionTerminology;
     unitCurrencyDefinitions?: Record<string, {
         masterCurrencies: MasterCurrency[];
         currencyRequirements: CurrencyRequirement[];
     }>;
-    sctEvents: string[];
-    onUpdateSctEvents: (events: string[]) => void;
+    sctEvents: any[];
+    onUpdateSctEvents: (events: any[]) => void;
     sctTerminology?: SctTerminology;
     preferredDutyPeriod: number;
     onUpdatePreferredDutyPeriod: (value: number) => void;
@@ -255,7 +257,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
     'training-report-template': 'Training Reports',
     'currencies': 'Currency Requirements',
-    'sct-events': 'SCT Events',
+    'sct-events': 'Continuation & Currency Events',
     'people-profile': 'NEO Build Course Exclusions',
     'scheduling-rules': 'Scheduling Rules',
     'event-limits': 'Daily Event Limits',
@@ -269,7 +271,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
     'standard-missions': 'Standard Missions',
-    'currency-profiles': 'Currency Profiles',
+    'currency-profiles': 'Continuation & Currency Events',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
     'platform-units': 'Units & Ownership',
@@ -570,7 +572,6 @@ const sectionGroups: {
     sections: [
         'crew-composition',
         'standard-missions',
-        'currency-profiles',
     ],
   },
   {
@@ -621,7 +622,7 @@ const sectionGroups: {
   },
 ];
 
-const highlightedCrewPageSections: SettingsMenuSection[] = ['crew-composition', 'standard-missions', 'currency-profiles'];
+const highlightedCrewPageSections: SettingsMenuSection[] = ['crew-composition', 'standard-missions'];
 const isHighlightedCrewPageSection = (section: SettingsMenuSection) => highlightedCrewPageSections.includes(section);
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
@@ -669,12 +670,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
     const getSectionLabel = (section: SettingsMenuSection): string => (
         section === 'sct-events'
-            ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} Events`
+            ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events`
             : sectionLabels[section]
     );
     const getSectionDescription = (section: SettingsMenuSection): string => (
         section === 'sct-events'
-            ? `Configure ${(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel)} event standards`
+            ? `Configure ${(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel)} and currency event defaults`
             : sectionDescriptions[section]
     );
 
@@ -1158,28 +1159,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
 
                     {activeSection === 'currency-profiles' && (
-                        <PlatformConfigurationSettings
-                            currentUserPermission={props.currentUserPermission}
-                            onShowSuccess={props.onShowSuccess}
-                            scrollTarget="platform-currency-profiles"
-                            sectionOnly={true}
-                            canUsePlatformPermission={props.canUsePlatformPermission}
-                            activeUnitCode={props.activeUnitCode}
-                                focusUnitCode={settingsFocusTarget?.unitCode}
-                                focusLocationCode={settingsFocusTarget?.locationCode}
-                                focusResourcePoolCode={settingsFocusTarget?.resourcePoolCode}
-                                focusAircraftTypeCode={settingsFocusTarget?.aircraftTypeCode}
-                                focusUserId={settingsFocusTarget?.userId}
-                                focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
-                            onNavigateToSettingsSection={navigateToSettingsSection}
-                            activeUnitCodes={props.activeUnitCodes}
-                            activeCompositeUnitCode={props.activeCompositeUnitCode}
-                            activeOperationalModel={props.activeOperationalModel}
-                            phraseBank={props.phraseBank}
-                            masterCurrencies={props.masterCurrencies}
-                            currencyRequirements={props.currencyRequirements}
-                            syllabusDetails={props.syllabusDetails}
-                            unitCurrencyDefinitions={props.unitCurrencyDefinitions}
+                        <SettingsView
+                            {...props}
+                            activeSection="sct-events"
                         />
                     )}
 

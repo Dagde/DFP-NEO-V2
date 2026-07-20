@@ -78,6 +78,11 @@ import {
 } from './utils/crewPositionTerminology';
 import { normaliseCrewCompositionSettings } from './utils/crewCompositionProfiles';
 import {
+    getContinuationEventNames,
+    normaliseContinuationEventSettings,
+    type ContinuationEventInput,
+} from './utils/continuationEvents';
+import {
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
     normaliseQualificationToken,
@@ -5325,7 +5330,7 @@ const getEventBookingWindowForAlgo = (
 const getEventDayNightClassification = (
     event: { flightNumber: string; dayNight?: 'Day' | 'Night' | 'Day/Night' },
     syllabusDetails: SyllabusItemDetail[],
-    sctEvents?: string[]
+    sctEvents?: ContinuationEventInput[]
 ): 'Day' | 'Night' | 'Day/Night' => {
     if (event.dayNight) {
         return event.dayNight;
@@ -5339,11 +5344,11 @@ const getEventDayNightClassification = (
     }
 
     // Continuation events are configured outside the Master LMP list.
-    if (sctEvents && sctEvents.includes(event.flightNumber)) {
-        if (/\bnight\b/i.test(event.flightNumber)) {
-            return 'Night';
-        }
-        return 'Day';
+    const continuationEvent = normaliseContinuationEventSettings(sctEvents).find(candidate => (
+        candidate.name === event.flightNumber || candidate.code === event.flightNumber
+    ));
+    if (continuationEvent) {
+        return continuationEvent.dayNight || 'Day';
     }
 
     const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
@@ -5910,7 +5915,7 @@ interface DfpConfig {
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
   remedialRequests: RemedialRequest[];
-  sctEvents: string[];
+  sctEvents: ContinuationEventInput[];
   formationCallsigns: FormationCallsign[];
   locationAbbreviations?: Record<string, string>;
   unitLocations?: Record<string, string>;
@@ -5925,7 +5930,7 @@ interface DfpConfig {
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
   taskProvenancePreBuild?: any;
-  getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
+  getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: ContinuationEventInput[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
   staffSharingGroups?: Array<{
@@ -26888,7 +26893,7 @@ const App: React.FC = () => {
         'Pearce': [],
         'Williamtown': [],
     });
-    const [sctEvents, setSctEvents] = useState<string[]>([]);
+    const [sctEvents, setSctEvents] = useState<any[]>([]);
     const [units, setUnits] = useState<string[]>(['1FTS', 'CFS', '2FTS', '76SQN', '77SQN', '1SQN', '6SQN', '2SQN', '10SQN']);
     const [unitLocations, setUnitLocations] = useState<Record<string, string>>({
         '1FTS': 'East Sale', 'CFS': 'East Sale', '2FTS': 'Pearce', '76SQN': 'Williamtown', '77SQN': 'Williamtown',
@@ -37997,9 +38002,7 @@ appliedUpdates.forEach(update => {
             (item.type === 'Ground School' && item.code.includes('CPT'))
         );
         console.log('Filtered items:', filtered);
-        const configuredContinuationOptions = sctEvents
-            .map(eventCode => String(eventCode || '').trim())
-            .filter(Boolean);
+        const configuredContinuationOptions = getContinuationEventNames(sctEvents);
         const options = [...filtered.map(item => item.id), ...configuredContinuationOptions];
 
         return options;
@@ -41846,6 +41849,7 @@ appliedUpdates.forEach(update => {
                     onUpdateInstructorPriority={setInstructorPriority}
                     sctFlights={sctFlights}
                     sctFtds={sctFtds}
+                    sctEvents={sctEvents}
                     onAddSctRequest={async (type) => {
                       console.log('[SCT] onAddSctRequest called with type:', type);
                       const newReq: SctRequest = {
@@ -42779,6 +42783,7 @@ appliedUpdates.forEach(update => {
                     onDeleteCurrency={handleDeleteCurrency}
                     onImportCurrenciesFromUnit={importCurrencyDefinitionsFromUnit}
                     aircraftCrewComposition={activeAircraftCrewComposition}
+                    aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
                     crewPositionTerminology={activeCrewPositionTerminology}
                     unitCurrencyDefinitions={unitCurrencyDefinitions}
                     sctEvents={sctEvents}

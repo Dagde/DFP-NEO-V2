@@ -3,13 +3,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { Instructor, SctRequest } from '../types';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
+import { getContinuationEventCurrencyProfiles } from '../utils/continuationEvents';
 
 interface SctRequestFlyoutProps {
   instructor: Instructor;
   onClose: () => void;
   onSave: (request: SctRequest) => void;
   currencyNames: string[];
-  sctEvents?: string[];
+  sctEvents?: any[];
   sctTerminology?: SctTerminology;
   nightContinuationDefaultTime?: string;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
@@ -19,7 +20,8 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
   const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
-  const sctEvents = useMemo(() => (Array.isArray(sctEventsProp) ? sctEventsProp.filter(Boolean) : []), [sctEventsProp]);
+  const continuationProfiles = useMemo(() => getContinuationEventCurrencyProfiles(sctEventsProp), [sctEventsProp]);
+  const sctEvents = useMemo(() => continuationProfiles.map(profile => profile.name).filter(Boolean), [continuationProfiles]);
   const normaliseRequestedTime = (value: string, fallback: string) => (/^\d{2}:\d{2}$/.test(value) ? value : fallback);
   const isNightContinuationEvent = (value: string) => /\bnight\b/i.test(value);
   const defaultDayRequestedTime = '15:00';
@@ -47,6 +49,16 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
     if (requestedTimeTouchedRef.current) return;
     setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
   }, [defaultNightRequestedTime, event]);
+  useEffect(() => {
+    const profile = continuationProfiles.find(candidate => candidate.name === event || candidate.code === event || candidate.currency === event);
+    if (!profile) return;
+    setFlightType(profile.flightType || 'Dual');
+    setCurrency(profile.currency || '');
+    setAircraftConfigId(profile.acceptableAircraftConfigs?.[0] || profile.config || BASE_AIRCRAFT_CONFIG.id);
+    if (!requestedTimeTouchedRef.current) {
+      setRequestedTime(profile.dayNight === 'Night' ? defaultNightRequestedTime : defaultDayRequestedTime);
+    }
+  }, [continuationProfiles, defaultNightRequestedTime, event]);
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
       ? aircraftConfigurationDefinitions
@@ -74,20 +86,23 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
       alert('Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.');
       return;
     }
+    const profile = continuationProfiles.find(candidate => candidate.name === event || candidate.code === event || candidate.currency === event);
     const newRequest: SctRequest = {
       id: uuidv4(),
       name: instructor.name,
       event,
+      eventCode: profile?.code || event,
       flightType,
-      currency,
+      currency: profile?.currency || currency,
       currencyExpire,
       priority,
       notes,
       dateRequested: new Date().toISOString().split('T')[0],
       requestedTime,
-      dayNight: isNightContinuationEvent(event) ? 'Night' : 'Day',
+      dayNight: profile?.dayNight || (isNightContinuationEvent(event) ? 'Night' : 'Day'),
       aircraftConfigId,
-      acceptableAircraftConfigs: [aircraftConfigId],
+      acceptableAircraftConfigs: profile?.acceptableAircraftConfigs?.length ? profile.acceptableAircraftConfigs : [aircraftConfigId],
+      aircraftCount: Math.max(1, Number(profile?.aircraftCount) || 1),
     };
     onSave(newRequest);
   };

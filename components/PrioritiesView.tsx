@@ -35,6 +35,7 @@ import {
   type CrewCompositionSettings,
   type CurrencyProfile,
 } from '../utils/crewCompositionProfiles';
+import { getContinuationEventCurrencyProfiles } from '../utils/continuationEvents';
 import {
   buildUnitEventCallsign,
   formatUnitCallsignNumber,
@@ -241,6 +242,7 @@ interface PrioritiesViewProps {
   onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
+  sctEvents?: any[];
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;
@@ -1011,6 +1013,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdateInstructorPriority,
   sctFlights,
   sctFtds,
+  sctEvents: continuationEvents = [],
   onAddSctRequest,
   onRemoveSctRequest,
   onUpdateSctRequest,
@@ -1338,7 +1341,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return groups;
   }, new Map<string, UnitCallsignEntry[]>()), [unitCallsignEntries]);
   const currencyProfilesForContext = useMemo<CurrencyProfile[]>(() => {
-    const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
+    const profiles = getContinuationEventCurrencyProfiles(continuationEvents);
     const contextCodes = Array.from(activeUnitCodeSet);
     const activeAircraftTypeCode = String(aircraftTypeCode || '').trim().toUpperCase();
     const activeCompositeCodes = new Set([
@@ -1358,7 +1361,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       return profileCompositeParts.length > 0 && profileCompositeParts.every(code => contextCodes.includes(code));
     };
     const seen = new Set<string>();
-    return settings.currencyProfiles
+    return profiles
       .filter(profile => profile.status !== 'INACTIVE')
       .filter(appliesToContext)
       .filter(profile => {
@@ -1367,7 +1370,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         seen.add(key);
         return true;
       });
-  }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, crewCompositionSettings]);
+  }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, continuationEvents]);
   const sctEvents = useMemo(() => {
     const profileNames = currencyProfilesForContext.map(profile => String(profile.name || profile.currency || '').trim()).filter(Boolean);
     return Array.from(new Set(profileNames));

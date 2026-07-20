@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { initDB, getAllFiles, addFile, getFile, deleteFile } from '../utils/db';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
-import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode } from '../types';
+import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CancellationRecord, CancellationCode, type ContinuationEventSetting } from '../types';
 import ACHistoryPage from './ACHistoryPage';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
@@ -30,6 +30,8 @@ import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService'
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
+import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import { normaliseContinuationEventSettings } from '../utils/continuationEvents';
 
 
 declare var XLSX: any;
@@ -47,8 +49,8 @@ interface SettingsViewProps {
     onOpenCurrencyBuilder?: () => void;
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
-    sctEvents: string[];
-    onUpdateSctEvents: (events: string[]) => void;
+    sctEvents: any[];
+    onUpdateSctEvents: (events: ContinuationEventSetting[]) => void;
     preferredDutyPeriod: number;
     onUpdatePreferredDutyPeriod: (value: number) => void;
     timezoneOffset: number;
@@ -82,6 +84,10 @@ interface SettingsViewProps {
     resourceDisplayNames?: ResourceDisplayNames;
     sctTerminology?: SctTerminology;
     personnelDisplaySettings?: PersonnelDisplaySettings;
+    aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+    activeUnitCode?: string;
+    activeUnitCodes?: string[];
+    activeCompositeUnitCode?: string;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -565,7 +571,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     dayFlyingEnd = '17:00',
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
-    personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
+    personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+    aircraftConfigurationDefinitions = [],
+    activeUnitCode = '',
+    activeUnitCodes = [],
+    activeCompositeUnitCode = '',
 }) => {
     // --- STATE ---
     
@@ -603,7 +613,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     // SCT Events State
     const [isEditingSctEvents, setIsEditingSctEvents] = useState(false);
     
-    const [tempSctEvents, setTempSctEvents] = useState<string[]>([]);
+    const [tempSctEvents, setTempSctEvents] = useState<ContinuationEventSetting[]>([]);
     const [newSctEvent, setNewSctEvent] = useState('');
     
     // Currency Details Panel State
@@ -637,6 +647,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             .filter(c => c.isVisible)
             .sort(safeNameSort);
     }, [masterCurrencies, currencyRequirements]);
+    const configuredSctEvents = useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
+    const activeCurrencyNames = useMemo(() => Array.from(new Set(
+        visibleCurrencies.map(currency => String(currency.name || '').trim()).filter(Boolean),
+    )), [visibleCurrencies]);
+    const aircraftConfigOptions = useMemo(() => {
+        const definitions = Array.isArray(aircraftConfigurationDefinitions) && aircraftConfigurationDefinitions.length > 0
+            ? aircraftConfigurationDefinitions
+            : [BASE_AIRCRAFT_CONFIG];
+        return Array.from(new Map([
+            ['ANY', { id: 'ANY', label: 'ANY' }],
+            ...definitions.map(definition => [definition.id, { id: definition.id, label: definition.label || definition.id }] as const),
+        ]).values());
+    }, [aircraftConfigurationDefinitions]);
+    const activeUnitCodeList = useMemo(() => Array.from(new Set([
+        activeUnitCode,
+        ...(Array.isArray(activeUnitCodes) ? activeUnitCodes : []),
+    ].map(unit => String(unit || '').trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+    const updateTempSctEvent = (eventId: string, updates: Partial<ContinuationEventSetting>) => {
+        setTempSctEvents(current => current.map(event => (
+            (event.id || event.name) === eventId ? { ...event, ...updates } : event
+        )));
+    };
+    const toggleTempSctConfig = (eventId: string, configId: string) => {
+        setTempSctEvents(current => current.map(event => {
+            if ((event.id || event.name) !== eventId) return event;
+            const currentConfigs = Array.isArray(event.acceptableAircraftConfigs) && event.acceptableAircraftConfigs.length > 0
+                ? event.acceptableAircraftConfigs
+                : [event.config || 'ANY'];
+            const selected = new Set(currentConfigs);
+            if (selected.has(configId)) selected.delete(configId);
+            else selected.add(configId);
+            const nextConfigs = Array.from(selected);
+            const safeConfigs = nextConfigs.length > 0 ? nextConfigs : ['ANY'];
+            return { ...event, acceptableAircraftConfigs: safeConfigs, config: safeConfigs[0] || 'ANY' };
+        }));
+    };
 
 
     // --- EFFECTS ---
@@ -805,14 +851,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     // SCT Events Handlers
     const handleEditSctEvents = () => {
-        setTempSctEvents([...sctEvents]);
+        setTempSctEvents(normaliseContinuationEventSettings(sctEvents));
         setIsEditingSctEvents(true);
     };
 
     const handleSaveSctEvents = () => {
-        const oldEvents = sctEvents.join(', ');
-        const newEvents = tempSctEvents.join(', ');
-        onUpdateSctEvents(tempSctEvents);
+        const cleanedEvents = normaliseContinuationEventSettings(tempSctEvents);
+        const oldEvents = configuredSctEvents.map(event => event.name).join(', ');
+        const newEvents = cleanedEvents.map(event => event.name).join(', ');
+        onUpdateSctEvents(cleanedEvents);
         setIsEditingSctEvents(false);
         logAudit({
             page: `Settings - ${sctShortLabel} Events`,
@@ -828,14 +875,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const handleAddSctEvent = () => {
-        if (newSctEvent && !tempSctEvents.includes(newSctEvent)) {
-            setTempSctEvents([...tempSctEvents, newSctEvent]);
+        const name = newSctEvent.trim();
+        if (name && !tempSctEvents.some(event => event.name.toUpperCase() === name.toUpperCase())) {
+            setTempSctEvents([
+                ...tempSctEvents,
+                {
+                    id: `continuation-event-${Date.now()}`,
+                    name,
+                    code: name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'CONT',
+                    unitCode: activeUnitCodeList[0] || '',
+                    compositeUnitCode: activeCompositeUnitCode || '',
+                    aircraftTypeCode: '',
+                    crew: '',
+                    config: 'ANY',
+                    acceptableAircraftConfigs: ['ANY'],
+                    currency: activeCurrencyNames[0] || name,
+                    dayNight: /\bnight\b/i.test(name) ? 'Night' : 'Day',
+                    flightType: 'Dual',
+                    aircraftCount: 1,
+                    status: 'ACTIVE',
+                },
+            ]);
             setNewSctEvent('');
         }
     };
 
     const handleRemoveSctEvent = (eventToRemove: string) => {
-        setTempSctEvents(tempSctEvents.filter(evt => evt !== eventToRemove));
+        setTempSctEvents(tempSctEvents.filter(evt => (evt.id || evt.name) !== eventToRemove));
     };
 
     // Event Limits Handlers
@@ -997,11 +1063,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     />
                    )}
 
-                          {/* SCT Events Window */}
+                          {/* Continuation and currency events window */}
                    {shouldShowSection('sct-events') && (
-                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-[600px] flex flex-col">
+                       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-6xl min-h-[600px] flex flex-col">
                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                               <h2 className="text-lg font-semibold text-gray-200">{sctShortLabel} Events</h2>
+                               <h2 className="text-lg font-semibold text-gray-200">{sctShortLabel} / Currency Events</h2>
                                {isEditingSctEvents ? (
                                    <div className="flex gap-[1px]">
                                        <button type="button" onClick={handleSaveSctEvents} className={standardSettingsButtonClass}>Save</button>
@@ -1021,19 +1087,140 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            <div className="p-4 space-y-4 flex min-h-0 flex-1 flex-col">
                                {isEditingSctEvents ? (
                                    <>
-                                       <p className="text-sm text-gray-400">Manage {sctShortLabel} event types.</p>
-                                       <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
-                                           {tempSctEvents.map(evt => (
-                                               <li key={evt} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
-                                                   <span className="text-white">{evt}</span>
-                                                   <button onClick={() => handleRemoveSctEvent(evt)} className="p-1 text-gray-400 hover:text-red-400">
-                                                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                                       </svg>
-                                                   </button>
-                                               </li>
-                                           ))}
-                                       </ul>
+                                       <p className="text-sm text-gray-400">Manage the configured event choices and their request/build defaults.</p>
+                                       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                                           {tempSctEvents.map(evt => {
+                                               const eventKey = evt.id || evt.name;
+                                               const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0
+                                                   ? evt.acceptableAircraftConfigs
+                                                   : [evt.config || 'ANY'];
+                                               return (
+                                                   <div key={eventKey} className="rounded-lg border border-gray-700 bg-gray-900/70 p-3">
+                                                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_90px_110px_110px_minmax(0,1fr)_minmax(0,1fr)_80px_auto]">
+                                                           <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Event
+                                                               <input
+                                                                   type="text"
+                                                                   value={evt.name}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { name: e.target.value })}
+                                                                   onKeyDownCapture={stopEditableKeyPropagation}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               />
+                                                           </label>
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Code
+                                                               <input
+                                                                   type="text"
+                                                                   value={evt.code || ''}
+                                                                   maxLength={8}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) })}
+                                                                   onKeyDownCapture={stopEditableKeyPropagation}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               />
+                                                           </label>
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Day/Night
+                                                               <select
+                                                                   value={evt.dayNight || 'Day'}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { dayNight: e.target.value as ContinuationEventSetting['dayNight'] })}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               >
+                                                                   <option>Day</option>
+                                                                   <option>Night</option>
+                                                                   <option>Day/Night</option>
+                                                               </select>
+                                                           </label>
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Dual/Solo
+                                                               <select
+                                                                   value={evt.flightType || 'Dual'}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { flightType: e.target.value as ContinuationEventSetting['flightType'] })}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               >
+                                                                   <option>Dual</option>
+                                                                   <option>Solo</option>
+                                                               </select>
+                                                           </label>
+                                                           <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Currency
+                                                               <select
+                                                                   value={evt.currency || ''}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { currency: e.target.value })}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               >
+                                                                   <option value="">None</option>
+                                                                   {activeCurrencyNames.map(currency => <option key={currency} value={currency}>{currency}</option>)}
+                                                               </select>
+                                                           </label>
+                                                           <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Crew
+                                                               <input
+                                                                   type="text"
+                                                                   value={evt.crew || ''}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { crew: e.target.value })}
+                                                                   onKeyDownCapture={stopEditableKeyPropagation}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               />
+                                                           </label>
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               A/C
+                                                               <input
+                                                                   type="number"
+                                                                   min={1}
+                                                                   max={24}
+                                                                   value={Math.max(1, Number(evt.aircraftCount) || 1)}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { aircraftCount: Math.max(1, Math.min(24, Math.round(Number(e.target.value) || 1))) })}
+                                                                   onKeyDownCapture={stopEditableKeyPropagation}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               />
+                                                           </label>
+                                                           <button onClick={() => handleRemoveSctEvent(eventKey)} className="mt-[18px] flex h-[34px] items-center justify-center rounded border border-red-500/30 bg-red-950/40 px-3 text-xs font-bold text-red-200 hover:bg-red-900/50">
+                                                               Delete
+                                                           </button>
+                                                       </div>
+                                                       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Unit
+                                                               <select
+                                                                   value={evt.unitCode || ''}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { unitCode: e.target.value })}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               >
+                                                                   <option value="">All applicable units</option>
+                                                                   {activeUnitCodeList.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+                                                               </select>
+                                                           </label>
+                                                           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+                                                               Aircraft Type
+                                                               <input
+                                                                   type="text"
+                                                                   value={evt.aircraftTypeCode || ''}
+                                                                   onChange={e => updateTempSctEvent(eventKey, { aircraftTypeCode: e.target.value.toUpperCase() })}
+                                                                   onKeyDownCapture={stopEditableKeyPropagation}
+                                                                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 px-2 py-1.5 text-sm font-semibold normal-case tracking-normal text-white focus:outline-none focus:ring-sky-500"
+                                                               />
+                                                           </label>
+                                                           <div className="min-w-0">
+                                                               <div className="mb-1 text-[10px] font-black uppercase tracking-wide text-gray-400">Acceptable CONFIG</div>
+                                                               <div className="flex flex-wrap gap-2 rounded border border-gray-700 bg-gray-950/60 p-2">
+                                                                   {aircraftConfigOptions.map(config => (
+                                                                       <label key={`${eventKey}-${config.id}`} className="flex min-w-[70px] items-center gap-2 text-xs font-semibold text-gray-200">
+                                                                           <input
+                                                                               type="checkbox"
+                                                                               checked={selectedConfigs.includes(config.id)}
+                                                                               onChange={() => toggleTempSctConfig(eventKey, config.id)}
+                                                                               className="h-3.5 w-3.5 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                                                           />
+                                                                           <span className="truncate">{config.label}</span>
+                                                                       </label>
+                                                                   ))}
+                                                               </div>
+                                                           </div>
+                                                       </div>
+                                                   </div>
+                                               );
+                                           })}
+                                       </div>
                                        <div className="flex space-x-2">
                                            <input 
                                                type="text" 
@@ -1052,11 +1239,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                    </>
                                ) : (
                                    <>
-                                       <p className="text-sm text-gray-400">Configured {sctShortLabel} event types.</p>
+                                       <p className="text-sm text-gray-400">Configured {sctShortLabel} and currency event defaults.</p>
                                        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
-                                           {sctEvents.map(evt => (
-                                               <li key={evt} className="p-2 bg-gray-700/50 rounded text-white">
-                                                   {evt}
+                                           {configuredSctEvents.map(evt => (
+                                               <li key={evt.id || evt.name} className="rounded bg-gray-700/50 p-3 text-white">
+                                                   <div className="flex flex-wrap items-center gap-2">
+                                                       <span className="font-semibold">{evt.name}</span>
+                                                       <span className="rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300">{evt.dayNight || 'Day'}</span>
+                                                       <span className="rounded bg-gray-900/70 px-2 py-0.5 text-[11px] text-gray-300">{evt.flightType || 'Dual'}</span>
+                                                       {evt.currency && <span className="rounded bg-sky-950/60 px-2 py-0.5 text-[11px] text-sky-100">{evt.currency}</span>}
+                                                   </div>
+                                                   <div className="mt-1 text-xs text-gray-400">
+                                                       CONFIG {(evt.acceptableAircraftConfigs?.length ? evt.acceptableAircraftConfigs : [evt.config || 'ANY']).join(', ')} · A/C {Math.max(1, Number(evt.aircraftCount) || 1)}
+                                                   </div>
                                                </li>
                                            ))}
                                        </ul>

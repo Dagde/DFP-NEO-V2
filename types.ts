@@ -28,6 +28,26 @@ export interface CrewRequirement {
   roles?: CrewRequirementRole[];
 }
 
+export type ContinuationEventDayNight = 'Day' | 'Night' | 'Day/Night';
+export type ContinuationEventFlightType = 'Solo' | 'Dual';
+
+export interface ContinuationEventSetting {
+    id?: string;
+    name: string;
+    code?: string;
+    unitCode?: string;
+    compositeUnitCode?: string;
+    aircraftTypeCode?: string;
+    crew?: string;
+    config?: string;
+    acceptableAircraftConfigs?: string[];
+    currency?: string;
+    dayNight?: ContinuationEventDayNight;
+    flightType?: ContinuationEventFlightType;
+    aircraftCount?: number;
+    status?: string;
+}
+
 export type StandardMissionResourceType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
 
 export interface StandardMissionRoleRequirement {
