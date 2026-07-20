@@ -1,6 +1,6 @@
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
 import { logAudit } from '../utils/auditLogger';
@@ -760,10 +760,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
-    const isContinuationFormationFlight = useCallback((value?: string | null): boolean => {
+    const isContinuationFormationFlight = (value?: string | null): boolean => {
         const code = String(value || '').trim().toUpperCase();
         return code === 'SCT FORM' || code === sctFormationLabel.toUpperCase();
-    }, [sctFormationLabel]);
+    };
     const formatContinuationLabel = (value: string): string => {
         const rawValue = String(value || '').trim();
         const code = rawValue.toUpperCase();
@@ -2013,7 +2013,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             });
             setCrew(newCrew);
         }
-    }, [aircraftCount, flightNumber, crew, eventCategory, isContinuationFormationFlight]);
+    }, [aircraftCount, flightNumber, crew, eventCategory, sctFormationLabel]);
 
     useEffect(() => {
       setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails));

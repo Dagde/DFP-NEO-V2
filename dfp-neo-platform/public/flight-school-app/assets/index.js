@@ -27047,10 +27047,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
-  const isContinuationFormationFlight = reactExports.useCallback((value) => {
+  const isContinuationFormationFlight = (value) => {
     const code = String(value || "").trim().toUpperCase();
     return code === "SCT FORM" || code === sctFormationLabel.toUpperCase();
-  }, [sctFormationLabel]);
+  };
   const formatContinuationLabel = (value) => {
     const rawValue = String(value || "").trim();
     const code = rawValue.toUpperCase();
@@ -27964,7 +27964,7 @@ ${swapNote}` : swapNote
       });
       setCrew(newCrew);
     }
-  }, [aircraftCount, flightNumber, crew, eventCategory, isContinuationFormationFlight]);
+  }, [aircraftCount, flightNumber, crew, eventCategory, sctFormationLabel]);
   reactExports.useEffect(() => {
     setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails));
   }, [flightNumber, syllabusDetails]);
