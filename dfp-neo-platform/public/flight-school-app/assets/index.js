@@ -31812,7 +31812,7 @@ const AddFlightTileModal = ({
   };
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return getContinuationEventNames(sctEvents).length > 0 ? [CONTINUATION_COURSE_KEY, ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
+    return getContinuationEventNames(sctEvents).length > 0 ? [CONTINUATION_COURSE_KEY, ...courses] : courses;
   }, [sctEvents, syllabusByCourse]);
   const getEventsForCourse = (course) => course === CONTINUATION_COURSE_KEY ? [] : syllabusByCourse.get(course) || [];
   const getCourseDisplayLabel = reactExports.useCallback((course) => course === CONTINUATION_COURSE_KEY ? sctShortLabel : course, [sctShortLabel]);
