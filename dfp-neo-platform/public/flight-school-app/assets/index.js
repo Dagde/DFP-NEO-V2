@@ -31131,7 +31131,7 @@ const FlightTile = ({
           fontStyle: "normal",
           lineHeight: 1,
           color: callsign ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.30)",
-          width: callsignOptions.length > 0 ? 95 : 105,
+          width: callsignOptions.length > 0 ? 110 : 120,
           padding: 0,
           cursor: "text"
         }
@@ -31165,7 +31165,7 @@ const FlightTile = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "aircraft", style: { position: "absolute", bottom: 2, left: 10, zIndex: 20 }, children: aircraftContent() }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "absolute", bottom: 2, right: 12, display: "flex", alignItems: "center", gap: 8, zIndex: 20 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", style: { transform: "translate(-40px, 3px)" }, children: areaContent() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translate(-40px, 4px)" }, children: callsignContent() })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translate(-10px, 4px)" }, children: callsignContent() })
     ] })
   ] });
   const savedAbsLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [

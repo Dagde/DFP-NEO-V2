@@ -1387,7 +1387,7 @@ const FlightTile: React.FC<TileProps> = ({
           background: 'transparent', border: 'none', outline: 'none',
           fontFamily: monoFamily, fontSize: 18, fontStyle: 'normal', lineHeight: 1,
           color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
-          width: callsignOptions.length > 0 ? 95 : 105, padding: 0, cursor: 'text',
+          width: callsignOptions.length > 0 ? 110 : 120, padding: 0, cursor: 'text',
         }}
       />
       {/* Dropdown arrow + overlay select — only when options are available */}
@@ -1429,7 +1429,7 @@ const FlightTile: React.FC<TileProps> = ({
       </FlexElem>
       <div style={{ position: 'absolute', bottom: 2, right: 12, display: 'flex', alignItems: 'center', gap: 8, zIndex: 20 }}>
           <FlexElem elemKey="area" style={{ transform: 'translate(-40px, 3px)' }}>{areaContent()}</FlexElem>
-          <FlexElem elemKey="callsign" style={{ transform: 'translate(-40px, 4px)' }}>{callsignContent()}</FlexElem>
+          <FlexElem elemKey="callsign" style={{ transform: 'translate(-10px, 4px)' }}>{callsignContent()}</FlexElem>
       </div>
     </>
   );
