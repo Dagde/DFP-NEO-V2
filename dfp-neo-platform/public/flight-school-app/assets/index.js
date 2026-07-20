@@ -27047,7 +27047,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
-  const isContinuationFormationFlight = useCallback((value) => {
+  const isContinuationFormationFlight = reactExports.useCallback((value) => {
     const code = String(value || "").trim().toUpperCase();
     return code === "SCT FORM" || code === sctFormationLabel.toUpperCase();
   }, [sctFormationLabel]);
