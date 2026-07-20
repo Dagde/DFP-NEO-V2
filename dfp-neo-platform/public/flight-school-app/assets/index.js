@@ -31131,7 +31131,7 @@ const FlightTile = ({
           fontStyle: "normal",
           lineHeight: 1,
           color: callsign ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.30)",
-          width: callsignOptions.length > 0 ? 110 : 120,
+          width: callsignOptions.length > 0 ? 125 : 135,
           padding: 0,
           cursor: "text"
         }
