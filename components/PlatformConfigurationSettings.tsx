@@ -9360,6 +9360,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 onUpdateCallsigns={onUpdateFormationCallsigns}
                 units={visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit: any) => unit.code).filter(Boolean)}
                 locations={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location: any) => location.name || location.code).filter(Boolean)}
+                locationOptions={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations)
+                  .map((location: any) => ({ name: location.name || location.code || '', code: location.code || '' }))
+                  .filter((location: any) => location.name)}
                 canEditSettings={canUnlockRankTerminology}
                 isSettingsUnlocked={canEditRankTerminology}
                 onRequestUnlock={unlockRankTerminology}

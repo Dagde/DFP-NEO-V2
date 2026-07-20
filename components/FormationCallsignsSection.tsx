@@ -7,6 +7,7 @@ interface FormationCallsignsSectionProps {
     onUpdateCallsigns: (callsigns: FormationCallsign[]) => void;
     units: string[];
     locations: string[];
+    locationOptions?: Array<{ name: string; code: string }>;
     canEditSettings: boolean;
     isSettingsUnlocked?: boolean;
     onRequestUnlock?: () => Promise<boolean>;
@@ -18,6 +19,7 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     onUpdateCallsigns,
     units,
     locations,
+    locationOptions = [],
     canEditSettings,
     isSettingsUnlocked = canEditSettings,
     onRequestUnlock,
@@ -33,6 +35,22 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
         location: '',
         locationCode: ''
     });
+    const [validationMessage, setValidationMessage] = useState('');
+    const configuredLocationOptions = locationOptions.length > 0
+        ? locationOptions
+        : locations.map(location => ({ name: location, code: '' }));
+    const findLocationOption = (locationName: string) => configuredLocationOptions.find(location => location.name === locationName);
+    const makeEmptyCallsign = (unitOverride = selectedUnit): FormationCallsign => {
+        const defaultLocation = configuredLocationOptions[0];
+        const defaultUnit = unitOverride !== 'ALL' ? unitOverride : units.length === 1 ? units[0] : '';
+        return {
+            name: '',
+            code: '',
+            unit: defaultUnit,
+            location: defaultLocation?.name || '',
+            locationCode: defaultLocation?.code || ''
+        };
+    };
     const allowedUnitSet = new Set(units.map(unit => String(unit || '').trim().toUpperCase()).filter(Boolean));
     const isCallsignVisibleForUnitScope = (callsign: FormationCallsign) => {
         if (allowedUnitSet.size === 0) return true;
@@ -47,6 +65,8 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
             if (!unlocked) return;
         }
         setTempCallsigns([...callsigns]);
+        setNewCallsign(makeEmptyCallsign());
+        setValidationMessage('');
         setIsEditing(true);
     };
 
@@ -68,15 +88,45 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     };
 
     const handleCancel = () => {
-        setNewCallsign({ name: '', code: '', unit: '', location: '', locationCode: '' });
+        setNewCallsign(makeEmptyCallsign());
+        setValidationMessage('');
         setIsEditing(false);
     };
 
     const handleAdd = () => {
-        if (newCallsign.name && newCallsign.code && newCallsign.unit && newCallsign.location && newCallsign.locationCode) {
-            setTempCallsigns([...tempCallsigns, { ...newCallsign }]);
-            setNewCallsign({ name: '', code: '', unit: '', location: '', locationCode: '' });
+        const locationOption = findLocationOption(newCallsign.location);
+        const callsignToAdd: FormationCallsign = {
+            ...newCallsign,
+            name: newCallsign.name.trim(),
+            code: newCallsign.code.trim().toUpperCase(),
+            unit: newCallsign.unit.trim(),
+            location: newCallsign.location.trim(),
+            locationCode: (newCallsign.locationCode || locationOption?.code || '').trim().toUpperCase()
+        };
+        const missingFields = [
+            !callsignToAdd.name ? 'name' : '',
+            !callsignToAdd.code ? 'code' : '',
+            !callsignToAdd.unit ? 'unit' : '',
+            !callsignToAdd.location ? 'location' : '',
+            !callsignToAdd.locationCode ? 'location code' : ''
+        ].filter(Boolean);
+        if (missingFields.length > 0) {
+            setValidationMessage(`Enter ${missingFields.join(', ')} before adding the formation callsign.`);
+            return;
         }
+        setTempCallsigns([...tempCallsigns, callsignToAdd]);
+        setNewCallsign(makeEmptyCallsign(callsignToAdd.unit));
+        setSelectedUnit(callsignToAdd.unit);
+        setValidationMessage('');
+    };
+
+    const handleNewLocationChange = (locationName: string) => {
+        const locationOption = findLocationOption(locationName);
+        setNewCallsign({
+            ...newCallsign,
+            location: locationName,
+            locationCode: (locationOption?.code || '').toUpperCase()
+        });
     };
 
     const handleRemove = (index: number) => {
@@ -84,8 +134,18 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     };
 
     const handleUpdateCallsign = (index: number, field: keyof FormationCallsign, value: string) => {
+        if (index < 0) return;
         const updated = [...tempCallsigns];
-        updated[index] = { ...updated[index], [field]: value };
+        if (field === 'location') {
+            const locationOption = findLocationOption(value);
+            updated[index] = {
+                ...updated[index],
+                location: value,
+                locationCode: (locationOption?.code || updated[index].locationCode || '').toUpperCase()
+            };
+        } else {
+            updated[index] = { ...updated[index], [field]: value };
+        }
         setTempCallsigns(updated);
     };
 
@@ -195,8 +255,8 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                                         className="w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                                                     >
                                                         <option value="">Select...</option>
-                                                        {locations.map(loc => (
-                                                            <option key={loc} value={loc}>{loc}</option>
+                                                        {configuredLocationOptions.map(loc => (
+                                                            <option key={`${loc.code || loc.name}-${loc.name}`} value={loc.name}>{loc.name}</option>
                                                         ))}
                                                     </select>
                                                 </td>
@@ -256,12 +316,12 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                 </select>
                                 <select
                                     value={newCallsign.location}
-                                    onChange={(e) => setNewCallsign({ ...newCallsign, location: e.target.value })}
+                                    onChange={(e) => handleNewLocationChange(e.target.value)}
                                     className="bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                                 >
                                     <option value="">Location...</option>
-                                    {locations.map(loc => (
-                                        <option key={loc} value={loc}>{loc}</option>
+                                    {configuredLocationOptions.map(loc => (
+                                        <option key={`${loc.code || loc.name}-${loc.name}`} value={loc.name}>{loc.name}</option>
                                     ))}
                                 </select>
                                 <input
@@ -279,6 +339,9 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                     Add
                                 </button>
                             </div>
+                            {validationMessage && (
+                                <p className="mt-2 text-xs text-amber-300">{validationMessage}</p>
+                            )}
                         </div>
                     </>
                 ) : (

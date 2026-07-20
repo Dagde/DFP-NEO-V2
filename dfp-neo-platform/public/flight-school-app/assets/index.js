@@ -31600,7 +31600,12 @@ const AddFlightTileModal = ({
   };
   const locationFullName = currentLocationName || school;
   const filteredFormationCallsigns = reactExports.useMemo(() => {
-    return (formationCallsigns || []).filter((fc) => fc.location === locationFullName);
+    const currentLocation = String(locationFullName || "").trim().toUpperCase();
+    return (formationCallsigns || []).filter((fc) => {
+      const callsignLocation = String(fc.location || "").trim().toUpperCase();
+      const callsignLocationCode = String(fc.locationCode || "").trim().toUpperCase();
+      return callsignLocation === currentLocation || callsignLocationCode === currentLocation;
+    });
   }, [formationCallsigns, locationFullName]);
   const formationTypes = reactExports.useMemo(() => {
     return filteredFormationCallsigns.map((cs) => cs.code);
@@ -64223,6 +64228,7 @@ const FormationCallsignsSection = ({
   onUpdateCallsigns,
   units,
   locations,
+  locationOptions = [],
   canEditSettings,
   isSettingsUnlocked = canEditSettings,
   onRequestUnlock,
@@ -64238,6 +64244,20 @@ const FormationCallsignsSection = ({
     location: "",
     locationCode: ""
   });
+  const [validationMessage, setValidationMessage] = reactExports.useState("");
+  const configuredLocationOptions = locationOptions.length > 0 ? locationOptions : locations.map((location) => ({ name: location, code: "" }));
+  const findLocationOption = (locationName) => configuredLocationOptions.find((location) => location.name === locationName);
+  const makeEmptyCallsign = (unitOverride = selectedUnit) => {
+    const defaultLocation = configuredLocationOptions[0];
+    const defaultUnit = unitOverride !== "ALL" ? unitOverride : units.length === 1 ? units[0] : "";
+    return {
+      name: "",
+      code: "",
+      unit: defaultUnit,
+      location: defaultLocation?.name || "",
+      locationCode: defaultLocation?.code || ""
+    };
+  };
   const allowedUnitSet = new Set(units.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
   const isCallsignVisibleForUnitScope = (callsign) => {
     if (allowedUnitSet.size === 0) return true;
@@ -64251,6 +64271,8 @@ const FormationCallsignsSection = ({
       if (!unlocked) return;
     }
     setTempCallsigns([...callsigns]);
+    setNewCallsign(makeEmptyCallsign());
+    setValidationMessage("");
     setIsEditing(true);
   };
   const handleSave = () => {
@@ -64268,21 +64290,60 @@ const FormationCallsignsSection = ({
     }
   };
   const handleCancel = () => {
-    setNewCallsign({ name: "", code: "", unit: "", location: "", locationCode: "" });
+    setNewCallsign(makeEmptyCallsign());
+    setValidationMessage("");
     setIsEditing(false);
   };
   const handleAdd = () => {
-    if (newCallsign.name && newCallsign.code && newCallsign.unit && newCallsign.location && newCallsign.locationCode) {
-      setTempCallsigns([...tempCallsigns, { ...newCallsign }]);
-      setNewCallsign({ name: "", code: "", unit: "", location: "", locationCode: "" });
+    const locationOption = findLocationOption(newCallsign.location);
+    const callsignToAdd = {
+      ...newCallsign,
+      name: newCallsign.name.trim(),
+      code: newCallsign.code.trim().toUpperCase(),
+      unit: newCallsign.unit.trim(),
+      location: newCallsign.location.trim(),
+      locationCode: (newCallsign.locationCode || locationOption?.code || "").trim().toUpperCase()
+    };
+    const missingFields = [
+      !callsignToAdd.name ? "name" : "",
+      !callsignToAdd.code ? "code" : "",
+      !callsignToAdd.unit ? "unit" : "",
+      !callsignToAdd.location ? "location" : "",
+      !callsignToAdd.locationCode ? "location code" : ""
+    ].filter(Boolean);
+    if (missingFields.length > 0) {
+      setValidationMessage(`Enter ${missingFields.join(", ")} before adding the formation callsign.`);
+      return;
     }
+    setTempCallsigns([...tempCallsigns, callsignToAdd]);
+    setNewCallsign(makeEmptyCallsign(callsignToAdd.unit));
+    setSelectedUnit(callsignToAdd.unit);
+    setValidationMessage("");
+  };
+  const handleNewLocationChange = (locationName) => {
+    const locationOption = findLocationOption(locationName);
+    setNewCallsign({
+      ...newCallsign,
+      location: locationName,
+      locationCode: (locationOption?.code || "").toUpperCase()
+    });
   };
   const handleRemove = (index) => {
     setTempCallsigns(tempCallsigns.filter((_, i) => i !== index));
   };
   const handleUpdateCallsign = (index, field, value) => {
+    if (index < 0) return;
     const updated = [...tempCallsigns];
-    updated[index] = { ...updated[index], [field]: value };
+    if (field === "location") {
+      const locationOption = findLocationOption(value);
+      updated[index] = {
+        ...updated[index],
+        location: value,
+        locationCode: (locationOption?.code || updated[index].locationCode || "").toUpperCase()
+      };
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
     setTempCallsigns(updated);
   };
   const effectiveSelectedUnit = selectedUnit !== "ALL" && allowedUnitSet.size > 0 && !allowedUnitSet.has(String(selectedUnit || "").trim().toUpperCase()) ? "ALL" : selectedUnit;
@@ -64375,7 +64436,7 @@ const FormationCallsignsSection = ({
                   className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
-                    locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+                    configuredLocationOptions.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc.name, children: loc.name }, `${loc.code || loc.name}-${loc.name}`))
                   ]
                 }
               ) }),
@@ -64439,11 +64500,11 @@ const FormationCallsignsSection = ({
               "select",
               {
                 value: newCallsign.location,
-                onChange: (e) => setNewCallsign({ ...newCallsign, location: e.target.value }),
+                onChange: (e) => handleNewLocationChange(e.target.value),
                 className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Location..." }),
-                  locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
+                  configuredLocationOptions.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc.name, children: loc.name }, `${loc.code || loc.name}-${loc.name}`))
                 ]
               }
             ),
@@ -64466,7 +64527,8 @@ const FormationCallsignsSection = ({
                 children: "Add"
               }
             )
-          ] })
+          ] }),
+          validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-300", children: validationMessage })
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Configured formation callsigns." }),
@@ -72411,6 +72473,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             onUpdateCallsigns: onUpdateFormationCallsigns,
             units: visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code).filter(Boolean),
             locations: (visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location) => location.name || location.code).filter(Boolean),
+            locationOptions: (visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location) => ({ name: location.name || location.code || "", code: location.code || "" })).filter((location) => location.name),
             canEditSettings: canUnlockRankTerminology,
             isSettingsUnlocked: canEditRankTerminology,
             onRequestUnlock: unlockRankTerminology,

@@ -1933,7 +1933,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const locationFullName = currentLocationName || school;
 
   const filteredFormationCallsigns = useMemo(() => {
-    return (formationCallsigns || []).filter(fc => fc.location === locationFullName);
+    const currentLocation = String(locationFullName || '').trim().toUpperCase();
+    return (formationCallsigns || []).filter(fc => {
+      const callsignLocation = String(fc.location || '').trim().toUpperCase();
+      const callsignLocationCode = String(fc.locationCode || '').trim().toUpperCase();
+      return callsignLocation === currentLocation || callsignLocationCode === currentLocation;
+    });
   }, [formationCallsigns, locationFullName]);
 
   const formationTypes = useMemo(() => {
