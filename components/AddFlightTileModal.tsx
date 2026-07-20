@@ -2111,6 +2111,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (!t) return 'bg-gray-500';
     return (t.course && courseColors[t.course]) || 'bg-gray-500';
   }, [picName, studentName, flightType, traineesData, courseColors, eventCategory]);
+  const isManualFormation = isSctFormationCode(flightNumber);
+  const previewCallsign = isManualFormation && formationType ? `${formationType}1` : callsign;
 
   // ── Syllabus by course (for event dropdown) ───────────────────────────────
   const syllabusByCourse = useMemo(() => {
@@ -3239,7 +3241,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   aircraftNumber={aircraftNumber}
                   aircraftNumberPrefix={aircraftNumberPrefix}
                   aircraftNumberSettings={aircraftNumberSettings}
-                  callsign={callsign}
+                  callsign={previewCallsign}
                   color={tileColor}
                   timeOptions={timeOptions}
                   durationOptions={durationOptions}
@@ -3294,6 +3296,156 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               <p className="text-xs text-gray-500 mt-2">
                 {`Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}`}
               </p>
+              {isManualFormation && (
+                <div className="mt-3 rounded-lg border border-gray-600 bg-gray-800/70 p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Formation Callsign</label>
+                      <SelectLikeDropdown
+                        value={formationType}
+                        onChange={setFormationType}
+                        width={280}
+                        placeholder="Select callsign"
+                        dropdownKey="add-flight-formation-callsign"
+                        options={filteredFormationCallsigns.length > 0
+                          ? filteredFormationCallsigns.map(cs => ({ value: cs.code, label: `${cs.name} (${cs.code})` }))
+                          : [{ value: '', label: 'No formation callsigns configured', disabled: true }]}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft Count</label>
+                      <SelectLikeDropdown
+                        value={String(Math.max(2, Number(aircraftCount) || 2))}
+                        onChange={value => setAircraftCount(Math.max(2, parseInt(value, 10) || 2))}
+                        width={140}
+                        dropdownKey="add-flight-formation-aircraft-count"
+                        options={Array.from({ length: 7 }, (_, i) => i + 2).map(count => ({ value: String(count), label: String(count) }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    <div className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
+                        <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
+                          {formationType ? `${formationType}1` : 'A/C 1'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
+                        <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                          <PersonDropdown
+                            value={picName}
+                            displayValue={picName}
+                            onChange={setPicName}
+                            allUnits={allUnits}
+                            getLayer2={getLayer2}
+                            getNames={getPicNames}
+                            placeholder="Select PIC"
+                            fontSize={14}
+                            color={picName ? '#fff' : 'rgba(255,255,255,0.45)'}
+                            bold
+                            dropdownId="formation-pic-dropdown-primary"
+                          />
+                        </div>
+                      </div>
+                      {!isSingleSeatAircraft && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                          <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                            {flightType === 'Dual' ? (
+                              <PersonDropdown
+                                value={studentName}
+                                displayValue={studentName}
+                                onChange={setStudentName}
+                                allUnits={allUnits}
+                                getLayer2={getLayer2}
+                                getNames={getNames}
+                                placeholder="Select crew"
+                                fontSize={14}
+                                color={studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
+                                allowSolo
+                                onSoloSelect={() => {
+                                  setFlightType('Solo');
+                                  setStudentName('');
+                                }}
+                                dropdownId="formation-crew-dropdown-primary"
+                              />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setFlightType('Dual')}
+                                className="w-full text-left text-sm font-semibold text-amber-300"
+                              >
+                                SOLO
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {formationCrew.map((crewMember, index) => (
+                      <div key={index} className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
+                          <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
+                            {formationType ? `${formationType}${index + 2}` : `A/C ${index + 2}`}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">PIC</label>
+                          <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                            <PersonDropdown
+                              value={crewMember.picName}
+                              displayValue={crewMember.picName}
+                              onChange={(name) => updateFormationCrew(index, { picName: name })}
+                              allUnits={allUnits}
+                              getLayer2={getLayer2}
+                              getNames={getPicNames}
+                              placeholder="Select PIC"
+                              fontSize={14}
+                              color={crewMember.picName ? '#fff' : 'rgba(255,255,255,0.45)'}
+                              bold
+                              dropdownId={`formation-pic-dropdown-${index}`}
+                            />
+                          </div>
+                        </div>
+                        {!isSingleSeatAircraft && (
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                            <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                              {crewMember.flightType === 'Dual' ? (
+                                <PersonDropdown
+                                  value={crewMember.studentName}
+                                  displayValue={crewMember.studentName}
+                                  onChange={(name) => updateFormationCrew(index, { studentName: name })}
+                                  allUnits={allUnits}
+                                  getLayer2={getLayer2}
+                                  getNames={getNames}
+                                  placeholder="Select crew"
+                                  fontSize={14}
+                                  color={crewMember.studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
+                                  allowSolo
+                                  onSoloSelect={() => updateFormationCrew(index, { flightType: 'Solo', studentName: '' })}
+                                  dropdownId={`formation-crew-dropdown-${index}`}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => updateFormationCrew(index, { flightType: 'Dual' })}
+                                  className="w-full text-left text-sm font-semibold text-amber-300"
+                                >
+                                  SOLO
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3449,158 +3601,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                         className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
                       />
                     </div>
-                  </div>
-                )}
-                {isSctFormationCode(flightNumber) && (
-                  <div className="mt-4 rounded-lg border border-gray-600 bg-gray-800/70 p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Formation Callsign</label>
-                        <SelectLikeDropdown
-                          value={formationType}
-                          onChange={setFormationType}
-                          width={280}
-                          placeholder="Select callsign"
-                          dropdownKey="add-flight-formation-callsign"
-                          options={filteredFormationCallsigns.length > 0
-                            ? filteredFormationCallsigns.map(cs => ({ value: cs.code, label: `${cs.name} (${cs.code})` }))
-                            : [{ value: '', label: 'No formation callsigns configured', disabled: true }]}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft Count</label>
-                        <SelectLikeDropdown
-                          value={String(aircraftCount)}
-                          onChange={value => setAircraftCount(parseInt(value, 10))}
-                          width={140}
-                          dropdownKey="add-flight-formation-aircraft-count"
-                          options={Array.from({ length: 7 }, (_, i) => i + 2).map(count => ({ value: String(count), label: String(count) }))}
-                        />
-                      </div>
-                    </div>
-                    {Math.max(1, Number(aircraftCount) || 1) > 1 && (
-                      <div className="mt-4 space-y-3">
-                        <div className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
-                            <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
-                              {formationType}1
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Pilot</label>
-                            <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
-                              <PersonDropdown
-                                value={picName}
-                                displayValue={picName}
-                                onChange={setPicName}
-                                allUnits={allUnits}
-                                getLayer2={getLayer2}
-                                getNames={getPicNames}
-                                placeholder="Select pilot"
-                                fontSize={14}
-                                color={picName ? '#fff' : 'rgba(255,255,255,0.45)'}
-                                bold
-                                dropdownId="formation-pic-dropdown-primary"
-                              />
-                            </div>
-                          </div>
-                          {!isSingleSeatAircraft && (
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
-                              <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
-                                {flightType === 'Dual' ? (
-                                  <PersonDropdown
-                                    value={studentName}
-                                    displayValue={studentName}
-                                    onChange={setStudentName}
-                                    allUnits={allUnits}
-                                    getLayer2={getLayer2}
-                                    getNames={getNames}
-                                    placeholder="Select crew"
-                                    fontSize={14}
-                                    color={studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
-                                    allowSolo
-                                    onSoloSelect={() => {
-                                      setFlightType('Solo');
-                                      setStudentName('');
-                                    }}
-                                    dropdownId="formation-crew-dropdown-primary"
-                                  />
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => setFlightType('Dual')}
-                                    className="w-full text-left text-sm font-semibold text-amber-300"
-                                  >
-                                    SOLO
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        {formationCrew.map((crewMember, index) => (
-                          <div key={index} className={`grid gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3 ${isSingleSeatAircraft ? 'grid-cols-[90px_1fr]' : 'grid-cols-[90px_1fr_1fr]'}`}>
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
-                              <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
-                                {formationType}{index + 2}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Pilot</label>
-                              <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
-                                <PersonDropdown
-                                  value={crewMember.picName}
-                                  displayValue={crewMember.picName}
-                                  onChange={(name) => updateFormationCrew(index, { picName: name })}
-                                  allUnits={allUnits}
-                                  getLayer2={getLayer2}
-                                  getNames={getPicNames}
-                                  placeholder="Select pilot"
-                                  fontSize={14}
-                                  color={crewMember.picName ? '#fff' : 'rgba(255,255,255,0.45)'}
-                                  bold
-                                  dropdownId={`formation-pic-dropdown-${index}`}
-                                />
-                              </div>
-                            </div>
-                            {!isSingleSeatAircraft && (
-                              <div>
-                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
-                                <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
-                                  {crewMember.flightType === 'Dual' ? (
-                                    <PersonDropdown
-                                      value={crewMember.studentName}
-                                      displayValue={crewMember.studentName}
-                                      onChange={(name) => updateFormationCrew(index, { studentName: name })}
-                                      allUnits={allUnits}
-                                      getLayer2={getLayer2}
-                                      getNames={getNames}
-                                      placeholder="Select crew"
-                                      fontSize={14}
-                                      color={crewMember.studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
-                                      allowSolo
-                                      onSoloSelect={() => updateFormationCrew(index, { flightType: 'Solo', studentName: '' })}
-                                      dropdownId={`formation-crew-dropdown-${index}`}
-                                    />
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => updateFormationCrew(index, { flightType: 'Dual' })}
-                                      className="w-full text-left text-sm font-semibold text-amber-300"
-                                    >
-                                      SOLO
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
                 <div className="mt-3">
