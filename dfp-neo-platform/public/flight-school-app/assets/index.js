@@ -31265,6 +31265,7 @@ const AddFlightTileModal = ({
   unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings,
+  personnelData,
   sctTerminology,
   sctEvents = [],
   nightContinuationDefaultStartTime = 18.5
@@ -31480,11 +31481,14 @@ const AddFlightTileModal = ({
   const resolveAssignedCallsign = reactExports.useCallback((name) => {
     const cleanName = String(name || "").trim();
     if (!cleanName) return "";
+    const assigned = personnelData?.get(cleanName);
+    if (assigned?.callsign) return String(assigned.callsign || "").trim();
     const instructor = instructorsData.find((staff) => staff.name === cleanName);
-    if (instructor) return String(instructor.callsign || instructor.secondaryCallsign || "").trim();
+    if (instructor) return String(instructor.callsign || instructor.preferences?.callsign || instructor.secondaryCallsign || "").trim();
     const trainee = traineesData.find((traineeRecord) => (traineeRecord.fullName || traineeRecord.name) === cleanName || traineeRecord.name === cleanName);
-    return String(trainee?.traineeCallsign || "").trim();
-  }, [instructorsData, traineesData]);
+    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName);
+    return String(trainee?.traineeCallsign || traineeAssigned?.callsign || "").trim();
+  }, [instructorsData, personnelData, traineesData]);
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
     startTime: { x: 14, y: 7 },
@@ -31824,7 +31828,7 @@ const AddFlightTileModal = ({
     const inst = instructorsData.find((i) => i.name === picName);
     if (inst) {
       picUnit = inst.unit || null;
-      const primary = inst.callsign || buildCallsignFromNumber(inst.callsignNumber) || "";
+      const primary = resolveAssignedCallsign(picName) || inst.callsign || buildCallsignFromNumber(inst.callsignNumber) || "";
       const secondary = inst.secondaryCallsign || "";
       const personal = [primary, secondary].filter(Boolean);
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
@@ -31838,7 +31842,7 @@ const AddFlightTileModal = ({
     const trainee = traineesData.find((t) => (t.fullName || t.name) === picName);
     if (trainee) {
       picUnit = trainee.unit || null;
-      const cs = trainee.traineeCallsign || buildCallsignFromNumber(trainee.callsignNumber) || "";
+      const cs = resolveAssignedCallsign(picName) || trainee.traineeCallsign || buildCallsignFromNumber(trainee.callsignNumber) || "";
       const personal = cs ? [cs] : [];
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
       const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
@@ -31850,7 +31854,7 @@ const AddFlightTileModal = ({
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
   reactExports.useEffect(() => {
     if (suppressNextCategoryResetRef.current) {
       suppressNextCategoryResetRef.current = false;
@@ -121033,6 +121037,7 @@ Do you want to replace the existing entry?`,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings,
+          personnelData,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
           sctEvents,
           nightContinuationDefaultStartTime: commenceNightFlying

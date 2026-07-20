@@ -69,6 +69,7 @@ interface AddFlightTileModalProps {
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   personnelDisplaySettings?: PersonnelDisplaySettings;
+  personnelData?: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   sctTerminology?: SctTerminology;
   sctEvents?: any[];
   nightContinuationDefaultStartTime?: number;
@@ -1542,6 +1543,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   unitCallsignSettings,
   staffQualificationCatalogue,
   personnelDisplaySettings,
+  personnelData,
   sctTerminology,
   sctEvents = [],
   nightContinuationDefaultStartTime = 18.5,
@@ -1803,14 +1805,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const resolveAssignedCallsign = useCallback((name?: string | null): string => {
     const cleanName = String(name || '').trim();
     if (!cleanName) return '';
+    const assigned = personnelData?.get(cleanName);
+    if (assigned?.callsign) return String(assigned.callsign || '').trim();
     const instructor = instructorsData.find(staff => staff.name === cleanName);
-    if (instructor) return String(instructor.callsign || instructor.secondaryCallsign || '').trim();
+    if (instructor) return String(instructor.callsign || instructor.preferences?.callsign || instructor.secondaryCallsign || '').trim();
     const trainee = traineesData.find(traineeRecord => (
       (traineeRecord.fullName || traineeRecord.name) === cleanName
       || traineeRecord.name === cleanName
     ));
-    return String(trainee?.traineeCallsign || '').trim();
-  }, [instructorsData, traineesData]);
+    const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName);
+    return String(trainee?.traineeCallsign || traineeAssigned?.callsign || '').trim();
+  }, [instructorsData, personnelData, traineesData]);
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
@@ -2244,7 +2249,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (inst) {
       picUnit = inst.unit || null;
       // Build callsign: prefer explicit callsign string, fall back to callsignNumber + school prefix
-      const primary   = inst.callsign || buildCallsignFromNumber((inst as any).callsignNumber) || '';
+      const primary   = resolveAssignedCallsign(picName) || inst.callsign || buildCallsignFromNumber((inst as any).callsignNumber) || '';
       const secondary = inst.secondaryCallsign || '';
       const personal  = [primary, secondary].filter(Boolean);
       // Add formation callsigns that belong to the same unit as the PIC
@@ -2261,7 +2266,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const trainee = traineesData.find(t => (t.fullName || t.name) === picName);
     if (trainee) {
       picUnit = (trainee as any).unit || null;
-      const cs = trainee.traineeCallsign || buildCallsignFromNumber((trainee as any).callsignNumber) || '';
+      const cs = resolveAssignedCallsign(picName) || trainee.traineeCallsign || buildCallsignFromNumber((trainee as any).callsignNumber) || '';
       const personal = cs ? [cs] : [];
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
@@ -2275,7 +2280,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)

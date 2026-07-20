@@ -44530,6 +44530,7 @@ appliedUpdates.forEach(update => {
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     personnelDisplaySettings={personnelDisplaySettings}
+                    personnelData={personnelData}
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                     sctEvents={sctEvents}
                     nightContinuationDefaultStartTime={commenceNightFlying}
