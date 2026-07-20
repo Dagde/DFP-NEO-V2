@@ -30042,6 +30042,7 @@ const saveUserPreference = async (userId, key, value) => {
     return false;
   }
 };
+const CONTINUATION_COURSE_KEY = "__continuation_events__";
 const formatTime$3 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
@@ -30710,7 +30711,7 @@ const EventDropdown = ({
                 alignItems: "center",
                 color: selectedCourse === course ? "#fff" : "rgba(255,255,255,0.8)",
                 backgroundColor: selectedCourse === course ? "rgba(255,255,255,0.12)" : "transparent",
-                fontWeight: course === "SCT" ? 600 : 400
+                fontWeight: course === CONTINUATION_COURSE_KEY ? 600 : 400
               },
               children: [
                 getCourseDisplayLabel(course),
@@ -30719,7 +30720,7 @@ const EventDropdown = ({
             },
             course
           )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: selectedCourse === "SCT" ? continuationEventOptions.map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: selectedCourse === CONTINUATION_COURSE_KEY ? continuationEventOptions.map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
               onClick: () => {
@@ -31811,10 +31812,10 @@ const AddFlightTileModal = ({
   };
   const courseOptions = reactExports.useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return getContinuationEventNames(sctEvents).length > 0 ? ["SCT", ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
+    return getContinuationEventNames(sctEvents).length > 0 ? [CONTINUATION_COURSE_KEY, ...courses.filter((c) => c !== "SCT")] : courses.filter((c) => c !== "SCT");
   }, [sctEvents, syllabusByCourse]);
-  const getEventsForCourse = (course) => course === "SCT" ? [] : syllabusByCourse.get(course) || [];
-  const getCourseDisplayLabel = reactExports.useCallback((course) => course === "SCT" ? sctShortLabel : course, [sctShortLabel]);
+  const getEventsForCourse = (course) => course === CONTINUATION_COURSE_KEY ? [] : syllabusByCourse.get(course) || [];
+  const getCourseDisplayLabel = reactExports.useCallback((course) => course === CONTINUATION_COURSE_KEY ? sctShortLabel : course, [sctShortLabel]);
   const nextLMPEvent = reactExports.useMemo(() => {
     if (eventCategory !== "lmp_event") return null;
     const name = flightType === "Solo" ? picName : studentName;

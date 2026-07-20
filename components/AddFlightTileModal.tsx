@@ -40,6 +40,8 @@ import {
   type FixedCrewAvailabilityWindow,
 } from '../utils/fixedCrewAvailability';
 
+const CONTINUATION_COURSE_KEY = '__continuation_events__';
+
 interface AddFlightTileModalProps {
   onClose: () => void;
   onSave: (events: ScheduleEvent[]) => void;
@@ -913,7 +915,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               color: selectedCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
               backgroundColor: selectedCourse === course ? 'rgba(255,255,255,0.12)' : 'transparent',
-              fontWeight: course === 'SCT' ? 600 : 400,
+              fontWeight: course === CONTINUATION_COURSE_KEY ? 600 : 400,
             }}
           >
             {getCourseDisplayLabel(course)}
@@ -924,7 +926,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
 
       {/* Col 2: Events */}
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
-        {selectedCourse === 'SCT' ? (
+        {selectedCourse === CONTINUATION_COURSE_KEY ? (
           continuationEventOptions.map(code => (
             <div
               key={code}
@@ -2211,13 +2213,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    return getContinuationEventNames(sctEvents).length > 0 ? ['SCT', ...courses.filter(c => c !== 'SCT')] : courses.filter(c => c !== 'SCT');
+    return getContinuationEventNames(sctEvents).length > 0
+      ? [CONTINUATION_COURSE_KEY, ...courses.filter(c => c !== 'SCT')]
+      : courses.filter(c => c !== 'SCT');
   }, [sctEvents, syllabusByCourse]);
 
   const getEventsForCourse = (course: string): SyllabusItemDetail[] =>
-    course === 'SCT' ? [] : (syllabusByCourse.get(course) || []);
+    course === CONTINUATION_COURSE_KEY ? [] : (syllabusByCourse.get(course) || []);
   const getCourseDisplayLabel = useCallback((course: string) => (
-    course === 'SCT' ? sctShortLabel : course
+    course === CONTINUATION_COURSE_KEY ? sctShortLabel : course
   ), [sctShortLabel]);
 
   // ── Next LMP event for the selected trainee ───────────────────────────────
