@@ -1105,8 +1105,8 @@ const FlightTile: React.FC<TileProps> = ({
     duration:  { x: 410, y: 1 },
     event:     { x: 486, y: 1 },
     aircraft:  { x: 14, y: 57 },
-    area:      { x: 341, y: 58 },
-    callsign:  { x: 397, y: 59 },
+    area:      { x: 271, y: 58 },
+    callsign:  { x: 327, y: 59 },
   };
 
   const activeElemKey = useMemo<ElemKey | null>(() => {
@@ -1385,7 +1385,7 @@ const FlightTile: React.FC<TileProps> = ({
         placeholder="CALLSGN"
         style={{
           background: 'transparent', border: 'none', outline: 'none',
-          fontFamily: monoFamily, fontSize: 22, fontStyle: 'normal', lineHeight: 1,
+          fontFamily: monoFamily, fontSize: 18, fontStyle: 'normal', lineHeight: 1,
           color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
           width: callsignOptions.length > 0 ? 70 : 80, padding: 0, cursor: 'text',
         }}
@@ -1834,10 +1834,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     duration:  { x: 410, y: 1 },
     event:     { x: 486, y: 1 },
     aircraft:  { x: 14, y: 57 },
-    area:      { x: 341, y: 58 },
-    callsign:  { x: 397, y: 59 },
+    area:      { x: 271, y: 58 },
+    callsign:  { x: 327, y: 59 },
   };
-  const LAYOUT_PREF_KEY = 'flightTileLayout_v6';
+  const LAYOUT_PREF_KEY = 'flightTileLayout_v7';
 
   // Helper: validate a positions object has all required keys
   const isValidPositions = (posData: any): posData is Record<ElemKey, { x: number; y: number }> => {
