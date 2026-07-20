@@ -8377,14 +8377,14 @@ const resolveScheduleTileBackgroundColor = (color, mode = "dark") => {
   if (isCssColor(value)) return value.startsWith("#") ? hexToRgba(value, mode === "light" ? 0.92 : 0.57, mode === "light") : value;
   return resolveTailwindBgClassToRgba(value, mode === "light" ? "tile-light" : "tile-dark");
 };
-const formatTime$8 = (time) => {
+const formatTime$7 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const formatDeploymentClock = (clock, fallbackHours) => {
   if (clock) return clock.replace(/:/g, "");
-  if (typeof fallbackHours === "number") return formatTime$8(fallbackHours).replace(/:/g, "");
+  if (typeof fallbackHours === "number") return formatTime$7(fallbackHours).replace(/:/g, "");
   return "";
 };
 const formatDeploymentDate = (dateString) => {
@@ -8932,9 +8932,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
                       desc && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#94a3b8", fontWeight: 400, marginLeft: 4 }, children: desc })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#64748b" }, children: [
-                      formatTime$8(t.startTime),
+                      formatTime$7(t.startTime),
                       " – ",
-                      formatTime$8(endTime),
+                      formatTime$7(endTime),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#475569", marginLeft: 6 }, children: [
                         "(",
                         durationStr,
@@ -8947,9 +8947,9 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { borderTop: "1px solid rgba(147,197,253,0.2)", marginTop: 4, paddingTop: 4, fontSize: 10, color: "#64748b", display: "flex", justifyContent: "space-between" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                   "Session: ",
-                  formatTime$8(dayStart),
+                  formatTime$7(dayStart),
                   " – ",
-                  formatTime$8(dayStart + dayDuration)
+                  formatTime$7(dayStart + dayDuration)
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#475569" }, children: (() => {
                   const totalMins = Math.round(dayDuration * 60);
@@ -9094,7 +9094,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-6 w-px bg-gray-600" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono font-semibold text-sky-400", children: displayFlightNumber }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$8(effectiveStartTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-400", children: formatTime$7(effectiveStartTime) })
       ] }),
       callsign && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign })
     ] }) });
@@ -9259,7 +9259,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               {
                 className: "absolute top-1 left-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$8(effectiveStartTime)
+                children: formatTime$7(effectiveStartTime)
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -9267,7 +9267,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
               {
                 className: "absolute top-1 right-1 font-mono text-white/60 pointer-events-none",
                 style: { fontSize: `${scaledFontSize * 0.825}px` },
-                children: formatTime$8(effectiveStartTime + effectiveDuration)
+                children: formatTime$7(effectiveStartTime + effectiveDuration)
               }
             )
           ] }) : !isSmallTile && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -9275,7 +9275,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
             {
               className: "absolute -top-px left-1 font-mono text-white/60 pointer-events-none",
               style: { fontSize: `${scaledFontSize * 0.75}px` },
-              children: formatTime$8(effectiveStartTime)
+              children: formatTime$7(effectiveStartTime)
             }
           ),
           renderContent(),
@@ -20779,7 +20779,7 @@ const buildAssessmentStructure = (elements, phraseBank) => {
   const categories = categoryOrder.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
   return categories.length > 0 ? categories : [{ category: "Core Dimensions", elements: DEFAULT_ASSESSED_ELEMENTS$1 }];
 };
-const formatTime$7 = (time) => {
+const formatTime$6 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -21501,7 +21501,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
         ["Course", trainee.course || "N/A"],
         [printOverviewFields.date, reportDate || "N/A"],
-        [printOverviewFields.timing, `${formatTime$7(startTime)} - ${formatTime$7(endTime)}`],
+        [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
         [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
         [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
         [printOverviewFields.callsign, currentEvent.callsign || event.callsign || "N/A"],
@@ -26417,7 +26417,7 @@ const MassBriefConfirmationFlyout = ({
     ) })
   ] }) });
 };
-const formatTime$6 = (time) => {
+const formatTime$5 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round((time - hours) * 60);
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
@@ -26434,11 +26434,11 @@ const VisualAdjustModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "Start Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(startTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(startTime) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-300 mb-1", children: "End Time" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$6(endTime) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1 bg-gray-700 text-white rounded text-sm", children: formatTime$5(endTime) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end space-x-2 mt-4", children: [
@@ -26840,7 +26840,7 @@ const getEventTypeFromSyllabus = (syllabusId, syllabusDetails) => {
   if (detail.type === "Ground School") return "ground";
   return "flight";
 };
-const formatTime$5 = (time) => {
+const formatTime$4 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -26857,13 +26857,13 @@ const formatUnavailabilityDate = (dateValue) => {
   });
 };
 const formatUnavailabilityClock = (rawTime, fallbackTime) => {
-  if (typeof rawTime === "number") return formatTime$5(rawTime);
+  if (typeof rawTime === "number") return formatTime$4(rawTime);
   if (typeof rawTime === "string" && rawTime.trim()) {
     if (rawTime.includes(":")) return rawTime;
     const cleaned = rawTime.replace(/\D/g, "").padStart(4, "0").slice(-4);
     return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
   }
-  if (typeof fallbackTime === "number") return formatTime$5(fallbackTime);
+  if (typeof fallbackTime === "number") return formatTime$4(fallbackTime);
   return "-";
 };
 const getAllDayUnavailabilityEndDate = (dateValue) => {
@@ -26874,7 +26874,7 @@ const getAllDayUnavailabilityEndDate = (dateValue) => {
   return parsedDate.toISOString().slice(0, 10);
 };
 const normalizeStartTimeValue = (time) => {
-  if (typeof time === "number") return formatTime$5(time);
+  if (typeof time === "number") return formatTime$4(time);
   if (!time) return "00:00";
   if (time.includes(":")) return time;
   const cleaned = time.replace(/\D/g, "").padStart(4, "0").slice(-4);
@@ -27269,14 +27269,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         return unavailableStart < bookingWindow.end && bookingWindow.start < unavailableEnd;
       }).map((period) => ({
         type: "unavailability",
-        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$5(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$5(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
+        label: period.allDay ? `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable all day${period.reason ? ` because ${period.reason}` : ""}.` : `${[staff.rank, staff.name].filter(Boolean).join(" ")} is unavailable from ${formatTime$4(normaliseTimeFieldToHour(period.startTime, 0))} to ${formatTime$4(normaliseTimeFieldToHour(period.endTime, 24))}${period.reason ? ` because ${period.reason}` : ""}.`
       }));
       const eventConflicts = (eventsForDate || []).filter((otherEvent) => !isSameDisplayedEvent(otherEvent)).filter((otherEvent) => getPersonnelForConflictCheck(otherEvent).includes(staff.name)).filter((otherEvent) => {
         const otherWindow = getEventBookingWindow2(otherEvent);
         return otherWindow.start < bookingWindow.end && bookingWindow.start < otherWindow.end;
       }).map((otherEvent) => ({
         type: "event",
-        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$5(otherEvent.startTime)} to ${formatTime$5((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
+        label: `${[staff.rank, staff.name].filter(Boolean).join(" ")} is already assigned to ${otherEvent.flightNumber || "another event"} from ${formatTime$4(otherEvent.startTime)} to ${formatTime$4((otherEvent.startTime || 0) + (otherEvent.duration || 0))}.`
       }));
       const conflicts = [...unavailabilityConflicts, ...eventConflicts];
       return {
@@ -27360,7 +27360,7 @@ Please select another substitute.`, "Substitution Not Available", "warning");
     ].map((name) => String(name || "").trim()).filter(Boolean))).map((name) => name === unavailableStaff.name ? substituteDisplayName : name);
     const nextPic = originalPic === unavailableStaff.name ? substituteDisplayName : originalPic;
     const existingNotes = String(event.fixedCrewManifestNotes || fixedCrewManifestNotes || "").trim();
-    const swapNote = `${formatTime$5(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
+    const swapNote = `${formatTime$4(event.startTime)}: ${[unavailableStaff.rank, unavailableStaff.name].filter(Boolean).join(" ")} replaced by ${[substitute.rank, substitute.name].filter(Boolean).join(" ")}.`;
     const updatedEvent = {
       ...event,
       attendees: updatedAttendees,
@@ -27385,9 +27385,9 @@ ${swapNote}` : swapNote
         !isPooledCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "rounded bg-emerald-500/15 px-2 py-1 text-sm font-bold text-emerald-200", children: formatFixedCrewDisplayGroup$2(fixedCrewGroup || event.fixedCrewGroup || "") || "Crew not assigned" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] font-semibold uppercase tracking-wider text-gray-400", children: [
           "Availability window ",
-          formatTime$5(Math.max(0, bookingWindow.start)),
+          formatTime$4(Math.max(0, bookingWindow.start)),
           "-",
-          formatTime$5(Math.min(24, bookingWindow.end))
+          formatTime$4(Math.min(24, bookingWindow.end))
         ] })
       ] }),
       fixedCrewRosterByRole.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-3 ${activeCrewConflict ? "grid-cols-[minmax(0,1fr)_12rem]" : "grid-cols-1"}`, children: [
@@ -28214,7 +28214,7 @@ ${swapNote}` : swapNote
     if (onVisualAdjustEnd) {
       onVisualAdjustEnd(updatedEvent);
     }
-    setStartTime(formatTime$5(visualAdjustStartTime));
+    setStartTime(formatTime$4(visualAdjustStartTime));
     setDuration(visualAdjustEndTime - visualAdjustStartTime);
   };
   const handleSave = async () => {
@@ -28374,7 +28374,7 @@ ${swapNote}` : swapNote
       for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
-        options.push({ label, value: formatTime$5(totalHours) });
+        options.push({ label, value: formatTime$4(totalHours) });
       }
     }
     return options;
@@ -29416,7 +29416,7 @@ ${swapNote}` : swapNote
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Start Time" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$5(event.startTime) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
               ] })
             ] }),
             renderFixedCrewRosterStatus()
@@ -30025,7 +30025,7 @@ const saveUserPreference = async (userId, key, value) => {
     return false;
   }
 };
-const formatTime$4 = (time) => {
+const formatTime$3 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -30974,7 +30974,7 @@ const FlightTile = ({
       width: 150,
       zIndex: zOverride ?? 1e4,
       dropdownKey: "add-flight-start-time",
-      children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$4(startTime) })
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) })
     }
   );
   const picNameContent = () => /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31596,7 +31596,7 @@ const AddFlightTileModal = ({
     for (let h = 6; h <= 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         const val = h + m / 60;
-        opts.push({ value: String(val), label: formatTime$4(val) });
+        opts.push({ value: String(val), label: formatTime$3(val) });
       }
     }
     return opts;
@@ -32062,9 +32062,9 @@ const AddFlightTileModal = ({
     setFixedCrewManifestStatus(initialEvent.fixedCrewManifestStatus || "pending");
     setFixedCrewManifestNotes(initialEvent.fixedCrewManifestNotes || "");
     setDeploymentStartDate(initialEvent.deploymentStartDate || initialEvent.date || date);
-    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$4(Number(initialEvent.startTime) || 8));
+    setDeploymentStartTime(initialEvent.deploymentStartTime || formatTime$3(Number(initialEvent.startTime) || 8));
     setDeploymentEndDate(initialEvent.deploymentEndDate || initialEvent.date || date);
-    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$4((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
+    setDeploymentEndTime(initialEvent.deploymentEndTime || formatTime$3((Number(initialEvent.startTime) || 8) + (Number(initialEvent.duration) || 1)));
     setDeploymentAircraftCount(Math.max(1, Math.floor(Number(initialEvent.deploymentAircraftCount) || 1)));
     if (initialEvent.eventCategory === "sct") {
       const profile = fixedCrewCurrencyProfileOptions.find((candidate) => candidate.code === initialEvent.flightNumber || candidate.code === initialEvent.eventCode || candidate.name === initialEvent.flightNumber || candidate.currency === initialEvent.currency);
@@ -34865,7 +34865,7 @@ const DashboardIconTrash = ({ className = "h-5 w-5", strokeWidth = 2 }) => /* @_
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M10 11v6" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M14 11v6" })
 ] });
-const formatTime$3 = (time) => {
+const formatTime$2 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -35351,9 +35351,9 @@ const MyDashboard = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-300", children: [
-          formatTime$3(event.startTime),
+          formatTime$2(event.startTime),
           " - ",
-          formatTime$3(event.startTime + event.duration)
+          formatTime$2(event.startTime + event.duration)
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onSelectEvent(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Details" })
       ] })
@@ -36013,7 +36013,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
     ] }) })
   ] });
 };
-const formatTime$2 = (time) => {
+const formatTime$1 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
@@ -36050,7 +36050,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$2(event.startTime) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white text-sm", children: event.flightNumber }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
@@ -79824,7 +79824,7 @@ const NightFlyingInfoFlyout = ({ traineeCount }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Trainees ready for night flying." })
   ] }) }) });
 };
-const formatTime$1 = (time) => {
+const formatTime = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
@@ -79940,7 +79940,7 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-4", children: groupedTimeShifts.map(([startTime, remediesForTime]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-gray-700/20 rounded-lg", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "font-bold text-sky-400 mb-2", children: [
               "New Start Time: ",
-              formatTime$1(startTime)
+              formatTime(startTime)
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: remediesForTime.map((remedy, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -111379,7 +111379,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         });
       }
       if (decision === "accept-conflict") {
-        const conflictDetails = dayNightConflicts.map((conflict2) => `${conflict2.personName}: ${conflict2.proposedEvent.flightNumber} conflicts with ${conflict2.conflictingEvent.flightNumber} at ${formatTime(conflict2.conflictingEvent.startTime)}`);
+        const conflictDetails = dayNightConflicts.map((conflict2) => `${conflict2.personName}: ${conflict2.proposedEvent.flightNumber} conflicts with ${conflict2.conflictingEvent.flightNumber} at ${formatTimeForAudit(conflict2.conflictingEvent.startTime)}`);
         eventsToSave = eventsToSave.map((event) => ({
           ...event,
           forcedInstructorConflict: true,
@@ -121540,7 +121540,7 @@ Do you want to replace the existing entry?`,
                 "Conflicting event: ",
                 conflict2.conflictingEvent.flightNumber,
                 " at ",
-                formatTime(conflict2.conflictingEvent.startTime),
+                formatTimeForAudit(conflict2.conflictingEvent.startTime),
                 !conflict2.canRemove && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-200", children: [
                   "Cannot remove: ",
                   conflict2.cannotRemoveReason || "already started or finished"

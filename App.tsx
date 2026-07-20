@@ -33081,7 +33081,7 @@ const App: React.FC = () => {
 
             if (decision === 'accept-conflict') {
                 const conflictDetails = dayNightConflicts.map(conflict => (
-                    `${conflict.personName}: ${conflict.proposedEvent.flightNumber} conflicts with ${conflict.conflictingEvent.flightNumber} at ${formatTime(conflict.conflictingEvent.startTime)}`
+                    `${conflict.personName}: ${conflict.proposedEvent.flightNumber} conflicts with ${conflict.conflictingEvent.flightNumber} at ${formatTimeForAudit(conflict.conflictingEvent.startTime)}`
                 ));
                 eventsToSave = eventsToSave.map(event => ({
                     ...event,
@@ -45091,7 +45091,7 @@ appliedUpdates.forEach(update => {
                                         <div className="font-semibold text-white">{conflict.personName}</div>
                                         <div className="mt-1 text-slate-300">{conflict.reason}</div>
                                         <div className="mt-2 text-xs text-slate-400">
-                                            Conflicting event: {conflict.conflictingEvent.flightNumber} at {formatTime(conflict.conflictingEvent.startTime)}
+                                            Conflicting event: {conflict.conflictingEvent.flightNumber} at {formatTimeForAudit(conflict.conflictingEvent.startTime)}
                                             {!conflict.canRemove && (
                                                 <span className="ml-2 rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-200">
                                                     Cannot remove: {conflict.cannotRemoveReason || 'already started or finished'}
