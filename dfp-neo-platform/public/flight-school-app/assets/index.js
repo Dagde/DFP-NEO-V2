@@ -30873,8 +30873,8 @@ const FlightTile = ({
     duration: { x: 410, y: 1 },
     event: { x: 486, y: 1 },
     aircraft: { x: 14, y: 57 },
-    area: { x: 271, y: 58 },
-    callsign: { x: 327, y: 59 }
+    area: { x: 476, y: 58 },
+    callsign: { x: 532, y: 59 }
   };
   const activeElemKey = reactExports.useMemo(() => {
     if (activeStep === "startTime") return "startTime";
@@ -31165,7 +31165,7 @@ const FlightTile = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "aircraft", style: { position: "absolute", bottom: 2, left: 10, zIndex: 20 }, children: aircraftContent() }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "absolute", bottom: 2, right: 12, display: "flex", alignItems: "center", gap: 8, zIndex: 20 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", style: { transform: "translate(-10px, 3px)" }, children: areaContent() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translateY(4px)" }, children: callsignContent() })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translate(-205px, 4px)" }, children: callsignContent() })
     ] })
   ] });
   const savedAbsLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -31512,10 +31512,10 @@ const AddFlightTileModal = ({
     duration: { x: 410, y: 1 },
     event: { x: 486, y: 1 },
     aircraft: { x: 14, y: 57 },
-    area: { x: 271, y: 58 },
-    callsign: { x: 327, y: 59 }
+    area: { x: 476, y: 58 },
+    callsign: { x: 532, y: 59 }
   };
-  const LAYOUT_PREF_KEY = "flightTileLayout_v7";
+  const LAYOUT_PREF_KEY = "flightTileLayout_v8";
   const isValidPositions = (posData) => {
     return posData && typeof posData === "object" && LAYOUT_ELEM_KEYS.every((k) => posData[k] && typeof posData[k].x === "number");
   };
