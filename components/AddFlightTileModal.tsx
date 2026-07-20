@@ -1561,10 +1561,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const rawCode = String(code || '').trim();
     return rawCode.replace(/\bSCT\b/gi, sctShortLabel);
   }, [sctShortLabel]);
-  const isSctFormationCode = useCallback((code?: string | null) => {
-    const normalisedCode = String(code || '').trim().toUpperCase();
-    return normalisedCode === 'SCT FORM' || normalisedCode === sctFormationLabel.toUpperCase();
-  }, [sctFormationLabel]);
   const resolvedAircraftCrewComposition = useMemo(
     () => normaliseAircraftCrewComposition(aircraftCrewComposition),
     [aircraftCrewComposition],
@@ -1783,6 +1779,49 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         return String(a.code || a.name || a.currency).localeCompare(String(b.code || b.name || b.currency), undefined, { numeric: true });
       });
   }, [activeFixedCrewCompositeCodes, activeFixedCrewUnitCodeSet, sctEvents]);
+  const getFixedCrewCurrencyProfileOptionKey = (profile: CurrencyProfile) => (
+    [
+      'currency',
+      normaliseFixedCrewUnitCode(profile.unitCode || profile.compositeUnitCode),
+      String(profile.compositeProfileId || '').trim(),
+      String(profile.aircraftTypeCode || '').trim().toUpperCase(),
+      String(profile.id || '').trim(),
+      String(profile.code || '').trim().toUpperCase(),
+      String(profile.name || '').trim(),
+      String(profile.currency || '').trim(),
+    ].join('::')
+  );
+  const findContinuationCurrencyProfile = useCallback((value: string): CurrencyProfile | undefined => {
+    const normalisedValue = String(value || '').trim().toUpperCase();
+    if (!normalisedValue) return undefined;
+    return fixedCrewCurrencyProfileOptions.find(profile => (
+      getFixedCrewCurrencyProfileOptionKey(profile) === value
+      || String(profile.id || '').trim().toUpperCase() === normalisedValue
+      || String(profile.code || '').trim().toUpperCase() === normalisedValue
+      || String(profile.name || '').trim().toUpperCase() === normalisedValue
+      || String(profile.currency || '').trim().toUpperCase() === normalisedValue
+    ));
+  }, [fixedCrewCurrencyProfileOptions]);
+  const continuationProfileIsFormation = (profile?: CurrencyProfile): boolean => {
+    if (!profile) return false;
+    if (Math.max(1, Math.floor(Number(profile.aircraftCount) || 1)) > 1) return true;
+    const combinedText = [
+      profile.name,
+      profile.code,
+      profile.currency,
+    ].map(value => String(value || '').trim().toUpperCase()).filter(Boolean).join(' ');
+    return /\bFORM\b/.test(combinedText) || combinedText.includes('FORM');
+  };
+  const isSctFormationCode = useCallback((code?: string | null) => {
+    const normalisedCode = String(code || '').trim().toUpperCase();
+    const compactCode = normalisedCode.replace(/[^A-Z0-9]/g, '');
+    const compactFormationLabel = sctFormationLabel.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return normalisedCode === 'SCT FORM'
+      || normalisedCode === sctFormationLabel.toUpperCase()
+      || compactCode === 'SCTFORM'
+      || compactCode === compactFormationLabel
+      || continuationProfileIsFormation(findContinuationCurrencyProfile(String(code || '')));
+  }, [findContinuationCurrencyProfile, sctFormationLabel]);
   const unitCallsignEntries = useMemo(() => {
     const seen = new Set<string>();
     return activeCallsignUnitCodes.flatMap(unitCode => getUnitCallsignEntries(unitCallsignSettings, unitCode))
@@ -1934,12 +1973,18 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const filteredFormationCallsigns = useMemo(() => {
     const currentLocation = String(locationFullName || '').trim().toUpperCase();
+    const activeFormationUnits = new Set((activeUnitCodes.length > 0 ? activeUnitCodes : [activeUnitCode])
+      .map(unit => String(unit || '').trim().toUpperCase())
+      .filter(Boolean));
     return (formationCallsigns || []).filter(fc => {
       const callsignLocation = String(fc.location || '').trim().toUpperCase();
       const callsignLocationCode = String(fc.locationCode || '').trim().toUpperCase();
-      return callsignLocation === currentLocation || callsignLocationCode === currentLocation;
+      const callsignUnit = String(fc.unit || '').trim().toUpperCase();
+      const matchesLocation = callsignLocation === currentLocation || callsignLocationCode === currentLocation;
+      const matchesUnit = activeFormationUnits.size === 0 || !callsignUnit || activeFormationUnits.has(callsignUnit);
+      return matchesLocation && matchesUnit;
     });
-  }, [formationCallsigns, locationFullName]);
+  }, [activeUnitCode, activeUnitCodes, formationCallsigns, locationFullName]);
 
   const formationTypes = useMemo(() => {
     return filteredFormationCallsigns.map(cs => cs.code);
@@ -2198,30 +2243,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     `${normaliseFixedCrewUnitCode(item.unit)}::${item.id || ''}::${item.code || ''}`
   );
 
-  const getFixedCrewCurrencyProfileOptionKey = (profile: CurrencyProfile) => (
-    [
-      'currency',
-      normaliseFixedCrewUnitCode(profile.unitCode || profile.compositeUnitCode),
-      String(profile.compositeProfileId || '').trim(),
-      String(profile.aircraftTypeCode || '').trim().toUpperCase(),
-      String(profile.id || '').trim(),
-      String(profile.code || '').trim().toUpperCase(),
-      String(profile.name || '').trim(),
-      String(profile.currency || '').trim(),
-    ].join('::')
-  );
-  const findContinuationCurrencyProfile = (value: string): CurrencyProfile | undefined => {
-    const normalisedValue = String(value || '').trim().toUpperCase();
-    if (!normalisedValue) return undefined;
-    return fixedCrewCurrencyProfileOptions.find(profile => (
-      getFixedCrewCurrencyProfileOptionKey(profile) === value
-      || String(profile.id || '').trim().toUpperCase() === normalisedValue
-      || String(profile.code || '').trim().toUpperCase() === normalisedValue
-      || String(profile.name || '').trim().toUpperCase() === normalisedValue
-      || String(profile.currency || '').trim().toUpperCase() === normalisedValue
-    ));
-  };
-
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
     return getContinuationEventNames(sctEvents).length > 0
@@ -2422,6 +2443,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const handleFlightNumberChange = (code: string, durationHrs?: number) => {
     const selectedProfile = findContinuationCurrencyProfile(code);
+    const selectedProfileIsFormation = continuationProfileIsFormation(selectedProfile);
     if (selectedProfile && eventCategory !== 'sct') {
       suppressNextCategoryResetRef.current = true;
       setEventCategory('sct');
@@ -2432,13 +2454,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       suppressNextCategoryResetRef.current = true;
       setEventCategory('lmp_currency');
     }
-    setFlightNumber(selectedProfile?.code || selectedProfile?.name || code);
+    setFlightNumber(selectedProfile?.name || code);
     if (selectedProfile) {
-      setFlightType(selectedProfile.flightType || 'Dual');
+      setFlightType(selectedProfileIsFormation ? 'Solo' : (selectedProfile.flightType || 'Dual'));
       if (selectedProfile.dayNight === 'Night') {
         setStartTime(nightContinuationDefaultStartTime);
       }
-      setAircraftCount(Math.max(1, Math.floor(Number(selectedProfile.aircraftCount) || 1)));
+      setAircraftCount(Math.max(selectedProfileIsFormation ? 2 : 1, Math.floor(Number(selectedProfile.aircraftCount) || 1)));
       if (selectedProfile.config && selectedProfile.config !== 'ANY') {
         setAircraftConfigId(selectedProfile.config);
       }
