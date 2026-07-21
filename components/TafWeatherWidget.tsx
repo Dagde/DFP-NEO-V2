@@ -15,7 +15,6 @@ interface TafWeatherWidgetProps {
     defaultLocationCodes?: string[];
 }
 
-const AVWX_API_TOKEN = ((import.meta as any).env?.VITE_AVWX_API_TOKEN || '').trim();
 const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 const normaliseTafLocationCodes = (codes: string[] = []) => (
@@ -79,30 +78,14 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
     // Fetch TAF data for a specific location
     const fetchTaf = async (icao: string) => {
         if (!isExternalDataAllowed('weatherDataEnabled')) return;
-        if (!AVWX_API_TOKEN) {
-            setTafData(prev => {
-                const newMap = new Map(prev);
-                newMap.set(icao, {
-                    station: icao.toUpperCase(),
-                    raw: '',
-                    time: new Date().toLocaleTimeString(),
-                    error: 'TAF provider token is not configured'
-                });
-                return newMap;
-            });
-            return;
-        }
         setLoading(prev => new Set(prev).add(icao));
         try {
-            const response = await fetch(
-                `https://avwx.rest/api/taf/${icao.toUpperCase()}?token=${AVWX_API_TOKEN}`
-            );
+            const response = await fetch(`/api/weather/taf/${encodeURIComponent(icao.toUpperCase())}`);
+            const data = await response.json().catch(() => ({}));
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw new Error(data?.error || `HTTP ${response.status}`);
             }
-
-            const data = await response.json();
             
             // Check for warnings about cached/outdated data
             const warning = data.meta?.warning;
@@ -129,7 +112,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                     station: icao.toUpperCase(),
                     raw: '',
                     time: new Date().toLocaleTimeString(),
-                    error: 'Failed to fetch TAF'
+                    error: error instanceof Error ? error.message : 'Failed to fetch TAF'
                 });
                 return newMap;
             });
@@ -273,13 +256,6 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                         TAF requests to AVWX are blocked by Settings - Data Sources.
                     </p>
                 </div>
-            ) : !AVWX_API_TOKEN && !isEditing ? (
-                <div className="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4">
-                    <p className="text-sm font-semibold text-amber-300">Weather provider not configured</p>
-                    <p className="mt-1 text-xs text-amber-200/80">
-                        Set VITE_AVWX_API_TOKEN for deployments that are approved to request external TAF data.
-                    </p>
-                </div>
             ) : isEditing ? (
                 <div className="space-y-3">
                     <p className="text-sm text-gray-400">Enter ICAO codes.</p>
@@ -354,6 +330,11 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                                                </div>
                                            )}
                                        </>
+                                   )}
+                                   {data?.error && (
+                                       <div className="mt-2 rounded border border-amber-700/50 bg-amber-900/20 p-3 text-xs text-amber-200">
+                                           {data.error}
+                                       </div>
                                    )}
                             </div>
                         );

@@ -181,6 +181,7 @@ function requireConfiguredSecret(name, developmentFallback, aliases = []) {
 const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret', ['NEXTAUTH_SECRET', 'AUTH_SECRET']);
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
+const AVWX_API_TOKEN = (process.env.AVWX_API_TOKEN || process.env.VITE_AVWX_API_TOKEN || '').trim();
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
 app.use(express.json({ limit: '10mb' }));
@@ -207,6 +208,43 @@ app.use((req, res, next) => {
     return res.status(204).end();
   }
   next();
+});
+
+app.get('/api/weather/taf/:icao', async (req, res) => {
+  const icao = String(req.params.icao || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{4}$/.test(icao)) {
+    return res.status(400).json({ error: 'Invalid ICAO code' });
+  }
+  if (!AVWX_API_TOKEN) {
+    return res.status(503).json({ error: 'Weather provider not configured. Set AVWX_API_TOKEN on the server.' });
+  }
+  if (typeof fetch !== 'function') {
+    return res.status(503).json({ error: 'Weather provider fetch is unavailable in this runtime.' });
+  }
+
+  try {
+    const providerUrl = `https://avwx.rest/api/taf/${encodeURIComponent(icao)}?token=${encodeURIComponent(AVWX_API_TOKEN)}`;
+    const providerResponse = await fetch(providerUrl, {
+      headers: { Accept: 'application/json' },
+    });
+    const text = await providerResponse.text();
+    let payload = {};
+    try {
+      payload = text ? JSON.parse(text) : {};
+    } catch {
+      payload = { raw: text };
+    }
+
+    if (!providerResponse.ok) {
+      const providerError = payload?.error || payload?.message || `Weather provider returned HTTP ${providerResponse.status}`;
+      return res.status(providerResponse.status).json({ error: providerError });
+    }
+
+    return res.json(payload);
+  } catch (error) {
+    console.error(`❌ GET /api/weather/taf/${icao} error:`, error);
+    return res.status(502).json({ error: 'Failed to fetch TAF from weather provider' });
+  }
 });
 
 // Lazy-load Prisma to avoid issues at startup

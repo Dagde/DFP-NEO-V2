@@ -34749,8 +34749,6 @@ const AddGroundEventFlyout = ({
     )
   ] });
 };
-const __vite_import_meta_env__ = {};
-const AVWX_API_TOKEN = (__vite_import_meta_env__?.VITE_AVWX_API_TOKEN || "").trim();
 const REFRESH_INTERVAL = 30 * 60 * 1e3;
 const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(code || "").trim().toUpperCase()).filter((code) => code.length >= 4);
 const readSavedTafLocations = () => {
@@ -34799,28 +34797,13 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
   };
   const fetchTaf = async (icao) => {
     if (!isExternalDataAllowed("weatherDataEnabled")) return;
-    if (!AVWX_API_TOKEN) {
-      setTafData((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(icao, {
-          station: icao.toUpperCase(),
-          raw: "",
-          time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
-          error: "TAF provider token is not configured"
-        });
-        return newMap;
-      });
-      return;
-    }
     setLoading((prev) => new Set(prev).add(icao));
     try {
-      const response = await fetch(
-        `https://avwx.rest/api/taf/${icao.toUpperCase()}?token=${AVWX_API_TOKEN}`
-      );
+      const response = await fetch(`/api/weather/taf/${encodeURIComponent(icao.toUpperCase())}`);
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(data?.error || `HTTP ${response.status}`);
       }
-      const data = await response.json();
       const warning = data.meta?.warning;
       const cacheTimestamp = data.meta?.["cache-timestamp"];
       const isCached = !!warning;
@@ -34844,7 +34827,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
           station: icao.toUpperCase(),
           raw: "",
           time: (/* @__PURE__ */ new Date()).toLocaleTimeString(),
-          error: "Failed to fetch TAF"
+          error: error instanceof Error ? error.message : "Failed to fetch TAF"
         });
         return newMap;
       });
@@ -34965,9 +34948,6 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     !externalDataAllowed && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External weather disabled" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings - Data Sources." })
-    ] }) : !AVWX_API_TOKEN && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Weather provider not configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "Set VITE_AVWX_API_TOKEN for deployments that are approved to request external TAF data." })
     ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes." }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
@@ -35026,7 +35006,8 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
             "⚠️ Old cached data - provided for display purposes only",
             data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })})`
           ] })
-        ] })
+        ] }),
+        data?.error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-amber-700/50 bg-amber-900/20 p-3 text-xs text-amber-200", children: data.error })
       ] }, location);
     }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 pt-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Auto-refreshes every 30 minutes • Data from AVWX" }) })
