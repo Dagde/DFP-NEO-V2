@@ -38237,7 +38237,7 @@ const PrioritiesView = ({
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
-  const locationDisplayName = school === "ESL" ? "East Sale (ESL)" : school === "PEA" ? "Pearce (PEA)" : school;
+  const locationDisplayName = String(school || "").trim() || "Selected location";
   const staffRankOrder = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
   const normalisedStaffQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
@@ -41832,7 +41832,7 @@ const PrioritiesViewWithMenu = (props) => {
   const [deploymentAddMessage, setDeploymentAddMessage] = reactExports.useState("");
   const mainScrollRef = reactExports.useRef(null);
   const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
-  const locationDisplayName = props.school === "ESL" ? "East Sale" : props.school === "PEA" ? "Pearce" : props.school;
+  const locationDisplayName = String(props.school || "").trim() || "Selected location";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
   const effectiveInstructorPriority = isFixedCrewModel ? { ...props.instructorPriority, enabled: false } : props.instructorPriority;
   const workflowItems = [

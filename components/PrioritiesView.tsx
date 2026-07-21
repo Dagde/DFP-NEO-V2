@@ -1055,7 +1055,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
-  const locationDisplayName = school === 'ESL' ? 'East Sale (ESL)' : school === 'PEA' ? 'Pearce (PEA)' : school;
+  const locationDisplayName = String(school || '').trim() || 'Selected location';
   const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
   const normalisedStaffQualificationCatalogue = useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),

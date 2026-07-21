@@ -118,7 +118,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const [deploymentAddMessage, setDeploymentAddMessage] = useState('');
     const mainScrollRef = useRef<HTMLElement | null>(null);
     const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
-    const locationDisplayName = props.school === 'ESL' ? 'East Sale' : props.school === 'PEA' ? 'Pearce' : props.school;
+    const locationDisplayName = String(props.school || '').trim() || 'Selected location';
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
     const effectiveInstructorPriority = isFixedCrewModel
         ? { ...props.instructorPriority, enabled: false }
