@@ -10868,7 +10868,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const organisationSettings = activeOrganisation?.settings || {};
   const resourceSharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : Array.isArray(organisationSettings.selectedUnits) && organisationSettings.selectedUnits.length > 0 ? [{ id: "legacy-resource-sharing", name: `${organisationSettings.selectedUnits.join("+")} Shared Resources`, selectedUnits: organisationSettings.selectedUnits, allocationMode: organisationSettings.allocationMode }] : [];
   const staffSharingGroups = Array.isArray(organisationSettings.staffSharingGroups) && organisationSettings.staffSharingGroups.length > 0 ? organisationSettings.staffSharingGroups : Array.isArray(organisationSettings.staffSharingUnits) && organisationSettings.staffSharingUnits.length > 0 ? [{ id: "legacy-staff-sharing", name: `${organisationSettings.staffSharingUnits.join("+")} Staff Sharing`, selectedUnits: organisationSettings.staffSharingUnits }] : [];
-  const resourceSharingForUnit = organisationSettings.fleetSharingEnabled ? resourceSharingGroups.filter((group) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
+  const resourceSharingForUnit = organisationSettings.fleetSharingEnabled ? resourceSharingGroups.filter((group) => group?.enabled !== false && (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
   const staffSharingForUnit = organisationSettings.staffSharingEnabled ? staffSharingGroups.filter((group) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))) : [];
   organisationSettings.deploymentProfile || {};
   organisationSettings.operationalRunbook || {};
@@ -63217,7 +63217,6 @@ const OrganisationSettings = ({
   const [staffSharingGroups, setStaffSharingGroups] = reactExports.useState(initialStaffSharingGroups);
   const [activeStaffSharingGroupId, setActiveStaffSharingGroupId] = reactExports.useState(initialActiveStaffSharingGroup.id);
   const [staffSharingUnits, setStaffSharingUnits] = reactExports.useState(initialActiveStaffSharingGroup.selectedUnits);
-  const [fleetSharingEnabled, setFleetSharingEnabled] = reactExports.useState(savedSettings?.fleetSharingEnabled ?? false);
   const [resourceSharingGroups, setResourceSharingGroups] = reactExports.useState(initialResourceSharingGroups);
   const [activeResourceSharingGroupId, setActiveResourceSharingGroupId] = reactExports.useState(initialActiveResourceSharingGroup.id);
   const [selectedUnits, setSelectedUnits] = reactExports.useState(initialActiveResourceSharingGroup.selectedUnits);
@@ -63291,7 +63290,6 @@ const OrganisationSettings = ({
       setStaffSharingGroups(loadedStaffGroups);
       setActiveStaffSharingGroupId(loadedActiveStaffGroup.id);
       setStaffSharingUnits(loadedActiveStaffGroup.selectedUnits);
-      setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
       const loadedGroups = normaliseResourceSharingGroups(savedSettings);
       const loadedActiveId = savedSettings.activeResourceSharingGroupId || loadedGroups[0]?.id || "resource-sharing-1";
       const loadedActiveGroup = loadedGroups.find((group) => group.id === loadedActiveId) || loadedGroups[0] || createEmptyResourceSharingGroup(1);
@@ -63337,6 +63335,8 @@ const OrganisationSettings = ({
       } : group
     );
   }, [resourceSharingGroups, activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
+  const activeResourceSharingEnabled = activeResourceSharingGroup.enabled !== false;
+  const anyResourceSharingArrangementEnabled = reactExports.useMemo(() => persistedResourceSharingGroups.some((group) => group.enabled !== false && (group.selectedUnits || []).length > 1), [persistedResourceSharingGroups]);
   const visibleResourceSharingGroups = reactExports.useMemo(() => {
     if (!isResourceSharingVisibilityEnabled) return persistedResourceSharingGroups;
     return persistedResourceSharingGroups.filter((group) => {
@@ -63363,7 +63363,7 @@ const OrganisationSettings = ({
     staffSharingUnits: allStaffSharingUnits,
     activeStaffSharingGroupId,
     staffSharingGroups: persistedStaffSharingGroups,
-    fleetSharingEnabled,
+    fleetSharingEnabled: anyResourceSharingArrangementEnabled,
     allocationMode,
     selectedUnits,
     desiredAllocations,
@@ -63499,10 +63499,17 @@ const OrganisationSettings = ({
     setValidationMessage(null);
   };
   reactExports.useEffect(() => {
-    if (!fleetSharingEnabled || visibleResourceSharingGroups.length === 0) return;
+    if (visibleResourceSharingGroups.length === 0) return;
     if (visibleResourceSharingGroups.some((group) => group.id === activeResourceSharingGroupId)) return;
     loadResourceSharingGroup(visibleResourceSharingGroups[0]);
-  }, [fleetSharingEnabled, visibleResourceSharingGroups, activeResourceSharingGroupId]);
+  }, [visibleResourceSharingGroups, activeResourceSharingGroupId]);
+  const handleToggleResourceSharingEnabled = (enabled) => {
+    if (!activeResourceSharingGroupIsVisible) return;
+    setResourceSharingGroups((previous) => previous.map(
+      (group) => group.id === activeResourceSharingGroupId ? { ...group, enabled } : group
+    ));
+    logAudit("Settings - Organisation", "Edit", `Aircraft resource sharing arrangement ${activeResourceSharingGroup.name || "Unnamed arrangement"} ${enabled ? "enabled" : "disabled"}`);
+  };
   const handleSelectResourceSharingGroup = (groupId) => {
     const group = persistedResourceSharingGroups.find((candidate) => candidate.id === groupId);
     if (!group) return;
@@ -63825,17 +63832,16 @@ const OrganisationSettings = ({
                     "input",
                     {
                       type: "checkbox",
-                      checked: fleetSharingEnabled,
+                      checked: activeResourceSharingGroupIsVisible && activeResourceSharingEnabled,
+                      disabled: !activeResourceSharingGroupIsVisible,
                       onChange: (e) => {
-                        const newVal = e.target.checked;
-                        setFleetSharingEnabled(newVal);
-                        logAudit("Settings - Organisation", "Edit", `Fleet Sharing ${newVal ? "enabled" : "disabled"}`);
+                        handleToggleResourceSharingEnabled(e.target.checked);
                       },
                       className: "sr-only peer"
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-3 text-sm font-medium text-white", children: "Enable Aircraft & Resource Sharing For This Arrangement" })
                 ] }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full items-center justify-between gap-4", children: [
@@ -63849,7 +63855,7 @@ const OrganisationSettings = ({
                 ] })
               ] }) })
             ] }),
-            fleetSharingEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 lg:flex-row lg:items-end", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [

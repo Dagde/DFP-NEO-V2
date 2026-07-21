@@ -1499,7 +1499,10 @@ const OrganisationMyUnitSettings: React.FC<{
             ? [{ id: 'legacy-staff-sharing', name: `${organisationSettings.staffSharingUnits.join('+')} Staff Sharing`, selectedUnits: organisationSettings.staffSharingUnits }]
             : []);
     const resourceSharingForUnit = organisationSettings.fleetSharingEnabled
-        ? resourceSharingGroups.filter((group: any) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code)))
+        ? resourceSharingGroups.filter((group: any) => (
+            group?.enabled !== false
+            && (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code))
+        ))
         : [];
     const staffSharingForUnit = organisationSettings.staffSharingEnabled
         ? staffSharingGroups.filter((group: any) => (group?.selectedUnits || []).map(normaliseUnitSettingsIdentifier).includes(normaliseUnitSettingsIdentifier(unit?.code)))

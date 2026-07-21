@@ -214,9 +214,6 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   const [activeStaffSharingGroupId, setActiveStaffSharingGroupId] = useState<string>(initialActiveStaffSharingGroup.id);
   const [staffSharingUnits, setStaffSharingUnits] = useState<string[]>(initialActiveStaffSharingGroup.selectedUnits);
 
-  // Fleet Sharing enable/disable
-  const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
-
   // Selected units to share assets with
   const [resourceSharingGroups, setResourceSharingGroups] = useState<ResourceSharingGroup[]>(initialResourceSharingGroups);
   const [activeResourceSharingGroupId, setActiveResourceSharingGroupId] = useState<string>(initialActiveResourceSharingGroup.id);
@@ -316,7 +313,6 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       setStaffSharingGroups(loadedStaffGroups);
       setActiveStaffSharingGroupId(loadedActiveStaffGroup.id);
       setStaffSharingUnits(loadedActiveStaffGroup.selectedUnits);
-      setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
       const loadedGroups = normaliseResourceSharingGroups(savedSettings);
       const loadedActiveId = savedSettings.activeResourceSharingGroupId || loadedGroups[0]?.id || 'resource-sharing-1';
       const loadedActiveGroup = loadedGroups.find(group => group.id === loadedActiveId) || loadedGroups[0] || createEmptyResourceSharingGroup(1);
@@ -383,6 +379,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     );
   }, [resourceSharingGroups, activeResourceSharingGroupId, selectedUnits, allocationMode, desiredAllocations, remainderUnitIndex]);
 
+  const activeResourceSharingEnabled = activeResourceSharingGroup.enabled !== false;
+  const anyResourceSharingArrangementEnabled = useMemo(() => (
+    persistedResourceSharingGroups.some(group => group.enabled !== false && (group.selectedUnits || []).length > 1)
+  ), [persistedResourceSharingGroups]);
+
   const visibleResourceSharingGroups = useMemo(() => {
     if (!isResourceSharingVisibilityEnabled) return persistedResourceSharingGroups;
     return persistedResourceSharingGroups.filter((group) => {
@@ -417,7 +418,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     staffSharingUnits: allStaffSharingUnits,
     activeStaffSharingGroupId,
     staffSharingGroups: persistedStaffSharingGroups,
-    fleetSharingEnabled,
+    fleetSharingEnabled: anyResourceSharingArrangementEnabled,
     allocationMode,
     selectedUnits,
     desiredAllocations,
@@ -592,10 +593,20 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   };
 
   useEffect(() => {
-    if (!fleetSharingEnabled || visibleResourceSharingGroups.length === 0) return;
+    if (visibleResourceSharingGroups.length === 0) return;
     if (visibleResourceSharingGroups.some(group => group.id === activeResourceSharingGroupId)) return;
     loadResourceSharingGroup(visibleResourceSharingGroups[0]);
-  }, [fleetSharingEnabled, visibleResourceSharingGroups, activeResourceSharingGroupId]);
+  }, [visibleResourceSharingGroups, activeResourceSharingGroupId]);
+
+  const handleToggleResourceSharingEnabled = (enabled: boolean) => {
+    if (!activeResourceSharingGroupIsVisible) return;
+    setResourceSharingGroups(previous => previous.map(group =>
+      group.id === activeResourceSharingGroupId
+        ? { ...group, enabled }
+        : group
+    ));
+    logAudit('Settings - Organisation', 'Edit', `Aircraft resource sharing arrangement ${activeResourceSharingGroup.name || 'Unnamed arrangement'} ${enabled ? 'enabled' : 'disabled'}`);
+  };
 
   const handleSelectResourceSharingGroup = (groupId: string) => {
     const group = persistedResourceSharingGroups.find(candidate => candidate.id === groupId);
@@ -1005,17 +1016,16 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={fleetSharingEnabled}
+                  checked={activeResourceSharingGroupIsVisible && activeResourceSharingEnabled}
+                  disabled={!activeResourceSharingGroupIsVisible}
                   onChange={(e) => {
-                    const newVal = e.target.checked;
-                    setFleetSharingEnabled(newVal);
-                    logAudit('Settings - Organisation', 'Edit', `Fleet Sharing ${newVal ? 'enabled' : 'disabled'}`);
+                    handleToggleResourceSharingEnabled(e.target.checked);
                   }}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                 <span className="ml-3 text-sm font-medium text-white">
-                  Enable Aircraft & Resource Sharing
+                  Enable Aircraft & Resource Sharing For This Arrangement
                 </span>
               </label>
             </div>
@@ -1038,8 +1048,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           </div>
         </div>
 
-        {fleetSharingEnabled && (
-          <>
+        <>
             <div className="bg-sky-500/10 rounded-lg border border-sky-500/30 p-4 mb-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
                 <div className="flex-1">
@@ -1426,8 +1435,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 </div>
               </div>
             )}
-          </>
-        )}
+        </>
       </div>
       </div>
     </div>
