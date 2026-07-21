@@ -16963,46 +16963,32 @@ const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI", simIpDi
     textClassName: ROLE_TEXT_COLOURS[hash % ROLE_TEXT_COLOURS.length]
   };
 };
+const unitPalette = [
+  { text: "text-blue-300", header: "bg-blue-500/20 border-blue-500/50 text-blue-300" },
+  { text: "text-emerald-300", header: "bg-emerald-500/20 border-emerald-500/50 text-emerald-300" },
+  { text: "text-violet-300", header: "bg-violet-500/20 border-violet-500/50 text-violet-300" },
+  { text: "text-amber-300", header: "bg-amber-500/20 border-amber-500/50 text-amber-300" },
+  { text: "text-cyan-300", header: "bg-cyan-500/20 border-cyan-500/50 text-cyan-300" },
+  { text: "text-rose-300", header: "bg-rose-500/20 border-rose-500/50 text-rose-300" },
+  { text: "text-lime-300", header: "bg-lime-500/20 border-lime-500/50 text-lime-300" },
+  { text: "text-orange-300", header: "bg-orange-500/20 border-orange-500/50 text-orange-300" }
+];
+const getUnitPaletteIndex = (unit) => {
+  const value = String(unit || "").trim();
+  if (!value) return -1;
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) % unitPalette.length;
+  }
+  return hash;
+};
 const getUnitTextColor = (unit) => {
-  const unitColors = {
-    "1FTS": "text-blue-300",
-    "2FTS": "text-green-300",
-    "CFS": "text-purple-300",
-    "CFTS": "text-orange-300",
-    "RMC": "text-red-300",
-    "ARFTU": "text-yellow-300",
-    "AWMU": "text-teal-300",
-    "No. 1 Squadron": "text-indigo-300",
-    "No. 2 Squadron": "text-pink-300",
-    "No. 3 Squadron": "text-cyan-300",
-    "No. 75 Squadron": "text-amber-300",
-    "No. 76 Squadron": "text-lime-300",
-    "No. 77 Squadron": "text-emerald-300",
-    "11SQN": "text-sky-300",
-    "12SQN": "text-violet-300"
-  };
-  console.log("🎨 UNIT COLOR DEBUG - Unit:", unit, "Color:", unitColors[unit || ""] || "text-gray-300");
-  return unitColors[unit || ""] || "text-gray-300";
+  const index = getUnitPaletteIndex(unit);
+  return index >= 0 ? unitPalette[index].text : "text-gray-300";
 };
 const getUnitColor = (unit) => {
-  const unitColors = {
-    "1FTS": "bg-blue-500/20 border-blue-500/50 text-blue-300",
-    "2FTS": "bg-green-500/20 border-green-500/50 text-green-300",
-    "CFS": "bg-purple-500/20 border-purple-500/50 text-purple-300",
-    "CFTS": "bg-orange-500/20 border-orange-500/50 text-orange-300",
-    "RMC": "bg-red-500/20 border-red-500/50 text-red-300",
-    "ARFTU": "bg-yellow-500/20 border-yellow-500/50 text-yellow-300",
-    "AWMU": "bg-teal-500/20 border-teal-500/50 text-teal-300",
-    "No. 1 Squadron": "bg-indigo-500/20 border-indigo-500/50 text-indigo-300",
-    "No. 2 Squadron": "bg-pink-500/20 border-pink-500/50 text-pink-300",
-    "No. 3 Squadron": "bg-cyan-500/20 border-cyan-500/50 text-cyan-300",
-    "No. 75 Squadron": "bg-amber-500/20 border-amber-500/50 text-amber-300",
-    "No. 76 Squadron": "bg-lime-500/20 border-lime-500/50 text-lime-300",
-    "No. 77 Squadron": "bg-emerald-500/20 border-emerald-500/50 text-emerald-300",
-    "11SQN": "bg-sky-500/20 border-sky-500/50 text-sky-300",
-    "12SQN": "bg-violet-500/20 border-violet-500/50 text-violet-300"
-  };
-  return unitColors[unit || ""] || "bg-gray-600/20 border-gray-500/50 text-gray-300";
+  const index = getUnitPaletteIndex(unit);
+  return index >= 0 ? unitPalette[index].header : "bg-gray-600/20 border-gray-500/50 text-gray-300";
 };
 const PersonnelColumn = ({
   personnel,
@@ -17018,12 +17004,6 @@ const PersonnelColumn = ({
   instructorLabel = "QFI",
   simIpDisplayLabel = "SIM IP"
 }) => {
-  console.log("🔍 PERSONNEL COLUMN DEBUG - Props:", {
-    personnelCount: personnel.length,
-    showUnits,
-    useUnitColors,
-    samplePersonnel: personnel.slice(0, 3).map((p) => ({ name: p.name, unit: p.unit }))
-  });
   const groupedPersonnel = React.useMemo(() => {
     if (!showUnits) return personnel;
     const groups = {};
