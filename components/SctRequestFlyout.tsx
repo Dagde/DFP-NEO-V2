@@ -14,15 +14,51 @@ interface SctRequestFlyoutProps {
   sctTerminology?: SctTerminology;
   nightContinuationDefaultTime?: string;
   aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
+  activeUnitCode?: string;
+  activeUnitCodes?: string[];
+  aircraftTypeCode?: string | null;
 }
 
-const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = '18:30', aircraftConfigurationDefinitions = [] }) => {
+const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = '18:30', aircraftConfigurationDefinitions = [], activeUnitCode = '', activeUnitCodes = [], aircraftTypeCode = '' }) => {
   const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
-  const continuationProfiles = useMemo(() => getContinuationEventCurrencyProfiles(sctEventsProp), [sctEventsProp]);
-  const sctEvents = useMemo(() => continuationProfiles.map(profile => profile.name).filter(Boolean), [continuationProfiles]);
   const normaliseOptionKey = (value: unknown) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const normaliseUnitCode = (value: unknown) => String(value || '').trim().toUpperCase();
+  const splitUnitCode = (value: unknown): string[] => (
+    String(value || '')
+      .split(/[+/]/)
+      .map(normaliseUnitCode)
+      .filter(Boolean)
+  );
+  const continuationProfiles = useMemo(() => {
+    const profiles = getContinuationEventCurrencyProfiles(sctEventsProp);
+    const contextCodes = Array.from(new Set([
+      ...activeUnitCodes,
+      ...splitUnitCode(activeUnitCode),
+      instructor.unit,
+    ].map(normaliseUnitCode).filter(Boolean)));
+    const activeAircraftTypeCode = normaliseUnitCode(aircraftTypeCode);
+    const activeCompositeCodes = new Set([
+      normaliseUnitCode(activeUnitCode),
+      contextCodes.join('+'),
+      contextCodes.join('/'),
+    ].filter(Boolean));
+    return profiles
+      .filter(profile => profile.status !== 'INACTIVE')
+      .filter(profile => {
+        const profileAircraftCode = normaliseUnitCode(profile.aircraftTypeCode);
+        if (profileAircraftCode && activeAircraftTypeCode && profileAircraftCode !== activeAircraftTypeCode) return false;
+        const profileUnitCode = normaliseUnitCode(profile.unitCode);
+        if (profileUnitCode && contextCodes.length > 0) return contextCodes.includes(profileUnitCode);
+        const profileCompositeCode = normaliseUnitCode(profile.compositeUnitCode);
+        if (!profileCompositeCode) return !profileUnitCode;
+        if (activeCompositeCodes.has(profileCompositeCode)) return true;
+        const profileCompositeParts = splitUnitCode(profileCompositeCode);
+        return profileCompositeParts.length > 0 && profileCompositeParts.every(code => contextCodes.includes(code));
+      });
+  }, [activeUnitCode, activeUnitCodes, aircraftTypeCode, instructor.unit, sctEventsProp]);
+  const sctEvents = useMemo(() => continuationProfiles.map(profile => profile.name).filter(Boolean), [continuationProfiles]);
   const currencyOptions = useMemo(() => {
     const seen = new Set<string>();
     return [...continuationProfiles.map(profile => profile.currency), ...currencyNames]

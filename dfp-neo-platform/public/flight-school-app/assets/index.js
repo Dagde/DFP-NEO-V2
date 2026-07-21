@@ -80450,13 +80450,39 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [] }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
-  const continuationProfiles = reactExports.useMemo(() => getContinuationEventCurrencyProfiles(sctEventsProp), [sctEventsProp]);
-  const sctEvents = reactExports.useMemo(() => continuationProfiles.map((profile) => profile.name).filter(Boolean), [continuationProfiles]);
   const normaliseOptionKey = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
+  const splitUnitCode = (value) => String(value || "").split(/[+/]/).map(normaliseUnitCode2).filter(Boolean);
+  const continuationProfiles = reactExports.useMemo(() => {
+    const profiles = getContinuationEventCurrencyProfiles(sctEventsProp);
+    const contextCodes = Array.from(new Set([
+      ...activeUnitCodes,
+      ...splitUnitCode(activeUnitCode),
+      instructor.unit
+    ].map(normaliseUnitCode2).filter(Boolean)));
+    const activeAircraftTypeCode = normaliseUnitCode2(aircraftTypeCode);
+    const activeCompositeCodes = new Set([
+      normaliseUnitCode2(activeUnitCode),
+      contextCodes.join("+"),
+      contextCodes.join("/")
+    ].filter(Boolean));
+    return profiles.filter((profile) => profile.status !== "INACTIVE").filter((profile) => {
+      const profileAircraftCode = normaliseUnitCode2(profile.aircraftTypeCode);
+      if (profileAircraftCode && activeAircraftTypeCode && profileAircraftCode !== activeAircraftTypeCode) return false;
+      const profileUnitCode = normaliseUnitCode2(profile.unitCode);
+      if (profileUnitCode && contextCodes.length > 0) return contextCodes.includes(profileUnitCode);
+      const profileCompositeCode = normaliseUnitCode2(profile.compositeUnitCode);
+      if (!profileCompositeCode) return !profileUnitCode;
+      if (activeCompositeCodes.has(profileCompositeCode)) return true;
+      const profileCompositeParts = splitUnitCode(profileCompositeCode);
+      return profileCompositeParts.length > 0 && profileCompositeParts.every((code) => contextCodes.includes(code));
+    });
+  }, [activeUnitCode, activeUnitCodes, aircraftTypeCode, instructor.unit, sctEventsProp]);
+  const sctEvents = reactExports.useMemo(() => continuationProfiles.map((profile) => profile.name).filter(Boolean), [continuationProfiles]);
   const currencyOptions = reactExports.useMemo(() => {
     const seen = /* @__PURE__ */ new Set();
     return [...continuationProfiles.map((profile) => profile.currency), ...currencyNames].map((value) => String(value || "").trim()).filter((value) => {
@@ -121765,7 +121791,10 @@ Do you want to replace the existing entry?`,
           sctEvents,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
           nightContinuationDefaultTime: formatDecimalTimeInput(commenceNightFlying),
-          aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions
+          aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
+          activeUnitCode,
+          activeUnitCodes: activeContextUnitCodes,
+          aircraftTypeCode: activeRuntimeAircraftTypeCode
         }
       ),
       fixedCrewCrewChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[91] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-2xl rounded-lg border border-cyan-500/40 bg-gray-900 shadow-2xl shadow-cyan-950/40 overflow-hidden", children: [

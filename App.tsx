@@ -45009,6 +45009,9 @@ appliedUpdates.forEach(update => {
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                     nightContinuationDefaultTime={formatDecimalTimeInput(commenceNightFlying)}
                     aircraftConfigurationDefinitions={aircraftConfigCapacityDefinitions}
+                    activeUnitCode={activeUnitCode}
+                    activeUnitCodes={activeContextUnitCodes}
+                    aircraftTypeCode={activeRuntimeAircraftTypeCode}
                 />
             )}
 
