@@ -11601,6 +11601,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+  const organisationDraftDirtyRef = reactExports.useRef(false);
   const [organisationDraft, setOrganisationDraft] = reactExports.useState({
     code: String(activeOrganisation?.code || "ORG"),
     name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
@@ -11616,6 +11617,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     level3Options: toLines(levelDraftSource(3)?.options || []),
     level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group")
   });
+  const updateOrganisationDraft = (updater) => {
+    organisationDraftDirtyRef.current = true;
+    setOrganisationDraft(updater);
+  };
   const [locationDraft, setLocationDraft] = reactExports.useState({
     code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "LOC1"),
     iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "LOC"),
@@ -11732,6 +11737,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     setUnitParentDraft(rows.map((row) => `${row.child} = ${row.parent}`).join("\n"));
   };
   reactExports.useEffect(() => {
+    if (organisationDraftDirtyRef.current) return;
     setOrganisationDraft({
       code: String(activeOrganisation?.code || "ORG"),
       name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
@@ -11904,6 +11910,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       { name: organisationDraft.level2Name, options: fromLines(organisationDraft.level2Options) },
       { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) }
     ];
+    organisationDraftDirtyRef.current = false;
     saveWizardConfig("Organisation details saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
       organisationStructure: {
@@ -12700,6 +12707,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
   };
   const resetWizard = () => {
+    organisationDraftDirtyRef.current = false;
     setWizardStep(0);
     setMode("active");
     setUploadResults({});
@@ -14400,14 +14408,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "First we are going to set up your organisation. What is the name of your organisation?" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Organisation name", organisationDraft.name, (value) => setOrganisationDraft((draft) => ({
+          wizardField("Organisation name", organisationDraft.name, (value) => updateOrganisationDraft((draft) => ({
             ...draft,
             name: value,
             code: draft.code || value,
             level0Name: value || draft.level0Name,
             level0Options: value || draft.level0Options
           })), void 0, "Your Organisation"),
-          wizardField("Short code", organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "ORG"),
+          wizardField("Short code", organisationDraft.code, (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "ORG"),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: renderOrganisationPreview() })
         ] })
       );
@@ -14423,9 +14431,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           organisationDraft.level1Name,
           organisationDraft.level1Options,
           organisationDraft.level1Parents,
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
           "Operations Division",
           level1ParentOptions
         )
@@ -14443,9 +14451,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           organisationDraft.level2Name,
           organisationDraft.level2Options,
           organisationDraft.level2Parents,
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
           "Flying Group\nTraining Group",
           level2ParentOptions
         )
@@ -14459,9 +14467,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           organisationDraft.level3Name,
           organisationDraft.level3Options,
           organisationDraft.level3Parents,
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
-          (value) => setOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
           "Operations Unit Group\nTraining Unit Group",
           level3ParentOptions
         )
