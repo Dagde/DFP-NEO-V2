@@ -10333,7 +10333,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit", "Role"],
     optionalHeaders: ["Rank", "PMKeyS", "Qualifications", "Email"],
     exampleRows: [
-      ["Smith, Alex", "36SQN", "Pilot", "SQNLDR", "1234567", "PIC; CFI", "alex.smith@example.com"]
+      ["Smith, Alex", "UNIT-A", "Pilot", "Rank", "1234567", "PIC; Instructor", "alex.smith@example.com"]
     ],
     settingsSection: "staff-database"
   },
@@ -10344,7 +10344,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit"],
     optionalHeaders: ["Rank", "PMKeyS", "Course Number", "Course", "Start Date", "Master LMP"],
     exampleRows: [
-      ["Jones, Taylor", "1FTS", "PLTOFF", "7654321", "1", "", "2026-01-15", "BPC+IPC"]
+      ["Jones, Taylor", "UNIT-B", "Trainee Rank", "7654321", "1", "Course 1", "2026-01-15", "Initial Training Stream"]
     ],
     settingsSection: "trainee-database"
   },
@@ -10355,7 +10355,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Master LMP", "Event Code", "Event Title", "Type", "Duration Minutes"],
     optionalHeaders: ["Aircraft Type", "Crew Required", "Pre Flight Minutes", "Post Flight Minutes"],
     exampleRows: [
-      ["C-17A Conversion", "C17-001", "Conversion sortie 1", "Flight", "90", "C-17A", "Pilot 2, Loadmaster 1", "90", "60"]
+      ["Initial Training Stream", "EVENT-001", "Training event 1", "Flight", "90", "Aircraft Type", "Pilot 2, Crew 1", "90", "60"]
     ],
     settingsSection: "platform-master-lmp-access"
   },
@@ -11623,23 +11623,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     timezone: String(currentLocation?.timezone || "UTC"),
     trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
   });
-  const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState(() => activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "36SQN | 36SQN");
+  const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState(() => activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "UNIT-A | Unit A");
   const [unitParentDraft, setUnitParentDraft] = reactExports.useState("");
   const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location");
   const [locationDraftRowCount, setLocationDraftRowCount] = reactExports.useState(() => Math.max(1, parseWizardLocationRows(
     activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location"
   ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
-    code: String(currentUnit?.code || unitCode || "36SQN"),
-    name: String(currentUnit?.name || currentUnit?.code || unitCode || "36SQN"),
+    code: String(currentUnit?.code || unitCode || "UNIT-A"),
+    name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit A"),
     locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
     unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
     operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
   });
   const [resourceDraft, setResourceDraft] = reactExports.useState({
-    aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "C-17A"),
-    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "C-17A"),
+    aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
+    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
     poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Aircraft"} Resource Pool`),
     poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
     poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
@@ -11650,7 +11650,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "")
   });
   const [crewDraft, setCrewDraft] = reactExports.useState({
-    aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || "C-17A"),
+    aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || "AIRCRAFT"),
     standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || [])
   });
   const [accessDraft, setAccessDraft] = reactExports.useState({
@@ -11685,15 +11685,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     minGapBetweenEventsMinutes: "0"
   });
   const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
-  const [staffDraft, setStaffDraft] = reactExports.useState("Burns, Alexander | 36SQN | Pilot | PIC");
+  const [staffDraft, setStaffDraft] = reactExports.useState("Smith, Alex | UNIT-A | Pilot | PIC");
   const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = reactExports.useState("Course 1");
   const [traineeCourseInputRows, setTraineeCourseInputRows] = reactExports.useState(() => ["Course 1"]);
   const [traineeDraft, setTraineeDraft] = reactExports.useState("");
   const [traineeAllocationCommitted, setTraineeAllocationCommitted] = reactExports.useState(false);
   const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = reactExports.useState(false);
-  const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Training Report | PT-051 | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory");
+  const [trainingRecordsDraft, setTrainingRecordsDraft] = reactExports.useState("Training Report | Assessment Form | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory");
   const [unitModulesDraft, setUnitModulesDraft] = reactExports.useState("DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On");
-  const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("1 | AIRCDRE = BRIG = CDRE | Same seniority across services\n2 | GPCAPT = COL = CAPT | Same seniority across services\n3 | WGCDR = LTCOL = CMDR | Same seniority across services\n4 | SQNLDR = MAJ = LCDR | Same seniority across services");
+  const [rankLabelsDraft, setRankLabelsDraft] = reactExports.useState("1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank");
   const [resourceSharingDraft, setResourceSharingDraft] = reactExports.useState("Resource sharing | Off |  | Unit keeps its own aircraft and resource pool capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.");
   const [currencyDraft, setCurrencyDraft] = reactExports.useState("PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1");
   const [scoringDraft, setScoringDraft] = reactExports.useState("Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent");
@@ -11796,8 +11796,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   }, [locationsTodayDraft]);
   reactExports.useEffect(() => {
     setUnitDraft({
-      code: String(currentUnit?.code || unitCode || "36SQN"),
-      name: String(currentUnit?.name || currentUnit?.code || unitCode || "36SQN"),
+      code: String(currentUnit?.code || unitCode || "UNIT-A"),
+      name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit A"),
       locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
       unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
       operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
@@ -11806,8 +11806,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
   reactExports.useEffect(() => {
     setResourceDraft({
-      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "C-17A"),
-      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "C-17A"),
+      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
+      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
       poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Aircraft"} Resource Pool`),
       poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
       poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
@@ -11818,7 +11818,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "")
     });
     setCrewDraft({
-      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "C-17A"),
+      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
       standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || [])
     });
   }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
@@ -12876,9 +12876,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           }, children: "Delete" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-5", children: [
-          wizardField("Surname", row.surname || "", (value) => updateStaffRow(index, "surname", value), void 0, "Burns"),
-          wizardField("Given names", row.givenNames || "", (value) => updateStaffRow(index, "givenNames", value), void 0, "Alexander"),
-          wizardDataListField("Unit", row.unit || "", (value) => updateStaffRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "36SQN", `staff-unit-${index}`),
+          wizardField("Surname", row.surname || "", (value) => updateStaffRow(index, "surname", value), void 0, "Smith"),
+          wizardField("Given names", row.givenNames || "", (value) => updateStaffRow(index, "givenNames", value), void 0, "Alex"),
+          wizardDataListField("Unit", row.unit || "", (value) => updateStaffRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-A", `staff-unit-${index}`),
           wizardField("Position", row.position || "", (value) => updateStaffRow(index, "position", value), void 0, "Pilot"),
           wizardField("Qualifications", row.qualifications || "", (value) => updateStaffRow(index, "qualifications", value), void 0, "PIC")
         ] })
@@ -12962,7 +12962,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (traineeCourseRows.length > 0 ? traineeCourseRows : [""]).map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end", children: [
-          wizardField(`Course ${index + 1}`, course, (value) => updateCourseOption(index, value), void 0, index === 0 ? "ADF301" : "ADF302"),
+          wizardField(`Course ${index + 1}`, course, (value) => updateCourseOption(index, value), void 0, index === 0 ? "Course 1" : "Course 2"),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -13054,11 +13054,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
           wizardField("Surname", row.surname || "", (value) => updateTraineeRow(index, "surname", value), void 0, "Jones"),
           wizardField("Given names", row.givenNames || "", (value) => updateTraineeRow(index, "givenNames", value), void 0, "Taylor"),
-          wizardDataListField("Unit", row.unit || "", (value) => updateTraineeRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "36SQN", `trainee-unit-${index}`),
-          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "PLTOFF"),
+          wizardDataListField("Unit", row.unit || "", (value) => updateTraineeRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-A", `trainee-unit-${index}`),
+          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "Trainee Rank"),
           wizardField("PMKeyS", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "7654321"),
           wizardField("Course number", row.courseNumber || "", (value) => updateTraineeRow(index, "courseNumber", value), void 0, "1"),
-          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "BPC+IPC", `trainee-master-lmp-${index}`),
+          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "Initial Training Stream", `trainee-master-lmp-${index}`),
           wizardField("Start date", row.startDate || "", (value) => updateTraineeRow(index, "startDate", value), void 0, "2026-01-15")
         ] })
       ] }, `trainee-row-${index}`)) : null,
@@ -13080,7 +13080,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const renderTrainingRecordsEditor = () => {
     const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-    const row = rows[0] || { genericName: "Training Report", organisationName: "PT-051", gradeMin: "0", gradeMax: "5", showNumbers: "Yes", demoGrade: "No", passLabel: "Satisfactory", failLabel: "Unsatisfactory" };
+    const row = rows[0] || { genericName: "Training Report", organisationName: "Assessment Form", gradeMin: "0", gradeMax: "5", showNumbers: "Yes", demoGrade: "No", passLabel: "Satisfactory", failLabel: "Unsatisfactory" };
     const updateRow = (field, value) => {
       setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
     };
@@ -13088,7 +13088,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "This mirrors the Training Reports settings in plain English. It names the report, sets the grade range, and decides what users see when they complete an assessment." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
         wizardField("Generic form name", row.genericName, (value) => updateRow("genericName", value), void 0, "Training Report"),
-        wizardField("Organisation form name", row.organisationName, (value) => updateRow("organisationName", value), void 0, "PT-051"),
+        wizardField("Organisation form name", row.organisationName, (value) => updateRow("organisationName", value), void 0, "Assessment Form"),
         wizardField("Lowest grade", row.gradeMin, (value) => updateRow("gradeMin", value), void 0, "0"),
         wizardField("Highest grade", row.gradeMax, (value) => updateRow("gradeMax", value), void 0, "5"),
         wizardField("Show grade numbers", row.showNumbers, (value) => updateRow("showNumbers", value), ["Yes", "No"]),
@@ -13142,10 +13142,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       setRankLabelsDraft(formatWizardRankRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line, for example GPCAPT = COL = CAPT." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[90px_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end", children: [
         wizardField("Order", row.order || String(index + 1), (value) => updateRow(index, "order", value), void 0, String(index + 1)),
-        wizardField("Ranks at this level", row.ranks || "", (value) => updateRow(index, "ranks", value), void 0, "SQNLDR = MAJ = LCDR"),
+        wizardField("Ranks at this level", row.ranks || "", (value) => updateRow(index, "ranks", value), void 0, "Team Lead Rank"),
         wizardField("Notes", row.notes || "", (value) => updateRow(index, "notes", value), void 0, "Same seniority across services"),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setRankLabelsDraft(formatWizardRankRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
       ] }, `rank-row-${index}`)),
@@ -13550,7 +13550,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         id: `setup-staff-${index + 1}`,
         idNumber: Number(row.pmkeys) || 9e5 + index + 1,
         name: fullName,
-        rank: row.rank || "SQNLDR",
+        rank: row.rank || "Rank",
         role: row.position || "Instructor",
         category: row.category || "B",
         callsign: row.callsign || "",
@@ -13582,7 +13582,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         idNumber: Number(row.pmkeys) || 8e5 + index + 1,
         fullName,
         name: fullName,
-        rank: row.rank || "PLTOFF",
+        rank: row.rank || "Rank",
         course: row.course || row.courseNumber || "",
         courseNumber: row.courseNumber || "",
         lmpType: row.masterLmp || trainingDraft.lmpCode || trainingDraft.lmpName || "",
@@ -14478,7 +14478,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "36SQN | 36SQN\n12SQN | 12SQN", true),
+          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "UNIT-A | Unit A\nUNIT-B | Unit B", true),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for each unit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose where each unit sits in the organisation tree. For example, Unit A might sit under Your Organisation / Operations Division / Flying Group." }),
@@ -14567,8 +14567,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Now we will set up the first unit using the app. What is the unit code and name?" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
-          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN")
+          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-A"),
+          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit A")
         ] })
       );
     }
@@ -14576,8 +14576,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
-          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN"),
+          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-A"),
+          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit A"),
           wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "LOC1"),
           wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions),
           wizardField(
@@ -14612,8 +14612,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           " use?"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "C-17A"),
-          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "C-17A"),
+          wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "AIRCRAFT"),
+          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Aircraft Type"),
           wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Primary Aircraft Resource Pool")
         ] })
       );
@@ -14634,7 +14634,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "C-17A") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "AIRCRAFT") }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-2", children: [
             renderCrewCompositionEditor("Standard crew composition", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
             renderCrewCompositionEditor("Alternate crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add alternate position")
@@ -14781,8 +14781,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "C-17A Conversion", "master-lmp-code"),
-          wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "C-17A Conversion"),
+          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Initial Training Stream", "master-lmp-code"),
+          wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "Initial Training Stream"),
           wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial conversion training stream")
         ] })
       );

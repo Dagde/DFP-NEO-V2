@@ -720,7 +720,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit', 'Role'],
         optionalHeaders: ['Rank', 'PMKeyS', 'Qualifications', 'Email'],
         exampleRows: [
-            ['Smith, Alex', '36SQN', 'Pilot', 'SQNLDR', '1234567', 'PIC; CFI', 'alex.smith@example.com'],
+            ['Smith, Alex', 'UNIT-A', 'Pilot', 'Rank', '1234567', 'PIC; Instructor', 'alex.smith@example.com'],
         ],
         settingsSection: 'staff-database',
     },
@@ -731,7 +731,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit'],
         optionalHeaders: ['Rank', 'PMKeyS', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
         exampleRows: [
-            ['Jones, Taylor', '1FTS', 'PLTOFF', '7654321', '1', '', '2026-01-15', 'BPC+IPC'],
+            ['Jones, Taylor', 'UNIT-B', 'Trainee Rank', '7654321', '1', 'Course 1', '2026-01-15', 'Initial Training Stream'],
         ],
         settingsSection: 'trainee-database',
     },
@@ -742,7 +742,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Master LMP', 'Event Code', 'Event Title', 'Type', 'Duration Minutes'],
         optionalHeaders: ['Aircraft Type', 'Crew Required', 'Pre Flight Minutes', 'Post Flight Minutes'],
         exampleRows: [
-            ['C-17A Conversion', 'C17-001', 'Conversion sortie 1', 'Flight', '90', 'C-17A', 'Pilot 2, Loadmaster 1', '90', '60'],
+            ['Initial Training Stream', 'EVENT-001', 'Training event 1', 'Flight', '90', 'Aircraft Type', 'Pilot 2, Crew 1', '90', '60'],
         ],
         settingsSection: 'platform-master-lmp-access',
     },
@@ -2542,7 +2542,7 @@ const InitialSetupWizard: React.FC<{
     const [unitsTodayDraft, setUnitsTodayDraft] = useState(() => (
         activeUnits.length > 0
             ? activeUnits.map((unit: any) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ''}`).join('\n')
-            : '36SQN | 36SQN'
+            : 'UNIT-A | Unit A'
     ));
     const [unitParentDraft, setUnitParentDraft] = useState('');
     const [locationsTodayDraft, setLocationsTodayDraft] = useState(() => (
@@ -2556,16 +2556,16 @@ const InitialSetupWizard: React.FC<{
             : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location',
     ).length));
     const [unitDraft, setUnitDraft] = useState({
-        code: String(currentUnit?.code || unitCode || '36SQN'),
-        name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
+        code: String(currentUnit?.code || unitCode || 'UNIT-A'),
+        name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit A'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
         unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
     const [resourceDraft, setResourceDraft] = useState({
-        aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
-        aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+        aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'AIRCRAFT'),
+        aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'Aircraft Type'),
         poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || 'Home'} ${primaryAircraftType?.code || 'Aircraft'} Resource Pool`),
         poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ''),
         poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ''),
@@ -2576,7 +2576,7 @@ const InitialSetupWizard: React.FC<{
         ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
     });
     const [crewDraft, setCrewDraft] = useState({
-        aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || 'C-17A'),
+        aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || 'AIRCRAFT'),
         standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
     });
     const [accessDraft, setAccessDraft] = useState({
@@ -2611,15 +2611,15 @@ const InitialSetupWizard: React.FC<{
         minGapBetweenEventsMinutes: '0',
     });
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
-    const [staffDraft, setStaffDraft] = useState('Burns, Alexander | 36SQN | Pilot | PIC');
+    const [staffDraft, setStaffDraft] = useState('Smith, Alex | UNIT-A | Pilot | PIC');
     const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
     const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
     const [traineeDraft, setTraineeDraft] = useState('');
     const [traineeAllocationCommitted, setTraineeAllocationCommitted] = useState(false);
     const [showMoreTraineesPrompt, setShowMoreTraineesPrompt] = useState(false);
-    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | PT-051 | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory');
+    const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | Assessment Form | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory');
     const [unitModulesDraft, setUnitModulesDraft] = useState('DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On');
-    const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | AIRCDRE = BRIG = CDRE | Same seniority across services\n2 | GPCAPT = COL = CAPT | Same seniority across services\n3 | WGCDR = LTCOL = CMDR | Same seniority across services\n4 | SQNLDR = MAJ = LCDR | Same seniority across services');
+    const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank');
     const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and resource pool capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
     const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
@@ -2733,8 +2733,8 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         setUnitDraft({
-            code: String(currentUnit?.code || unitCode || '36SQN'),
-            name: String(currentUnit?.name || currentUnit?.code || unitCode || '36SQN'),
+            code: String(currentUnit?.code || unitCode || 'UNIT-A'),
+            name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit A'),
             locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
             operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
@@ -2744,8 +2744,8 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         setResourceDraft({
-            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
-            aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'AIRCRAFT'),
+            aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'Aircraft Type'),
             poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || 'Home'} ${primaryAircraftType?.code || 'Aircraft'} Resource Pool`),
             poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ''),
             poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ''),
@@ -2756,7 +2756,7 @@ const InitialSetupWizard: React.FC<{
             ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
         });
         setCrewDraft({
-            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'C-17A'),
+            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'AIRCRAFT'),
             standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
         });
     }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
@@ -3944,9 +3944,9 @@ const InitialSetupWizard: React.FC<{
                             </button>
                         </div>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                            {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Burns')}
-                            {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'Alexander')}
-                            {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || '36SQN', `staff-unit-${index}`)}
+                            {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Smith')}
+                            {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'Alex')}
+                            {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-A', `staff-unit-${index}`)}
                             {wizardField('Position', row.position || '', (value) => updateStaffRow(index, 'position', value), undefined, 'Pilot')}
                             {wizardField('Qualifications', row.qualifications || '', (value) => updateStaffRow(index, 'qualifications', value), undefined, 'PIC')}
                         </div>
@@ -4038,7 +4038,7 @@ const InitialSetupWizard: React.FC<{
                         <div className="space-y-2">
                             {(traineeCourseRows.length > 0 ? traineeCourseRows : ['']).map((course, index) => (
                                 <div key={`trainee-course-option-${index}`} className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                                    {wizardField(`Course ${index + 1}`, course, (value) => updateCourseOption(index, value), undefined, index === 0 ? 'ADF301' : 'ADF302')}
+                                    {wizardField(`Course ${index + 1}`, course, (value) => updateCourseOption(index, value), undefined, index === 0 ? 'Course 1' : 'Course 2')}
                                     <button
                                         type="button"
                                         className={wizardSmallButtonClass}
@@ -4147,11 +4147,11 @@ const InitialSetupWizard: React.FC<{
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                             {wizardField('Surname', row.surname || '', (value) => updateTraineeRow(index, 'surname', value), undefined, 'Jones')}
                             {wizardField('Given names', row.givenNames || '', (value) => updateTraineeRow(index, 'givenNames', value), undefined, 'Taylor')}
-                            {wizardDataListField('Unit', row.unit || '', (value) => updateTraineeRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || '36SQN', `trainee-unit-${index}`)}
-                            {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'PLTOFF')}
+                            {wizardDataListField('Unit', row.unit || '', (value) => updateTraineeRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-A', `trainee-unit-${index}`)}
+                            {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'Trainee Rank')}
                             {wizardField('PMKeyS', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '7654321')}
                             {wizardField('Course number', row.courseNumber || '', (value) => updateTraineeRow(index, 'courseNumber', value), undefined, '1')}
-                            {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'BPC+IPC', `trainee-master-lmp-${index}`)}
+                            {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Initial Training Stream', `trainee-master-lmp-${index}`)}
                             {wizardField('Start date', row.startDate || '', (value) => updateTraineeRow(index, 'startDate', value), undefined, '2026-01-15')}
                         </div>
                     </div>
@@ -4173,7 +4173,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderTrainingRecordsEditor = () => {
         const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-        const row = rows[0] || { genericName: 'Training Report', organisationName: 'PT-051', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', demoGrade: 'No', passLabel: 'Satisfactory', failLabel: 'Unsatisfactory' };
+        const row = rows[0] || { genericName: 'Training Report', organisationName: 'Assessment Form', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', demoGrade: 'No', passLabel: 'Satisfactory', failLabel: 'Unsatisfactory' };
         const updateRow = (field: keyof typeof row, value: string) => {
             setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
         };
@@ -4184,7 +4184,7 @@ const InitialSetupWizard: React.FC<{
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Generic form name', row.genericName, (value) => updateRow('genericName', value), undefined, 'Training Report')}
-                    {wizardField('Organisation form name', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'PT-051')}
+                    {wizardField('Organisation form name', row.organisationName, (value) => updateRow('organisationName', value), undefined, 'Assessment Form')}
                     {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
                     {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
                     {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
@@ -4245,12 +4245,12 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line, for example GPCAPT = COL = CAPT.
+                    Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`rank-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[90px_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end">
                         {wizardField('Order', row.order || String(index + 1), (value) => updateRow(index, 'order', value), undefined, String(index + 1))}
-                        {wizardField('Ranks at this level', row.ranks || '', (value) => updateRow(index, 'ranks', value), undefined, 'SQNLDR = MAJ = LCDR')}
+                        {wizardField('Ranks at this level', row.ranks || '', (value) => updateRow(index, 'ranks', value), undefined, 'Team Lead Rank')}
                         {wizardField('Notes', row.notes || '', (value) => updateRow(index, 'notes', value), undefined, 'Same seniority across services')}
                         <button type="button" className={wizardSmallButtonClass} onClick={() => setRankLabelsDraft(formatWizardRankRows(editableRows.filter((_, rowIndex) => rowIndex !== index)))}>
                             Delete
@@ -4768,7 +4768,7 @@ const InitialSetupWizard: React.FC<{
                 id: `setup-staff-${index + 1}`,
                 idNumber: Number(row.pmkeys) || 900000 + index + 1,
                 name: fullName,
-                rank: row.rank || 'SQNLDR',
+                rank: row.rank || 'Rank',
                 role: row.position || 'Instructor',
                 category: row.category || 'B',
                 callsign: row.callsign || '',
@@ -4801,7 +4801,7 @@ const InitialSetupWizard: React.FC<{
                     idNumber: Number(row.pmkeys) || 800000 + index + 1,
                     fullName,
                     name: fullName,
-                    rank: row.rank || 'PLTOFF',
+                    rank: row.rank || 'Rank',
                     course: row.course || row.courseNumber || '',
                     courseNumber: row.courseNumber || '',
                     lmpType: row.masterLmp || trainingDraft.lmpCode || trainingDraft.lmpName || '',
@@ -5722,7 +5722,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>List each unit you want to configure in this setup run. Use one line per unit. Format: <strong>Unit code | Unit name</strong>.</p>,
                 <div>
-                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, '36SQN | 36SQN\n12SQN | 12SQN', true)}
+                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, 'UNIT-A | Unit A\nUNIT-B | Unit B', true)}
                     <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Parent organisation for each unit</p>
                         <p className="mt-1 text-xs leading-5 text-slate-600">
@@ -5829,8 +5829,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Now we will set up the first unit using the app. What is the unit code and name?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
-                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
+                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-A')}
+                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit A')}
                 </div>,
             );
         }
@@ -5838,8 +5838,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, '36SQN')}
-                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, '36SQN')}
+                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-A')}
+                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit A')}
                     {wizardDataListField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'LOC1')}
                     {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}
                     {wizardField(
@@ -5868,8 +5868,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>What aircraft type or primary resource should <strong>{unitDraft.code || 'this unit'}</strong> use?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'C-17A')}
-                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'C-17A')}
+                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'AIRCRAFT')}
+                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Aircraft Type')}
                     {wizardField('Resource pool name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'Primary Aircraft Resource Pool')}
                 </div>,
             );
@@ -5891,7 +5891,7 @@ const InitialSetupWizard: React.FC<{
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
                 <div className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
-                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'C-17A')}
+                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'AIRCRAFT')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
                         {renderCrewCompositionEditor('Standard crew composition', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
@@ -6043,8 +6043,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'C-17A Conversion', 'master-lmp-code')}
-                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'C-17A Conversion')}
+                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Initial Training Stream', 'master-lmp-code')}
+                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Initial Training Stream')}
                     {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial conversion training stream')}
                 </div>,
             );
