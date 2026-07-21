@@ -35052,38 +35052,29 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 max-h-96 overflow-y-auto", children: locations.map((location) => {
       const data = tafData.get(location);
       const isLoading = loading.has(location);
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start mb-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-300", children: location.toUpperCase() }),
-            data && !data.error && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", children: [
-              "Retrieved at ",
-              data.time
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => handleRefresh(location),
-              disabled: isLoading,
-              className: `p-1 rounded transition-colors ${isLoading ? "text-gray-500 cursor-not-allowed" : "text-gray-400 hover:text-sky-400"}`,
-              title: "Refresh this location",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "svg",
-                {
-                  xmlns: "http://www.w3.org/2000/svg",
-                  className: `h-4 w-4 ${isLoading ? "animate-spin" : ""}`,
-                  viewBox: "0 0 20 20",
-                  fill: "currentColor",
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z", clipRule: "evenodd" })
-                }
-              )
-            }
-          )
-        ] }),
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative bg-gray-700/50 rounded-lg p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute right-2 top-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => handleRefresh(location),
+            disabled: isLoading,
+            className: `p-1 rounded transition-colors ${isLoading ? "text-gray-500 cursor-not-allowed" : "text-gray-400 hover:text-sky-400"}`,
+            title: `Refresh ${location.toUpperCase()}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "svg",
+              {
+                xmlns: "http://www.w3.org/2000/svg",
+                className: `h-4 w-4 ${isLoading ? "animate-spin" : ""}`,
+                viewBox: "0 0 20 20",
+                fill: "currentColor",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z", clipRule: "evenodd" })
+              }
+            )
+          }
+        ) }),
         isLoading && !data && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-sm", children: "Loading..." }),
         data && !data.error && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data.raw) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-900 rounded p-3 pr-9", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs leading-relaxed text-green-400 font-mono whitespace-pre-wrap break-words", children: highlightTafText(data.raw) }) }),
           data.isCached && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs text-yellow-500/70 italic", children: [
             "⚠️ Old cached data - provided for display purposes only",
             data.cacheTimestamp && ` (Cached: ${new Date(data.cacheTimestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })})`

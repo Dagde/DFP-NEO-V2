@@ -366,16 +366,8 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                         const isLoading = loading.has(location);
 
                         return (
-                            <div key={location} className="bg-gray-700/50 rounded-lg p-4">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <h3 className="text-lg font-bold text-sky-300">{location.toUpperCase()}</h3>
-                                        {data && !data.error && (
-                                            <span className="text-xs text-gray-400">
-                                                Retrieved at {data.time}
-                                            </span>
-                                        )}
-                                    </div>
+                            <div key={location} className="relative bg-gray-700/50 rounded-lg p-3">
+                                <div className="absolute right-2 top-2">
                                     <button
                                         onClick={() => handleRefresh(location)}
                                         disabled={isLoading}
@@ -384,7 +376,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                                                 ? 'text-gray-500 cursor-not-allowed' 
                                                 : 'text-gray-400 hover:text-sky-400'
                                         }`}
-                                        title="Refresh this location"
+                                        title={`Refresh ${location.toUpperCase()}`}
                                     >
                                         <svg 
                                             xmlns="http://www.w3.org/2000/svg" 
@@ -404,8 +396,8 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                                 
                                    {data && !data.error && (
                                        <>
-                                           <div className="bg-gray-900 rounded p-3 mt-2">
-                                               <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap break-words">
+                                           <div className="bg-gray-900 rounded p-3 pr-9">
+                                               <pre className="text-xs leading-relaxed text-green-400 font-mono whitespace-pre-wrap break-words">
                                                    {highlightTafText(data.raw)}
                                                </pre>
                                            </div>
