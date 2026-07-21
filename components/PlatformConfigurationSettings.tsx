@@ -9651,7 +9651,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h5 className="text-sm font-bold text-white">Access Scope</h5>
-                  <InfoHint text="This section answers where the selected user's permission profiles apply. Example: Location ESL + Unit 1FTS + all enabled features means the user's selected profiles apply to all 1FTS features at East Sale." />
+                  <InfoHint text="This section answers where the selected user's permission profiles apply. Example: a selected location + unit + all enabled features means the user's selected profiles apply to all enabled features for that unit at that location." />
                   <span className="ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
                     {access.locationCode || 'All locations'} / {access.unitCode || 'All units'} / {appliesToAllFeatures ? 'All enabled features' : access.moduleCode}
                   </span>
@@ -9711,7 +9711,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="mt-3 rounded border border-gray-700 bg-gray-950 p-3">
                       <div className="mb-2 flex items-center gap-2">
                         <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Limit This Scope To One Feature Area</h6>
-                        <InfoHint text="Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." />
+                        <InfoHint text="Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." />
                       </div>
                       <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEditSection('platform-user-access') || appliesToAllFeatures} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
                       <p className="mt-2 text-xs text-gray-400">

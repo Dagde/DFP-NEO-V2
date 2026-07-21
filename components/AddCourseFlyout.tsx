@@ -224,7 +224,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
                                     id="course-location"
                                     value={location}
                                     onChange={e => setLocation(e.target.value)}
-                                    placeholder="e.g., East Sale"
+                                    placeholder="Enter location code or name"
                                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
                                 />
                             )}
@@ -247,7 +247,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
                                     id="course-unit"
                                     value={unit}
                                     onChange={e => setUnit(e.target.value)}
-                                    placeholder="e.g., 2FTS"
+                                    placeholder="Enter unit code"
                                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
                                 />
                             )}

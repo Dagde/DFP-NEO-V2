@@ -7270,7 +7270,7 @@ const AddCourseFlyout = ({
               id: "course-location",
               value: location,
               onChange: (e) => setLocation(e.target.value),
-              placeholder: "e.g., East Sale",
+              placeholder: "Enter location code or name",
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
             }
           )
@@ -7299,7 +7299,7 @@ const AddCourseFlyout = ({
               id: "course-unit",
               value: unit,
               onChange: (e) => setUnit(e.target.value),
-              placeholder: "e.g., 2FTS",
+              placeholder: "Enter unit code",
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
             }
           )
@@ -72832,7 +72832,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Access Scope" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This section answers where the selected user's permission profiles apply. Example: Location ESL + Unit 1FTS + all enabled features means the user's selected profiles apply to all 1FTS features at East Sale." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This section answers where the selected user's permission profiles apply. Example: a selected location + unit + all enabled features means the user's selected profiles apply to all enabled features for that unit at that location." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
                     access.locationCode || "All locations",
                     " / ",
@@ -72897,7 +72897,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       showAdvancedFeatureArea && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Scope To One Feature Area" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
@@ -77802,7 +77802,7 @@ const EditCourseFlyout = ({
                       id: "edit-location",
                       value: location,
                       onChange: (e) => setLocation(e.target.value),
-                      placeholder: "e.g., East Sale",
+                      placeholder: "Enter location code or name",
                       className: fieldClass2
                     }
                   )
@@ -77828,7 +77828,7 @@ const EditCourseFlyout = ({
                       id: "edit-unit",
                       value: unit,
                       onChange: (e) => setUnit(e.target.value),
-                      placeholder: "e.g., 1FTS",
+                      placeholder: "Enter unit code",
                       className: fieldClass2
                     }
                   )

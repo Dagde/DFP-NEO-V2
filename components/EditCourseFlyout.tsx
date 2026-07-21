@@ -190,7 +190,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                                     id="edit-location"
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
-                                    placeholder="e.g., East Sale"
+                                    placeholder="Enter location code or name"
                                     className={fieldClass}
                                 />
                             )}
@@ -217,7 +217,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                                     id="edit-unit"
                                     value={unit}
                                     onChange={(e) => setUnit(e.target.value)}
-                                    placeholder="e.g., 1FTS"
+                                    placeholder="Enter unit code"
                                     className={fieldClass}
                                 />
                             )}
