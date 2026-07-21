@@ -24,7 +24,7 @@ interface AcademicsTabProps {
   events: ScheduleEvent[]; // existing events for conflict detection
   date: string;
   courseColors: { [key: string]: string };
-  school: 'ESL' | 'PEA';
+  school: string;
   locationAbbreviations?: Record<string, string>; // long name -> short code
   // Course-level academic completion: Map<courseCode, Set<lessonCode>>
   courseAcademicProgress?: Map<string, Set<string>>;

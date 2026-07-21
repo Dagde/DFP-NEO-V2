@@ -24,7 +24,7 @@ interface PostFlightViewProps {
   event: ScheduleEvent;
   onReturn: () => void;
   onSave: (data: any) => void | boolean | Promise<void | boolean>;
-  school: 'ESL' | 'PEA';
+  school: string;
   traineesData: Trainee[];
   instructorsData: Instructor[];
   masterCurrencies?: MasterCurrency[];

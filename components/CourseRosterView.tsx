@@ -32,7 +32,7 @@ interface CourseRosterViewProps {
     onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
     onReplaceTrainees?: (trainees: Trainee[]) => void;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
-    school: 'ESL' | 'PEA';
+    school: string;
     scores: Map<string, Score[]>;
     syllabusDetails: SyllabusItemDetail[];
     onNavigateToSyllabus: (syllabusId: string) => void;

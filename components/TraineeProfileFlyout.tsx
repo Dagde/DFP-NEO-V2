@@ -52,7 +52,7 @@ interface TraineeProfileFlyoutProps {
   onClose: () => void;
   onUpdateTrainee: (data: Trainee) => void;
   events: ScheduleEvent[];
-  school: 'ESL' | 'PEA';
+  school: string;
   onNavigateToHateSheet: (trainee: Trainee) => void;
   onAddRemedialPackage: (trainee: Trainee) => void;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;

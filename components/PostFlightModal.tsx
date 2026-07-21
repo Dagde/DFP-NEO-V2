@@ -12,7 +12,7 @@ interface PostFlightModalProps {
   event: ScheduleEvent;
   onClose: () => void;
   onSave: (data: any) => void;
-  school: 'ESL' | 'PEA';
+  school: string;
   traineesData: Trainee[];
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftNumberSettings?: AircraftNumberSettings;

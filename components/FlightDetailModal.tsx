@@ -406,7 +406,7 @@ interface EventDetailModalProps {
   syllabusDetails: SyllabusItemDetail[];
   highlightedField?: 'startTime' | 'instructor' | 'student' | null;
   onScoresCreated?: (scores: any[]) => void; // New callback for creating scores
-  school: 'ESL' | 'PEA';
+  school: string;
   traineesData: Trainee[];
   instructorsData: Instructor[];
   courseColors: { [key: string]: string };

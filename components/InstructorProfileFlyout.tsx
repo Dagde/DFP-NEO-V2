@@ -63,7 +63,7 @@ const isContractorStaffRoleValue = (value?: string | null): boolean => (
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
   onClose: () => void;
-  school: 'ESL' | 'PEA';
+  school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
   onNavigateToCurrency: (person: Instructor) => void;

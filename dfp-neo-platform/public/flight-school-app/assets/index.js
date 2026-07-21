@@ -14519,9 +14519,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: editableLocationRows.map((row, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(100px,0.35fr)_minmax(180px,1fr)]", children: [
-            wizardDataListField("ICAO code", row.icao, (value) => updateWizardLocationRow(rowIndex, "icao", value), wizardLocationIcaoOptions, "YMES", `icao-${rowIndex}`),
-            wizardDataListField("IATA code", row.iata, (value) => updateWizardLocationRow(rowIndex, "iata", value), wizardLocationIataOptions, "ESL", `iata-${rowIndex}`),
-            wizardDataListField("Location name", row.name, (value) => updateWizardLocationRow(rowIndex, "name", value), wizardLocationNameOptions, "East Sale", `location-name-${rowIndex}`)
+            wizardDataListField("ICAO code", row.icao, (value) => updateWizardLocationRow(rowIndex, "icao", value), wizardLocationIcaoOptions, "ICAO code", `icao-${rowIndex}`),
+            wizardDataListField("IATA code", row.iata, (value) => updateWizardLocationRow(rowIndex, "iata", value), wizardLocationIataOptions, "IATA code", `iata-${rowIndex}`),
+            wizardDataListField("Location name", row.name, (value) => updateWizardLocationRow(rowIndex, "name", value), wizardLocationNameOptions, "Location name", `location-name-${rowIndex}`)
           ] }, `wizard-location-row-${rowIndex}`)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -14532,7 +14532,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
               children: "Add another locality"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "ICAO is the four-letter aviation code, for example YMES. IATA is the shorter three-letter code, for example ESL. Start typing a known code or location name to see matching suggestions." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "ICAO is the four-letter aviation code. IATA is the shorter location code. Start typing a configured code or location name to see matching suggestions." })
         ] })
       );
     }
