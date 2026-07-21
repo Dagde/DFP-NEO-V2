@@ -1340,7 +1340,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
 const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
   const lowerTitle = title.toLowerCase();
   if (area === 'Organisation') {
-    return 'Open Organisation and create or reactivate the operating organisation. Example: code RAAF, name RAAF, status ACTIVE.';
+    return 'Open Organisation and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
   }
   if (area === 'Locations') {
     if (lowerTitle.includes('organisation')) {

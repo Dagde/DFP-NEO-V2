@@ -29143,7 +29143,7 @@ ${swapNote}` : swapNote
                   value: origin,
                   onChange: (e) => setOrigin(e.target.value.toUpperCase()),
                   maxLength: 3,
-                  placeholder: "e.g. ESL",
+                  placeholder: "IATA",
                   className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
                 }
               )
@@ -29157,7 +29157,7 @@ ${swapNote}` : swapNote
                   value: destination,
                   onChange: (e) => setDestination(e.target.value.toUpperCase()),
                   maxLength: 3,
-                  placeholder: "e.g. PEA",
+                  placeholder: "IATA",
                   className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
                 }
               )
@@ -65508,7 +65508,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
 const getDefaultConfigurationHealthRemediation = (area, title) => {
   const lowerTitle = title.toLowerCase();
   if (area === "Organisation") {
-    return "Open Organisation and create or reactivate the operating organisation. Example: code RAAF, name RAAF, status ACTIVE.";
+    return "Open Organisation and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.";
   }
   if (area === "Locations") {
     if (lowerTitle.includes("organisation")) {
