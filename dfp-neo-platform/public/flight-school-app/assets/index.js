@@ -4960,8 +4960,6 @@ const buildUnitEventCallsign = (base, number) => {
 const CALLSIGN_LIMIT = 50;
 const norm = (value) => String(value || "").trim().toUpperCase();
 const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
-const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
-const isSimIp = (person) => person.role === "SIM IP";
 const isCallsignAssignableStaff = (person) => Boolean(person.name) && person.isActive !== false && !person.isAdminStaff;
 const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
   if (allowedRoles.length === 0) return false;
@@ -4976,20 +4974,6 @@ const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
     if (crew && (value === crew || value === `CREW:${crew}`)) return true;
     return false;
   });
-};
-const isLegacyFlightSchoolCallsignUnit = (person) => {
-  const unit = norm(person.unit);
-  return unit.startsWith("1FTS") || unit.startsWith("CFS") || unit.startsWith("2FTS");
-};
-const isEastSale = (person) => {
-  const location = norm(person.location);
-  const unit = norm(person.unit);
-  return location === "EAST SALE" || location === "ESL" || !location && (unit.startsWith("1FTS") || unit.startsWith("CFS"));
-};
-const isPearce = (person) => {
-  const location = norm(person.location);
-  const unit = norm(person.unit);
-  return location === "PEARCE" || location === "PEA" || !location && unit.startsWith("2FTS");
 };
 const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank(a, b, settings, "staff"));
 const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
@@ -5021,29 +5005,12 @@ const getConfiguredPermanentCallsignAssignments = (instructors, settings, unitCa
   });
   return assignments;
 };
-const getLegacyFlightSchoolCallsignAssignments = (instructors, settings) => {
-  const assignments = /* @__PURE__ */ new Map();
-  const activeStaff = instructors.filter((person) => person.name && person.isActive !== false && isLegacyFlightSchoolCallsignUnit(person));
-  const oneFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("1FTS")), settings);
-  const cfs = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("CFS")), settings);
-  const twoFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("2FTS")), settings);
-  const eslSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isEastSale(person)), settings);
-  const peaSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isPearce(person)), settings);
-  const nextRolr = assignSequence(assignments, oneFts, "ROLR", 1);
-  assignSequence(assignments, eslSimIp, "ROLR", nextRolr);
-  assignSequence(assignments, cfs, "ALDN", 1);
-  const nextVipr = assignSequence(assignments, twoFts, "VIPR", 1);
-  assignSequence(assignments, peaSimIp, "VIPR", nextVipr);
-  return assignments;
-};
 const getStaffCallsignAssignments = (instructors, settings, unitCallsignSettings) => {
-  const configuredAssignments = getConfiguredPermanentCallsignAssignments(
+  return getConfiguredPermanentCallsignAssignments(
     instructors,
     settings,
     unitCallsignSettings
   );
-  if (configuredAssignments.size > 0) return configuredAssignments;
-  return getLegacyFlightSchoolCallsignAssignments(instructors, settings);
 };
 const getStaffCallsignKey = personKey;
 const DEFAULT_AIR_COMBAT_SCHEDULING_WEIGHTS = {
@@ -52823,8 +52790,8 @@ const InstructorListView = ({
   const simIps = reactExports.useMemo(() => {
     console.log("🔍 [SIM IP FILTER] instructorsData length:", instructorsData.length);
     const simIpCandidates = instructorsData.filter((i) => {
-      const isSimIp2 = i.role === "SIM IP";
-      if (!isSimIp2) return false;
+      const isSimIp = i.role === "SIM IP";
+      if (!isSimIp) return false;
       console.log(`🔍 [SIM IP FILTER] Found active-context SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
       return true;
     });
@@ -52864,9 +52831,9 @@ const InstructorListView = ({
     console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter((i) => {
       const isQfi = isQfiRole(i) || isAirCombatModel && (isPilotRole(i) || isConfiguredCrewPositionRole(i, crewPositionTerminology)) || isFixedCrewModel && !i.isAdminStaff && !isSupportStaffRole(i);
-      const isSimIp2 = i.role === "SIM IP";
+      const isSimIp = i.role === "SIM IP";
       const isOfi = i.role === "OFI" || i.isOFI === true;
-      const isOther = !isQfi && !isSimIp2 && !isOfi;
+      const isOther = !isQfi && !isSimIp && !isOfi;
       if (!isOther) return false;
       console.log(`🔍 [OTHER STAFF] Found active-context other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
       return true;
