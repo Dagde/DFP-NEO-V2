@@ -34884,6 +34884,21 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     setEditLocationDrafts({});
     setIsEditing(false);
   };
+  const handleAddLocation = () => {
+    setEditLocations((previous) => [...previous, ""]);
+  };
+  const handleRemoveLocation = (index) => {
+    setEditLocations((previous) => previous.filter((_, locationIndex) => locationIndex !== index));
+    setEditLocationDrafts((previous) => {
+      const nextDrafts = {};
+      Object.entries(previous).forEach(([key, value]) => {
+        const draftIndex = Number(key);
+        if (!Number.isInteger(draftIndex) || draftIndex === index) return;
+        nextDrafts[draftIndex > index ? draftIndex - 1 : draftIndex] = value;
+      });
+      return nextDrafts;
+    });
+  };
   const handleLocationChange = (index, value) => {
     setEditLocationDrafts((previous) => ({ ...previous, [index]: value }));
   };
@@ -34992,7 +35007,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings - Data Sources." })
     ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes." }),
-      editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+      editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400 text-sm w-8", children: [
           index + 1,
           "."
@@ -35014,8 +35029,26 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
             placeholder: "ICAO code",
             className: "flex-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 uppercase"
           }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => handleRemoveLocation(index),
+            className: "px-3 py-2 bg-gray-700 hover:bg-red-700 text-white rounded-md text-sm font-semibold transition-colors",
+            children: "Remove"
+          }
         )
-      ] }, index))
+      ] }, index)),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: handleAddLocation,
+          className: "px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors",
+          children: "Add Airport"
+        }
+      )
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 max-h-96 overflow-y-auto", children: locations.map((location) => {
       const data = tafData.get(location);
       const isLoading = loading.has(location);

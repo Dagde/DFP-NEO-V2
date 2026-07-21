@@ -187,6 +187,23 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
         setIsEditing(false);
     };
 
+    const handleAddLocation = () => {
+        setEditLocations(previous => [...previous, '']);
+    };
+
+    const handleRemoveLocation = (index: number) => {
+        setEditLocations(previous => previous.filter((_, locationIndex) => locationIndex !== index));
+        setEditLocationDrafts(previous => {
+            const nextDrafts: Record<number, string> = {};
+            Object.entries(previous).forEach(([key, value]) => {
+                const draftIndex = Number(key);
+                if (!Number.isInteger(draftIndex) || draftIndex === index) return;
+                nextDrafts[draftIndex > index ? draftIndex - 1 : draftIndex] = value;
+            });
+            return nextDrafts;
+        });
+    };
+
     const handleLocationChange = (index: number, value: string) => {
         setEditLocationDrafts(previous => ({ ...previous, [index]: value }));
     };
@@ -308,7 +325,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                 <div className="space-y-3">
                     <p className="text-sm text-gray-400">Enter ICAO codes.</p>
                     {editLocations.map((location, index) => (
-                        <div key={index} className="flex items-center space-x-2">
+                        <div key={index} className="flex items-center gap-2">
                             <span className="text-gray-400 text-sm w-8">{index + 1}.</span>
                             <input
                                 type="text"
@@ -325,8 +342,22 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                                 placeholder="ICAO code"
                                 className="flex-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 uppercase"
                             />
+                            <button
+                                type="button"
+                                onClick={() => handleRemoveLocation(index)}
+                                className="px-3 py-2 bg-gray-700 hover:bg-red-700 text-white rounded-md text-sm font-semibold transition-colors"
+                            >
+                                Remove
+                            </button>
                         </div>
                     ))}
+                    <button
+                        type="button"
+                        onClick={handleAddLocation}
+                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors"
+                    >
+                        Add Airport
+                    </button>
                 </div>
             ) : (
                 <div className="space-y-4 max-h-96 overflow-y-auto">
