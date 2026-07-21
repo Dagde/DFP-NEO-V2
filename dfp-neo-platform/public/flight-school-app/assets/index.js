@@ -10283,9 +10283,9 @@ const initialSetupTemplates = [
     requiredHeaders: ["Level", "Name"],
     optionalHeaders: ["Parent", "Notes"],
     exampleRows: [
-      ["0", "RAAF", "", "Top level organisation"],
-      ["1", "Air Command", "RAAF", "Branch or command"],
-      ["2", "Air Mobility Group", "Air Command", "Command group"]
+      ["0", "Your Organisation", "", "Top level organisation"],
+      ["1", "Operations Division", "Your Organisation", "Branch, command, region, or division"],
+      ["2", "Flying Group", "Operations Division", "Operating group"]
     ],
     settingsSection: "platform-organisation-locations",
     focusSubsectionId: "platform-organisation-structure"
@@ -10297,8 +10297,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Code", "Name", "Timezone"],
     optionalHeaders: ["Training Areas", "Notes"],
     exampleRows: [
-      ["YAMB", "Amberley", "Australia/Brisbane", "Area A; Area B", "Home base"],
-      ["YMES", "East Sale", "Australia/Melbourne", "Area 1; Area 2", "Training base"]
+      ["HOME", "Home Base", "UTC", "Area A; Area B", "Primary operating location"],
+      ["TRAIN", "Training Base", "UTC", "Area 1; Area 2", "Training location"]
     ],
     settingsSection: "platform-organisation-locations",
     focusSubsectionId: "platform-locations"
@@ -10310,8 +10310,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Unit Code", "Unit Name", "Location", "Unit Type", "Operating Model"],
     optionalHeaders: ["Parent Organisation", "Trainees", "Notes"],
     exampleRows: [
-      ["36SQN", "36SQN", "YAMB", "Airlift", "Pooled Crew Model", "Air Command / Air Mobility Group / 84WG", "No", ""],
-      ["1FTS", "1FTS", "YMES", "Training", "Flight School Model", "Air Command / Air Force Training Group / AirA", "Yes", ""]
+      ["UNIT-A", "Unit A", "HOME", "Operational", "Pooled Crew Model", "Your Organisation / Operations Division / Flying Group", "No", ""],
+      ["UNIT-B", "Unit B", "TRAIN", "Training", "Flight School Model", "Your Organisation / Training Division / Training Group", "Yes", ""]
     ],
     settingsSection: "platform-units"
   },
@@ -10322,7 +10322,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Pool Name", "Aircraft Type", "Unit", "Location", "Aircraft", "Sim", "Trainer", "Standby", "Ground"],
     optionalHeaders: ["Notes"],
     exampleRows: [
-      ["Amberley C-17A Resource Pool", "C-17A", "36SQN", "YAMB", "4", "0", "0", "1", "0", ""]
+      ["Primary Aircraft Resource Pool", "Aircraft Type", "UNIT-A", "HOME", "4", "0", "0", "1", "0", ""]
     ],
     settingsSection: "platform-resource-pools"
   },
@@ -11602,32 +11602,32 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     return Number.isFinite(parsed) ? parsed : fallback;
   };
   const [organisationDraft, setOrganisationDraft] = reactExports.useState({
-    code: String(activeOrganisation?.code || "RAAF"),
-    name: String(activeOrganisation?.name || activeOrganisation?.code || "RAAF"),
+    code: String(activeOrganisation?.code || "ORG"),
+    name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
     level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
-    level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "RAAF"]),
+    level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"]),
     level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
     level1Options: toLines(levelDraftSource(1)?.options || []),
-    level1Parents: parentLinesForLevel(1, `Air Command = ${activeOrganisation?.name || activeOrganisation?.code || "RAAF"}`),
-    level2Name: String(levelDraftSource(2)?.name || "Command"),
+    level1Parents: parentLinesForLevel(1, `Operations Division = ${activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"}`),
+    level2Name: String(levelDraftSource(2)?.name || "Operating Group"),
     level2Options: toLines(levelDraftSource(2)?.options || []),
-    level2Parents: parentLinesForLevel(2, "Air Combat Group = Air Command\nAir Mobility Group = Air Command"),
+    level2Parents: parentLinesForLevel(2, "Flying Group = Operations Division\nTraining Group = Operations Division"),
     level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
     level3Options: toLines(levelDraftSource(3)?.options || []),
-    level3Parents: parentLinesForLevel(3, "78WG = Air Combat Group\n84WG = Air Mobility Group")
+    level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group")
   });
   const [locationDraft, setLocationDraft] = reactExports.useState({
-    code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "YAMB"),
-    iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "AMB"),
-    name: String(currentLocation?.name || "Amberley"),
-    timezone: String(currentLocation?.timezone || "Australia/Brisbane"),
+    code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "LOC1"),
+    iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "LOC"),
+    name: String(currentLocation?.name || "Home Location"),
+    timezone: String(currentLocation?.timezone || "UTC"),
     trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
   });
   const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState(() => activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "36SQN | 36SQN");
   const [unitParentDraft, setUnitParentDraft] = reactExports.useState("");
-  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "YAMB | AMB | Amberley");
+  const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location");
   const [locationDraftRowCount, setLocationDraftRowCount] = reactExports.useState(() => Math.max(1, parseWizardLocationRows(
-    activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "YAMB | AMB | Amberley"
+    activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location"
   ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
     code: String(currentUnit?.code || unitCode || "36SQN"),
@@ -11733,19 +11733,19 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   reactExports.useEffect(() => {
     setOrganisationDraft({
-      code: String(activeOrganisation?.code || "RAAF"),
-      name: String(activeOrganisation?.name || activeOrganisation?.code || "RAAF"),
+      code: String(activeOrganisation?.code || "ORG"),
+      name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
       level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
-      level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "RAAF"]),
+      level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"]),
       level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
       level1Options: toLines(levelDraftSource(1)?.options || []),
-      level1Parents: parentLinesForLevel(1, `Air Command = ${activeOrganisation?.name || activeOrganisation?.code || "RAAF"}`),
-      level2Name: String(levelDraftSource(2)?.name || "Command"),
+      level1Parents: parentLinesForLevel(1, `Operations Division = ${activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"}`),
+      level2Name: String(levelDraftSource(2)?.name || "Operating Group"),
       level2Options: toLines(levelDraftSource(2)?.options || []),
-      level2Parents: parentLinesForLevel(2, "Air Combat Group = Air Command\nAir Mobility Group = Air Command"),
+      level2Parents: parentLinesForLevel(2, "Flying Group = Operations Division\nTraining Group = Operations Division"),
       level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
       level3Options: toLines(levelDraftSource(3)?.options || []),
-      level3Parents: parentLinesForLevel(3, "78WG = Air Combat Group\n84WG = Air Mobility Group")
+      level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group")
     });
   }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
   reactExports.useEffect(() => {
@@ -11774,10 +11774,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   ]);
   reactExports.useEffect(() => {
     setLocationDraft({
-      code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "YAMB"),
-      iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "AMB"),
-      name: String(currentLocation?.name || "Amberley"),
-      timezone: String(currentLocation?.timezone || "Australia/Brisbane"),
+      code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "LOC1"),
+      iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "LOC"),
+      name: String(currentLocation?.name || "Home Location"),
+      timezone: String(currentLocation?.timezone || "UTC"),
       trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
     });
   }, [activeWizardLocationCode, currentLocation?.code, currentLocation?.name, currentLocation?.timezone, JSON.stringify(currentLocation?.trainingAreas || [])]);
@@ -11861,8 +11861,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const organisations = Array.isArray(baseConfig.organisations) ? baseConfig.organisations : [];
     const fallbackOrganisation = {
       id: createWizardRecordId("organisation"),
-      code: organisationDraft.code || "RAAF",
-      name: organisationDraft.name || organisationDraft.code || "RAAF",
+      code: organisationDraft.code || "ORG",
+      name: organisationDraft.name || organisationDraft.code || "Your Organisation",
       status: "ACTIVE",
       settings: {}
     };
@@ -13408,7 +13408,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   ] });
   const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentOptions) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]", children: [
-      wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, levelNumber === 1 ? "Branch / HQ" : levelNumber === 2 ? "Command" : "Numbered Air Force"),
+      wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, levelNumber === 1 ? "Branch / HQ" : levelNumber === 2 ? "Operating Group" : "Unit Group"),
       wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
@@ -14406,8 +14406,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             code: draft.code || value,
             level0Name: value || draft.level0Name,
             level0Options: value || draft.level0Options
-          })), void 0, "RAAF"),
-          wizardField("Short code", organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "RAAF"),
+          })), void 0, "Your Organisation"),
+          wizardField("Short code", organisationDraft.code, (value) => setOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "ORG"),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: renderOrganisationPreview() })
         ] })
       );
@@ -14426,7 +14426,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           (value) => setOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
-          "Air Command",
+          "Operations Division",
           level1ParentOptions
         )
       );
@@ -14436,7 +14436,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
           "This layer sits underneath ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: organisationDraft.level1Name || "Level 1" }),
-          ". Use it for the organisations that own or manage several lower groups. Example: Air Combat Group, Air Mobility Group, Training Group."
+          ". Use it for the organisations that own or manage several lower groups. Example: Flying Group, Training Group, Support Group."
         ] }),
         organisationLevelAnswer(
           2,
@@ -14446,7 +14446,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           (value) => setOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
-          "Air Combat Group\nAir Mobility Group",
+          "Flying Group\nTraining Group",
           level2ParentOptions
         )
       );
@@ -14462,7 +14462,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           (value) => setOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
           (value) => setOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
-          "78WG\n81WG\n82WG\n84WG",
+          "Operations Unit Group\nTraining Unit Group",
           level3ParentOptions
         )
       );
@@ -14481,7 +14481,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "36SQN | 36SQN\n12SQN | 12SQN", true),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for each unit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose where each unit sits in the organisation tree. For example, 36SQN might sit under RAAF / Air Command / Air Mobility Group / 84WG." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose where each unit sits in the organisation tree. For example, Unit A might sit under Your Organisation / Operations Division / Flying Group." }),
             unitRows.length > 0 && unitParentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: unitRows.map((row) => {
               const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
               const currentParentValue = formatWizardOrganisationPath(currentParentPath);
@@ -14539,7 +14539,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     if (visibleStep.id === "location-code") {
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Next we will set up the first base or operating location. What is the location code?" }),
-        wizardField("Location code", locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "YAMB")
+        wizardField("Location code", locationDraft.code, (value) => setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "LOC1")
       );
     }
     if (visibleStep.id === "location-details") {
@@ -14549,15 +14549,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardDataListField("ICAO code", locationDraft.code, (value) => {
             const matchedProfile = findWizardLocationProfile(value);
             setLocationDraft((draft) => ({ ...draft, code: value.toUpperCase(), iataCode: matchedProfile?.iata || draft.iataCode, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
-          }, wizardLocationIcaoOptions, "YMES"),
+          }, wizardLocationIcaoOptions, "ICAO code"),
           wizardDataListField("IATA code", locationDraft.iataCode, (value) => {
             const matchedProfile = findWizardLocationProfile(value);
             setLocationDraft((draft) => ({ ...draft, iataCode: value.toUpperCase(), code: matchedProfile?.icao || draft.code, name: matchedProfile?.name || draft.name, timezone: matchedProfile?.timezone || draft.timezone }));
-          }, wizardLocationIataOptions, "ESL"),
+          }, wizardLocationIataOptions, "IATA code"),
           wizardDataListField("Location name", locationDraft.name, (value) => {
             const matchedProfile = findWizardLocationProfile(value);
             setLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
-          }, wizardLocationNameOptions, "Amberley"),
+          }, wizardLocationNameOptions, "Location name"),
           wizardField("Timezone", locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), void 0, "Australia/Brisbane"),
           wizardField("Training areas", locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), void 0, "Area A, Area B")
         ] })
@@ -14578,7 +14578,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "36SQN"),
           wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "36SQN"),
-          wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "YAMB"),
+          wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "LOC1"),
           wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions),
           wizardField(
             "Operational model",
@@ -14614,7 +14614,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "C-17A"),
           wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "C-17A"),
-          wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Amberley C-17A Resource Pool")
+          wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Primary Aircraft Resource Pool")
         ] })
       );
     }
