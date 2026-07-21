@@ -63729,7 +63729,7 @@ const OrganisationSettings = ({
                         type: "text",
                         value: activeStaffSharingGroup.name || "",
                         onChange: (event) => handleRenameStaffSharingGroup(event.target.value),
-                        placeholder: "e.g. YMES 1FTS/CFS staff sharing",
+                        placeholder: "Enter staff sharing arrangement name",
                         className: "w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
                       }
                     )
@@ -63926,7 +63926,7 @@ const OrganisationSettings = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg border border-gray-600 p-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-medium text-white mb-2", children: "Select Units Sharing Aircraft / Resources" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-3", children: "Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-2", children: visibleResourceSharingUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "div",
                     {
@@ -65194,9 +65194,9 @@ const DEFAULT_OPERATIONAL_RUNBOOK = {
 };
 const OPERATIONAL_RUNBOOK_HELP = {
   environmentName: "Name this installed system so administrators know what environment they are changing. Examples: Production, Training Network, Offline Test Rig. Text only; do not enter passwords, URLs or connection strings.",
-  deploymentIdentifier: "Use a stable short identifier for this deployment. Recommended format: letters, numbers and dashes, for example DFP-NEO-V2-RAAF-PROD or RAAF-ESL-OFFLINE-01.",
+  deploymentIdentifier: "Use a stable short identifier for this deployment. Recommended format: letters, numbers and dashes, for example DFP-NEO-V2-CUSTOMER-PROD or CUSTOMER-OFFLINE-01.",
   releaseChannel: "Select the update stream this system follows. Production is live use; Staging is pre-live testing; Customer Acceptance is formal customer test; Offline Package is an isolated deployment package.",
-  supportOwner: "Record who owns support for this deployment. Examples: Unit Admin Cell, Defence Prime Support Desk, 1FTS Systems Officer, or a named support team.",
+  supportOwner: "Record who owns support for this deployment. Examples: Unit Admin Cell, Customer Support Desk, Systems Officer, or a named support team.",
   supportContact: "Record how support is contacted. Acceptable formats include an email address, phone number, internal extension, or service desk queue name. Do not enter account passwords or secret tokens.",
   approvingAuthority: "Record who can approve operational changes or software updates. Examples: Chief Instructor, SQNLDR Operations, System Owner, or Customer Change Board.",
   backupFrequency: "Select how often the database and critical records are backed up. Choose the closest option to the approved local backup process.",

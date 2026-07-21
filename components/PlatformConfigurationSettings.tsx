@@ -929,9 +929,9 @@ const DEFAULT_OPERATIONAL_RUNBOOK = {
 
 const OPERATIONAL_RUNBOOK_HELP: Record<string, string> = {
   environmentName: 'Name this installed system so administrators know what environment they are changing. Examples: Production, Training Network, Offline Test Rig. Text only; do not enter passwords, URLs or connection strings.',
-  deploymentIdentifier: 'Use a stable short identifier for this deployment. Recommended format: letters, numbers and dashes, for example DFP-NEO-V2-RAAF-PROD or RAAF-ESL-OFFLINE-01.',
+  deploymentIdentifier: 'Use a stable short identifier for this deployment. Recommended format: letters, numbers and dashes, for example DFP-NEO-V2-CUSTOMER-PROD or CUSTOMER-OFFLINE-01.',
   releaseChannel: 'Select the update stream this system follows. Production is live use; Staging is pre-live testing; Customer Acceptance is formal customer test; Offline Package is an isolated deployment package.',
-  supportOwner: 'Record who owns support for this deployment. Examples: Unit Admin Cell, Defence Prime Support Desk, 1FTS Systems Officer, or a named support team.',
+  supportOwner: 'Record who owns support for this deployment. Examples: Unit Admin Cell, Customer Support Desk, Systems Officer, or a named support team.',
   supportContact: 'Record how support is contacted. Acceptable formats include an email address, phone number, internal extension, or service desk queue name. Do not enter account passwords or secret tokens.',
   approvingAuthority: 'Record who can approve operational changes or software updates. Examples: Chief Instructor, SQNLDR Operations, System Owner, or Customer Change Board.',
   backupFrequency: 'Select how often the database and critical records are backed up. Choose the closest option to the approved local backup process.',

@@ -877,7 +877,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                     type="text"
                     value={activeStaffSharingGroup.name || ''}
                     onChange={(event) => handleRenameStaffSharingGroup(event.target.value)}
-                    placeholder="e.g. YMES 1FTS/CFS staff sharing"
+                    placeholder="Enter staff sharing arrangement name"
                     className="w-full bg-gray-950/80 border border-sky-500/40 rounded-md py-2 px-3 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
@@ -1130,7 +1130,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4">
                 <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Aircraft / Resources</h4>
                 <p className="text-xs text-gray-400 mb-3">
-                  Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector, e.g. 1FTS+CFS.
+                  Choose units that will schedule aircraft/resources together. Selecting units here creates a shared fleet context in the top-left Location/Unit selector.
                 </p>
                 
                 {/* Narrower grid for units */}
