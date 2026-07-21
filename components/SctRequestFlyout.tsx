@@ -22,6 +22,27 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
   const continuationLongLabel = resolvedSctTerminology.longLabel;
   const continuationProfiles = useMemo(() => getContinuationEventCurrencyProfiles(sctEventsProp), [sctEventsProp]);
   const sctEvents = useMemo(() => continuationProfiles.map(profile => profile.name).filter(Boolean), [continuationProfiles]);
+  const normaliseOptionKey = (value: unknown) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const currencyOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return [...continuationProfiles.map(profile => profile.currency), ...currencyNames]
+      .map(value => String(value || '').trim())
+      .filter(value => {
+        const key = normaliseOptionKey(value);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [continuationProfiles, currencyNames]);
+  const findContinuationProfile = (value: string) => {
+    const key = normaliseOptionKey(value);
+    return continuationProfiles.find(candidate => (
+      [candidate.name, candidate.code, candidate.currency]
+        .map(normaliseOptionKey)
+        .filter(Boolean)
+        .includes(key)
+    ));
+  };
   const normaliseRequestedTime = (value: string, fallback: string) => (/^\d{2}:\d{2}$/.test(value) ? value : fallback);
   const isNightContinuationEvent = (value: string) => /\bnight\b/i.test(value);
   const defaultDayRequestedTime = '15:00';
@@ -50,7 +71,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
     setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
   }, [defaultNightRequestedTime, event]);
   useEffect(() => {
-    const profile = continuationProfiles.find(candidate => candidate.name === event || candidate.code === event || candidate.currency === event);
+    const profile = findContinuationProfile(event);
     if (!profile) return;
     setFlightType(profile.flightType || 'Dual');
     setCurrency(profile.currency || '');
@@ -86,7 +107,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
       alert('Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.');
       return;
     }
-    const profile = continuationProfiles.find(candidate => candidate.name === event || candidate.code === event || candidate.currency === event);
+    const profile = findContinuationProfile(event);
     const newRequest: SctRequest = {
       id: uuidv4(),
       name: instructor.name,
@@ -196,9 +217,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
               <label className="block text-sm font-medium text-gray-400">Currency</label>
               <select value={currency} onChange={e => setCurrency(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white">
                 <option value="">Select Currency...</option>
-                <option value="GF">GF</option>
-                <option value="30 Day">30 Day</option>
-                {currencyNames.map(c => <option key={c} value={c}>{c}</option>)}
+                {currencyOptions.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>

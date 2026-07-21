@@ -80456,6 +80456,20 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
   const continuationLongLabel = resolvedSctTerminology.longLabel;
   const continuationProfiles = reactExports.useMemo(() => getContinuationEventCurrencyProfiles(sctEventsProp), [sctEventsProp]);
   const sctEvents = reactExports.useMemo(() => continuationProfiles.map((profile) => profile.name).filter(Boolean), [continuationProfiles]);
+  const normaliseOptionKey = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const currencyOptions = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return [...continuationProfiles.map((profile) => profile.currency), ...currencyNames].map((value) => String(value || "").trim()).filter((value) => {
+      const key = normaliseOptionKey(value);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [continuationProfiles, currencyNames]);
+  const findContinuationProfile = (value) => {
+    const key = normaliseOptionKey(value);
+    return continuationProfiles.find((candidate) => [candidate.name, candidate.code, candidate.currency].map(normaliseOptionKey).filter(Boolean).includes(key));
+  };
   const normaliseRequestedTime = (value, fallback) => /^\d{2}:\d{2}$/.test(value) ? value : fallback;
   const isNightContinuationEvent = (value) => /\bnight\b/i.test(value);
   const defaultDayRequestedTime = "15:00";
@@ -80482,7 +80496,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
   }, [defaultNightRequestedTime, event]);
   reactExports.useEffect(() => {
-    const profile = continuationProfiles.find((candidate) => candidate.name === event || candidate.code === event || candidate.currency === event);
+    const profile = findContinuationProfile(event);
     if (!profile) return;
     setFlightType(profile.flightType || "Dual");
     setCurrency(profile.currency || "");
@@ -80511,7 +80525,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       alert("Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.");
       return;
     }
-    const profile = continuationProfiles.find((candidate) => candidate.name === event || candidate.code === event || candidate.currency === event);
+    const profile = findContinuationProfile(event);
     const newRequest = {
       id: v4(),
       name: instructor.name,
@@ -80626,9 +80640,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Currency" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: currency, onChange: (e) => setCurrency(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select Currency..." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "GF", children: "GF" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "30 Day", children: "30 Day" }),
-            currencyNames.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c))
+            currencyOptions.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c))
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
