@@ -36036,33 +36036,19 @@ const UnavailabilitiesWindow = ({ instructorsData, traineesData, date, title }) 
     ] })
   ] });
 };
-const TRACKING_LOCATIONS = {
-  ESL: { label: "East Sale", shortCode: "ESL", lat: -38.0989, lon: 147.1494, zoom: 8 },
-  "EAST SALE": { label: "East Sale", shortCode: "ESL", lat: -38.0989, lon: 147.1494, zoom: 8 },
-  YMES: { label: "East Sale", shortCode: "YMES", lat: -38.0989, lon: 147.1494, zoom: 8 },
-  PEA: { label: "Pearce", shortCode: "PEA", lat: -31.6678, lon: 116.015, zoom: 8 },
-  PEARCE: { label: "Pearce", shortCode: "PEA", lat: -31.6678, lon: 116.015, zoom: 8 },
-  YPEA: { label: "Pearce", shortCode: "YPEA", lat: -31.6678, lon: 116.015, zoom: 8 },
-  WLM: { label: "Williamtown", shortCode: "WLM", lat: -32.7949, lon: 151.8344, zoom: 8 },
-  WILLIAMTOWN: { label: "Williamtown", shortCode: "WLM", lat: -32.7949, lon: 151.8344, zoom: 8 },
-  YWLM: { label: "Williamtown", shortCode: "YWLM", lat: -32.7949, lon: 151.8344, zoom: 8 },
-  AMB: { label: "Amberley", shortCode: "AMB", lat: -27.6406, lon: 152.7122, zoom: 8 },
-  AMBERLEY: { label: "Amberley", shortCode: "AMB", lat: -27.6406, lon: 152.7122, zoom: 8 },
-  YAMB: { label: "Amberley", shortCode: "YAMB", lat: -27.6406, lon: 152.7122, zoom: 8 },
-  TDL: { label: "Tindal", shortCode: "TDL", lat: -14.5211, lon: 132.3783, zoom: 8 },
-  TINDAL: { label: "Tindal", shortCode: "TDL", lat: -14.5211, lon: 132.3783, zoom: 8 },
-  YPTN: { label: "Tindal", shortCode: "YPTN", lat: -14.5211, lon: 132.3783, zoom: 8 },
-  EDN: { label: "Edinburgh", shortCode: "EDN", lat: -34.7025, lon: 138.6208, zoom: 8 },
-  EDINBURGH: { label: "Edinburgh", shortCode: "EDN", lat: -34.7025, lon: 138.6208, zoom: 8 },
-  YPED: { label: "Edinburgh", shortCode: "YPED", lat: -34.7025, lon: 138.6208, zoom: 8 }
-};
-const DEFAULT_TRACKING_LOCATION = TRACKING_LOCATIONS.ESL;
-const resolveTrackingLocation = (school, locationName) => {
-  const keys = [school, locationName].filter(Boolean).map((value) => String(value).trim().toUpperCase());
-  for (const key of keys) {
-    if (TRACKING_LOCATIONS[key]) return TRACKING_LOCATIONS[key];
-  }
-  return DEFAULT_TRACKING_LOCATION;
+const resolveTrackingLocation = (school, locationName, locationProfile) => {
+  const lat = Number(locationProfile?.latitude);
+  const lon = Number(locationProfile?.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const label = String(locationProfile?.name || locationName || school || "Selected location").trim();
+  const shortCode = String(locationProfile?.code || school || label).trim();
+  return {
+    label,
+    shortCode,
+    lat,
+    lon,
+    zoom: 8
+  };
 };
 const buildTrackerUrl = (location, enlarged = false) => {
   const params = new URLSearchParams({
@@ -36074,12 +36060,12 @@ const buildTrackerUrl = (location, enlarged = false) => {
   if (!enlarged) params.append("hideButtons", "");
   return `https://globe.adsb.lol/?${params.toString()}`;
 };
-const FlightTrackingWidget = ({ school, locationName }) => {
+const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
   const [isExpanded, setIsExpanded] = reactExports.useState(false);
   const [trackingAllowed, setTrackingAllowed] = reactExports.useState(() => isExternalDataAllowed("flightTrackingEnabled"));
-  const trackingLocation = reactExports.useMemo(() => resolveTrackingLocation(school, locationName), [school, locationName]);
-  const compactTrackerUrl = reactExports.useMemo(() => buildTrackerUrl(trackingLocation), [trackingLocation]);
-  const expandedTrackerUrl = reactExports.useMemo(() => buildTrackerUrl(trackingLocation, true), [trackingLocation]);
+  const trackingLocation = reactExports.useMemo(() => resolveTrackingLocation(school, locationName, locationProfile), [school, locationName, locationProfile]);
+  const compactTrackerUrl = reactExports.useMemo(() => trackingLocation ? buildTrackerUrl(trackingLocation) : "", [trackingLocation]);
+  const expandedTrackerUrl = reactExports.useMemo(() => trackingLocation ? buildTrackerUrl(trackingLocation, true) : "", [trackingLocation]);
   React.useEffect(() => {
     const update = () => setTrackingAllowed(isExternalDataAllowed("flightTrackingEnabled"));
     window.addEventListener(EXTERNAL_DATA_CONTROLS_EVENT, update);
@@ -36094,14 +36080,9 @@ const FlightTrackingWidget = ({ school, locationName }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start gap-3 mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Flight Tracking" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
-            trackingLocation.label,
-            " (",
-            trackingLocation.shortCode,
-            ")"
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", children: trackingLocation ? `${trackingLocation.label} (${trackingLocation.shortCode})` : "Location coordinates not configured" })
         ] }),
-        trackingAllowed && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        trackingAllowed && trackingLocation && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "a",
           {
             href: expandedTrackerUrl,
@@ -36112,7 +36093,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden border border-gray-700 bg-gray-900 h-64", children: trackingAllowed ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden border border-gray-700 bg-gray-900 h-64", children: trackingAllowed && trackingLocation ? /* @__PURE__ */ jsxRuntimeExports.jsx(
         "iframe",
         {
           title: `Flight tracking map centered on ${trackingLocation.label}`,
@@ -36121,9 +36102,12 @@ const FlightTrackingWidget = ({ school, locationName }) => {
           loading: "lazy",
           referrerPolicy: "no-referrer-when-downgrade"
         }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
+      ) : !trackingAllowed ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External flight tracking disabled" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Public ADS-B map embeds are blocked by Settings - Data Sources." })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Location coordinates required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Add latitude and longitude in Settings - Platform & Deployment - Locations." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -36131,12 +36115,12 @@ const FlightTrackingWidget = ({ school, locationName }) => {
           {
             type: "button",
             onClick: () => setIsExpanded(true),
-            disabled: !trackingAllowed,
+            disabled: !trackingAllowed || !trackingLocation,
             className: "px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed text-sm",
             children: "Enlarge Map"
           }
         ),
-        trackingAllowed ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        trackingAllowed && trackingLocation ? /* @__PURE__ */ jsxRuntimeExports.jsx(
           "a",
           {
             href: expandedTrackerUrl,
@@ -36149,7 +36133,7 @@ const FlightTrackingWidget = ({ school, locationName }) => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500", children: "Free public ADS-B display centered on the active DFP location." })
     ] }),
-    isExpanded && trackingAllowed && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden", children: [
+    isExpanded && trackingAllowed && trackingLocation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 border-b border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-white", children: [
@@ -36200,7 +36184,7 @@ const formatTime$1 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
     const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
     return events.filter(
@@ -36259,7 +36243,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Flight Tracking" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0 flex-1 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FlightTrackingWidget, { school, locationName: currentLocation }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0 flex-1 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FlightTrackingWidget, { school, locationName: currentLocation, locationProfile: currentLocationProfile }) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-6", children: [
@@ -119499,6 +119483,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             events: eventsForDate,
             school,
             currentLocation: activeLocationDisplayName,
+            currentLocationProfile: activeLocationSolarProfile,
             onNavigate: handleNavigation,
             onOpenAuth: (e) => {
               const latestEvent = events.find((ev) => ev.id === e.id) || e;

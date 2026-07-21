@@ -11,6 +11,12 @@ interface SupervisorDashboardProps {
     events: ScheduleEvent[];
     school: string;
     currentLocation: string;
+    currentLocationProfile?: {
+        code?: string | null;
+        name?: string | null;
+        latitude?: number | null;
+        longitude?: number | null;
+    } | null;
     onNavigate: (view: string) => void;
     onOpenAuth: (event: ScheduleEvent) => void;
 }
@@ -21,7 +27,7 @@ const formatTime = (time: number) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, school, currentLocation, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, school, currentLocation, currentLocationProfile, onNavigate, onOpenAuth }) => {
     
     const flightsNeedingAuth = useMemo(() => {
         const nowInHours = new Date().getHours() + new Date().getMinutes() / 60;
@@ -117,7 +123,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                             Flight Tracking
                         </h2>
                         <div className="p-0 flex-1 flex flex-col">
-                            <FlightTrackingWidget school={school} locationName={currentLocation} />
+                            <FlightTrackingWidget school={school} locationName={currentLocation} locationProfile={currentLocationProfile} />
                         </div>
                     </div>
                 </div>

@@ -42582,6 +42582,7 @@ appliedUpdates.forEach(update => {
                             events={eventsForDate}
                             school={school}
                             currentLocation={activeLocationDisplayName}
+                            currentLocationProfile={activeLocationSolarProfile}
                             onNavigate={handleNavigation}
                             onOpenAuth={(e) => {
                                 // Find the latest version of the event from main events state
