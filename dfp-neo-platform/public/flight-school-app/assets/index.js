@@ -34750,7 +34750,8 @@ const AddGroundEventFlyout = ({
   ] });
 };
 const REFRESH_INTERVAL = 30 * 60 * 1e3;
-const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(code || "").trim().toUpperCase()).filter((code) => code.length >= 4);
+const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(code || "").replace(/\s+/g, "").toUpperCase()).filter((code) => code.length >= 4);
+const normaliseTafLocationDraft = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
 const readSavedTafLocations = () => {
   try {
     const saved = localStorage.getItem("tafLocations");
@@ -34769,6 +34770,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
   const [tafData, setTafData] = reactExports.useState(/* @__PURE__ */ new Map());
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [editLocations, setEditLocations] = reactExports.useState([]);
+  const [editLocationDrafts, setEditLocationDrafts] = reactExports.useState({});
   const [loading, setLoading] = reactExports.useState(/* @__PURE__ */ new Set());
   const [lastUpdate, setLastUpdate] = reactExports.useState(/* @__PURE__ */ new Date());
   const [externalDataAllowed, setExternalDataAllowed] = reactExports.useState(() => isExternalDataAllowed("weatherDataEnabled"));
@@ -34860,9 +34862,10 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     return () => clearInterval(interval);
   }, [locations, externalDataAllowed]);
   const handleSaveLocations = () => {
-    const validLocations = editLocations.map((loc) => loc.trim().toUpperCase()).filter((loc) => loc.length >= 4);
+    const validLocations = editLocations.map((loc, index) => normaliseTafLocationDraft(editLocationDrafts[index] ?? loc)).filter((loc) => loc.length >= 4);
     setLocations(validLocations);
     localStorage.setItem("tafLocations", JSON.stringify(validLocations));
+    setEditLocationDrafts({});
     setIsEditing(false);
     if (isExternalDataAllowed("weatherDataEnabled")) {
       validLocations.forEach((location) => {
@@ -34874,15 +34877,54 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
   };
   const handleEditLocations = () => {
     setEditLocations([...locations]);
+    setEditLocationDrafts({});
     setIsEditing(true);
   };
   const handleCancelEdit = () => {
+    setEditLocationDrafts({});
     setIsEditing(false);
   };
   const handleLocationChange = (index, value) => {
-    const updated = [...editLocations];
-    updated[index] = value;
-    setEditLocations(updated);
+    setEditLocationDrafts((previous) => ({ ...previous, [index]: value }));
+  };
+  const commitLocationDraft = (index) => {
+    setEditLocations((previous) => {
+      const updated = [...previous];
+      updated[index] = normaliseTafLocationDraft(editLocationDrafts[index] ?? updated[index] ?? "");
+      return updated;
+    });
+    setEditLocationDrafts((previous) => {
+      if (!(index in previous)) return previous;
+      const { [index]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+  };
+  const insertLocationDraftText = (index, field, text) => {
+    const currentValue = field.value || "";
+    const selectionStart = field.selectionStart ?? currentValue.length;
+    const selectionEnd = field.selectionEnd ?? selectionStart;
+    const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
+    const nextCursor = selectionStart + text.length;
+    handleLocationChange(index, nextValue);
+    window.requestAnimationFrame(() => {
+      field.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+  const handleLocationKeyDownCapture = (event, index) => {
+    if ((event.key === " " || event.code === "Space" || event.key === "Spacebar") && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      insertLocationDraftText(index, event.currentTarget, " ");
+      return;
+    }
+    stopEditableKeyPropagation(event);
+  };
+  const handleLocationBeforeInput = (event, index) => {
+    const inputEvent = event.nativeEvent;
+    if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    insertLocationDraftText(index, event.currentTarget, " ");
   };
   const handleRefresh = (icao) => {
     fetchTaf(icao);
@@ -34959,10 +35001,17 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
           "input",
           {
             type: "text",
-            value: location,
+            value: editLocationDrafts[index] ?? location,
+            onFocus: () => setEditLocationDrafts((previous) => ({
+              ...previous,
+              [index]: previous[index] ?? location
+            })),
+            onBlur: () => commitLocationDraft(index),
+            onBeforeInput: (event) => handleLocationBeforeInput(event, index),
+            onKeyDownCapture: (event) => handleLocationKeyDownCapture(event, index),
+            onKeyDown: stopEditableKeyPropagation,
             onChange: (e) => handleLocationChange(index, e.target.value),
             placeholder: "ICAO code",
-            maxLength: 4,
             className: "flex-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 uppercase"
           }
         )

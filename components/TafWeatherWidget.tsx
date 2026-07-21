@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EXTERNAL_DATA_CONTROLS_EVENT, isExternalDataAllowed } from '../utils/externalDataControls';
+import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface TafData {
     station: string;
@@ -19,9 +20,11 @@ const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 const normaliseTafLocationCodes = (codes: string[] = []) => (
     codes
-        .map(code => String(code || '').trim().toUpperCase())
+        .map(code => String(code || '').replace(/\s+/g, '').toUpperCase())
         .filter(code => code.length >= 4)
 );
+
+const normaliseTafLocationDraft = (value: string) => String(value || '').replace(/\s+/g, '').toUpperCase();
 
 const readSavedTafLocations = (): string[] | null => {
     try {
@@ -42,6 +45,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
     const [tafData, setTafData] = useState<Map<string, TafData>>(new Map());
     const [isEditing, setIsEditing] = useState(false);
     const [editLocations, setEditLocations] = useState<string[]>([]);
+    const [editLocationDrafts, setEditLocationDrafts] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState<Set<string>>(new Set());
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
     const [externalDataAllowed, setExternalDataAllowed] = useState(() => isExternalDataAllowed('weatherDataEnabled'));
@@ -154,11 +158,12 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
     // Save locations to localStorage
     const handleSaveLocations = () => {
         const validLocations = editLocations
-            .map(loc => loc.trim().toUpperCase())
+            .map((loc, index) => normaliseTafLocationDraft(editLocationDrafts[index] ?? loc))
             .filter(loc => loc.length >= 4);
         
         setLocations(validLocations);
         localStorage.setItem('tafLocations', JSON.stringify(validLocations));
+        setEditLocationDrafts({});
         setIsEditing(false);
         
         // Fetch TAFs for new locations
@@ -173,17 +178,60 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
 
     const handleEditLocations = () => {
         setEditLocations([...locations]);
+        setEditLocationDrafts({});
         setIsEditing(true);
     };
 
     const handleCancelEdit = () => {
+        setEditLocationDrafts({});
         setIsEditing(false);
     };
 
     const handleLocationChange = (index: number, value: string) => {
-        const updated = [...editLocations];
-        updated[index] = value;
-        setEditLocations(updated);
+        setEditLocationDrafts(previous => ({ ...previous, [index]: value }));
+    };
+
+    const commitLocationDraft = (index: number) => {
+        setEditLocations(previous => {
+            const updated = [...previous];
+            updated[index] = normaliseTafLocationDraft(editLocationDrafts[index] ?? updated[index] ?? '');
+            return updated;
+        });
+        setEditLocationDrafts(previous => {
+            if (!(index in previous)) return previous;
+            const { [index]: _committedDraft, ...remainingDrafts } = previous;
+            return remainingDrafts;
+        });
+    };
+
+    const insertLocationDraftText = (index: number, field: HTMLInputElement, text: string) => {
+        const currentValue = field.value || '';
+        const selectionStart = field.selectionStart ?? currentValue.length;
+        const selectionEnd = field.selectionEnd ?? selectionStart;
+        const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
+        const nextCursor = selectionStart + text.length;
+        handleLocationChange(index, nextValue);
+        window.requestAnimationFrame(() => {
+            field.setSelectionRange(nextCursor, nextCursor);
+        });
+    };
+
+    const handleLocationKeyDownCapture = (event: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+        if ((event.key === ' ' || event.code === 'Space' || event.key === 'Spacebar') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            insertLocationDraftText(index, event.currentTarget, ' ');
+            return;
+        }
+        stopEditableKeyPropagation(event);
+    };
+
+    const handleLocationBeforeInput = (event: React.FormEvent<HTMLInputElement>, index: number) => {
+        const inputEvent = event.nativeEvent as InputEvent;
+        if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        insertLocationDraftText(index, event.currentTarget, ' ');
     };
 
     const handleRefresh = (icao: string) => {
@@ -264,10 +312,17 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                             <span className="text-gray-400 text-sm w-8">{index + 1}.</span>
                             <input
                                 type="text"
-                                value={location}
+                                value={editLocationDrafts[index] ?? location}
+                                onFocus={() => setEditLocationDrafts(previous => ({
+                                    ...previous,
+                                    [index]: previous[index] ?? location,
+                                }))}
+                                onBlur={() => commitLocationDraft(index)}
+                                onBeforeInput={(event) => handleLocationBeforeInput(event, index)}
+                                onKeyDownCapture={(event) => handleLocationKeyDownCapture(event, index)}
+                                onKeyDown={stopEditableKeyPropagation}
                                 onChange={(e) => handleLocationChange(index, e.target.value)}
                                 placeholder="ICAO code"
-                                maxLength={4}
                                 className="flex-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 uppercase"
                             />
                         </div>
