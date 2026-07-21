@@ -54513,7 +54513,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
-              value: currentItem.cctOnly || (currentItem.code === "BGF10" ? "YES" : "NO"),
+              value: currentItem.cctOnly || "NO",
               onChange: (e) => handleFieldChange("cctOnly", e.target.value),
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]",
               children: [
@@ -54528,7 +54528,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
-              value: currentItem.twrDiReqd || (currentItem.code === "BGF11" || currentItem.code === "BGF18" ? "YES" : "NO"),
+              value: currentItem.twrDiReqd || "NO",
               onChange: (e) => handleFieldChange("twrDiReqd", e.target.value),
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]",
               children: [
@@ -54699,8 +54699,8 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Day/Night", value: item.dayNight }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Type", value: formatDisplayType2(getDisplayType2(item)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Cct Only", value: item.cctOnly || (item.code === "BGF10" ? "YES" : "NO") }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "TWR DI Reqd", value: item.twrDiReqd || (item.code === "BGF11" || item.code === "BGF18" ? "YES" : "NO") }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Cct Only", value: item.cctOnly || "NO" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "TWR DI Reqd", value: item.twrDiReqd || "NO" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Total Event Hrs", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           item.totalEventHours.toFixed(1),
           " ",

@@ -597,7 +597,7 @@ const DetailView: React.FC<{
                         <div className="bg-gray-700/50 p-1 rounded-lg">
                                <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Cct Only</label>
                                <select
-                                  value={currentItem.cctOnly || (currentItem.code === 'BGF10' ? 'YES' : 'NO')}
+                                  value={currentItem.cctOnly || 'NO'}
                                   onChange={(e) => handleFieldChange('cctOnly', e.target.value as 'YES' | 'NO')}
                                   className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                               >
@@ -608,7 +608,7 @@ const DetailView: React.FC<{
                         <div className="bg-gray-700/50 p-1 rounded-lg">
                                <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">TWR DI Reqd</label>
                                <select
-                                  value={currentItem.twrDiReqd || (currentItem.code === 'BGF11' || currentItem.code === 'BGF18' ? 'YES' : 'NO')}
+                                  value={currentItem.twrDiReqd || 'NO'}
                                   onChange={(e) => handleFieldChange('twrDiReqd', e.target.value as 'YES' | 'NO')}
                                   className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                               >
@@ -748,8 +748,8 @@ const DetailView: React.FC<{
                         <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
                         <DetailCard label="Day/Night" value={item.dayNight} />
                         <DetailCard label="Type" value={formatDisplayType(getDisplayType(item))} />
-                        <DetailCard label="Cct Only" value={item.cctOnly || (item.code === 'BGF10' ? 'YES' : 'NO')} />
-                        <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || (item.code === 'BGF11' || item.code === 'BGF18' ? 'YES' : 'NO')} />
+                        <DetailCard label="Cct Only" value={item.cctOnly || 'NO'} />
+                        <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || 'NO'} />
                         <DetailCard label="Total Event Hrs" value={<>{item.totalEventHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
                         <DetailCard label="Flight/Sim Hrs" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
                         <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
