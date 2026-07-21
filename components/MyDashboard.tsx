@@ -27,6 +27,7 @@ interface MyDashboardProps {
     onSelectStaffName?: (staffName: string) => void;
     onUnreadMessageCountChange?: (count: number) => void;
     sctTerminology?: SctTerminology;
+    currentLocationCode?: string | null;
 }
 
 type DashboardMessageContact = {
@@ -343,6 +344,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectStaffName,
     onUnreadMessageCountChange,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+    currentLocationCode,
 }) => {
     const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const continuationShortLabel = continuationTerminology.shortLabel;
@@ -1045,7 +1047,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
 
                 {/* Weather Widget */}
                 <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-                    <TafWeatherWidget />
+                    <TafWeatherWidget defaultLocationCodes={currentLocationCode ? [currentLocationCode] : []} />
                 </div>
                 
                 {/* My Active Continuation Training Requests */}

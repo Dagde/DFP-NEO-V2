@@ -42422,6 +42422,7 @@ appliedUpdates.forEach(update => {
                             onSelectStaffName={setDashboardTestUserName}
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
+                            currentLocationCode={activeLocationSolarProfile.code}
                             onSelectTrainingReport={(entry) => {
                                 const selectedStaff = allInstructorsData.find(staff => (
                                     (entry.staff as any).id

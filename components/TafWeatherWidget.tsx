@@ -12,16 +12,33 @@ interface TafData {
 
 interface TafWeatherWidgetProps {
     onClose?: () => void;
+    defaultLocationCodes?: string[];
 }
 
-const DEFAULT_LOCATIONS = ['YMES', 'YMEN', 'YMAY', 'YSCB', 'YLTV'];
 const AVWX_API_TOKEN = ((import.meta as any).env?.VITE_AVWX_API_TOKEN || '').trim();
 const REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
-    const [locations, setLocations] = useState<string[]>(() => {
+const normaliseTafLocationCodes = (codes: string[] = []) => (
+    codes
+        .map(code => String(code || '').trim().toUpperCase())
+        .filter(code => code.length >= 4)
+);
+
+const readSavedTafLocations = (): string[] | null => {
+    try {
         const saved = localStorage.getItem('tafLocations');
-        return saved ? JSON.parse(saved) : DEFAULT_LOCATIONS;
+        if (!saved) return null;
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? normaliseTafLocationCodes(parsed) : null;
+    } catch {
+        return null;
+    }
+};
+
+const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLocationCodes = [] }) => {
+    const defaultLocations = normaliseTafLocationCodes(defaultLocationCodes);
+    const [locations, setLocations] = useState<string[]>(() => {
+        return readSavedTafLocations() || defaultLocations;
     });
     const [tafData, setTafData] = useState<Map<string, TafData>>(new Map());
     const [isEditing, setIsEditing] = useState(false);
@@ -39,6 +56,11 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
             window.removeEventListener('storage', update);
         };
     }, []);
+
+    useEffect(() => {
+        if (readSavedTafLocations()) return;
+        setLocations(current => current.length > 0 ? current : defaultLocations);
+    }, [defaultLocations.join('|')]);
 
     // Function to highlight INTER and TEMPO with their time periods in TAF text
     const highlightTafText = (text: string) => {
@@ -260,7 +282,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose }) => {
                 </div>
             ) : isEditing ? (
                 <div className="space-y-3">
-                    <p className="text-sm text-gray-400">Enter ICAO codes (e.g., YMES, YMEN)</p>
+                    <p className="text-sm text-gray-400">Enter ICAO codes.</p>
                     {editLocations.map((location, index) => (
                         <div key={index} className="flex items-center space-x-2">
                             <span className="text-gray-400 text-sm w-8">{index + 1}.</span>

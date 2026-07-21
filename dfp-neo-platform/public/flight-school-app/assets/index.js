@@ -34750,13 +34750,23 @@ const AddGroundEventFlyout = ({
   ] });
 };
 const __vite_import_meta_env__ = {};
-const DEFAULT_LOCATIONS = ["YMES", "YMEN", "YMAY", "YSCB", "YLTV"];
 const AVWX_API_TOKEN = (__vite_import_meta_env__?.VITE_AVWX_API_TOKEN || "").trim();
 const REFRESH_INTERVAL = 30 * 60 * 1e3;
-const TafWeatherWidget = ({ onClose }) => {
-  const [locations, setLocations] = reactExports.useState(() => {
+const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(code || "").trim().toUpperCase()).filter((code) => code.length >= 4);
+const readSavedTafLocations = () => {
+  try {
     const saved = localStorage.getItem("tafLocations");
-    return saved ? JSON.parse(saved) : DEFAULT_LOCATIONS;
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? normaliseTafLocationCodes(parsed) : null;
+  } catch {
+    return null;
+  }
+};
+const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
+  const defaultLocations = normaliseTafLocationCodes(defaultLocationCodes);
+  const [locations, setLocations] = reactExports.useState(() => {
+    return readSavedTafLocations() || defaultLocations;
   });
   const [tafData, setTafData] = reactExports.useState(/* @__PURE__ */ new Map());
   const [isEditing, setIsEditing] = reactExports.useState(false);
@@ -34773,6 +34783,10 @@ const TafWeatherWidget = ({ onClose }) => {
       window.removeEventListener("storage", update);
     };
   }, []);
+  reactExports.useEffect(() => {
+    if (readSavedTafLocations()) return;
+    setLocations((current) => current.length > 0 ? current : defaultLocations);
+  }, [defaultLocations.join("|")]);
   const highlightTafText = (text) => {
     const regex = /(\b(?:INTER|TEMPO)\s+\d{4}\/\d{4})/g;
     const parts = text.split(regex);
@@ -34955,7 +34969,7 @@ const TafWeatherWidget = ({ onClose }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Weather provider not configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "Set VITE_AVWX_API_TOKEN for deployments that are approved to request external TAF data." })
     ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes (e.g., YMES, YMEN)" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes." }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400 text-sm w-8", children: [
           index + 1,
@@ -35230,7 +35244,8 @@ const MyDashboard = ({
   selectedStaffName,
   onSelectStaffName,
   onUnreadMessageCountChange,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  currentLocationCode
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -35818,7 +35833,7 @@ const MyDashboard = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, {}) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, { defaultLocationCodes: currentLocationCode ? [currentLocationCode] : [] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: [
           "My Active ",
@@ -36239,7 +36254,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, scho
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Weather (TAF)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0 flex-1 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, {}) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0 flex-1 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, { defaultLocationCodes: [currentLocationProfile?.code || school] }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Flight Tracking" }),
@@ -119353,6 +119368,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSelectStaffName: setDashboardTestUserName,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            currentLocationCode: activeLocationSolarProfile.code,
             onSelectTrainingReport: (entry) => {
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
               const reportAssignee = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(entry.report.dashboardAssigneeName || dashboardUserName)) || dashboardStaff;

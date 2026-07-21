@@ -113,7 +113,7 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                             Weather (TAF)
                         </h2>
                         <div className="p-0 flex-1 flex flex-col">
-                            <TafWeatherWidget />
+                            <TafWeatherWidget defaultLocationCodes={[currentLocationProfile?.code || school]} />
                         </div>
                     </div>
 
