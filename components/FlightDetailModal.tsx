@@ -30,7 +30,7 @@ import {
 } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
-import { getContinuationEventNames } from '../utils/continuationEvents';
+import { getContinuationEventNames, normaliseContinuationEventSettings } from '../utils/continuationEvents';
 import {
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
@@ -520,7 +520,7 @@ const makeInitialCrewMember = (sourceEvent: ScheduleEvent): CrewMember => {
 
 const getEventTypeFromSyllabus = (syllabusId: string, syllabusDetails: SyllabusItemDetail[]): 'flight' | 'ftd' | 'ground' => {
     const detail = syllabusDetails.find(d => d.id === syllabusId);
-    if (!detail) { // Fallback for items not in syllabus like 'SCT FORM' or if data is missing
+    if (!detail) { // Fallback for configured continuation items or if data is missing
         if (syllabusId.includes('FTD')) return 'ftd';
         if (syllabusId.includes('CPT') || syllabusId.includes('MB') || syllabusId.includes('TUT') || syllabusId.includes('QUIZ')) return 'ground';
         return 'flight';
@@ -760,9 +760,40 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
+    const configuredContinuationEvents = useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
+    const getConfiguredContinuationEvent = (value?: string | null) => {
+        const normalisedValue = String(value || '').trim().toUpperCase();
+        const compactValue = normalisedValue.replace(/[^A-Z0-9]/g, '');
+        if (!normalisedValue) return undefined;
+        return configuredContinuationEvents.find(candidate => {
+            const candidateValues = [candidate.name, candidate.code, candidate.currency]
+                .map(candidateValue => String(candidateValue || '').trim().toUpperCase())
+                .filter(Boolean);
+            return candidateValues.some(candidateValue => (
+                candidateValue === normalisedValue
+                || candidateValue.replace(/[^A-Z0-9]/g, '') === compactValue
+            ));
+        });
+    };
+    const isConfiguredContinuationFormation = (value?: string | null): boolean => {
+        const configuredEvent = getConfiguredContinuationEvent(value);
+        if (!configuredEvent) return false;
+        if (Math.max(1, Math.floor(Number(configuredEvent.aircraftCount) || 1)) > 1) return true;
+        const configuredText = [configuredEvent.name, configuredEvent.code, configuredEvent.currency]
+            .map(item => String(item || '').trim().toUpperCase())
+            .filter(Boolean)
+            .join(' ');
+        return configuredText.includes('FORM');
+    };
     const isContinuationFormationFlight = (value?: string | null): boolean => {
         const code = String(value || '').trim().toUpperCase();
-        return code === 'SCT FORM' || code === sctFormationLabel.toUpperCase();
+        const compactCode = code.replace(/[^A-Z0-9]/g, '');
+        const compactFormationLabel = sctFormationLabel.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        return code === 'SCT FORM'
+            || code === sctFormationLabel.toUpperCase()
+            || compactCode === 'SCTFORM'
+            || compactCode === compactFormationLabel
+            || isConfiguredContinuationFormation(value);
     };
     const formatContinuationLabel = (value: string): string => {
         const rawValue = String(value || '').trim();
@@ -1859,19 +1890,34 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     // Filter formation callsigns by current location
     const filteredCallsigns = useMemo(() => {
         if (formationCallsigns && formationCallsigns.length > 0 && currentLocation) {
-            const filtered = formationCallsigns.filter(cs => cs.location === currentLocation);
+            const normalise = (value?: string | null) => String(value || '').trim().toUpperCase();
+            const currentLocationKey = normalise(currentLocation);
+            const activeUnits = new Set(
+                String(activeUnitCode || '')
+                    .split('+')
+                    .map(normalise)
+                    .filter(Boolean)
+            );
+            const filtered = formationCallsigns.filter(cs => {
+                const callsignUnit = normalise(cs.unit);
+                const callsignLocation = normalise(cs.location);
+                const callsignLocationCode = normalise(cs.locationCode);
+                const matchesUnit = activeUnits.size === 0 || !callsignUnit || activeUnits.has(callsignUnit);
+                const matchesLocation = callsignLocation === currentLocationKey || callsignLocationCode === currentLocationKey;
+                return matchesUnit && matchesLocation;
+            });
             return filtered.length > 0 ? filtered : null;
         }
         return null;
-    }, [formationCallsigns, currentLocation]);
+    }, [activeUnitCode, formationCallsigns, currentLocation]);
 
     // Backwards compatible formationTypes (just codes)
     const formationTypes = useMemo(() => {
         if (filteredCallsigns) {
             return filteredCallsigns.map(cs => cs.code);
         }
-        return school === 'ESL' ? ['MERL', 'VANG'] : ['COBR', 'HAWK'];
-    }, [filteredCallsigns, school]);
+        return [];
+    }, [filteredCallsigns]);
     const unitCallsignEntries = useMemo(
         () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
         [activeUnitCode, school, unitCallsignSettings],
@@ -1970,7 +2016,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setLocationType(event.locationType || 'Local');
         setOrigin(event.origin || school);
         setDestination(event.destination || school);
-        setFormationType(event.formationType || formationTypes[0]);
+        setFormationType(event.formationType || formationTypes[0] || '');
         setCallsign(event.callsign || '');
         setUnitCallsignBase(defaultUnitCallsign);
         setUnitCallsignNumber(0);
@@ -2007,7 +2053,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const newSize = isFormation ? aircraftCount : 1;
         if (crew.length !== newSize) {
              const newCrew = Array.from({ length: newSize }, (_, i) => {
-                // For SCT FORM with SCT category, default to Solo
+                // Formation continuation rows default to solo aircraft unless the user changes them.
                 const defaultFlightType = (isFormation && eventCategory === 'sct') ? 'Solo' : 'Dual';
                 return crew[i] || { flightType: defaultFlightType as 'Dual' | 'Solo', instructor: '', student: '', pilot: '', group: '', groupTraineeIds: [] };
             });
@@ -2280,13 +2326,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 
         console.log('Flight number changed to:', newFlightNumber);
         const isNewContinuationFormation = isContinuationFormationFlight(newFlightNumber);
-        if (isNewContinuationFormation && !formationType) {
+        if (isNewContinuationFormation && !formationType && formationTypes[0]) {
             setFormationType(formationTypes[0]);
         }
         
            
            if (isNewContinuationFormation && eventCategory === 'sct') {
-               // Set defaults for SCT FORM
+               // Set defaults for formation continuation events.
                setAircraftCount(2);
                // Update crew to Solo
                setCrew(crew.map(member => ({
@@ -2341,7 +2387,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const handleAircraftCountChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newCount = parseInt(e.target.value);
         setAircraftCount(newCount);
-        // When changing aircraft count for SCT FORM, ensure all existing crew are Solo
+        // When changing aircraft count for a formation continuation, keep existing rows solo by default.
         if (isContinuationFormationFlight(flightNumber) && eventCategory === 'sct') {
             setTimeout(() => {
                 setCrew(prevCrew => prevCrew.map(member => ({
@@ -2405,6 +2451,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 return;
             }
         }
+        if (isContinuationFormationFlight(flightNumber) && !formationType) {
+            await showDarkAlert('No formation callsign is configured for this unit and location. Add one in Settings before saving this formation event.', 'Formation Callsign Required', 'warning');
+            return;
+        }
         const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
             let eventColor = event.color;
             
@@ -2427,13 +2477,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 }
             }
             
-            // For SCT FORM events with multiple aircraft, generate unique IDs for each event
+            // Formation continuation events with multiple aircraft need one saved tile per aircraft.
             const isContinuationFormation = isContinuationFormationFlight(flightNumber);
             const eventId = (isContinuationFormation && crew.length > 1)
                 ? `${event.id}-${index}-${Date.now()}` 
                 : event.id;
             
-            // For SCT FORM events with multiple aircraft, clear resourceId so findAvailableResourceId assigns them to different lines
+            // Clear the row so resource assignment can place each formation aircraft separately.
             if (isContinuationFormation && crew.length > 1) {
                 resourceId = '';
             }
@@ -3525,15 +3575,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-400">Formation Callsign</label>
-                                                    <select value={formationType} onChange={e => setFormationType(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                    <select value={formationType} onChange={e => setFormationType(e.target.value)} disabled={isDeploy || formationTypes.length === 0} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
                                                            {filteredCallsigns ? (
                                                                filteredCallsigns.map(cs => (
                                                                    <option key={cs.code} value={cs.code}>
                                                                        {cs.name} ({cs.code}) - {cs.unit}
                                                                    </option>
                                                                ))
-                                                           ) : (
+                                                           ) : formationTypes.length > 0 ? (
                                                                formationTypes.map(type => <option key={type} value={type}>{type}</option>)
+                                                           ) : (
+                                                               <option value="">No formation callsigns configured</option>
                                                            )}
                                                     </select>
                                                 </div>

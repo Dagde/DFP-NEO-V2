@@ -27047,9 +27047,28 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
+  const configuredContinuationEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
+  const getConfiguredContinuationEvent = (value) => {
+    const normalisedValue = String(value || "").trim().toUpperCase();
+    const compactValue = normalisedValue.replace(/[^A-Z0-9]/g, "");
+    if (!normalisedValue) return void 0;
+    return configuredContinuationEvents.find((candidate) => {
+      const candidateValues = [candidate.name, candidate.code, candidate.currency].map((candidateValue) => String(candidateValue || "").trim().toUpperCase()).filter(Boolean);
+      return candidateValues.some((candidateValue) => candidateValue === normalisedValue || candidateValue.replace(/[^A-Z0-9]/g, "") === compactValue);
+    });
+  };
+  const isConfiguredContinuationFormation = (value) => {
+    const configuredEvent = getConfiguredContinuationEvent(value);
+    if (!configuredEvent) return false;
+    if (Math.max(1, Math.floor(Number(configuredEvent.aircraftCount) || 1)) > 1) return true;
+    const configuredText = [configuredEvent.name, configuredEvent.code, configuredEvent.currency].map((item) => String(item || "").trim().toUpperCase()).filter(Boolean).join(" ");
+    return configuredText.includes("FORM");
+  };
   const isContinuationFormationFlight = (value) => {
     const code = String(value || "").trim().toUpperCase();
-    return code === "SCT FORM" || code === sctFormationLabel.toUpperCase();
+    const compactCode = code.replace(/[^A-Z0-9]/g, "");
+    const compactFormationLabel = sctFormationLabel.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return code === "SCT FORM" || code === sctFormationLabel.toUpperCase() || compactCode === "SCTFORM" || compactCode === compactFormationLabel || isConfiguredContinuationFormation(value);
   };
   const formatContinuationLabel = (value) => {
     const rawValue = String(value || "").trim();
@@ -27841,17 +27860,29 @@ ${swapNote}` : swapNote
   }, [crew[0]?.student, crew[0]?.pilot, flightNumber, traineeLMPs, isAddingTile, isEditingDefault, event.id]);
   const filteredCallsigns = reactExports.useMemo(() => {
     if (formationCallsigns && formationCallsigns.length > 0 && currentLocation) {
-      const filtered = formationCallsigns.filter((cs) => cs.location === currentLocation);
+      const normalise = (value) => String(value || "").trim().toUpperCase();
+      const currentLocationKey = normalise(currentLocation);
+      const activeUnits = new Set(
+        String(activeUnitCode || "").split("+").map(normalise).filter(Boolean)
+      );
+      const filtered = formationCallsigns.filter((cs) => {
+        const callsignUnit = normalise(cs.unit);
+        const callsignLocation = normalise(cs.location);
+        const callsignLocationCode = normalise(cs.locationCode);
+        const matchesUnit = activeUnits.size === 0 || !callsignUnit || activeUnits.has(callsignUnit);
+        const matchesLocation = callsignLocation === currentLocationKey || callsignLocationCode === currentLocationKey;
+        return matchesUnit && matchesLocation;
+      });
       return filtered.length > 0 ? filtered : null;
     }
     return null;
-  }, [formationCallsigns, currentLocation]);
+  }, [activeUnitCode, formationCallsigns, currentLocation]);
   const formationTypes = reactExports.useMemo(() => {
     if (filteredCallsigns) {
       return filteredCallsigns.map((cs) => cs.code);
     }
-    return school === "ESL" ? ["MERL", "VANG"] : ["COBR", "HAWK"];
-  }, [filteredCallsigns, school]);
+    return [];
+  }, [filteredCallsigns]);
   const unitCallsignEntries = reactExports.useMemo(
     () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
     [activeUnitCode, school, unitCallsignSettings]
@@ -27928,7 +27959,7 @@ ${swapNote}` : swapNote
     setLocationType(event.locationType || "Local");
     setOrigin(event.origin || school);
     setDestination(event.destination || school);
-    setFormationType(event.formationType || formationTypes[0]);
+    setFormationType(event.formationType || formationTypes[0] || "");
     setCallsign(event.callsign || "");
     setUnitCallsignBase(defaultUnitCallsign);
     setUnitCallsignNumber(0);
@@ -28159,7 +28190,7 @@ ${swapNote}` : swapNote
     }
     console.log("Flight number changed to:", newFlightNumber);
     const isNewContinuationFormation = isContinuationFormationFlight(newFlightNumber);
-    if (isNewContinuationFormation && !formationType) {
+    if (isNewContinuationFormation && !formationType && formationTypes[0]) {
       setFormationType(formationTypes[0]);
     }
     if (isNewContinuationFormation && eventCategory === "sct") {
@@ -28254,6 +28285,10 @@ ${swapNote}` : swapNote
         await showDarkAlert("System is currently frozen. No modifications are allowed during a system freeze.", "System Frozen", "error");
         return;
       }
+    }
+    if (isContinuationFormationFlight(flightNumber) && !formationType) {
+      await showDarkAlert("No formation callsign is configured for this unit and location. Add one in Settings before saving this formation event.", "Formation Callsign Required", "warning");
+      return;
     }
     const eventsToSave = crew.map((c, index) => {
       let eventColor = event.color;
@@ -29207,13 +29242,13 @@ ${swapNote}` : swapNote
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Formation Callsign" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: formationType, onChange: (e) => setFormationType(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: filteredCallsigns ? filteredCallsigns.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cs.code, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: formationType, onChange: (e) => setFormationType(e.target.value), disabled: isDeploy || formationTypes.length === 0, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: filteredCallsigns ? filteredCallsigns.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cs.code, children: [
                   cs.name,
                   " (",
                   cs.code,
                   ") - ",
                   cs.unit
-                ] }, cs.code)) : formationTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: type, children: type }, type)) })
+                ] }, cs.code)) : formationTypes.length > 0 ? formationTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: type, children: type }, type)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No formation callsigns configured" }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft Count" }),
