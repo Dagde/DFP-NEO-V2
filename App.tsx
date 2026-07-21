@@ -5345,8 +5345,13 @@ const getEventDayNightClassification = (
     }
 
     // Continuation events are configured outside the Master LMP list.
+    const normaliseContinuationKey = (value: unknown) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const eventContinuationKey = normaliseContinuationKey(event.flightNumber);
     const continuationEvent = normaliseContinuationEventSettings(sctEvents).find(candidate => (
-        candidate.name === event.flightNumber || candidate.code === event.flightNumber
+        [candidate.name, candidate.code, candidate.currency]
+            .map(normaliseContinuationKey)
+            .filter(Boolean)
+            .includes(eventContinuationKey)
     ));
     if (continuationEvent) {
         return continuationEvent.dayNight || 'Day';
@@ -27218,8 +27223,8 @@ const App: React.FC = () => {
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
                 if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
                 if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
-                if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
-                if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
+                if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
+                if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
                 if (saved.coursePercentages && Object.keys(saved.coursePercentages).length) {
                     setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v as number])));
@@ -27239,7 +27244,7 @@ const App: React.FC = () => {
                     setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit((saved as any).fixedCrewTileColourModeByUnit));
                 }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
-                if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
+                if (Array.isArray(saved.cancellationCodes)) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
                 {
                     const dbReqs = saved.currencyRequirements ?? [];

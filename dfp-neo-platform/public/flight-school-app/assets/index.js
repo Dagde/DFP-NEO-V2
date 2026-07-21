@@ -89062,7 +89062,9 @@ const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
   if (event.flightNumber === "Duty Sup") {
     return "Day";
   }
-  const continuationEvent = normaliseContinuationEventSettings(sctEvents).find((candidate) => candidate.name === event.flightNumber || candidate.code === event.flightNumber);
+  const normaliseContinuationKey = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const eventContinuationKey = normaliseContinuationKey(event.flightNumber);
+  const continuationEvent = normaliseContinuationEventSettings(sctEvents).find((candidate) => [candidate.name, candidate.code, candidate.currency].map(normaliseContinuationKey).filter(Boolean).includes(eventContinuationKey));
   if (continuationEvent) {
     return continuationEvent.dayNight || "Day";
   }
@@ -106950,8 +106952,8 @@ ${"=".repeat(60)}`);
         if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
         if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
         if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
-        if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
-        if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
+        if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
+        if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
         if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
         if (saved.coursePercentages && Object.keys(saved.coursePercentages).length) {
           setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v])));
@@ -106970,7 +106972,7 @@ ${"=".repeat(60)}`);
           setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit(saved.fixedCrewTileColourModeByUnit));
         }
         if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
-        if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
+        if (Array.isArray(saved.cancellationCodes)) setCancellationCodes(saved.cancellationCodes);
         {
           const dbReqs = saved.currencyRequirements ?? [];
           const dbMasters = saved.masterCurrencies ?? [];
