@@ -45004,7 +45004,7 @@ appliedUpdates.forEach(update => {
                         // Show success message
                         setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
                     }}
-                    currencyNames={['Instrument', 'Night', 'Multi-Engine', 'Formation']}
+                    currencyNames={[]}
                     sctEvents={sctEvents}
                     sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                     nightContinuationDefaultTime={formatDecimalTimeInput(commenceNightFlying)}

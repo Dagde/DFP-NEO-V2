@@ -121761,7 +121761,7 @@ Do you want to replace the existing entry?`,
             setShowSctRequest(false);
             setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
           },
-          currencyNames: ["Instrument", "Night", "Multi-Engine", "Formation"],
+          currencyNames: [],
           sctEvents,
           sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
           nightContinuationDefaultTime: formatDecimalTimeInput(commenceNightFlying),
