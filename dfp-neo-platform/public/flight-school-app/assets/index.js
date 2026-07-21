@@ -28693,6 +28693,27 @@ ${swapNote}` : swapNote
       )
     ] }, index);
   };
+  const formationGroupEvents = reactExports.useMemo(() => {
+    const formationId = String(event.formationId || "").trim();
+    if (!formationId) return [];
+    const byId = /* @__PURE__ */ new Map();
+    [event, ...eventsForDate].forEach((candidate) => {
+      if (candidate?.formationId === formationId) {
+        byId.set(candidate.id, candidate);
+      }
+    });
+    return Array.from(byId.values()).sort((a, b) => Number(a.formationPosition || 0) - Number(b.formationPosition || 0));
+  }, [event, eventsForDate]);
+  const displayedFormationPosition = Math.max(0, Math.floor(Number(event.formationPosition) || 0));
+  const displayedFormationSize = Math.max(
+    Number(isContinuationFormationFlight(event.flightNumber) ? 2 : 1),
+    Math.floor(Number(event.aircraftCount) || 0),
+    Math.floor(Number(event.formationSize) || 0),
+    formationGroupEvents.length,
+    displayedFormationPosition
+  );
+  const isDisplayedFormationContinuation = event.type === "flight" && (isContinuationFormationFlight(event.flightNumber) || event.eventCategory === "sct" && (displayedFormationSize > 1 || Boolean(event.formationId)));
+  const displayedFormationCallsign = String(event.callsign || "").trim() || (event.formationType && displayedFormationPosition ? `${event.formationType}${displayedFormationPosition}` : String(event.formationType || "").trim());
   if (isVisualAdjustMode) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       VisualAdjustModal,
@@ -29446,6 +29467,20 @@ ${swapNote}` : swapNote
             " ",
             aircraftConfigOptions.find((definition) => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label
           ] }),
+          !isFixedCrewCrewedEvent && isDisplayedFormationContinuation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-sky-500/30 bg-sky-950/20 p-3 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Formation Callsign" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: displayedFormationCallsign || "Not set" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Aircraft" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: displayedFormationPosition ? `${displayedFormationPosition} of ${displayedFormationSize}` : displayedFormationSize })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs uppercase tracking-wider text-gray-500", children: "Departure" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-100", children: formatTime$4(event.startTime) })
+            ] })
+          ] }) }),
           isFixedCrewCrewedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-3 py-2", children: [

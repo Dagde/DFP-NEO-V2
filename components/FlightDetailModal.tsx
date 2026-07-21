@@ -2969,7 +2969,34 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                )}
         </div>
     );
-};    
+};
+
+    const formationGroupEvents = useMemo(() => {
+        const formationId = String(event.formationId || '').trim();
+        if (!formationId) return [];
+        const byId = new Map<string, ScheduleEvent>();
+        [event, ...eventsForDate].forEach(candidate => {
+            if (candidate?.formationId === formationId) {
+                byId.set(candidate.id, candidate);
+            }
+        });
+        return Array.from(byId.values()).sort((a, b) => Number(a.formationPosition || 0) - Number(b.formationPosition || 0));
+    }, [event, eventsForDate]);
+    const displayedFormationPosition = Math.max(0, Math.floor(Number(event.formationPosition) || 0));
+    const displayedFormationSize = Math.max(
+        Number(isContinuationFormationFlight(event.flightNumber) ? 2 : 1),
+        Math.floor(Number((event as any).aircraftCount) || 0),
+        Math.floor(Number((event as any).formationSize) || 0),
+        formationGroupEvents.length,
+        displayedFormationPosition
+    );
+    const isDisplayedFormationContinuation = event.type === 'flight' && (
+        isContinuationFormationFlight(event.flightNumber)
+        || ((event as any).eventCategory === 'sct' && (displayedFormationSize > 1 || Boolean(event.formationId)))
+    );
+    const displayedFormationCallsign = String(event.callsign || '').trim()
+        || (event.formationType && displayedFormationPosition ? `${event.formationType}${displayedFormationPosition}` : String(event.formationType || '').trim());
+
     if (isVisualAdjustMode) {
         return (
             <VisualAdjustModal
@@ -3796,6 +3823,26 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
                                     {!isFixedCrewCrewedEvent && event.type === 'flight' && (
                                         <p><strong>CONFIG:</strong> {aircraftConfigOptions.find(definition => definition.id === (event.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id))?.label || BASE_AIRCRAFT_CONFIG.label}</p>
+                                    )}
+                                    {!isFixedCrewCrewedEvent && isDisplayedFormationContinuation && (
+                                        <div className="mt-3 rounded-lg border border-sky-500/30 bg-sky-950/20 p-3 space-y-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                                <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">Formation Callsign</span>
+                                                    <span className="text-gray-100">{displayedFormationCallsign || 'Not set'}</span>
+                                                </div>
+                                                <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">Aircraft</span>
+                                                    <span className="text-gray-100">
+                                                        {displayedFormationPosition ? `${displayedFormationPosition} of ${displayedFormationSize}` : displayedFormationSize}
+                                                    </span>
+                                                </div>
+                                                <div className="rounded bg-gray-900/50 px-3 py-2">
+                                                    <span className="block text-xs uppercase tracking-wider text-gray-500">Departure</span>
+                                                    <span className="text-gray-100">{formatTime(event.startTime)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                     {isFixedCrewCrewedEvent && (
                                         <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2">
