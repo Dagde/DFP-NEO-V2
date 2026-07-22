@@ -11818,7 +11818,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const getHydratedOrganisationUnitLevel = () => {
     const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-    return levels.find((level) => String(level?.name || "").trim().toLowerCase() === "unit") || levels.find((level) => Number(level?.levelIndex ?? level?.level) === 4) || null;
+    return levels.find((level) => String(level?.name || "").trim().toLowerCase() === "unit") || levels.find((level) => Number(level?.levelIndex ?? level?.level) === 4) || levels.map((level, index) => ({ level, index })).filter(({ level, index }) => index > 3 && Array.isArray(level?.options) && level.options.length > 0).sort((a, b) => a.index - b.index)[0]?.level || null;
   };
   const getSavedInitialSetupWizardDrafts = () => {
     const drafts = activeOrganisation?.settings?.initialSetupWizardDrafts;
@@ -11832,10 +11832,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths : [];
     const parentOptions = getWizardUnitParentPathOptionsForDraft(buildHydratedOrganisationDraft());
     const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
+    const activeUnitByCode = new Map(activeUnits.map((unit) => [normaliseUnitSettingsIdentifier(unit?.code), unit]));
     const relationshipUnitCodes = relationshipPaths.map((rawPath) => Array.isArray(rawPath) ? rawPath.map((part) => String(part || "").trim()).filter(Boolean) : []).filter((path) => path.length > 1 && validParentValues.has(formatWizardOrganisationPath(path.slice(0, -1)))).map((path) => path[path.length - 1]).filter(Boolean);
-    const sourceUnitCodes = savedUnitCodes.length > 0 ? savedUnitCodes : Array.from(new Set(relationshipUnitCodes));
+    const unitRecordCodes = activeUnits.filter((unit) => {
+      const parentPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath.map((part) => String(part || "").trim()).filter(Boolean) : [];
+      return parentPath.length > 0 && validParentValues.has(formatWizardOrganisationPath(parentPath));
+    }).map((unit) => String(unit?.code || "").trim()).filter(Boolean);
+    const sourceUnitCodes = savedUnitCodes.length > 0 ? savedUnitCodes : relationshipUnitCodes.length > 0 ? Array.from(new Set(relationshipUnitCodes)) : Array.from(new Set(unitRecordCodes));
     if (sourceUnitCodes.length > 0) {
-      const activeUnitByCode = new Map(activeUnits.map((unit) => [normaliseUnitSettingsIdentifier(unit?.code), unit]));
       return sourceUnitCodes.map((code) => {
         const unit = activeUnitByCode.get(normaliseUnitSettingsIdentifier(code));
         const name = String(unit?.name || "").trim();

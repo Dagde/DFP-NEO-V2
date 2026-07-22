@@ -2749,6 +2749,10 @@ const InitialSetupWizard: React.FC<{
             : [];
         return levels.find((level: any) => String(level?.name || '').trim().toLowerCase() === 'unit')
             || levels.find((level: any) => Number(level?.levelIndex ?? level?.level) === 4)
+            || levels
+                .map((level: any, index: number) => ({ level, index }))
+                .filter(({ level, index }: any) => index > 3 && Array.isArray(level?.options) && level.options.length > 0)
+                .sort((a: any, b: any) => a.index - b.index)[0]?.level
             || null;
     };
     const getSavedInitialSetupWizardDrafts = () => {
@@ -2767,14 +2771,27 @@ const InitialSetupWizard: React.FC<{
             : [];
         const parentOptions = getWizardUnitParentPathOptionsForDraft(buildHydratedOrganisationDraft());
         const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
+        const activeUnitByCode = new Map(activeUnits.map((unit: any) => [normaliseUnitSettingsIdentifier(unit?.code), unit]));
         const relationshipUnitCodes = relationshipPaths
             .map((rawPath: any) => Array.isArray(rawPath) ? rawPath.map((part) => String(part || '').trim()).filter(Boolean) : [])
             .filter((path) => path.length > 1 && validParentValues.has(formatWizardOrganisationPath(path.slice(0, -1))))
             .map((path) => path[path.length - 1])
             .filter(Boolean);
-        const sourceUnitCodes = savedUnitCodes.length > 0 ? savedUnitCodes : Array.from(new Set(relationshipUnitCodes));
+        const unitRecordCodes = activeUnits
+            .filter((unit: any) => {
+                const parentPath = Array.isArray(unit?.settings?.parentOrganisationPath)
+                    ? unit.settings.parentOrganisationPath.map((part: any) => String(part || '').trim()).filter(Boolean)
+                    : [];
+                return parentPath.length > 0 && validParentValues.has(formatWizardOrganisationPath(parentPath));
+            })
+            .map((unit: any) => String(unit?.code || '').trim())
+            .filter(Boolean);
+        const sourceUnitCodes = savedUnitCodes.length > 0
+            ? savedUnitCodes
+            : relationshipUnitCodes.length > 0
+                ? Array.from(new Set(relationshipUnitCodes))
+                : Array.from(new Set(unitRecordCodes));
         if (sourceUnitCodes.length > 0) {
-            const activeUnitByCode = new Map(activeUnits.map((unit: any) => [normaliseUnitSettingsIdentifier(unit?.code), unit]));
             return sourceUnitCodes.map((code: string) => {
                 const unit = activeUnitByCode.get(normaliseUnitSettingsIdentifier(code));
                 const name = String(unit?.name || '').trim();
