@@ -2912,7 +2912,9 @@ const InitialSetupWizard: React.FC<{
         };
     };
 
-    const saveOrganisationDraft = () => {
+    const organisationWizardStepIds = new Set(['org-name', 'org-level1', 'org-level2', 'org-level3']);
+    const isOrganisationWizardStep = (stepId?: string) => organisationWizardStepIds.has(String(stepId || ''));
+    const saveOrganisationDraft = (options: { preserveWizardDraft?: boolean; message?: string } = {}) => {
         const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
         const level1ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level1Options), organisationDraft.level1Parents, [rootLabel]);
         const level2ParentRows = buildWizardParentRowsForChildren(fromLines(organisationDraft.level2Options), organisationDraft.level2Parents, fromLines(organisationDraft.level1Options));
@@ -2935,10 +2937,13 @@ const InitialSetupWizard: React.FC<{
             activeOrganisation: summariseActiveOrganisation(),
             relationshipPaths,
             levels: levelDrafts,
+            preserveWizardDraft: Boolean(options.preserveWizardDraft),
         });
-        organisationDraftDirtyRef.current = false;
-        if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
-        saveWizardConfig('Organisation details saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+        if (!options.preserveWizardDraft) {
+            organisationDraftDirtyRef.current = false;
+            if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+        }
+        saveWizardConfig(options.message || 'Organisation details saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
             ...settings,
             organisationStructure: {
                 ...(settings.organisationStructure || {}),
@@ -4549,6 +4554,17 @@ const InitialSetupWizard: React.FC<{
                 return;
             }
         }
+        if (isOrganisationWizardStep(visibleStep.id)) {
+            pushWizardOrgDiag('wizard:next-saving-organisation-draft', {
+                fromStep: visibleStep.id,
+                draft: summariseOrganisationDraft(organisationDraft),
+                activeOrganisation: summariseActiveOrganisation(),
+            });
+            saveOrganisationDraft({
+                preserveWizardDraft: true,
+                message: 'Organisation draft synced into Settings.',
+            });
+        }
         if (isSetupTestMode) {
             pushWizardOrgDiag('wizard:next-before-setup-sync', {
                 fromStep: visibleStep.id,
@@ -4568,6 +4584,18 @@ const InitialSetupWizard: React.FC<{
             draft: summariseOrganisationDraft(organisationDraft),
             activeOrganisation: summariseActiveOrganisation(),
         });
+        if (isOrganisationWizardStep(visibleStep.id)) {
+            pushWizardOrgDiag('wizard:jump-saving-organisation-draft', {
+                fromStep: visibleStep.id,
+                toStep: steps[boundedStep]?.id,
+                draft: summariseOrganisationDraft(organisationDraft),
+                activeOrganisation: summariseActiveOrganisation(),
+            });
+            saveOrganisationDraft({
+                preserveWizardDraft: true,
+                message: 'Organisation draft synced into Settings.',
+            });
+        }
         if (isSetupTestMode) {
             pushWizardOrgDiag('wizard:jump-before-setup-sync', {
                 fromStep: visibleStep.id,

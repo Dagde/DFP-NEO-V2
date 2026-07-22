@@ -11964,7 +11964,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       organisations: nextOrganisations
     };
   };
-  const saveOrganisationDraft = () => {
+  const organisationWizardStepIds = /* @__PURE__ */ new Set(["org-name", "org-level1", "org-level2", "org-level3"]);
+  const isOrganisationWizardStep = (stepId) => organisationWizardStepIds.has(String(stepId || ""));
+  const saveOrganisationDraft = (options = {}) => {
     const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || "Organisation";
     const level1ParentRows2 = buildWizardParentRowsForChildren(fromLines(organisationDraft.level1Options), organisationDraft.level1Parents, [rootLabel]);
     const level2ParentRows2 = buildWizardParentRowsForChildren(fromLines(organisationDraft.level2Options), organisationDraft.level2Parents, fromLines(organisationDraft.level1Options));
@@ -11986,11 +11988,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation(),
       relationshipPaths,
-      levels: levelDrafts
+      levels: levelDrafts,
+      preserveWizardDraft: Boolean(options.preserveWizardDraft)
     });
-    organisationDraftDirtyRef.current = false;
-    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
-    saveWizardConfig("Organisation details saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
+    if (!options.preserveWizardDraft) {
+      organisationDraftDirtyRef.current = false;
+      if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+    }
+    saveWizardConfig(options.message || "Organisation details saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
       organisationStructure: {
         ...settings.organisationStructure || {},
@@ -13395,6 +13400,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         return;
       }
     }
+    if (isOrganisationWizardStep(visibleStep.id)) {
+      pushWizardOrgDiag("wizard:next-saving-organisation-draft", {
+        fromStep: visibleStep.id,
+        draft: summariseOrganisationDraft(organisationDraft),
+        activeOrganisation: summariseActiveOrganisation()
+      });
+      saveOrganisationDraft({
+        preserveWizardDraft: true,
+        message: "Organisation draft synced into Settings."
+      });
+    }
     if (isSetupTestMode$1) {
       pushWizardOrgDiag("wizard:next-before-setup-sync", {
         fromStep: visibleStep.id,
@@ -13414,6 +13430,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       draft: summariseOrganisationDraft(organisationDraft),
       activeOrganisation: summariseActiveOrganisation()
     });
+    if (isOrganisationWizardStep(visibleStep.id)) {
+      pushWizardOrgDiag("wizard:jump-saving-organisation-draft", {
+        fromStep: visibleStep.id,
+        toStep: steps[boundedStep]?.id,
+        draft: summariseOrganisationDraft(organisationDraft),
+        activeOrganisation: summariseActiveOrganisation()
+      });
+      saveOrganisationDraft({
+        preserveWizardDraft: true,
+        message: "Organisation draft synced into Settings."
+      });
+    }
     if (isSetupTestMode$1) {
       pushWizardOrgDiag("wizard:jump-before-setup-sync", {
         fromStep: visibleStep.id,
