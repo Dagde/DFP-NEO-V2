@@ -2747,11 +2747,31 @@ const InitialSetupWizard: React.FC<{
         if (cleanParentPath) rows.push({ child: cleanUnitCode, parent: cleanParentPath });
         setUnitParentDraft(rows.map((row) => `${row.child} = ${row.parent}`).join('\n'));
     };
-    const buildHydratedUnitsTodayDraft = () => (
-        activeUnits.length > 0
+    const getHydratedOrganisationUnitLevel = () => {
+        const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels)
+            ? activeOrganisation.settings.organisationStructure.levels
+            : [];
+        return levels.find((level: any) => String(level?.name || '').trim().toLowerCase() === 'unit')
+            || levels.find((level: any) => Number(level?.levelIndex ?? level?.level) === 4)
+            || null;
+    };
+    const buildHydratedUnitsTodayDraft = () => {
+        const unitLevel = getHydratedOrganisationUnitLevel();
+        const savedUnitCodes = Array.isArray(unitLevel?.options)
+            ? unitLevel.options.map((code: any) => String(code || '').trim()).filter(Boolean)
+            : [];
+        if (savedUnitCodes.length > 0) {
+            const activeUnitByCode = new Map(activeUnits.map((unit: any) => [normaliseUnitSettingsIdentifier(unit?.code), unit]));
+            return savedUnitCodes.map((code: string) => {
+                const unit = activeUnitByCode.get(normaliseUnitSettingsIdentifier(code));
+                const name = String(unit?.name || '').trim();
+                return `${code}${name && name !== code ? ` | ${name}` : ''}`;
+            }).join('\n');
+        }
+        return activeUnits.length > 0
             ? activeUnits.map((unit: any) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ''}`).join('\n')
-            : 'UNIT-A | Unit A'
-    );
+            : 'UNIT-A | Unit A';
+    };
     const buildHydratedLocationsTodayDraft = () => (
         activeLocations.length > 0
             ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
@@ -2764,14 +2784,9 @@ const InitialSetupWizard: React.FC<{
         const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths)
             ? activeOrganisation.settings.organisationStructure.relationshipPaths
             : [];
+        const unitLevel = getHydratedOrganisationUnitLevel();
+        const unitParentByChild = unitLevel?.parentByChild && typeof unitLevel.parentByChild === 'object' ? unitLevel.parentByChild : {};
         const savedParentByUnit = new Map<string, string[]>();
-        activeUnits.forEach((unit: any) => {
-            const cleanCode = normaliseUnitSettingsIdentifier(unit?.code);
-            const parentPath = Array.isArray(unit?.settings?.parentOrganisationPath)
-                ? unit.settings.parentOrganisationPath.map((part: any) => String(part || '').trim()).filter(Boolean)
-                : [];
-            if (cleanCode && parentPath.length > 0) savedParentByUnit.set(cleanCode, parentPath);
-        });
         relationshipPaths.forEach((rawPath: any) => {
             const path = Array.isArray(rawPath) ? rawPath.map((part) => String(part || '').trim()).filter(Boolean) : [];
             const unitCode = path[path.length - 1];
@@ -2779,6 +2794,22 @@ const InitialSetupWizard: React.FC<{
             if (path.length > 1 && unitKey && !savedParentByUnit.has(unitKey)) {
                 savedParentByUnit.set(unitKey, path.slice(0, -1));
             }
+        });
+        Object.entries(unitParentByChild).forEach(([unitCode, parent]) => {
+            const unitKey = normaliseUnitSettingsIdentifier(unitCode);
+            const parentLabel = String(parent || '').trim();
+            if (!unitKey || !parentLabel || savedParentByUnit.has(unitKey)) return;
+            const matchingParentPath = parentOptions.find((path) => (
+                normaliseUnitSettingsIdentifier(path[path.length - 1]) === normaliseUnitSettingsIdentifier(parentLabel)
+            ));
+            if (matchingParentPath) savedParentByUnit.set(unitKey, matchingParentPath);
+        });
+        activeUnits.forEach((unit: any) => {
+            const cleanCode = normaliseUnitSettingsIdentifier(unit?.code);
+            const parentPath = Array.isArray(unit?.settings?.parentOrganisationPath)
+                ? unit.settings.parentOrganisationPath.map((part: any) => String(part || '').trim()).filter(Boolean)
+                : [];
+            if (cleanCode && parentPath.length > 0 && !savedParentByUnit.has(cleanCode)) savedParentByUnit.set(cleanCode, parentPath);
         });
         const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
         const fallbackValue = formatWizardOrganisationPath(parentOptions[0]);
