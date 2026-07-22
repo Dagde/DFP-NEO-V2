@@ -673,8 +673,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         optionalHeaders: ['Parent', 'Notes'],
         exampleRows: [
             ['0', 'Your Organisation', '', 'Top level organisation'],
-            ['1', 'Operations Division', 'Your Organisation', 'Branch, command, region, or division'],
-            ['2', 'Flying Group', 'Operations Division', 'Operating group'],
+            ['1', 'Division A', 'Your Organisation', 'Branch, command, region, or division'],
+            ['2', 'Group A', 'Division A', 'Operating group, department, wing, or team'],
         ],
         settingsSection: 'platform-organisation-locations',
         focusSubsectionId: 'platform-organisation-structure',
@@ -699,8 +699,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Unit Code', 'Unit Name', 'Location', 'Unit Type', 'Operating Model'],
         optionalHeaders: ['Parent Organisation', 'Trainees', 'Notes'],
         exampleRows: [
-            ['UNIT-A', 'Unit A', 'HOME', 'Operational', 'Pooled Crew Model', 'Your Organisation / Operations Division / Flying Group', 'No', ''],
-            ['UNIT-B', 'Unit B', 'TRAIN', 'Training', 'Flight School Model', 'Your Organisation / Training Division / Training Group', 'Yes', ''],
+            ['UNIT-A', 'Unit A', 'HOME', 'Operational', 'Pooled Crew Model', 'Your Organisation / Division A / Group A', 'No', ''],
+            ['UNIT-B', 'Unit B', 'TRAIN', 'Training', 'Flight School Model', 'Your Organisation / Division B / Group B', 'Yes', ''],
         ],
         settingsSection: 'platform-units',
     },
@@ -2696,13 +2696,13 @@ const InitialSetupWizard: React.FC<{
         level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'Your Organisation']),
         level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
         level1Options: toLines(levelDraftSource(1)?.options || []),
-        level1Parents: parentLinesForLevel(1, `Operations Division = ${activeOrganisation?.name || activeOrganisation?.code || 'Your Organisation'}`),
+        level1Parents: parentLinesForLevel(1, ''),
         level2Name: String(levelDraftSource(2)?.name || 'Operating Group'),
         level2Options: toLines(levelDraftSource(2)?.options || []),
-        level2Parents: parentLinesForLevel(2, 'Flying Group = Operations Division\nTraining Group = Operations Division'),
+        level2Parents: parentLinesForLevel(2, ''),
         level3Name: String(levelDraftSource(3)?.name || 'Wing / Group'),
         level3Options: toLines(levelDraftSource(3)?.options || []),
-        level3Parents: parentLinesForLevel(3, 'Operations Unit Group = Flying Group\nTraining Unit Group = Training Group'),
+        level3Parents: parentLinesForLevel(3, ''),
         additionalLevels: Array.from({ length: Math.max(0, getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3) - 3) }, (_, offset) => {
             const levelIndex = offset + 4;
             const source = levelDraftSource(levelIndex) || {};
@@ -4800,7 +4800,7 @@ const InitialSetupWizard: React.FC<{
                     <div key={`sharing-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[170px_120px_minmax(0,1fr)]">
                         {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
                         {wizardField('Enabled', row.enabled || 'Off', (value) => updateRow(index, 'enabled', value), ['Off', 'On'])}
-                        {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, '6SQN, 35SQN', `sharing-units-${index}`)}
+                        {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, 'UNIT-A, UNIT-B', `sharing-units-${index}`)}
                         <div className="md:col-span-3">
                             {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can borrow aircraft capacity from listed units.')}
                         </div>
@@ -6303,14 +6303,14 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Name: value }), 'field-edit:level1-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Options: value }), 'field-edit:level1-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Parents: value }), 'field-edit:level1-parents'),
-                    'Operations Division',
+                    'Division A',
                     level1ParentOptions,
                 ),
             );
         }
         if (visibleStep.id === 'org-level2') {
             return promptShell(
-                <p>This layer sits underneath <strong>{organisationDraft.level1Name || 'Level 1'}</strong>. Use it for the organisations that own or manage several lower groups. Example: Flying Group, Training Group, Support Group.</p>,
+                <p>This layer sits underneath <strong>{organisationDraft.level1Name || 'Level 1'}</strong>. Use it for the organisations that own or manage several lower groups, departments, teams, or regions.</p>,
                 organisationLevelAnswer(
                     2,
                     organisationDraft.level2Name,
@@ -6319,7 +6319,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Name: value }), 'field-edit:level2-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Options: value }), 'field-edit:level2-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Parents: value }), 'field-edit:level2-parents'),
-                    'Flying Group\nTraining Group',
+                    'Group A\nGroup B',
                     level2ParentOptions,
                 ),
             );
@@ -6335,7 +6335,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Name: value }), 'field-edit:level3-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Options: value }), 'field-edit:level3-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Parents: value }), 'field-edit:level3-parents'),
-                    'Operations Unit Group\nTraining Unit Group',
+                    'Department A\nDepartment B',
                     level3ParentOptions,
                 ),
             );
