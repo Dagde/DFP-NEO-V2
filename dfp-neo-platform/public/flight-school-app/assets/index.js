@@ -11680,9 +11680,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const normaliseOrganisationDraftLevel = (level, levelIndex) => ({
     levelIndex,
-    name: String(level?.name || `Level ${levelIndex}`),
-    options: Array.isArray(level?.options) ? level.options.map((item) => String(item || "").trim()).filter(Boolean) : fromLines(level?.options || ""),
-    parents: String(level?.parents || "")
+    name: String(level?.name || "").trim().toLowerCase() === "unit" ? `Level ${levelIndex}` : String(level?.name || `Level ${levelIndex}`),
+    options: String(level?.name || "").trim().toLowerCase() === "unit" ? [] : Array.isArray(level?.options) ? level.options.map((item) => String(item || "").trim()).filter(Boolean) : fromLines(level?.options || ""),
+    parents: String(level?.name || "").trim().toLowerCase() === "unit" ? "" : String(level?.parents || "")
   });
   const getOrganisationDraftLevel = (draft, levelIndex) => {
     if (levelIndex === 0) return {
@@ -12555,16 +12555,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const selectedOrganisationLevelCount = normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3);
   const additionalOrganisationLevelSteps = Array.from({ length: Math.max(0, selectedOrganisationLevelCount - 3) }, (_, index) => {
     const levelIndex = index + 4;
-    const level = getOrganisationDraftLevel(organisationDraft, levelIndex);
     return {
       id: `org-level${levelIndex}`,
       title: `Build the level below ${getOrganisationDraftLevel(organisationDraft, levelIndex - 1).name || `Level ${levelIndex - 1}`}`,
       label: `Level ${levelIndex}`,
       body: "Add this organisation layer and choose the immediate parent for each item.",
-      checkIds: ["organisation"],
-      hidden: String(level.name || "").trim().toLowerCase() === "unit"
+      checkIds: ["organisation"]
     };
-  }).filter((step) => !step.hidden);
+  });
   const steps = [
     {
       id: "analysis",
@@ -12777,7 +12775,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     "master-lmp": ["courses"],
     "scoring": ["scoring"]
   };
-  const visibleTemplates = initialSetupTemplates.filter((template) => (templateIdsByStep[visibleStep.id] || []).includes(template.id));
+  const visibleStepTemplateIds = /^org-level\d+$/.test(visibleStep.id) ? ["organisation"] : templateIdsByStep[visibleStep.id] || [];
+  const visibleTemplates = initialSetupTemplates.filter((template) => visibleStepTemplateIds.includes(template.id));
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(currentStep));
@@ -13900,8 +13899,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     updateOrganisationDraft((draft) => {
       const additionalLevels = Array.isArray(draft.additionalLevels) ? [...draft.additionalLevels] : [];
       const extraIndex = levelIndex - 4;
+      const existingLevel = additionalLevels[extraIndex] || {};
+      const cleanExistingLevel = String(existingLevel?.name || "").trim().toLowerCase() === "unit" ? { name: `Level ${levelIndex}`, options: "", parents: "" } : existingLevel;
       additionalLevels[extraIndex] = {
-        ...additionalLevels[extraIndex] || { name: `Level ${levelIndex}`, options: "", parents: "" },
+        ...cleanExistingLevel || { name: `Level ${levelIndex}`, options: "", parents: "" },
         ...changes
       };
       return { ...draft, additionalLevels };
@@ -13912,12 +13913,16 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     updateOrganisationDraft((draft) => {
       const existingAdditionalLevels = Array.isArray(draft.additionalLevels) ? draft.additionalLevels : [];
       const additionalCount = Math.max(0, levelCount - 3);
-      const additionalLevels = Array.from({ length: additionalCount }, (_, index) => ({
-        ...existingAdditionalLevels[index] || {},
-        name: String(existingAdditionalLevels[index]?.name || `Level ${index + 4}`),
-        options: Array.isArray(existingAdditionalLevels[index]?.options) ? existingAdditionalLevels[index].options.join("\n") : String(existingAdditionalLevels[index]?.options || ""),
-        parents: String(existingAdditionalLevels[index]?.parents || "")
-      }));
+      const additionalLevels = Array.from({ length: additionalCount }, (_, index) => {
+        const existingLevel = existingAdditionalLevels[index] || {};
+        const isUnitLevel = String(existingLevel?.name || "").trim().toLowerCase() === "unit";
+        return {
+          ...isUnitLevel ? {} : existingLevel,
+          name: isUnitLevel ? `Level ${index + 4}` : String(existingLevel?.name || `Level ${index + 4}`),
+          options: isUnitLevel ? "" : Array.isArray(existingLevel?.options) ? existingLevel.options.join("\n") : String(existingLevel?.options || ""),
+          parents: isUnitLevel ? "" : String(existingLevel?.parents || "")
+        };
+      });
       return {
         ...draft,
         organisationLevelCount: levelCount,
