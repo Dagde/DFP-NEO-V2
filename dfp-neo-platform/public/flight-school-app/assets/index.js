@@ -11703,7 +11703,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     timezone: String(currentLocation?.timezone || "UTC"),
     trainingAreas: Array.isArray(currentLocation?.trainingAreas) ? currentLocation.trainingAreas.join(", ") : ""
   });
-  const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState(() => activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "UNIT-A | Unit A");
+  const [unitsTodayDraft, setUnitsTodayDraft] = reactExports.useState("");
   const [unitParentDraft, setUnitParentDraft] = reactExports.useState("");
   const [locationsTodayDraft, setLocationsTodayDraft] = reactExports.useState(() => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location");
   const [locationDraftRowCount, setLocationDraftRowCount] = reactExports.useState(() => Math.max(1, parseWizardLocationRows(
@@ -11820,21 +11820,34 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
     return levels.find((level) => String(level?.name || "").trim().toLowerCase() === "unit") || levels.find((level) => Number(level?.levelIndex ?? level?.level) === 4) || null;
   };
+  const getSavedInitialSetupWizardDrafts = () => {
+    const drafts = activeOrganisation?.settings?.initialSetupWizardDrafts;
+    return drafts && typeof drafts === "object" ? drafts : {};
+  };
   const buildHydratedUnitsTodayDraft = () => {
+    const savedWizardUnits = String(getSavedInitialSetupWizardDrafts()?.unitsTodayDraft || "").trim();
+    if (savedWizardUnits) return savedWizardUnits;
     const unitLevel = getHydratedOrganisationUnitLevel();
     const savedUnitCodes = Array.isArray(unitLevel?.options) ? unitLevel.options.map((code) => String(code || "").trim()).filter(Boolean) : [];
-    if (savedUnitCodes.length > 0) {
+    const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths : [];
+    const parentOptions = getWizardUnitParentPathOptionsForDraft(buildHydratedOrganisationDraft());
+    const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
+    const relationshipUnitCodes = relationshipPaths.map((rawPath) => Array.isArray(rawPath) ? rawPath.map((part) => String(part || "").trim()).filter(Boolean) : []).filter((path) => path.length > 1 && validParentValues.has(formatWizardOrganisationPath(path.slice(0, -1)))).map((path) => path[path.length - 1]).filter(Boolean);
+    const sourceUnitCodes = savedUnitCodes.length > 0 ? savedUnitCodes : Array.from(new Set(relationshipUnitCodes));
+    if (sourceUnitCodes.length > 0) {
       const activeUnitByCode = new Map(activeUnits.map((unit) => [normaliseUnitSettingsIdentifier(unit?.code), unit]));
-      return savedUnitCodes.map((code) => {
+      return sourceUnitCodes.map((code) => {
         const unit = activeUnitByCode.get(normaliseUnitSettingsIdentifier(code));
         const name = String(unit?.name || "").trim();
         return `${code}${name && name !== code ? ` | ${name}` : ""}`;
       }).join("\n");
     }
-    return activeUnits.length > 0 ? activeUnits.map((unit) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ""}`).join("\n") : "UNIT-A | Unit A";
+    return "";
   };
-  const buildHydratedLocationsTodayDraft = () => activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location";
+  const buildHydratedLocationsTodayDraft = () => String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim() ? String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim() : activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location";
   const buildHydratedUnitParentDraft = (unitsDraftValue, draft) => {
+    const savedWizardUnitParents = String(getSavedInitialSetupWizardDrafts()?.unitParentDraft || "").trim();
+    if (savedWizardUnitParents) return savedWizardUnitParents;
     const unitRows = parseWizardUnitRows(unitsDraftValue).filter((row) => row.code);
     const parentOptions = getWizardUnitParentPathOptionsForDraft(draft);
     if (unitRows.length === 0 || parentOptions.length === 0) return "";
@@ -11842,6 +11855,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const unitLevel = getHydratedOrganisationUnitLevel();
     const unitParentByChild = unitLevel?.parentByChild && typeof unitLevel.parentByChild === "object" ? unitLevel.parentByChild : {};
     const savedParentByUnit = /* @__PURE__ */ new Map();
+    Object.entries(unitParentByChild).forEach(([unitCode2, parent]) => {
+      const unitKey = normaliseUnitSettingsIdentifier(unitCode2);
+      const parentLabel = String(parent || "").trim();
+      if (!unitKey || !parentLabel || savedParentByUnit.has(unitKey)) return;
+      const matchingParentPath = parentOptions.find((path) => normaliseUnitSettingsIdentifier(path[path.length - 1]) === normaliseUnitSettingsIdentifier(parentLabel));
+      if (matchingParentPath) savedParentByUnit.set(unitKey, matchingParentPath);
+    });
     relationshipPaths.forEach((rawPath) => {
       const path = Array.isArray(rawPath) ? rawPath.map((part) => String(part || "").trim()).filter(Boolean) : [];
       const unitCode2 = path[path.length - 1];
@@ -11849,13 +11869,6 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       if (path.length > 1 && unitKey && !savedParentByUnit.has(unitKey)) {
         savedParentByUnit.set(unitKey, path.slice(0, -1));
       }
-    });
-    Object.entries(unitParentByChild).forEach(([unitCode2, parent]) => {
-      const unitKey = normaliseUnitSettingsIdentifier(unitCode2);
-      const parentLabel = String(parent || "").trim();
-      if (!unitKey || !parentLabel || savedParentByUnit.has(unitKey)) return;
-      const matchingParentPath = parentOptions.find((path) => normaliseUnitSettingsIdentifier(path[path.length - 1]) === normaliseUnitSettingsIdentifier(parentLabel));
-      if (matchingParentPath) savedParentByUnit.set(unitKey, matchingParentPath);
     });
     activeUnits.forEach((unit) => {
       const cleanCode = normaliseUnitSettingsIdentifier(unit?.code);
@@ -11897,12 +11910,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       });
       return;
     }
-    const hydrated = buildHydratedOrganisationDraft();
-    pushWizardOrgDiag("hydrate:from-active-organisation", {
-      activeOrganisation: summariseActiveOrganisation(),
-      hydrated: summariseOrganisationDraft(hydrated)
-    });
-    setOrganisationDraft(hydrated);
+    hydrateWizardDraftsFromSettings("active-organisation");
   }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
   reactExports.useEffect(() => {
     const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
@@ -12105,6 +12113,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     saveWizardConfig(options.message || "Organisation details saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
+      initialSetupWizardDrafts: {
+        ...settings.initialSetupWizardDrafts || {},
+        organisationDraft,
+        unitsTodayDraft,
+        unitParentDraft,
+        locationsTodayDraft,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      },
       organisationStructure: {
         ...settings.organisationStructure || {},
         levels: levelDrafts.map((draft, levelIndex) => ({
