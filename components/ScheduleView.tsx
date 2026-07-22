@@ -5230,7 +5230,9 @@ const InitialSetupWizard: React.FC<{
         <div className="max-w-full overflow-hidden">
             <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]">
                 {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, levelNumber === 1 ? 'Branch / HQ' : levelNumber === 2 ? 'Operating Group' : 'Unit Group')}
-                {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
+                <div className="min-w-0 md:w-1/2">
+                    {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
+                </div>
                 <div className="md:col-span-2">
                     <div>
                         <span className={wizardLabelClass}>Parents for this level</span>
@@ -5245,7 +5247,7 @@ const InitialSetupWizard: React.FC<{
                                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Child</p>
                                                     <p className="mt-1 text-sm font-bold text-slate-950">{child}</p>
                                                 </div>
-                                                <label className="block">
+                                                <label className="block min-w-0 md:w-1/2">
                                                     <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Parent</span>
                                                     <select
                                                         className={`${wizardInputClass} mt-1`}
