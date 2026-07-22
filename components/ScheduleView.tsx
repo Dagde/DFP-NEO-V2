@@ -2344,19 +2344,74 @@ const InitialSetupWizard: React.FC<{
     const [uploadedCourseLmpItems, setUploadedCourseLmpItems] = useState<SyllabusItemDetail[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const lastSetupTestPersonnelSnapshotRef = useRef('');
+    const wizardDiagnosticStorageKeys = [
+        'dfp_setup_wizard_import_diag',
+        'dfp_setup_test_lmp_diag',
+        'dfp_setup_wizard_org_diag',
+    ];
+    const safeSetWizardLocalStorage = (key: string, value: string) => {
+        if (typeof window === 'undefined') return false;
+        try {
+            window.localStorage.setItem(key, value);
+            return true;
+        } catch (error: any) {
+            const isQuotaError = /quota/i.test(String(error?.name || error?.message || ''));
+            if (!isQuotaError) {
+                console.log('[SETUP-WIZARD-STORAGE] write failed', { key, error });
+                return false;
+            }
+            wizardDiagnosticStorageKeys.forEach((diagKey) => {
+                try { window.localStorage.removeItem(diagKey); } catch { /* ignore quota cleanup failure */ }
+            });
+            try {
+                window.localStorage.setItem(key, value);
+                console.log('[SETUP-WIZARD-STORAGE] cleared diagnostics after quota error', { key });
+                return true;
+            } catch (retryError) {
+                console.log('[SETUP-WIZARD-STORAGE] write still failed after quota cleanup', { key, retryError });
+                return false;
+            }
+        }
+    };
+    const compactWizardDiagDetails = (details: Record<string, any> = {}) => {
+        const compactValue = (value: any, depth = 0): any => {
+            if (value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+            if (Array.isArray(value)) {
+                return {
+                    count: value.length,
+                    sample: value.slice(0, 5).map((item) => compactValue(item, depth + 1)),
+                };
+            }
+            if (typeof value === 'object') {
+                const entries = Object.entries(value);
+                if (depth >= 2) {
+                    return {
+                        keys: entries.map(([key]) => key).slice(0, 20),
+                        keyCount: entries.length,
+                    };
+                }
+                return entries.slice(0, 20).reduce((next, [key, item]) => ({
+                    ...next,
+                    [key]: compactValue(item, depth + 1),
+                }), {});
+            }
+            return String(value);
+        };
+        return compactValue(details);
+    };
     const pushWizardImportDiag = (stage: string, details: Record<string, any> = {}) => {
         if (!isSetupTestMode || typeof window === 'undefined') return;
         const entry = {
             ts: new Date().toISOString(),
             stage,
             unitCode,
-            details,
+            details: compactWizardDiagDetails(details),
         };
         try {
             console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_import_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-80);
-            window.localStorage.setItem('dfp_setup_wizard_import_diag', JSON.stringify(next));
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-30);
+            safeSetWizardLocalStorage('dfp_setup_wizard_import_diag', JSON.stringify(next));
             (window as any).neoSetupWizardImportDiag = next;
         } catch (error) {
             console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry, error);
@@ -2391,13 +2446,13 @@ const InitialSetupWizard: React.FC<{
             },
             stagedCourseLmpItems: uploadedCourseLmpItems.length,
             setupTestKeys,
-            details,
+            details: compactWizardDiagDetails(details),
         };
         try {
             console.log(`[SETUP-TEST-LMP] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-500);
-            window.localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-50);
+            safeSetWizardLocalStorage('dfp_setup_test_lmp_diag', JSON.stringify(next));
             (window as any).neoSetupTestLmpDiag = next;
         } catch (error) {
             console.log(`[SETUP-TEST-LMP] ${stage}`, entry, error);
@@ -2411,13 +2466,13 @@ const InitialSetupWizard: React.FC<{
             activeUnitCode: unitCode,
             activeLocationCode: locationCode,
             isSetupTestMode,
-            details,
+            details: compactWizardDiagDetails(details),
         };
         try {
             console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_org_diag') || '[]');
-            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-300);
-            window.localStorage.setItem('dfp_setup_wizard_org_diag', JSON.stringify(next));
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-50);
+            safeSetWizardLocalStorage('dfp_setup_wizard_org_diag', JSON.stringify(next));
             (window as any).neoSetupWizardOrgDiag = next;
         } catch (error) {
             console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry, error);
@@ -2667,8 +2722,8 @@ const InitialSetupWizard: React.FC<{
     }, []);
     const persistOrganisationDraft = (draft: typeof organisationDraft) => {
         if (typeof window === 'undefined') return;
-        window.localStorage.setItem(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));
-        pushWizardOrgDiag('stored-draft:write', { draft });
+        safeSetWizardLocalStorage(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));
+        pushWizardOrgDiag('stored-draft:write', { draft: summariseOrganisationDraft(draft) });
     };
     const updateOrganisationDraft = (updater: any, stage = 'field-edit') => {
         organisationDraftDirtyRef.current = true;
@@ -2676,8 +2731,8 @@ const InitialSetupWizard: React.FC<{
             const next = typeof updater === 'function' ? updater(current) : updater;
             persistOrganisationDraft(next);
             pushWizardOrgDiag(`draft:${stage}`, {
-                before: current,
-                after: next,
+                before: summariseOrganisationDraft(current),
+                after: summariseOrganisationDraft(next),
             });
             return next;
         });
@@ -2703,9 +2758,15 @@ const InitialSetupWizard: React.FC<{
         id: activeOrganisation?.id,
         code: activeOrganisation?.code,
         name: activeOrganisation?.name,
-        levelNames: organisationStructureLevels.map((level: any) => level?.name),
-        levelOptions: organisationStructureLevels.map((level: any) => level?.options),
-        relationshipPaths: activeOrganisation?.settings?.organisationStructure?.relationshipPaths,
+        levelCount: organisationStructureLevels.length,
+        levels: organisationStructureLevels.map((level: any) => ({
+            name: level?.name,
+            optionCount: Array.isArray(level?.options) ? level.options.length : 0,
+            optionsSample: Array.isArray(level?.options) ? level.options.slice(0, 8) : [],
+        })),
+        relationshipPathCount: Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths)
+            ? activeOrganisation.settings.organisationStructure.relationshipPaths.length
+            : 0,
     });
     const [locationDraft, setLocationDraft] = useState({
         code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
@@ -3793,7 +3854,7 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        window.localStorage.setItem(initialSetupWizardStorageKey, String(currentStep));
+        safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(currentStep));
         pushWizardOrgDiag('wizard:step-rendered', {
             step: visibleStep?.id,
             currentStep,
@@ -4164,7 +4225,7 @@ const InitialSetupWizard: React.FC<{
         setWizardStep(0);
         setMode('active');
         setUploadResults({});
-        if (typeof window !== 'undefined') window.localStorage.setItem(initialSetupWizardStorageKey, '0');
+        safeSetWizardLocalStorage(initialSetupWizardStorageKey, '0');
     };
 
     const resumeWizard = () => {
@@ -5701,7 +5762,7 @@ const InitialSetupWizard: React.FC<{
             onSaveSetupTestPersonnel?.(setupPersonnel);
         }
         if (markComplete && typeof window !== 'undefined') {
-            window.localStorage.setItem(initialSetupWizardStorageKey, String(steps.length - 1));
+            safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(steps.length - 1));
         }
         setSaveMessage(markComplete
             ? 'Setup saved into this local test app only. The real DFP-NEO app and database were not touched.'
