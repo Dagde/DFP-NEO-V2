@@ -3545,20 +3545,19 @@ const InitialSetupWizard: React.FC<{
     const completedChecks = checks.filter((check) => check.complete).length;
     const isPartiallyConfigured = completedMandatory > 1 && completedMandatory < mandatoryChecks.length;
     const allMandatoryComplete = completedMandatory === mandatoryChecks.length;
-    const additionalOrganisationLevelSteps = getOrganisationDraftLevels(organisationDraft)
-        .filter((level) => (
-            level.levelIndex >= 4
-            && level.levelIndex < MAX_INITIAL_SETUP_ORGANISATION_LEVELS
-            && String(level.name || '').trim().toLowerCase() !== 'unit'
-            && level.levelIndex < normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 4)
-        ))
-        .map((level) => ({
-            id: `org-level${level.levelIndex}`,
-            title: `Build the level below ${getOrganisationDraftLevel(organisationDraft, level.levelIndex - 1).name || `Level ${level.levelIndex - 1}`}`,
-            label: `Level ${level.levelIndex}`,
+    const selectedOrganisationLevelCount = normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 4);
+    const additionalOrganisationLevelSteps = Array.from({ length: Math.max(0, selectedOrganisationLevelCount - 4) }, (_, index) => {
+        const levelIndex = index + 4;
+        const level = getOrganisationDraftLevel(organisationDraft, levelIndex);
+        return {
+            id: `org-level${levelIndex}`,
+            title: `Build the level below ${getOrganisationDraftLevel(organisationDraft, levelIndex - 1).name || `Level ${levelIndex - 1}`}`,
+            label: `Level ${levelIndex}`,
             body: 'Add this organisation layer and choose the immediate parent for each item.',
             checkIds: ['organisation'],
-        }));
+            hidden: String(level.name || '').trim().toLowerCase() === 'unit',
+        };
+    }).filter((step) => !step.hidden);
 
     const steps = [
         {
