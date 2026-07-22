@@ -10699,34 +10699,6 @@ const updateWizardParentMapping = (parentMappings, child, parent) => {
   if (cleanParent) nextRows.push({ child: cleanChild, parent: cleanParent });
   return nextRows.map((row) => `${row.child} = ${row.parent}`).join("\n");
 };
-const buildWizardRelationshipPaths = (rootLabel, level1Rows, level2Rows, level3Rows) => {
-  const root2 = String(rootLabel).trim() || "Organisation";
-  const parentByLevel1 = new Map(level1Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent || root2]));
-  const parentByLevel2 = new Map(level2Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]));
-  const parentByLevel3 = new Map(level3Rows.map((row) => [normaliseUnitSettingsIdentifier(row.child), row.parent]));
-  const pathFor = (child, level) => {
-    const cleanChild = String(child || "").trim();
-    if (!cleanChild) return [];
-    if (level === 1) {
-      const parent2 = parentByLevel1.get(normaliseUnitSettingsIdentifier(cleanChild)) || root2;
-      return [parent2, cleanChild].filter(Boolean);
-    }
-    if (level === 2) {
-      const parent2 = parentByLevel2.get(normaliseUnitSettingsIdentifier(cleanChild)) || "";
-      const grandParent2 = parent2 ? parentByLevel1.get(normaliseUnitSettingsIdentifier(parent2)) || root2 : root2;
-      return [grandParent2, parent2, cleanChild].filter(Boolean);
-    }
-    const parent = parentByLevel3.get(normaliseUnitSettingsIdentifier(cleanChild)) || "";
-    const grandParent = parent ? parentByLevel2.get(normaliseUnitSettingsIdentifier(parent)) || "" : "";
-    const greatGrandParent = grandParent ? parentByLevel1.get(normaliseUnitSettingsIdentifier(grandParent)) || root2 : root2;
-    return [greatGrandParent, grandParent, parent, cleanChild].filter(Boolean);
-  };
-  return [
-    ...level1Rows.map((row) => pathFor(row.child, 1)),
-    ...level2Rows.map((row) => pathFor(row.child, 2)),
-    ...level3Rows.map((row) => pathFor(row.child, 3))
-  ].filter((path) => path.length > 1);
-};
 const buildWizardRelationshipPathsFromLevelRows = (rootLabel, parentRowsByLevel) => {
   const root2 = String(rootLabel || "").trim() || "Organisation";
   const parentByLevel = /* @__PURE__ */ new Map();
@@ -11639,7 +11611,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const toLines = (items) => Array.isArray(items) ? items.map((item) => String(item || "").trim()).filter(Boolean).join("\n") : "";
   const fromLines = (value) => String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
-  const normaliseOrganisationLevelCount = (value, fallback = 4) => Math.max(4, Math.min(MAX_INITIAL_SETUP_ORGANISATION_LEVELS, Math.round(Number(value) || fallback)));
+  const normaliseOrganisationLevelCount = (value, fallback = 3) => Math.max(3, Math.min(MAX_INITIAL_SETUP_ORGANISATION_LEVELS, Math.round(Number(value) || fallback)));
+  const getOrganisationLevelCountBeforeUnits = (levels, fallback = 3) => {
+    const deepestLevel = (Array.isArray(levels) ? levels : []).map((level, index) => ({
+      index,
+      levelIndex: Number(level?.levelIndex ?? level?.level ?? index),
+      name: String(level?.name || "").trim()
+    })).filter((level) => level.levelIndex > 0 && level.name.toLowerCase() !== "unit").reduce((maxLevel, level) => Math.max(maxLevel, Number.isFinite(level.levelIndex) ? level.levelIndex : level.index), 0);
+    return normaliseOrganisationLevelCount(deepestLevel || fallback, fallback);
+  };
   const normaliseOrganisationDraftLevel = (level, levelIndex) => ({
     levelIndex,
     name: String(level?.name || `Level ${levelIndex}`),
@@ -11660,12 +11640,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     return normaliseOrganisationDraftLevel(extra, levelIndex);
   };
   const getOrganisationDraftLevels = (draft) => {
+    const savedOrganisationLevelCount = getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3) + 1;
     const configuredCount = Math.min(
-      MAX_INITIAL_SETUP_ORGANISATION_LEVELS,
+      MAX_INITIAL_SETUP_ORGANISATION_LEVELS + 1,
       Math.max(
-        normaliseOrganisationLevelCount(draft?.organisationLevelCount, 4),
+        normaliseOrganisationLevelCount(draft?.organisationLevelCount, 3) + 1,
         Array.isArray(draft?.additionalLevels) ? draft.additionalLevels.length + 4 : 4,
-        organisationStructureLevels.length || 0
+        savedOrganisationLevelCount
       )
     );
     return Array.from({ length: configuredCount }, (_, levelIndex) => getOrganisationDraftLevel(draft, levelIndex));
@@ -11696,7 +11677,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const buildHydratedOrganisationDraft = () => ({
     code: String(activeOrganisation?.code || "ORG"),
     name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
-    organisationLevelCount: normaliseOrganisationLevelCount(organisationStructureLevels.length || 4, 4),
+    organisationLevelCount: getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3),
     level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
     level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"]),
     level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
@@ -11708,7 +11689,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
     level3Options: toLines(levelDraftSource(3)?.options || []),
     level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group"),
-    additionalLevels: Array.from({ length: Math.max(0, Math.min(MAX_INITIAL_SETUP_ORGANISATION_LEVELS, organisationStructureLevels.length) - 4) }, (_, offset) => {
+    additionalLevels: Array.from({ length: Math.max(0, getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3) - 3) }, (_, offset) => {
       const levelIndex = offset + 4;
       const source = levelDraftSource(levelIndex) || {};
       return {
@@ -12074,6 +12055,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     organisationDraft.level2Parents,
     organisationDraft.level3Options,
     organisationDraft.level3Parents,
+    organisationDraft.organisationLevelCount,
+    JSON.stringify(organisationDraft.additionalLevels || []),
     unitParentDraft
   ]);
   reactExports.useEffect(() => {
@@ -12507,8 +12490,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const completedChecks = checks.filter((check) => check.complete).length;
   const isPartiallyConfigured = completedMandatory > 1 && completedMandatory < mandatoryChecks.length;
   const allMandatoryComplete = completedMandatory === mandatoryChecks.length;
-  const selectedOrganisationLevelCount = normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 4);
-  const additionalOrganisationLevelSteps = Array.from({ length: Math.max(0, selectedOrganisationLevelCount - 4) }, (_, index) => {
+  const selectedOrganisationLevelCount = normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3);
+  const additionalOrganisationLevelSteps = Array.from({ length: Math.max(0, selectedOrganisationLevelCount - 3) }, (_, index) => {
     const levelIndex = index + 4;
     const level = getOrganisationDraftLevel(organisationDraft, levelIndex);
     return {
@@ -13863,10 +13846,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }, `field-edit:level${levelIndex}`);
   };
   const updateOrganisationLevelCount = (value) => {
-    const levelCount = normaliseOrganisationLevelCount(value, normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 4));
+    const levelCount = normaliseOrganisationLevelCount(value, normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3));
     updateOrganisationDraft((draft) => {
       const existingAdditionalLevels = Array.isArray(draft.additionalLevels) ? draft.additionalLevels : [];
-      const additionalCount = Math.max(0, levelCount - 4);
+      const additionalCount = Math.max(0, levelCount - 3);
       const additionalLevels = Array.from({ length: additionalCount }, (_, index) => ({
         ...existingAdditionalLevels[index] || {},
         name: String(existingAdditionalLevels[index]?.name || `Level ${index + 4}`),
@@ -13881,14 +13864,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }, "field-edit:organisation-level-count");
   };
   const buildSetupTestOrganisationStructure = (unitRows) => {
-    const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || "Organisation";
-    const level1Options = fromLines(organisationDraft.level1Options);
-    const level2Options = fromLines(organisationDraft.level2Options);
-    const level3Options = fromLines(organisationDraft.level3Options);
-    const level1Rows = buildWizardParentRowsForChildren(level1Options, organisationDraft.level1Parents, [rootLabel]);
-    const level2Rows = buildWizardParentRowsForChildren(level2Options, organisationDraft.level2Parents, level1Options);
-    const level3Rows = buildWizardParentRowsForChildren(level3Options, organisationDraft.level3Parents, level2Options);
-    const relationshipPaths = buildWizardRelationshipPaths(rootLabel, level1Rows, level2Rows, level3Rows);
+    const organisationLevels = getOrganisationDraftLevels(organisationDraft).filter((level, index) => index === 0 || String(level.name || "").trim().toLowerCase() !== "unit").filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
+    const rootLabel = organisationLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || "Organisation";
+    const parentRowsByLevel = organisationLevels.map((level, levelIndex) => levelIndex === 0 ? [] : buildWizardParentRowsForChildren(level.options, level.parents, organisationLevels[levelIndex - 1]?.options || []));
+    const relationshipPaths = buildWizardRelationshipPathsFromLevelRows(rootLabel, parentRowsByLevel);
     const unitParentOptions = getWizardUnitParentPathOptions();
     const fallbackUnitParentPath = (unitParentOptions[0] || relationshipPaths[0] || [rootLabel]).filter(Boolean);
     const unitParentPathByCode = getWizardUnitParentPathMap();
@@ -13921,37 +13900,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       };
     }, {});
     const levels = [
+      ...organisationLevels.map((level, levelIndex) => ({
+        ...levelDraftSource(levelIndex) || {},
+        levelIndex,
+        name: level.name,
+        options: levelIndex === 0 ? [rootLabel] : level.options,
+        ...buildWizardParentMaps(parentRowsByLevel[levelIndex] || [])
+      })),
       {
-        ...levelDraftSource(0) || {},
-        levelIndex: 0,
-        name: organisationDraft.level0Name,
-        options: [rootLabel],
-        childrenByParent: {},
-        parentByChild: {}
-      },
-      {
-        ...levelDraftSource(1) || {},
-        levelIndex: 1,
-        name: organisationDraft.level1Name,
-        options: level1Options,
-        ...buildWizardParentMaps(level1Rows)
-      },
-      {
-        ...levelDraftSource(2) || {},
-        levelIndex: 2,
-        name: organisationDraft.level2Name,
-        options: level2Options,
-        ...buildWizardParentMaps(level2Rows)
-      },
-      {
-        ...levelDraftSource(3) || {},
-        levelIndex: 3,
-        name: organisationDraft.level3Name,
-        options: level3Options,
-        ...buildWizardParentMaps(level3Rows)
-      },
-      {
-        levelIndex: 4,
+        levelIndex: organisationLevels.length,
         name: "Unit",
         options: unitCodes,
         childrenByParent: unitChildrenByParent,
@@ -14886,9 +14843,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardField("Short code", organisationDraft.code, (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value }), "field-edit:organisation-code"), void 0, "ORG"),
           wizardField(
             "Organisation levels before units",
-            String(normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 4)),
+            String(normaliseOrganisationLevelCount(organisationDraft.organisationLevelCount, 3)),
             updateOrganisationLevelCount,
-            Array.from({ length: MAX_INITIAL_SETUP_ORGANISATION_LEVELS - 3 }, (_, index) => String(index + 4))
+            Array.from({ length: MAX_INITIAL_SETUP_ORGANISATION_LEVELS - 2 }, (_, index) => String(index + 3))
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: renderOrganisationPreview() })
         ] })
@@ -14951,7 +14908,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     const additionalOrganisationLevelMatch = /^org-level(\d+)$/.exec(visibleStep.id);
     const additionalOrganisationLevelIndex = additionalOrganisationLevelMatch ? Number(additionalOrganisationLevelMatch[1]) : 0;
-    if (additionalOrganisationLevelIndex >= 4 && additionalOrganisationLevelIndex < MAX_INITIAL_SETUP_ORGANISATION_LEVELS) {
+    if (additionalOrganisationLevelIndex >= 4 && additionalOrganisationLevelIndex <= MAX_INITIAL_SETUP_ORGANISATION_LEVELS) {
       const level = getOrganisationDraftLevel(organisationDraft, additionalOrganisationLevelIndex);
       const parentLevel = getOrganisationDraftLevel(organisationDraft, additionalOrganisationLevelIndex - 1);
       return promptShell(
