@@ -10324,7 +10324,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Pool Name", "Aircraft Type", "Unit", "Location", "Aircraft", "Sim", "Trainer", "Standby", "Ground"],
     optionalHeaders: ["Notes"],
     exampleRows: [
-      ["Primary Aircraft Resource Pool", "Aircraft Type", "UNIT-A", "HOME", "4", "0", "0", "1", "0", ""]
+      ["Primary Resource Pool", "Primary Resource", "UNIT-A", "HOME", "4", "0", "0", "1", "0", ""]
     ],
     settingsSection: "platform-resource-pools"
   },
@@ -10335,7 +10335,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit", "Role"],
     optionalHeaders: ["Rank", "Personnel ID", "Qualifications", "Email"],
     exampleRows: [
-      ["Smith, Alex", "UNIT-A", "Pilot", "Rank", "1234567", "PIC; Instructor", "alex.smith@example.com"]
+      ["Smith, Alex", "UNIT-A", "Operator", "Role Level", "1234567", "Supervisor; Assessor", "alex.smith@example.com"]
     ],
     settingsSection: "staff-database"
   },
@@ -10346,7 +10346,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit"],
     optionalHeaders: ["Rank", "Personnel ID", "Course Number", "Course", "Start Date", "Master LMP"],
     exampleRows: [
-      ["Jones, Taylor", "UNIT-B", "Trainee Rank", "7654321", "1", "Course 1", "2026-01-15", "Initial Training Stream"]
+      ["Jones, Taylor", "UNIT-B", "Learner Level", "7654321", "1", "Course A", "2026-01-15", "Training Stream A"]
     ],
     settingsSection: "trainee-database"
   },
@@ -10357,7 +10357,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Master LMP", "Event Code", "Event Title", "Type", "Duration Minutes"],
     optionalHeaders: ["Aircraft Type", "Crew Required", "Pre Flight Minutes", "Post Flight Minutes"],
     exampleRows: [
-      ["Initial Training Stream", "EVENT-001", "Training event 1", "Flight", "90", "Aircraft Type", "Pilot 2, Crew 1", "90", "60"]
+      ["Training Stream A", "EVENT-001", "Training event 1", "Flight", "90", "Primary Resource", "Lead 1, Support 1", "90", "60"]
     ],
     settingsSection: "platform-master-lmp-access"
   },
@@ -11903,8 +11903,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   });
   const [resourceDraft, setResourceDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
-    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
-    poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Aircraft"} Resource Pool`),
+    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Primary Resource"),
+    poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
     poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
     poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
     aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ""),
@@ -12224,8 +12224,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   reactExports.useEffect(() => {
     setResourceDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
-      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
-      poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Aircraft"} Resource Pool`),
+      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Primary Resource"),
+      poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
       poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
       poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
       aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ""),
@@ -13544,10 +13544,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardField("Surname", row.surname || "", (value) => updateTraineeRow(index, "surname", value), void 0, "Jones"),
           wizardField("Given names", row.givenNames || "", (value) => updateTraineeRow(index, "givenNames", value), void 0, "Taylor"),
           wizardDataListField("Unit", row.unit || "", (value) => updateTraineeRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-A", `trainee-unit-${index}`),
-          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "Trainee Rank"),
+          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "Learner Level"),
           wizardField("Personnel ID", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "7654321"),
           wizardField("Course number", row.courseNumber || "", (value) => updateTraineeRow(index, "courseNumber", value), void 0, "1"),
-          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "Initial Training Stream", `trainee-master-lmp-${index}`),
+          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "Training Stream A", `trainee-master-lmp-${index}`),
           wizardField("Start date", row.startDate || "", (value) => updateTraineeRow(index, "startDate", value), void 0, "2026-01-15")
         ] })
       ] }, `trainee-row-${index}`)) : null,
@@ -15209,8 +15209,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "AIRCRAFT"),
-          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Aircraft Type"),
-          wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Primary Aircraft Resource Pool")
+          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Primary Resource"),
+          wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Primary Resource Pool")
         ] })
       );
     }
@@ -15377,9 +15377,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Initial Training Stream", "master-lmp-code"),
-          wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "Initial Training Stream"),
-          wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial conversion training stream")
+          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Training Stream A", "master-lmp-code"),
+          wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "Training Stream A"),
+          wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial training stream")
         ] })
       );
     }
