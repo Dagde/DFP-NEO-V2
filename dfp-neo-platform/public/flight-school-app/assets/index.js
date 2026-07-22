@@ -11818,7 +11818,28 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const getHydratedOrganisationUnitLevel = () => {
     const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-    return levels.find((level) => String(level?.name || "").trim().toLowerCase() === "unit") || levels.find((level) => Number(level?.levelIndex ?? level?.level) === 4) || levels.map((level, index) => ({ level, index })).filter(({ level, index }) => index > 3 && Array.isArray(level?.options) && level.options.length > 0).sort((a, b) => a.index - b.index)[0]?.level || null;
+    const selectedLevel = levels.find((level) => String(level?.name || "").trim().toLowerCase() === "unit") || levels.find((level) => Number(level?.levelIndex ?? level?.level) === 4) || levels.map((level, index) => ({ level, index })).filter(({ level, index }) => index > 3 && Array.isArray(level?.options) && level.options.length > 0).sort((a, b) => a.index - b.index)[0]?.level || null;
+    pushWizardOrgDiag("hydrate:unit-level-selection", {
+      levelCount: levels.length,
+      levels: levels.map((level, index) => ({
+        index,
+        name: level?.name,
+        levelIndex: level?.levelIndex,
+        level: level?.level,
+        optionCount: Array.isArray(level?.options) ? level.options.length : 0,
+        optionsSample: Array.isArray(level?.options) ? level.options.slice(0, 12) : [],
+        parentByChildKeys: level?.parentByChild && typeof level.parentByChild === "object" ? Object.keys(level.parentByChild).slice(0, 12) : []
+      })),
+      selectedLevel: selectedLevel ? {
+        name: selectedLevel?.name,
+        levelIndex: selectedLevel?.levelIndex,
+        level: selectedLevel?.level,
+        optionCount: Array.isArray(selectedLevel?.options) ? selectedLevel.options.length : 0,
+        options: Array.isArray(selectedLevel?.options) ? selectedLevel.options : [],
+        parentByChild: selectedLevel?.parentByChild
+      } : null
+    });
+    return selectedLevel;
   };
   const getSavedInitialSetupWizardDrafts = () => {
     const drafts = activeOrganisation?.settings?.initialSetupWizardDrafts;
@@ -11826,7 +11847,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const buildHydratedUnitsTodayDraft = () => {
     const savedWizardUnits = String(getSavedInitialSetupWizardDrafts()?.unitsTodayDraft || "").trim();
-    if (savedWizardUnits) return savedWizardUnits;
+    if (savedWizardUnits) {
+      pushWizardOrgDiag("hydrate:units-source-saved-wizard-draft", {
+        savedWizardUnits,
+        parsedUnits: parseWizardUnitRows(savedWizardUnits)
+      });
+      return savedWizardUnits;
+    }
     const unitLevel = getHydratedOrganisationUnitLevel();
     const savedUnitCodes = Array.isArray(unitLevel?.options) ? unitLevel.options.map((code) => String(code || "").trim()).filter(Boolean) : [];
     const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths : [];
@@ -11839,6 +11866,20 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return parentPath.length > 0 && validParentValues.has(formatWizardOrganisationPath(parentPath));
     }).map((unit) => String(unit?.code || "").trim()).filter(Boolean);
     const sourceUnitCodes = savedUnitCodes.length > 0 ? savedUnitCodes : relationshipUnitCodes.length > 0 ? Array.from(new Set(relationshipUnitCodes)) : Array.from(new Set(unitRecordCodes));
+    pushWizardOrgDiag("hydrate:units-source-decision", {
+      savedWizardUnitsPresent: Boolean(savedWizardUnits),
+      selectedUnitLevelName: unitLevel?.name,
+      selectedUnitLevelIndex: unitLevel?.levelIndex ?? unitLevel?.level,
+      savedUnitCodes,
+      parentOptions: parentOptions.map(formatWizardOrganisationPath),
+      relationshipPathCount: relationshipPaths.length,
+      relationshipPathsSample: relationshipPaths.slice(0, 24),
+      relationshipUnitCodes,
+      unitRecordCodes,
+      activeUnitCodes: activeUnits.map((unit) => unit?.code),
+      source: savedUnitCodes.length > 0 ? "unit-level-options" : relationshipUnitCodes.length > 0 ? "relationship-path-leaves" : unitRecordCodes.length > 0 ? "unit-record-parent-paths" : "empty",
+      sourceUnitCodes
+    });
     if (sourceUnitCodes.length > 0) {
       return sourceUnitCodes.map((code) => {
         const unit = activeUnitByCode.get(normaliseUnitSettingsIdentifier(code));
@@ -11851,10 +11892,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const buildHydratedLocationsTodayDraft = () => String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim() ? String(getSavedInitialSetupWizardDrafts()?.locationsTodayDraft || "").trim() : activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location";
   const buildHydratedUnitParentDraft = (unitsDraftValue, draft) => {
     const savedWizardUnitParents = String(getSavedInitialSetupWizardDrafts()?.unitParentDraft || "").trim();
-    if (savedWizardUnitParents) return savedWizardUnitParents;
+    if (savedWizardUnitParents) {
+      pushWizardOrgDiag("hydrate:unit-parents-source-saved-wizard-draft", {
+        savedWizardUnitParents,
+        parsedParents: parseWizardParentRows(savedWizardUnitParents)
+      });
+      return savedWizardUnitParents;
+    }
     const unitRows = parseWizardUnitRows(unitsDraftValue).filter((row) => row.code);
     const parentOptions = getWizardUnitParentPathOptionsForDraft(draft);
-    if (unitRows.length === 0 || parentOptions.length === 0) return "";
+    if (unitRows.length === 0 || parentOptions.length === 0) {
+      pushWizardOrgDiag("hydrate:unit-parents-empty-input", {
+        unitsDraftValue,
+        unitRows,
+        parentOptions: parentOptions.map(formatWizardOrganisationPath)
+      });
+      return "";
+    }
     const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths) ? activeOrganisation.settings.organisationStructure.relationshipPaths : [];
     const unitLevel = getHydratedOrganisationUnitLevel();
     const unitParentByChild = unitLevel?.parentByChild && typeof unitLevel.parentByChild === "object" ? unitLevel.parentByChild : {};
@@ -11881,11 +11935,23 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     });
     const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
     const fallbackValue = formatWizardOrganisationPath(parentOptions[0]);
-    return unitRows.map((row) => {
+    const parentRows = unitRows.map((row) => {
       const savedParentValue = formatWizardOrganisationPath(savedParentByUnit.get(normaliseUnitSettingsIdentifier(row.code)) || []);
       const parentValue = savedParentValue && validParentValues.has(savedParentValue) ? savedParentValue : fallbackValue;
       return `${row.code} = ${parentValue}`;
-    }).join("\n");
+    });
+    pushWizardOrgDiag("hydrate:unit-parents-source-decision", {
+      unitsDraftValue,
+      unitRows,
+      parentOptions: parentOptions.map(formatWizardOrganisationPath),
+      unitLevelName: unitLevel?.name,
+      unitParentByChild,
+      relationshipPathsSample: relationshipPaths.slice(0, 24),
+      savedParentByUnit: Array.from(savedParentByUnit.entries()),
+      fallbackValue,
+      parentRows
+    });
+    return parentRows.join("\n");
   };
   const hydrateWizardDraftsFromSettings = (stage = "manual") => {
     const hydratedOrganisation = buildHydratedOrganisationDraft();
