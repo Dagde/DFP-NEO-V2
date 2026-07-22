@@ -2376,6 +2376,26 @@ const InitialSetupWizard: React.FC<{
             console.log(`[SETUP-TEST-LMP] ${stage}`, entry, error);
         }
     };
+    const pushWizardOrgDiag = (stage: string, details: Record<string, any> = {}) => {
+        if (typeof window === 'undefined') return;
+        const entry = {
+            ts: new Date().toISOString(),
+            stage,
+            activeUnitCode: unitCode,
+            activeLocationCode: locationCode,
+            isSetupTestMode,
+            details,
+        };
+        try {
+            console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry);
+            const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_org_diag') || '[]');
+            const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-300);
+            window.localStorage.setItem('dfp_setup_wizard_org_diag', JSON.stringify(next));
+            (window as any).neoSetupWizardOrgDiag = next;
+        } catch (error) {
+            console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry, error);
+        }
+    };
 
     useEffect(() => {
         pushWizardLmpDiag('wizard:staged-items-state', {
@@ -2522,8 +2542,15 @@ const InitialSetupWizard: React.FC<{
         if (typeof window === 'undefined') return null;
         try {
             const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey) || 'null');
+            pushWizardOrgDiag('stored-draft:read', {
+                found: Boolean(parsed && typeof parsed === 'object'),
+                draft: parsed,
+            });
             return parsed && typeof parsed === 'object' ? parsed : null;
-        } catch {
+        } catch (error) {
+            pushWizardOrgDiag('stored-draft:read-error', {
+                message: error instanceof Error ? error.message : String(error),
+            });
             return null;
         }
     };
@@ -2548,15 +2575,43 @@ const InitialSetupWizard: React.FC<{
     const persistOrganisationDraft = (draft: typeof organisationDraft) => {
         if (typeof window === 'undefined') return;
         window.localStorage.setItem(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));
+        pushWizardOrgDiag('stored-draft:write', { draft });
     };
-    const updateOrganisationDraft = (updater: any) => {
+    const updateOrganisationDraft = (updater: any, stage = 'field-edit') => {
         organisationDraftDirtyRef.current = true;
         setOrganisationDraft((current: typeof organisationDraft) => {
             const next = typeof updater === 'function' ? updater(current) : updater;
             persistOrganisationDraft(next);
+            pushWizardOrgDiag(`draft:${stage}`, {
+                before: current,
+                after: next,
+            });
             return next;
         });
     };
+    const summariseOrganisationDraft = (draft: any) => ({
+        code: draft?.code,
+        name: draft?.name,
+        level0Name: draft?.level0Name,
+        level0Options: draft?.level0Options,
+        level1Name: draft?.level1Name,
+        level1Options: draft?.level1Options,
+        level1Parents: draft?.level1Parents,
+        level2Name: draft?.level2Name,
+        level2Options: draft?.level2Options,
+        level2Parents: draft?.level2Parents,
+        level3Name: draft?.level3Name,
+        level3Options: draft?.level3Options,
+        level3Parents: draft?.level3Parents,
+    });
+    const summariseActiveOrganisation = () => ({
+        id: activeOrganisation?.id,
+        code: activeOrganisation?.code,
+        name: activeOrganisation?.name,
+        levelNames: organisationStructureLevels.map((level: any) => level?.name),
+        levelOptions: organisationStructureLevels.map((level: any) => level?.options),
+        relationshipPaths: activeOrganisation?.settings?.organisationStructure?.relationshipPaths,
+    });
     const [locationDraft, setLocationDraft] = useState({
         code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || 'LOC1'),
         iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || 'LOC'),
@@ -2688,8 +2743,19 @@ const InitialSetupWizard: React.FC<{
     };
 
     useEffect(() => {
-        if (organisationDraftDirtyRef.current) return;
-        setOrganisationDraft(buildHydratedOrganisationDraft());
+        if (organisationDraftDirtyRef.current) {
+            pushWizardOrgDiag('hydrate:skipped-dirty-draft', {
+                activeOrganisation: summariseActiveOrganisation(),
+                draft: summariseOrganisationDraft(organisationDraft),
+            });
+            return;
+        }
+        const hydrated = buildHydratedOrganisationDraft();
+        pushWizardOrgDiag('hydrate:from-active-organisation', {
+            activeOrganisation: summariseActiveOrganisation(),
+            hydrated: summariseOrganisationDraft(hydrated),
+        });
+        setOrganisationDraft(hydrated);
     }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
 
     useEffect(() => {
@@ -2864,6 +2930,12 @@ const InitialSetupWizard: React.FC<{
             { name: organisationDraft.level2Name, options: fromLines(organisationDraft.level2Options) },
             { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) },
         ];
+        pushWizardOrgDiag('save-organisation:before', {
+            draft: summariseOrganisationDraft(organisationDraft),
+            activeOrganisation: summariseActiveOrganisation(),
+            relationshipPaths,
+            levels: levelDrafts,
+        });
         organisationDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         saveWizardConfig('Organisation details saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
@@ -3374,6 +3446,14 @@ const InitialSetupWizard: React.FC<{
     useEffect(() => {
         if (typeof window === 'undefined') return;
         window.localStorage.setItem(initialSetupWizardStorageKey, String(currentStep));
+        pushWizardOrgDiag('wizard:step-rendered', {
+            step: visibleStep?.id,
+            currentStep,
+            draft: summariseOrganisationDraft(organisationDraft),
+            activeOrganisation: summariseActiveOrganisation(),
+            dirty: organisationDraftDirtyRef.current,
+            storedDraft: readStoredOrganisationDraft(),
+        });
     }, [currentStep]);
 
     useEffect(() => {
@@ -3726,6 +3806,10 @@ const InitialSetupWizard: React.FC<{
     };
 
     const resetWizard = () => {
+        pushWizardOrgDiag('wizard:reset', {
+            draftBeforeReset: summariseOrganisationDraft(organisationDraft),
+            activeOrganisation: summariseActiveOrganisation(),
+        });
         organisationDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
         setWizardStep(0);
@@ -4433,6 +4517,12 @@ const InitialSetupWizard: React.FC<{
         </label>
     );
     const goToNextWizardStep = () => {
+        pushWizardOrgDiag('wizard:next-clicked', {
+            fromStep: visibleStep.id,
+            currentStep,
+            draft: summariseOrganisationDraft(organisationDraft),
+            activeOrganisation: summariseActiveOrganisation(),
+        });
         if (visibleStep.id === 'trainee-courses' && unitDraft.hasTrainees) {
             const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
             if (courseCount === 0) {
@@ -4460,13 +4550,31 @@ const InitialSetupWizard: React.FC<{
             }
         }
         if (isSetupTestMode) {
+            pushWizardOrgDiag('wizard:next-before-setup-sync', {
+                fromStep: visibleStep.id,
+                draft: summariseOrganisationDraft(organisationDraft),
+                activeOrganisation: summariseActiveOrganisation(),
+            });
             saveSetupTestWizardDrafts(false);
         }
         setWizardStep(Math.min(steps.length - 1, currentStep + 1));
     };
     const goToWizardStep = (nextStep: number) => {
         const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
+        pushWizardOrgDiag('wizard:jump-clicked', {
+            fromStep: visibleStep.id,
+            toStep: steps[boundedStep]?.id,
+            currentStep,
+            draft: summariseOrganisationDraft(organisationDraft),
+            activeOrganisation: summariseActiveOrganisation(),
+        });
         if (isSetupTestMode) {
+            pushWizardOrgDiag('wizard:jump-before-setup-sync', {
+                fromStep: visibleStep.id,
+                toStep: steps[boundedStep]?.id,
+                draft: summariseOrganisationDraft(organisationDraft),
+                activeOrganisation: summariseActiveOrganisation(),
+            });
             saveSetupTestWizardDrafts(false);
         }
         setWizardStep(boundedStep);
@@ -4866,6 +4974,19 @@ const InitialSetupWizard: React.FC<{
             name: effectiveUnitDraft.name || effectiveUnitDraft.code || unitCode || 'Unit',
         }]).filter((row) => row.code || row.name);
         const { structure, unitParentPaths, fallbackUnitParentPath } = buildSetupTestOrganisationStructure(cleanUnits);
+        pushWizardOrgDiag('setup-sync:prepared-structure', {
+            markComplete,
+            cleanUnits,
+            draft: summariseOrganisationDraft(organisationDraft),
+            structureLevels: structure.levels.map((level: any) => ({
+                levelIndex: level.levelIndex,
+                name: level.name,
+                options: level.options,
+                parentByChild: level.parentByChild,
+            })),
+            relationshipPaths: structure.relationshipPaths,
+            activeOrganisation: summariseActiveOrganisation(),
+        });
         const primaryLocationCode = cleanLocations[0]?.icao || locationDraft.code || '';
         const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || 'Aircraft').trim().toUpperCase();
         const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
@@ -4935,6 +5056,17 @@ const InitialSetupWizard: React.FC<{
         onUpdatePlatformConfig((baseConfig: any) => {
             const existingOrganisation = Array.isArray(baseConfig?.organisations) ? baseConfig.organisations[0] : null;
             const existingOrganisationSettings = existingOrganisation?.settings || {};
+            pushWizardOrgDiag('setup-sync:updater-entered', {
+                baseOrganisation: {
+                    id: existingOrganisation?.id,
+                    code: existingOrganisation?.code,
+                    name: existingOrganisation?.name,
+                    levelNames: Array.isArray(existingOrganisationSettings?.organisationStructure?.levels)
+                        ? existingOrganisationSettings.organisationStructure.levels.map((level: any) => level?.name)
+                        : [],
+                },
+                draft: summariseOrganisationDraft(organisationDraft),
+            });
             const existingMasterLmpCatalogue = Array.isArray(existingOrganisationSettings.masterLmpCatalogue)
                 ? existingOrganisationSettings.masterLmpCatalogue
                 : [];
@@ -5079,6 +5211,17 @@ const InitialSetupWizard: React.FC<{
                     },
                 },
             };
+            pushWizardOrgDiag('setup-sync:writing-organisation', {
+                organisation: {
+                    id: organisation.id,
+                    code: organisation.code,
+                    name: organisation.name,
+                    levelNames: organisation.settings.organisationStructure?.levels?.map((level: any) => level?.name),
+                    levelOptions: organisation.settings.organisationStructure?.levels?.map((level: any) => level?.options),
+                    relationshipPaths: organisation.settings.organisationStructure?.relationshipPaths,
+                    storedDraft: organisation.settings.initialSetupWizardDraft?.organisation,
+                },
+            });
             return {
                 organisations: [organisation],
                 locations: nextLocations,
@@ -5678,8 +5821,8 @@ const InitialSetupWizard: React.FC<{
                         code: draft.code || value,
                         level0Name: value || draft.level0Name,
                         level0Options: value || draft.level0Options,
-                    })), undefined, 'Your Organisation')}
-                    {wizardField('Short code', organisationDraft.code, (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, code: value })), undefined, 'ORG')}
+                    }), 'field-edit:organisation-name'), undefined, 'Your Organisation')}
+                    {wizardField('Short code', organisationDraft.code, (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, code: value }), 'field-edit:organisation-code'), undefined, 'ORG')}
                     <div className="md:col-span-2">{renderOrganisationPreview()}</div>
                 </div>,
             );
@@ -5692,9 +5835,9 @@ const InitialSetupWizard: React.FC<{
                     organisationDraft.level1Name,
                     organisationDraft.level1Options,
                     organisationDraft.level1Parents,
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Name: value })),
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Options: value })),
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Parents: value })),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Name: value }), 'field-edit:level1-name'),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Options: value }), 'field-edit:level1-options'),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level1Parents: value }), 'field-edit:level1-parents'),
                     'Operations Division',
                     level1ParentOptions,
                 ),
@@ -5708,9 +5851,9 @@ const InitialSetupWizard: React.FC<{
                     organisationDraft.level2Name,
                     organisationDraft.level2Options,
                     organisationDraft.level2Parents,
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Name: value })),
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Options: value })),
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Parents: value })),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Name: value }), 'field-edit:level2-name'),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Options: value }), 'field-edit:level2-options'),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level2Parents: value }), 'field-edit:level2-parents'),
                     'Flying Group\nTraining Group',
                     level2ParentOptions,
                 ),
@@ -5724,9 +5867,9 @@ const InitialSetupWizard: React.FC<{
                     organisationDraft.level3Name,
                     organisationDraft.level3Options,
                     organisationDraft.level3Parents,
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Name: value })),
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Options: value })),
-                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Parents: value })),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Name: value }), 'field-edit:level3-name'),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Options: value }), 'field-edit:level3-options'),
+                    (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Parents: value }), 'field-edit:level3-parents'),
                     'Operations Unit Group\nTraining Unit Group',
                     level3ParentOptions,
                 ),

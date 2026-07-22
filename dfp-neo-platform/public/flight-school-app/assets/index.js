@@ -11499,6 +11499,26 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       console.log(`[SETUP-TEST-LMP] ${stage}`, entry, error);
     }
   };
+  const pushWizardOrgDiag = (stage, details = {}) => {
+    if (typeof window === "undefined") return;
+    const entry = {
+      ts: (/* @__PURE__ */ new Date()).toISOString(),
+      stage,
+      activeUnitCode: unitCode,
+      activeLocationCode: locationCode,
+      isSetupTestMode: isSetupTestMode$1,
+      details
+    };
+    try {
+      console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry);
+      const existing = JSON.parse(window.localStorage.getItem("dfp_setup_wizard_org_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], entry].slice(-300);
+      window.localStorage.setItem("dfp_setup_wizard_org_diag", JSON.stringify(next));
+      window.neoSetupWizardOrgDiag = next;
+    } catch (error) {
+      console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry, error);
+    }
+  };
   reactExports.useEffect(() => {
     pushWizardLmpDiag("wizard:staged-items-state", {
       stagedCount: uploadedCourseLmpItems.length,
@@ -11606,8 +11626,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     if (typeof window === "undefined") return null;
     try {
       const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey) || "null");
+      pushWizardOrgDiag("stored-draft:read", {
+        found: Boolean(parsed && typeof parsed === "object"),
+        draft: parsed
+      });
       return parsed && typeof parsed === "object" ? parsed : null;
-    } catch {
+    } catch (error) {
+      pushWizardOrgDiag("stored-draft:read-error", {
+        message: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   };
@@ -11632,15 +11659,43 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const persistOrganisationDraft = (draft) => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));
+    pushWizardOrgDiag("stored-draft:write", { draft });
   };
-  const updateOrganisationDraft = (updater) => {
+  const updateOrganisationDraft = (updater, stage = "field-edit") => {
     organisationDraftDirtyRef.current = true;
     setOrganisationDraft((current) => {
       const next = typeof updater === "function" ? updater(current) : updater;
       persistOrganisationDraft(next);
+      pushWizardOrgDiag(`draft:${stage}`, {
+        before: current,
+        after: next
+      });
       return next;
     });
   };
+  const summariseOrganisationDraft = (draft) => ({
+    code: draft?.code,
+    name: draft?.name,
+    level0Name: draft?.level0Name,
+    level0Options: draft?.level0Options,
+    level1Name: draft?.level1Name,
+    level1Options: draft?.level1Options,
+    level1Parents: draft?.level1Parents,
+    level2Name: draft?.level2Name,
+    level2Options: draft?.level2Options,
+    level2Parents: draft?.level2Parents,
+    level3Name: draft?.level3Name,
+    level3Options: draft?.level3Options,
+    level3Parents: draft?.level3Parents
+  });
+  const summariseActiveOrganisation = () => ({
+    id: activeOrganisation?.id,
+    code: activeOrganisation?.code,
+    name: activeOrganisation?.name,
+    levelNames: organisationStructureLevels.map((level) => level?.name),
+    levelOptions: organisationStructureLevels.map((level) => level?.options),
+    relationshipPaths: activeOrganisation?.settings?.organisationStructure?.relationshipPaths
+  });
   const [locationDraft, setLocationDraft] = reactExports.useState({
     code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "LOC1"),
     iataCode: String(currentLocation?.iataCode || currentLocation?.settings?.iataCode || "LOC"),
@@ -11757,8 +11812,19 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     setUnitParentDraft(rows.map((row) => `${row.child} = ${row.parent}`).join("\n"));
   };
   reactExports.useEffect(() => {
-    if (organisationDraftDirtyRef.current) return;
-    setOrganisationDraft(buildHydratedOrganisationDraft());
+    if (organisationDraftDirtyRef.current) {
+      pushWizardOrgDiag("hydrate:skipped-dirty-draft", {
+        activeOrganisation: summariseActiveOrganisation(),
+        draft: summariseOrganisationDraft(organisationDraft)
+      });
+      return;
+    }
+    const hydrated = buildHydratedOrganisationDraft();
+    pushWizardOrgDiag("hydrate:from-active-organisation", {
+      activeOrganisation: summariseActiveOrganisation(),
+      hydrated: summariseOrganisationDraft(hydrated)
+    });
+    setOrganisationDraft(hydrated);
   }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
   reactExports.useEffect(() => {
     const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
@@ -11916,6 +11982,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       { name: organisationDraft.level2Name, options: fromLines(organisationDraft.level2Options) },
       { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) }
     ];
+    pushWizardOrgDiag("save-organisation:before", {
+      draft: summariseOrganisationDraft(organisationDraft),
+      activeOrganisation: summariseActiveOrganisation(),
+      relationshipPaths,
+      levels: levelDrafts
+    });
     organisationDraftDirtyRef.current = false;
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     saveWizardConfig("Organisation details saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
@@ -12387,6 +12459,14 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   reactExports.useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(initialSetupWizardStorageKey, String(currentStep));
+    pushWizardOrgDiag("wizard:step-rendered", {
+      step: visibleStep?.id,
+      currentStep,
+      draft: summariseOrganisationDraft(organisationDraft),
+      activeOrganisation: summariseActiveOrganisation(),
+      dirty: organisationDraftDirtyRef.current,
+      storedDraft: readStoredOrganisationDraft()
+    });
   }, [currentStep]);
   reactExports.useEffect(() => {
     setWizardStep((step) => Math.min(step, steps.length - 1));
@@ -12714,6 +12794,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     setSaveMessage(`${template.label} passed validation. Import for this template step has not been added yet.`);
   };
   const resetWizard = () => {
+    pushWizardOrgDiag("wizard:reset", {
+      draftBeforeReset: summariseOrganisationDraft(organisationDraft),
+      activeOrganisation: summariseActiveOrganisation()
+    });
     organisationDraftDirtyRef.current = false;
     if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     setWizardStep(0);
@@ -13281,6 +13365,12 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     )
   ] });
   const goToNextWizardStep = () => {
+    pushWizardOrgDiag("wizard:next-clicked", {
+      fromStep: visibleStep.id,
+      currentStep,
+      draft: summariseOrganisationDraft(organisationDraft),
+      activeOrganisation: summariseActiveOrganisation()
+    });
     if (visibleStep.id === "trainee-courses" && unitDraft.hasTrainees) {
       const courseCount = parseWizardLineItems(traineeCourseOptionsDraft).length;
       if (courseCount === 0) {
@@ -13306,13 +13396,31 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       }
     }
     if (isSetupTestMode$1) {
+      pushWizardOrgDiag("wizard:next-before-setup-sync", {
+        fromStep: visibleStep.id,
+        draft: summariseOrganisationDraft(organisationDraft),
+        activeOrganisation: summariseActiveOrganisation()
+      });
       saveSetupTestWizardDrafts(false);
     }
     setWizardStep(Math.min(steps.length - 1, currentStep + 1));
   };
   const goToWizardStep = (nextStep) => {
     const boundedStep = Math.min(steps.length - 1, Math.max(0, nextStep));
+    pushWizardOrgDiag("wizard:jump-clicked", {
+      fromStep: visibleStep.id,
+      toStep: steps[boundedStep]?.id,
+      currentStep,
+      draft: summariseOrganisationDraft(organisationDraft),
+      activeOrganisation: summariseActiveOrganisation()
+    });
     if (isSetupTestMode$1) {
+      pushWizardOrgDiag("wizard:jump-before-setup-sync", {
+        fromStep: visibleStep.id,
+        toStep: steps[boundedStep]?.id,
+        draft: summariseOrganisationDraft(organisationDraft),
+        activeOrganisation: summariseActiveOrganisation()
+      });
       saveSetupTestWizardDrafts(false);
     }
     setWizardStep(boundedStep);
@@ -13638,6 +13746,19 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       name: effectiveUnitDraft.name || effectiveUnitDraft.code || unitCode || "Unit"
     }]).filter((row) => row.code || row.name);
     const { structure, unitParentPaths, fallbackUnitParentPath } = buildSetupTestOrganisationStructure(cleanUnits);
+    pushWizardOrgDiag("setup-sync:prepared-structure", {
+      markComplete,
+      cleanUnits,
+      draft: summariseOrganisationDraft(organisationDraft),
+      structureLevels: structure.levels.map((level) => ({
+        levelIndex: level.levelIndex,
+        name: level.name,
+        options: level.options,
+        parentByChild: level.parentByChild
+      })),
+      relationshipPaths: structure.relationshipPaths,
+      activeOrganisation: summariseActiveOrganisation()
+    });
     const primaryLocationCode = cleanLocations[0]?.icao || locationDraft.code || "";
     const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || "Aircraft").trim().toUpperCase();
     const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
@@ -13703,6 +13824,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     onUpdatePlatformConfig((baseConfig) => {
       const existingOrganisation = Array.isArray(baseConfig?.organisations) ? baseConfig.organisations[0] : null;
       const existingOrganisationSettings = existingOrganisation?.settings || {};
+      pushWizardOrgDiag("setup-sync:updater-entered", {
+        baseOrganisation: {
+          id: existingOrganisation?.id,
+          code: existingOrganisation?.code,
+          name: existingOrganisation?.name,
+          levelNames: Array.isArray(existingOrganisationSettings?.organisationStructure?.levels) ? existingOrganisationSettings.organisationStructure.levels.map((level) => level?.name) : []
+        },
+        draft: summariseOrganisationDraft(organisationDraft)
+      });
       const existingMasterLmpCatalogue = Array.isArray(existingOrganisationSettings.masterLmpCatalogue) ? existingOrganisationSettings.masterLmpCatalogue : [];
       const existingMasterLmpAccess = Array.isArray(existingOrganisationSettings.masterLmpAccess) ? existingOrganisationSettings.masterLmpAccess : [];
       const draftLmpCode = String(trainingDraft.lmpCode || "").trim();
@@ -13841,6 +13971,17 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           }
         }
       };
+      pushWizardOrgDiag("setup-sync:writing-organisation", {
+        organisation: {
+          id: organisation.id,
+          code: organisation.code,
+          name: organisation.name,
+          levelNames: organisation.settings.organisationStructure?.levels?.map((level) => level?.name),
+          levelOptions: organisation.settings.organisationStructure?.levels?.map((level) => level?.options),
+          relationshipPaths: organisation.settings.organisationStructure?.relationshipPaths,
+          storedDraft: organisation.settings.initialSetupWizardDraft?.organisation
+        }
+      });
       return {
         organisations: [organisation],
         locations: nextLocations,
@@ -14423,8 +14564,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             code: draft.code || value,
             level0Name: value || draft.level0Name,
             level0Options: value || draft.level0Options
-          })), void 0, "Your Organisation"),
-          wizardField("Short code", organisationDraft.code, (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value })), void 0, "ORG"),
+          }), "field-edit:organisation-name"), void 0, "Your Organisation"),
+          wizardField("Short code", organisationDraft.code, (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value }), "field-edit:organisation-code"), void 0, "ORG"),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: renderOrganisationPreview() })
         ] })
       );
@@ -14440,9 +14581,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           organisationDraft.level1Name,
           organisationDraft.level1Options,
           organisationDraft.level1Parents,
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Name: value })),
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Options: value })),
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Parents: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Name: value }), "field-edit:level1-name"),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Options: value }), "field-edit:level1-options"),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Parents: value }), "field-edit:level1-parents"),
           "Operations Division",
           level1ParentOptions
         )
@@ -14460,9 +14601,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           organisationDraft.level2Name,
           organisationDraft.level2Options,
           organisationDraft.level2Parents,
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Name: value })),
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Options: value })),
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Parents: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Name: value }), "field-edit:level2-name"),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Options: value }), "field-edit:level2-options"),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Parents: value }), "field-edit:level2-parents"),
           "Flying Group\nTraining Group",
           level2ParentOptions
         )
@@ -14476,9 +14617,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           organisationDraft.level3Name,
           organisationDraft.level3Options,
           organisationDraft.level3Parents,
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Name: value })),
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Options: value })),
-          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Parents: value })),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Name: value }), "field-edit:level3-name"),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Options: value }), "field-edit:level3-options"),
+          (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Parents: value }), "field-edit:level3-parents"),
           "Operations Unit Group\nTraining Unit Group",
           level3ParentOptions
         )
