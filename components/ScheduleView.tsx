@@ -720,7 +720,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         label: 'Staff',
         fileName: 'DFP_NEO_Staff_Template.csv',
         requiredHeaders: ['Name', 'Unit', 'Role'],
-        optionalHeaders: ['Rank', 'PMKeyS', 'Qualifications', 'Email'],
+        optionalHeaders: ['Rank', 'Personnel ID', 'Qualifications', 'Email'],
         exampleRows: [
             ['Smith, Alex', 'UNIT-A', 'Pilot', 'Rank', '1234567', 'PIC; Instructor', 'alex.smith@example.com'],
         ],
@@ -731,7 +731,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         label: 'Trainees',
         fileName: 'DFP_NEO_Trainees_Template.csv',
         requiredHeaders: ['Name', 'Unit'],
-        optionalHeaders: ['Rank', 'PMKeyS', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
+        optionalHeaders: ['Rank', 'Personnel ID', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
         exampleRows: [
             ['Jones, Taylor', 'UNIT-B', 'Trainee Rank', '7654321', '1', 'Course 1', '2026-01-15', 'Initial Training Stream'],
         ],
@@ -776,7 +776,7 @@ const wizardRequiredHeaderAliases: Record<string, string[]> = {
     name: ['fullname', 'nameandsurname', 'namesurnamefirstname', 'namesurnamefirstnames', 'surnamefirstname', 'surnamefirstnames', 'surname', 'lastname', 'familyname', 'givennames', 'givenname', 'firstname', 'forename'],
     role: ['position', 'crewrole', 'primaryrole'],
     qualifications: ['qualification', 'qualificationsandroles', 'qualificationsroles', 'quals', 'roles'],
-    pmkeys: ['pmkeysid', 'pmkey', 'employeeid', 'serviceid'],
+    pmkeys: ['personnelid', 'personid', 'staffid', 'employeeid', 'serviceid', 'pmkeysid', 'pmkey'],
     code: ['icao', 'locationcode', 'basecode'],
     aircrafttype: ['aircraft', 'resource'],
     course: ['courseallocation', 'allocatedcourse', 'courseassigned', 'trainingcourse'],
@@ -1254,7 +1254,7 @@ const normaliseWizardLocationProfile = (location: any) => ({
     icao: String(location?.icao || location?.code || '').trim().toUpperCase(),
     iata: String(location?.iataCode || location?.settings?.iataCode || location?.iata || '').trim().toUpperCase(),
     name: String(location?.name || location?.label || location?.code || '').trim(),
-    timezone: String(location?.timezone || 'Australia/Brisbane').trim(),
+    timezone: String(location?.timezone || 'UTC').trim(),
 });
 
 const parseWizardUnitRows = (value: string): Array<{ code: string; name: string }> => (
@@ -3445,7 +3445,7 @@ const InitialSetupWizard: React.FC<{
                 code: cleanCode,
                 iataCode: String(locationDraft.iataCode || '').trim().toUpperCase(),
                 name: locationDraft.name || cleanCode,
-                timezone: locationDraft.timezone || 'Australia/Brisbane',
+                timezone: locationDraft.timezone || 'UTC',
                 trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
                 status: 'ACTIVE',
                 settings: {
@@ -4109,7 +4109,7 @@ const InitialSetupWizard: React.FC<{
                     position: getWizardCellByHeader(headers, row, 'Role'),
                     qualifications: getWizardCellByHeader(headers, row, 'Qualifications'),
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
-                    pmkeys: getWizardCellByHeader(headers, row, 'PMKeyS'),
+                    pmkeys: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'PMKeyS', 'Employee ID', 'Service ID']),
                     email: getWizardCellByHeader(headers, row, 'Email'),
                     phoneNumber: getWizardCellByAnyHeader(headers, row, ['Phone', 'Phone Number', 'Mobile', 'Mobile Number']),
                     location: getWizardCellByAnyHeader(headers, row, ['Location', 'Base', 'Home Location', 'Airfield']),
@@ -4157,7 +4157,7 @@ const InitialSetupWizard: React.FC<{
                     givenNames: givenValue || givenPart || '',
                     unit: (getWizardCellByHeader(headers, row, 'Unit') || unitDraft.code || '').toUpperCase(),
                     rank: getWizardCellByHeader(headers, row, 'Rank'),
-                    pmkeys: getWizardCellByHeader(headers, row, 'PMKeyS'),
+                    pmkeys: getWizardCellByAnyHeader(headers, row, ['Personnel ID', 'PMKeyS', 'Employee ID', 'Service ID']),
                     courseNumber: getWizardCellByHeader(headers, row, 'Course Number'),
                     course: getWizardCellByHeader(headers, row, 'Course'),
                     masterLmp: getWizardCellByHeader(headers, row, 'Master LMP'),
@@ -4739,7 +4739,7 @@ const InitialSetupWizard: React.FC<{
                             {wizardField('Given names', row.givenNames || '', (value) => updateTraineeRow(index, 'givenNames', value), undefined, 'Taylor')}
                             {wizardDataListField('Unit', row.unit || '', (value) => updateTraineeRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-A', `trainee-unit-${index}`)}
                             {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'Trainee Rank')}
-                            {wizardField('PMKeyS', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '7654321')}
+                            {wizardField('Personnel ID', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '7654321')}
                             {wizardField('Course number', row.courseNumber || '', (value) => updateTraineeRow(index, 'courseNumber', value), undefined, '1')}
                             {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Initial Training Stream', `trainee-master-lmp-${index}`)}
                             {wizardField('Start date', row.startDate || '', (value) => updateTraineeRow(index, 'startDate', value), undefined, '2026-01-15')}
@@ -5642,7 +5642,7 @@ const InitialSetupWizard: React.FC<{
                     code: row.icao || row.iata || `LOC${index + 1}`,
                     iataCode: row.iata || profile?.iata || '',
                     name: row.name || profile?.name || row.icao || row.iata || `Location ${index + 1}`,
-                    timezone: profile?.timezone || locationDraft.timezone || 'Australia/Brisbane',
+                    timezone: profile?.timezone || locationDraft.timezone || 'UTC',
                     trainingAreas: locationDraft.trainingAreas.split(',').map((item) => item.trim()).filter(Boolean),
                     status: 'ACTIVE',
                     settings: { iataCode: row.iata || profile?.iata || '' },
@@ -5884,7 +5884,7 @@ const InitialSetupWizard: React.FC<{
                         code,
                         iataCode: row.iata,
                         name: row.name || code,
-                        timezone: existingIndex >= 0 ? nextLocations[existingIndex].timezone || 'Australia/Brisbane' : 'Australia/Brisbane',
+                        timezone: existingIndex >= 0 ? nextLocations[existingIndex].timezone || 'UTC' : 'UTC',
                         status: 'ACTIVE',
                         settings: {
                             ...(existingIndex >= 0 ? nextLocations[existingIndex].settings || {} : {}),
@@ -6541,7 +6541,7 @@ const InitialSetupWizard: React.FC<{
                         const matchedProfile = findWizardLocationProfile(value);
                         setLocationDraft((draft) => ({ ...draft, name: value, code: matchedProfile?.icao || draft.code, iataCode: matchedProfile?.iata || draft.iataCode, timezone: matchedProfile?.timezone || draft.timezone }));
                     }, wizardLocationNameOptions, 'Location name')}
-                    {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'Australia/Brisbane')}
+                    {wizardField('Timezone', locationDraft.timezone, (value) => setLocationDraft((draft) => ({ ...draft, timezone: value })), undefined, 'UTC')}
                     {wizardField('Training areas', locationDraft.trainingAreas, (value) => setLocationDraft((draft) => ({ ...draft, trainingAreas: value })), undefined, 'Area A, Area B')}
                 </div>,
             );
@@ -6804,7 +6804,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Access scopes decide who can view, assign, or manage a Master LMP for a location and unit. Practically: if a user has no access scope here, they should not be offered this LMP for this unit.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Alexander Burns')}
+                    {wizardField('User', accessDraft.userName, (value) => setAccessDraft((draft) => ({ ...draft, userName: value })), undefined, 'Admin User')}
                     {wizardField('Location', accessDraft.locationCode, (value) => setAccessDraft((draft) => ({ ...draft, locationCode: value })), activeLocations.map((location: any) => location.code))}
                     {wizardField('Unit', accessDraft.unitCode, (value) => setAccessDraft((draft) => ({ ...draft, unitCode: value })), activeUnits.map((unit: any) => unit.code))}
                     {wizardField('Module', accessDraft.moduleCode, (value) => setAccessDraft((draft) => ({ ...draft, moduleCode: value })), ['DFP', 'NEO Build', 'Training Records', 'Build Intelligence'])}
