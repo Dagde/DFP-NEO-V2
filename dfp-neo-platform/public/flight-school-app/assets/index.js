@@ -11964,25 +11964,55 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       organisations: nextOrganisations
     };
   };
-  const organisationWizardStepIds = /* @__PURE__ */ new Set(["org-name", "org-level1", "org-level2", "org-level3"]);
+  const organisationWizardStepIds = /* @__PURE__ */ new Set(["org-name", "org-level1", "org-level2", "org-level3", "units-today"]);
   const isOrganisationWizardStep = (stepId) => organisationWizardStepIds.has(String(stepId || ""));
   const saveOrganisationDraft = (options = {}) => {
     const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || "Organisation";
     const level1ParentRows2 = buildWizardParentRowsForChildren(fromLines(organisationDraft.level1Options), organisationDraft.level1Parents, [rootLabel]);
     const level2ParentRows2 = buildWizardParentRowsForChildren(fromLines(organisationDraft.level2Options), organisationDraft.level2Parents, fromLines(organisationDraft.level1Options));
     const level3ParentRows2 = buildWizardParentRowsForChildren(fromLines(organisationDraft.level3Options), organisationDraft.level3Parents, fromLines(organisationDraft.level2Options));
+    const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
+    const unitParentPathMap = getWizardUnitParentPathMap();
+    const unitParentOptions = getWizardUnitParentPathOptions();
+    const fallbackUnitParentPath = (unitParentOptions[0] || buildWizardRelationshipPaths(rootLabel, level1ParentRows2, level2ParentRows2, level3ParentRows2)[0] || [rootLabel]).filter(Boolean);
+    const unitCodes = unitRows.map((row) => row.code).filter(Boolean);
+    const unitParentByChild = unitCodes.reduce((map, code) => {
+      const parentPath = unitParentPathMap.get(normaliseUnitSettingsIdentifier(code)) || fallbackUnitParentPath;
+      return {
+        ...map,
+        [code]: parentPath[parentPath.length - 1] || rootLabel
+      };
+    }, {});
+    const unitChildrenByParent = unitCodes.reduce((map, code) => {
+      const parent = unitParentByChild[code] || rootLabel;
+      return {
+        ...map,
+        [parent]: Array.from(/* @__PURE__ */ new Set([...map[parent] || [], code]))
+      };
+    }, {});
     const parentMapsByLevel = [
       buildWizardParentMaps([]),
       buildWizardParentMaps(level1ParentRows2),
       buildWizardParentMaps(level2ParentRows2),
-      buildWizardParentMaps(level3ParentRows2)
+      buildWizardParentMaps(level3ParentRows2),
+      {
+        childrenByParent: unitChildrenByParent,
+        parentByChild: unitParentByChild
+      }
     ];
-    const relationshipPaths = buildWizardRelationshipPaths(rootLabel, level1ParentRows2, level2ParentRows2, level3ParentRows2);
+    const relationshipPaths = [
+      ...buildWizardRelationshipPaths(rootLabel, level1ParentRows2, level2ParentRows2, level3ParentRows2),
+      ...unitCodes.map((code) => [
+        ...unitParentPathMap.get(normaliseUnitSettingsIdentifier(code)) || fallbackUnitParentPath,
+        code
+      ])
+    ];
     const levelDrafts = [
       { name: organisationDraft.level0Name, options: fromLines(organisationDraft.level0Options) },
       { name: organisationDraft.level1Name, options: fromLines(organisationDraft.level1Options) },
       { name: organisationDraft.level2Name, options: fromLines(organisationDraft.level2Options) },
-      { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) }
+      { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) },
+      { name: "Unit", options: unitCodes }
     ];
     pushWizardOrgDiag("save-organisation:before", {
       draft: summariseOrganisationDraft(organisationDraft),
