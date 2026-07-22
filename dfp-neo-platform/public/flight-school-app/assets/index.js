@@ -11779,6 +11779,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const [scoringDraft, setScoringDraft] = reactExports.useState("Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent");
   const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = reactExports.useState("Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1");
   const formatWizardOrganisationPath = (path) => path.map((item) => String(item || "").trim()).filter(Boolean).join(" / ");
+  const formatWizardImmediateParentLabel = (path) => {
+    const cleanPath = path.map((item) => String(item || "").trim()).filter(Boolean);
+    return cleanPath[cleanPath.length - 1] || "Parent";
+  };
   const parseWizardOrganisationPath = (value) => String(value || "").split("/").map((item) => item.trim()).filter(Boolean);
   const getWizardOrganisationRelationshipPaths = () => {
     const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || "Organisation";
@@ -14697,7 +14701,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "UNIT-A | Unit A\nUNIT-B | Unit B", true),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for each unit" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose where each unit sits in the organisation tree. For example, Unit A might sit under Your Organisation / Operations Division / Flying Group." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose the immediate parent each unit sits under in the organisation tree." }),
             unitRows.length > 0 && unitParentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: unitRows.map((row) => {
               const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
               const currentParentValue = formatWizardOrganisationPath(currentParentPath);
@@ -14716,7 +14720,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
                       onChange: (event) => updateWizardUnitParentPath(row.code, event.target.value),
                       children: unitParentOptions.map((path) => {
                         const value = formatWizardOrganisationPath(path);
-                        return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: value }, `${row.code}-${value}`);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value, children: formatWizardImmediateParentLabel(path) }, `${row.code}-${value}`);
                       })
                     }
                   )

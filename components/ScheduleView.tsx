@@ -2706,6 +2706,10 @@ const InitialSetupWizard: React.FC<{
     const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
 
     const formatWizardOrganisationPath = (path: string[]) => path.map((item) => String(item || '').trim()).filter(Boolean).join(' / ');
+    const formatWizardImmediateParentLabel = (path: string[]) => {
+        const cleanPath = path.map((item) => String(item || '').trim()).filter(Boolean);
+        return cleanPath[cleanPath.length - 1] || 'Parent';
+    };
     const parseWizardOrganisationPath = (value: string) => String(value || '').split('/').map((item) => item.trim()).filter(Boolean);
     const getWizardOrganisationRelationshipPaths = () => {
         const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
@@ -5944,7 +5948,7 @@ const InitialSetupWizard: React.FC<{
                     <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Parent organisation for each unit</p>
                         <p className="mt-1 text-xs leading-5 text-slate-600">
-                            Choose where each unit sits in the organisation tree. For example, Unit A might sit under Your Organisation / Operations Division / Flying Group.
+                            Choose the immediate parent each unit sits under in the organisation tree.
                         </p>
                         {unitRows.length > 0 && unitParentOptions.length > 0 ? (
                             <div className="mt-3 space-y-2">
@@ -5966,7 +5970,7 @@ const InitialSetupWizard: React.FC<{
                                                 >
                                                     {unitParentOptions.map((path) => {
                                                         const value = formatWizardOrganisationPath(path);
-                                                        return <option key={`${row.code}-${value}`} value={value}>{value}</option>;
+                                                        return <option key={`${row.code}-${value}`} value={value}>{formatWizardImmediateParentLabel(path)}</option>;
                                                     })}
                                                 </select>
                                             </label>
