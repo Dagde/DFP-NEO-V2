@@ -2554,8 +2554,9 @@ const InitialSetupWizard: React.FC<{
             return null;
         }
     };
-    const storedOrganisationDraft = readStoredOrganisationDraft();
-    const organisationDraftDirtyRef = useRef(Boolean(storedOrganisationDraft));
+    const storedOrganisationDraft = useMemo(() => readStoredOrganisationDraft(), []);
+    const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && !orgStructureConfigured;
+    const organisationDraftDirtyRef = useRef(shouldUseStoredOrganisationDraft);
     const buildHydratedOrganisationDraft = () => ({
         code: String(activeOrganisation?.code || 'ORG'),
         name: String(activeOrganisation?.name || activeOrganisation?.code || 'Your Organisation'),
@@ -2571,7 +2572,17 @@ const InitialSetupWizard: React.FC<{
         level3Options: toLines(levelDraftSource(3)?.options || []),
         level3Parents: parentLinesForLevel(3, 'Operations Unit Group = Flying Group\nTraining Unit Group = Training Group'),
     });
-    const [organisationDraft, setOrganisationDraft] = useState(() => storedOrganisationDraft || buildHydratedOrganisationDraft());
+    const [organisationDraft, setOrganisationDraft] = useState(() => (
+        shouldUseStoredOrganisationDraft ? storedOrganisationDraft : buildHydratedOrganisationDraft()
+    ));
+    useEffect(() => {
+        if (!storedOrganisationDraft || shouldUseStoredOrganisationDraft) return;
+        if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+        pushWizardOrgDiag('stored-draft:ignored-synced-settings-present', {
+            storedDraft: summariseOrganisationDraft(storedOrganisationDraft),
+            activeOrganisation: summariseActiveOrganisation(),
+        });
+    }, []);
     const persistOrganisationDraft = (draft: typeof organisationDraft) => {
         if (typeof window === 'undefined') return;
         window.localStorage.setItem(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));

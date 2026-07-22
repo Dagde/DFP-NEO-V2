@@ -11638,8 +11638,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return null;
     }
   };
-  const storedOrganisationDraft = readStoredOrganisationDraft();
-  const organisationDraftDirtyRef = reactExports.useRef(Boolean(storedOrganisationDraft));
+  const storedOrganisationDraft = reactExports.useMemo(() => readStoredOrganisationDraft(), []);
+  const shouldUseStoredOrganisationDraft = Boolean(storedOrganisationDraft) && !orgStructureConfigured;
+  const organisationDraftDirtyRef = reactExports.useRef(shouldUseStoredOrganisationDraft);
   const buildHydratedOrganisationDraft = () => ({
     code: String(activeOrganisation?.code || "ORG"),
     name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
@@ -11655,7 +11656,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     level3Options: toLines(levelDraftSource(3)?.options || []),
     level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group")
   });
-  const [organisationDraft, setOrganisationDraft] = reactExports.useState(() => storedOrganisationDraft || buildHydratedOrganisationDraft());
+  const [organisationDraft, setOrganisationDraft] = reactExports.useState(() => shouldUseStoredOrganisationDraft ? storedOrganisationDraft : buildHydratedOrganisationDraft());
+  reactExports.useEffect(() => {
+    if (!storedOrganisationDraft || shouldUseStoredOrganisationDraft) return;
+    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+    pushWizardOrgDiag("stored-draft:ignored-synced-settings-present", {
+      storedDraft: summariseOrganisationDraft(storedOrganisationDraft),
+      activeOrganisation: summariseActiveOrganisation()
+    });
+  }, []);
   const persistOrganisationDraft = (draft) => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));
