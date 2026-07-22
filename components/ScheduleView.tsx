@@ -2711,25 +2711,27 @@ const InitialSetupWizard: React.FC<{
         return cleanPath[cleanPath.length - 1] || 'Parent';
     };
     const parseWizardOrganisationPath = (value: string) => String(value || '').split('/').map((item) => item.trim()).filter(Boolean);
-    const getWizardOrganisationRelationshipPaths = () => {
-        const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
-        const level1Options = fromLines(organisationDraft.level1Options);
-        const level2Options = fromLines(organisationDraft.level2Options);
-        const level3Options = fromLines(organisationDraft.level3Options);
-        const level1Rows = buildWizardParentRowsForChildren(level1Options, organisationDraft.level1Parents, [rootLabel]);
-        const level2Rows = buildWizardParentRowsForChildren(level2Options, organisationDraft.level2Parents, level1Options);
-        const level3Rows = buildWizardParentRowsForChildren(level3Options, organisationDraft.level3Parents, level2Options);
+    const getWizardOrganisationRelationshipPathsForDraft = (draft: typeof organisationDraft) => {
+        const rootLabel = fromLines(draft.level0Options)[0] || draft.name || draft.code || 'Organisation';
+        const level1Options = fromLines(draft.level1Options);
+        const level2Options = fromLines(draft.level2Options);
+        const level3Options = fromLines(draft.level3Options);
+        const level1Rows = buildWizardParentRowsForChildren(level1Options, draft.level1Parents, [rootLabel]);
+        const level2Rows = buildWizardParentRowsForChildren(level2Options, draft.level2Parents, level1Options);
+        const level3Rows = buildWizardParentRowsForChildren(level3Options, draft.level3Parents, level2Options);
         return buildWizardRelationshipPaths(rootLabel, level1Rows, level2Rows, level3Rows);
     };
-    const getWizardUnitParentPathOptions = () => {
-        const rootLabel = fromLines(organisationDraft.level0Options)[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
-        const relationshipPaths = getWizardOrganisationRelationshipPaths();
+    const getWizardOrganisationRelationshipPaths = () => getWizardOrganisationRelationshipPathsForDraft(organisationDraft);
+    const getWizardUnitParentPathOptionsForDraft = (draft: typeof organisationDraft) => {
+        const rootLabel = fromLines(draft.level0Options)[0] || draft.name || draft.code || 'Organisation';
+        const relationshipPaths = getWizardOrganisationRelationshipPathsForDraft(draft);
         const candidatePaths = relationshipPaths.length > 0 ? relationshipPaths : [[rootLabel]];
         const deepestLength = Math.max(...candidatePaths.map((path) => path.length));
         return candidatePaths
             .filter((path) => path.length === deepestLength)
             .map((path) => path.filter(Boolean));
     };
+    const getWizardUnitParentPathOptions = () => getWizardUnitParentPathOptionsForDraft(organisationDraft);
     const getWizardUnitParentPathMap = () => new Map(
         parseWizardParentRows(unitParentDraft).map((row) => [
             normaliseUnitSettingsIdentifier(row.child),
@@ -2744,6 +2746,66 @@ const InitialSetupWizard: React.FC<{
         const cleanParentPath = formatWizardOrganisationPath(parseWizardOrganisationPath(parentPathValue));
         if (cleanParentPath) rows.push({ child: cleanUnitCode, parent: cleanParentPath });
         setUnitParentDraft(rows.map((row) => `${row.child} = ${row.parent}`).join('\n'));
+    };
+    const buildHydratedUnitsTodayDraft = () => (
+        activeUnits.length > 0
+            ? activeUnits.map((unit: any) => `${unit.code}${unit.name && unit.name !== unit.code ? ` | ${unit.name}` : ''}`).join('\n')
+            : 'UNIT-A | Unit A'
+    );
+    const buildHydratedLocationsTodayDraft = () => (
+        activeLocations.length > 0
+            ? activeLocations.map((location: any) => `${location.code || ''} | ${location.iataCode || location.settings?.iataCode || ''} | ${location.name || location.code || ''}`).join('\n')
+            : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location'
+    );
+    const buildHydratedUnitParentDraft = (unitsDraftValue: string, draft: typeof organisationDraft) => {
+        const unitRows = parseWizardUnitRows(unitsDraftValue).filter((row) => row.code);
+        const parentOptions = getWizardUnitParentPathOptionsForDraft(draft);
+        if (unitRows.length === 0 || parentOptions.length === 0) return '';
+        const relationshipPaths = Array.isArray(activeOrganisation?.settings?.organisationStructure?.relationshipPaths)
+            ? activeOrganisation.settings.organisationStructure.relationshipPaths
+            : [];
+        const savedParentByUnit = new Map<string, string[]>();
+        activeUnits.forEach((unit: any) => {
+            const cleanCode = normaliseUnitSettingsIdentifier(unit?.code);
+            const parentPath = Array.isArray(unit?.settings?.parentOrganisationPath)
+                ? unit.settings.parentOrganisationPath.map((part: any) => String(part || '').trim()).filter(Boolean)
+                : [];
+            if (cleanCode && parentPath.length > 0) savedParentByUnit.set(cleanCode, parentPath);
+        });
+        relationshipPaths.forEach((rawPath: any) => {
+            const path = Array.isArray(rawPath) ? rawPath.map((part) => String(part || '').trim()).filter(Boolean) : [];
+            const unitCode = path[path.length - 1];
+            const unitKey = normaliseUnitSettingsIdentifier(unitCode);
+            if (path.length > 1 && unitKey && !savedParentByUnit.has(unitKey)) {
+                savedParentByUnit.set(unitKey, path.slice(0, -1));
+            }
+        });
+        const validParentValues = new Set(parentOptions.map(formatWizardOrganisationPath));
+        const fallbackValue = formatWizardOrganisationPath(parentOptions[0]);
+        return unitRows.map((row) => {
+            const savedParentValue = formatWizardOrganisationPath(savedParentByUnit.get(normaliseUnitSettingsIdentifier(row.code)) || []);
+            const parentValue = savedParentValue && validParentValues.has(savedParentValue) ? savedParentValue : fallbackValue;
+            return `${row.code} = ${parentValue}`;
+        }).join('\n');
+    };
+    const hydrateWizardDraftsFromSettings = (stage = 'manual') => {
+        const hydratedOrganisation = buildHydratedOrganisationDraft();
+        const hydratedUnits = buildHydratedUnitsTodayDraft();
+        const hydratedUnitParents = buildHydratedUnitParentDraft(hydratedUnits, hydratedOrganisation);
+        const hydratedLocations = buildHydratedLocationsTodayDraft();
+        organisationDraftDirtyRef.current = false;
+        if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+        pushWizardOrgDiag(`hydrate:${stage}-from-synced-settings`, {
+            activeOrganisation: summariseActiveOrganisation(),
+            hydratedOrganisation: summariseOrganisationDraft(hydratedOrganisation),
+            unitsToday: hydratedUnits,
+            unitParents: hydratedUnitParents,
+            locationsToday: hydratedLocations,
+        });
+        setOrganisationDraft(hydratedOrganisation);
+        setUnitsTodayDraft(hydratedUnits);
+        setUnitParentDraft(hydratedUnitParents);
+        setLocationsTodayDraft(hydratedLocations);
     };
 
     useEffect(() => {
@@ -3851,6 +3913,7 @@ const InitialSetupWizard: React.FC<{
         });
         organisationDraftDirtyRef.current = false;
         if (typeof window !== 'undefined') window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
+        hydrateWizardDraftsFromSettings('start-again');
         setWizardStep(0);
         setMode('active');
         setUploadResults({});
@@ -3858,6 +3921,7 @@ const InitialSetupWizard: React.FC<{
     };
 
     const resumeWizard = () => {
+        hydrateWizardDraftsFromSettings('resume');
         setMode('active');
         setWizardStep((step) => Math.min(Math.max(0, step), steps.length - 1));
     };
