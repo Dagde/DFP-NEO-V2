@@ -10269,6 +10269,7 @@ const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 firs
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
 const unitSettingsScrollClass = "max-w-full overflow-x-auto";
 const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
+const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
 const createWizardRecordId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createSetupTestRecordId = (prefix, key = "") => {
   const cleanPrefix = String(prefix || "record").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "record";
@@ -11601,8 +11602,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
-  const organisationDraftDirtyRef = reactExports.useRef(false);
-  const [organisationDraft, setOrganisationDraft] = reactExports.useState({
+  const readStoredOrganisationDraft = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(initialSetupWizardOrganisationDraftStorageKey) || "null");
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+  const storedOrganisationDraft = readStoredOrganisationDraft();
+  const organisationDraftDirtyRef = reactExports.useRef(Boolean(storedOrganisationDraft));
+  const buildHydratedOrganisationDraft = () => ({
     code: String(activeOrganisation?.code || "ORG"),
     name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
     level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
@@ -11617,9 +11628,18 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     level3Options: toLines(levelDraftSource(3)?.options || []),
     level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group")
   });
+  const [organisationDraft, setOrganisationDraft] = reactExports.useState(() => storedOrganisationDraft || buildHydratedOrganisationDraft());
+  const persistOrganisationDraft = (draft) => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(initialSetupWizardOrganisationDraftStorageKey, JSON.stringify(draft));
+  };
   const updateOrganisationDraft = (updater) => {
     organisationDraftDirtyRef.current = true;
-    setOrganisationDraft(updater);
+    setOrganisationDraft((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      persistOrganisationDraft(next);
+      return next;
+    });
   };
   const [locationDraft, setLocationDraft] = reactExports.useState({
     code: String(currentLocation?.code || activeWizardLocationCode || currentUnit?.locationCode || "LOC1"),
@@ -11738,21 +11758,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   reactExports.useEffect(() => {
     if (organisationDraftDirtyRef.current) return;
-    setOrganisationDraft({
-      code: String(activeOrganisation?.code || "ORG"),
-      name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
-      level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
-      level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"]),
-      level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
-      level1Options: toLines(levelDraftSource(1)?.options || []),
-      level1Parents: parentLinesForLevel(1, `Operations Division = ${activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"}`),
-      level2Name: String(levelDraftSource(2)?.name || "Operating Group"),
-      level2Options: toLines(levelDraftSource(2)?.options || []),
-      level2Parents: parentLinesForLevel(2, "Flying Group = Operations Division\nTraining Group = Operations Division"),
-      level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
-      level3Options: toLines(levelDraftSource(3)?.options || []),
-      level3Parents: parentLinesForLevel(3, "Operations Unit Group = Flying Group\nTraining Unit Group = Training Group")
-    });
+    setOrganisationDraft(buildHydratedOrganisationDraft());
   }, [activeOrganisation?.code, activeOrganisation?.name, JSON.stringify(organisationStructureLevels)]);
   reactExports.useEffect(() => {
     const unitRows = parseWizardUnitRows(unitsTodayDraft).filter((row) => row.code);
@@ -11911,6 +11917,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       { name: organisationDraft.level3Name, options: fromLines(organisationDraft.level3Options) }
     ];
     organisationDraftDirtyRef.current = false;
+    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     saveWizardConfig("Organisation details saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => ({
       ...settings,
       organisationStructure: {
@@ -12708,6 +12715,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const resetWizard = () => {
     organisationDraftDirtyRef.current = false;
+    if (typeof window !== "undefined") window.localStorage.removeItem(initialSetupWizardOrganisationDraftStorageKey);
     setWizardStep(0);
     setMode("active");
     setUploadResults({});
@@ -13812,6 +13820,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             status: "ACTIVE"
           })),
           initialSetupWizardDraft: {
+            organisation: organisationDraft,
             unitsToday: cleanUnits,
             locationsToday: cleanLocations,
             unitParents: unitParentDraft,
