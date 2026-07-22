@@ -13364,7 +13364,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             setUploadedStaffProfileRows((current) => current.filter((_, rowIndex) => rowIndex !== index));
           }, children: "Delete" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: [
           wizardField("Surname", row.surname || "", (value) => updateStaffRow(index, "surname", value), void 0, "Smith"),
           wizardField("Given names", row.givenNames || "", (value) => updateStaffRow(index, "givenNames", value), void 0, "Alex"),
           wizardDataListField("Unit", row.unit || "", (value) => updateStaffRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-A", `staff-unit-${index}`),
@@ -13632,7 +13632,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line." }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[90px_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end", children: [
+      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end", children: [
         wizardField("Order", row.order || String(index + 1), (value) => updateRow(index, "order", value), void 0, String(index + 1)),
         wizardField("Ranks at this level", row.ranks || "", (value) => updateRow(index, "ranks", value), void 0, "Team Lead Rank"),
         wizardField("Notes", row.notes || "", (value) => updateRow(index, "notes", value), void 0, "Same seniority across services"),
@@ -13655,7 +13655,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const unitOptions = parseWizardUnitRows(unitsTodayDraft).map((unit) => unit.code);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units." }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[170px_120px_minmax(0,1fr)]", children: [
+      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[150px_110px_minmax(0,1fr)]", children: [
         wizardField("Sharing type", row.type || "", (value) => updateRow(index, "type", value), ["Resource sharing", "Staff sharing"]),
         wizardField("Enabled", row.enabled || "Off", (value) => updateRow(index, "enabled", value), ["Off", "On"]),
         wizardDataListField("Shared with units", row.units || "", (value) => updateRow(index, "units", value.toUpperCase()), unitOptions, "UNIT-A, UNIT-B", `sharing-units-${index}`),
@@ -13673,7 +13673,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "A currency profile is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests a currency event." }),
-      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_minmax(0,1fr)_110px_minmax(0,1fr)_90px_82px] xl:items-end", children: [
+      editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
         wizardField("Profile name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
         wizardField("Code", row.code || "", (value) => updateRow(index, "code", value.toUpperCase()), void 0, "PIC"),
         wizardField("Crew", row.crew || "", (value) => updateRow(index, "crew", value), void 0, "Standard crew"),
@@ -13696,13 +13696,13 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "The scoring matrix defines what each training report grade means. In practice, instructors use these words to explain why a trainee passed, failed, or needs more training." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end", children: [
           wizardField("Assessment area", row.dimension || "", (value) => updateRow(index, "dimension", value), void 0, "Preparation"),
           wizardField("Pass standard", row.passStandard || "", (value) => updateRow(index, "passStandard", value), void 0, "Prepared, safe and ready."),
           wizardField("Fail standard", row.failStandard || "", (value) => updateRow(index, "failStandard", value), void 0, "Unsafe or not prepared."),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setScoringDraft(formatWizardScoringRows(editableRows.filter((_, rowIndex) => rowIndex !== index))), children: "Delete" })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-3 xl:grid-cols-6", children: ["grade0", "grade1", "grade2", "grade3", "grade4", "grade5"].map((field, gradeIndex) => wizardField(`Grade ${gradeIndex}`, row[field] || "", (value) => updateRow(index, field, value), void 0, gradeIndex === 0 ? "Unsafe" : gradeIndex < 3 ? "Needs help" : "Meets standard")) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid min-w-0 gap-2 md:grid-cols-3 xl:grid-cols-4", children: ["grade0", "grade1", "grade2", "grade3", "grade4", "grade5"].map((field, gradeIndex) => wizardField(`Grade ${gradeIndex}`, row[field] || "", (value) => updateRow(index, field, value), void 0, gradeIndex === 0 ? "Unsafe" : gradeIndex < 3 ? "Needs help" : "Meets standard")) })
       ] }, `scoring-row-${index}`)),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardSmallButtonClass, onClick: () => setScoringDraft(formatWizardScoringRows([...editableRows, { dimension: "", passStandard: "", failStandard: "", grade0: "", grade1: "", grade2: "", grade3: "", grade4: "", grade5: "" }])), children: "Add assessment area" })
     ] });
@@ -13718,7 +13718,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Standard staff currency events are reusable event templates. They save time later by pre-filling duration, resource type, crew, currency and aircraft configuration for common staff currency checks." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(190px,1fr)_120px_140px_90px_90px_90px] xl:items-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
           wizardField("Short title", row.shortTitle || "", (value) => updateRow(index, "shortTitle", value.toUpperCase()), void 0, "INST"),
           wizardField("Resource type", row.resourceType || "Flight", (value) => updateRow(index, "resourceType", value), ["Flight", "FTD", "CPT", "Ground"]),
@@ -13726,7 +13726,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           wizardField("Pre-flight", row.preFlight || "90", (value) => updateRow(index, "preFlight", value), void 0, "90"),
           wizardField("Post-flight", row.postFlight || "60", (value) => updateRow(index, "postFlight", value), void 0, "60")
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_90px_82px] xl:items-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Crew", row.crew || "Standard crew", (value) => updateRow(index, "crew", value), void 0, "Standard crew"),
           wizardField("Currency", row.currency || "", (value) => updateRow(index, "currency", value), void 0, "Instrument Currency"),
           wizardField("CONFIG", row.config || "ANY", (value) => updateRow(index, "config", value), void 0, "ANY"),
@@ -13742,7 +13742,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "textarea",
       {
-        className: `${wizardInputClass} mt-1 min-h-[84px] resize-y`,
+        className: `${wizardInputClass} mt-1 min-h-[68px] resize-y`,
         value,
         placeholder,
         autoFocus,
@@ -13840,11 +13840,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const promptShell = (question, answer, actionLabel = "Next", saveAction) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
-      className: "animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm",
+      className: "max-w-full overflow-hidden animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm",
       onKeyDownCapture: stopEditableKeyPropagation,
       onKeyDown: stopEditableKeyPropagation,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600", children: [
               "Step ",
@@ -13852,10 +13852,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
               " of ",
               steps.length
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-bold text-slate-950", children: visibleStep.title }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-sm leading-6 text-slate-700", children: question })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-lg font-bold leading-tight text-slate-950", children: visibleStep.title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-sm leading-5 text-slate-700", children: question })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block w-full lg:w-[320px]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block w-full shrink-0 lg:w-[240px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Go to wizard page" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "select",
@@ -13876,7 +13876,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
-            className: "rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm",
+            className: "max-w-full overflow-hidden rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm",
             onKeyDownCapture: stopEditableKeyPropagation,
             onKeyDown: stopEditableKeyPropagation,
             children: answer
@@ -13929,15 +13929,15 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       ] }, `${part}-${pathIndex}`)) }, `${path.join("-")}-${index}`)) })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-lg border border-amber-300/30 bg-amber-950/20 px-3 py-2 text-xs font-semibold leading-5 text-amber-100", children: "Add parent links so DFP-NEO knows which organisation owns each child." })
   ] });
-  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentOptions) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]", children: [
+  const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentOptions) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-full overflow-hidden", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]", children: [
       wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, levelNumber === 1 ? "Branch / HQ" : levelNumber === 2 ? "Operating Group" : "Unit Group"),
       wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-hidden rounded-lg border border-slate-300 bg-white", children: fromLines(levelOptions).length > 0 && parentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-slate-200", children: fromLines(levelOptions).map((child) => {
           const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || "";
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 px-3 py-3 md:grid-cols-[minmax(130px,220px)_minmax(180px,340px)] md:items-center", children: [
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 px-3 py-2 md:grid-cols-[minmax(110px,170px)_minmax(0,1fr)] md:items-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-black uppercase tracking-[0.14em] text-slate-500", children: "Child" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-bold text-slate-950", children: child })
@@ -15081,7 +15081,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             unitRows.length > 0 && unitParentOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: unitRows.map((row) => {
               const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
               const currentParentValue = formatWizardOrganisationPath(currentParentPath);
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[140px_minmax(0,1fr)] md:items-center", children: [
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[120px_minmax(0,1fr)] md:items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-slate-900", children: row.code }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: row.name || row.code })
@@ -15114,7 +15114,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Add every locality, base, airfield, or operating location you want available. Use ICAO where known, IATA where available, and the plain English location name." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: editableLocationRows.map((row, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(100px,0.35fr)_minmax(180px,1fr)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: editableLocationRows.map((row, rowIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3", children: [
             wizardDataListField("ICAO code", row.icao, (value) => updateWizardLocationRow(rowIndex, "icao", value), wizardLocationIcaoOptions, "ICAO code", `icao-${rowIndex}`),
             wizardDataListField("IATA code", row.iata, (value) => updateWizardLocationRow(rowIndex, "iata", value), wizardLocationIataOptions, "IATA code", `iata-${rowIndex}`),
             wizardDataListField("Location name", row.name, (value) => updateWizardLocationRow(rowIndex, "name", value), wizardLocationNameOptions, "Location name", `location-name-${rowIndex}`)
@@ -15467,7 +15467,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         ["Access", `${accessDraft.userName || "Not set"} / ${accessDraft.locationCode || "no location"} / ${accessDraft.unitCode || "no unit"} / ${trainingDraft.accessLevel || "View"}`],
         ["Scoring", scoringDraft || "Not set"],
         ["Staff currency events", staffCurrencyEventsDraft || "Not set"]
-      ].map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[150px_minmax(0,1fr)]", children: [
+      ].map(([label, value]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[120px_minmax(0,1fr)]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-black uppercase tracking-[0.12em] text-slate-500", children: label }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-line font-bold text-slate-900", children: value })
       ] }, label)) }),
@@ -15499,7 +15499,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       ] })
     ] });
   }
-  const renderTemplatePanel = (className = "h-fit") => /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${className} rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm`, children: [
+  const renderTemplatePanel = (className = "h-fit") => /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: `${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black text-slate-950", children: "Templates and uploads" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: visibleTemplates.map((template) => {
@@ -15576,8 +15576,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         }
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid gap-4 ${visibleTemplates.length > 0 && !placeTemplatesBelow ? "xl:grid-cols-[minmax(0,1fr)_360px]" : ""}`, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `grid max-w-full min-w-0 gap-3 overflow-hidden ${visibleTemplates.length > 0 && !placeTemplatesBelow ? "xl:grid-cols-[minmax(0,1fr)_300px]" : ""}`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-3", children: [
         renderWizardDataEntry(),
         visibleTemplates.length > 0 && placeTemplatesBelow ? renderTemplatePanel("") : null,
         saveMessage ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm", children: saveMessage }) : null
@@ -15612,7 +15612,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
   const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
   const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : /* @__PURE__ */ new Map();
   const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-full overflow-auto px-5 py-4 text-slate-100", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-full overflow-y-auto px-5 py-4 text-slate-100 ${activeView === "structure" ? "overflow-x-auto" : "overflow-x-hidden"}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
                 /* Keep connector rules aligned with docs/organisation-chart-rendering.md. */
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
@@ -15727,7 +15727,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
         onUpdatePlatformConfig,
         onNavigateToSettingsSection
       }
-    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       InitialSetupWizard,
       {
         platformConfig,
@@ -15738,7 +15738,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
         isSetupTestMode: isSetupTestMode2,
         onSaveSetupTestPersonnel
       }
-    )
+    ) })
   ] });
 };
 const ScheduleView = ({

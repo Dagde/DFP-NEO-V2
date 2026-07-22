@@ -4533,7 +4533,7 @@ const InitialSetupWizard: React.FC<{
                                 Delete
                             </button>
                         </div>
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                             {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Smith')}
                             {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'Alex')}
                             {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-A', `staff-unit-${index}`)}
@@ -4838,7 +4838,7 @@ const InitialSetupWizard: React.FC<{
                     Rank order controls how people are sorted in lists. Put the most senior rank at order 1. If more than one service or arm of the military will use this unit, include equivalent ranks on the same line.
                 </div>
                 {editableRows.map((row, index) => (
-                    <div key={`rank-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[90px_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end">
+                    <div key={`rank-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[80px_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end">
                         {wizardField('Order', row.order || String(index + 1), (value) => updateRow(index, 'order', value), undefined, String(index + 1))}
                         {wizardField('Ranks at this level', row.ranks || '', (value) => updateRow(index, 'ranks', value), undefined, 'Team Lead Rank')}
                         {wizardField('Notes', row.notes || '', (value) => updateRow(index, 'notes', value), undefined, 'Same seniority across services')}
@@ -4871,7 +4871,7 @@ const InitialSetupWizard: React.FC<{
                     Resource sharing lets this unit use another unit's aircraft, simulators, trainers or ground lines. Staff sharing lets this unit schedule people from another unit. Turning either on can increase scheduling flexibility, but it also means conflicts and availability must be managed across units.
                 </div>
                 {editableRows.map((row, index) => (
-                    <div key={`sharing-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-[170px_120px_minmax(0,1fr)]">
+                    <div key={`sharing-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[150px_110px_minmax(0,1fr)]">
                         {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
                         {wizardField('Enabled', row.enabled || 'Off', (value) => updateRow(index, 'enabled', value), ['Off', 'On'])}
                         {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, 'UNIT-A, UNIT-B', `sharing-units-${index}`)}
@@ -4897,7 +4897,7 @@ const InitialSetupWizard: React.FC<{
                     A currency profile is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests a currency event.
                 </div>
                 {editableRows.map((row, index) => (
-                    <div key={`currency-row-${index}`} className="grid gap-3 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_110px_minmax(0,1fr)_110px_minmax(0,1fr)_90px_82px] xl:items-end">
+                    <div key={`currency-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                         {wizardField('Profile name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
                         {wizardField('Code', row.code || '', (value) => updateRow(index, 'code', value.toUpperCase()), undefined, 'PIC')}
                         {wizardField('Crew', row.crew || '', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
@@ -4930,7 +4930,7 @@ const InitialSetupWizard: React.FC<{
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`scoring-row-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
-                        <div className="grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_82px] md:items-end">
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_74px] xl:items-end">
                             {wizardField('Assessment area', row.dimension || '', (value) => updateRow(index, 'dimension', value), undefined, 'Preparation')}
                             {wizardField('Pass standard', row.passStandard || '', (value) => updateRow(index, 'passStandard', value), undefined, 'Prepared, safe and ready.')}
                             {wizardField('Fail standard', row.failStandard || '', (value) => updateRow(index, 'failStandard', value), undefined, 'Unsafe or not prepared.')}
@@ -4938,7 +4938,7 @@ const InitialSetupWizard: React.FC<{
                                 Delete
                             </button>
                         </div>
-                        <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+                        <div className="grid min-w-0 gap-2 md:grid-cols-3 xl:grid-cols-4">
                             {(['grade0', 'grade1', 'grade2', 'grade3', 'grade4', 'grade5'] as const).map((field, gradeIndex) => (
                                 wizardField(`Grade ${gradeIndex}`, row[field] || '', (value) => updateRow(index, field, value), undefined, gradeIndex === 0 ? 'Unsafe' : gradeIndex < 3 ? 'Needs help' : 'Meets standard')
                             ))}
@@ -4966,7 +4966,7 @@ const InitialSetupWizard: React.FC<{
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`standard-currency-event-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(190px,1fr)_120px_140px_90px_90px_90px] xl:items-end">
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                             {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'Annual Instrument Check')}
                             {wizardField('Short title', row.shortTitle || '', (value) => updateRow(index, 'shortTitle', value.toUpperCase()), undefined, 'INST')}
                             {wizardField('Resource type', row.resourceType || 'Flight', (value) => updateRow(index, 'resourceType', value), ['Flight', 'FTD', 'CPT', 'Ground'])}
@@ -4974,7 +4974,7 @@ const InitialSetupWizard: React.FC<{
                             {wizardField('Pre-flight', row.preFlight || '90', (value) => updateRow(index, 'preFlight', value), undefined, '90')}
                             {wizardField('Post-flight', row.postFlight || '60', (value) => updateRow(index, 'postFlight', value), undefined, '60')}
                         </div>
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_90px_82px] xl:items-end">
+                        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
                             {wizardField('Crew', row.crew || 'Standard crew', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
                             {wizardField('Currency', row.currency || '', (value) => updateRow(index, 'currency', value), undefined, 'Instrument Currency')}
                             {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
@@ -4995,7 +4995,7 @@ const InitialSetupWizard: React.FC<{
         <label className="block">
             <span className={wizardLabelClass}>{label}</span>
             <textarea
-                className={`${wizardInputClass} mt-1 min-h-[84px] resize-y`}
+                className={`${wizardInputClass} mt-1 min-h-[68px] resize-y`}
                 value={value}
                 placeholder={placeholder}
                 autoFocus={autoFocus}
@@ -5095,17 +5095,17 @@ const InitialSetupWizard: React.FC<{
     const promptShell = (question: React.ReactNode, answer: React.ReactNode, actionLabel = 'Next', saveAction?: () => void) => (
         <div
             key={visibleStep.id}
-            className="animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-5 text-slate-900 shadow-sm"
+            className="max-w-full overflow-hidden animate-[neoWizardIn_220ms_ease-out] rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm"
             onKeyDownCapture={stopEditableKeyPropagation}
             onKeyDown={stopEditableKeyPropagation}
         >
-            <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="mb-4 flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Step {currentStep + 1} of {steps.length}</p>
-                    <h4 className="mt-1 text-xl font-bold text-slate-950">{visibleStep.title}</h4>
-                    <div className="mt-3 text-sm leading-6 text-slate-700">{question}</div>
+                    <h4 className="mt-1 text-lg font-bold leading-tight text-slate-950">{visibleStep.title}</h4>
+                    <div className="mt-2 text-sm leading-5 text-slate-700">{question}</div>
                 </div>
-                <label className="block w-full lg:w-[320px]">
+                <label className="block w-full shrink-0 lg:w-[240px]">
                     <span className={wizardLabelClass}>Go to wizard page</span>
                     <select
                         className={`${wizardInputClass} mt-1 bg-white text-slate-950`}
@@ -5122,7 +5122,7 @@ const InitialSetupWizard: React.FC<{
                 </label>
             </div>
             <div
-                className="rounded-xl border border-slate-300 bg-white/80 p-4 shadow-sm"
+                className="max-w-full overflow-hidden rounded-xl border border-slate-300 bg-white/80 p-3 shadow-sm"
                 onKeyDownCapture={stopEditableKeyPropagation}
                 onKeyDown={stopEditableKeyPropagation}
             >
@@ -5227,8 +5227,8 @@ const InitialSetupWizard: React.FC<{
         placeholder: string,
         parentOptions: string[],
     ) => (
-        <div>
-            <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="max-w-full overflow-hidden">
+            <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]">
                 {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, levelNumber === 1 ? 'Branch / HQ' : levelNumber === 2 ? 'Operating Group' : 'Unit Group')}
                 {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
                 <div className="md:col-span-2">
@@ -5240,7 +5240,7 @@ const InitialSetupWizard: React.FC<{
                                     {fromLines(levelOptions).map((child) => {
                                         const currentParent = buildWizardParentRowsForChildren([child], parentMappings, parentOptions)[0]?.parent || '';
                                         return (
-                                            <div key={`${levelNumber}-${child}`} className="grid gap-3 px-3 py-3 md:grid-cols-[minmax(130px,220px)_minmax(180px,340px)] md:items-center">
+                                            <div key={`${levelNumber}-${child}`} className="grid min-w-0 gap-2 px-3 py-2 md:grid-cols-[minmax(110px,170px)_minmax(0,1fr)] md:items-center">
                                                 <div>
                                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Child</p>
                                                     <p className="mt-1 text-sm font-bold text-slate-950">{child}</p>
@@ -6453,7 +6453,7 @@ const InitialSetupWizard: React.FC<{
                                     const currentParentPath = unitParentMap.get(normaliseUnitSettingsIdentifier(row.code)) || unitParentOptions[0];
                                     const currentParentValue = formatWizardOrganisationPath(currentParentPath);
                                     return (
-                                        <div key={`unit-parent-${row.code}`} className="grid gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[140px_minmax(0,1fr)] md:items-center">
+                                        <div key={`unit-parent-${row.code}`} className="grid min-w-0 gap-2 rounded-md border border-slate-200 bg-white p-3 md:grid-cols-[120px_minmax(0,1fr)] md:items-center">
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900">{row.code}</p>
                                                 <p className="text-xs text-slate-500">{row.name || row.code}</p>
@@ -6497,7 +6497,7 @@ const InitialSetupWizard: React.FC<{
                 <div>
                     <div className="space-y-3">
                         {editableLocationRows.map((row, rowIndex) => (
-                            <div key={`wizard-location-row-${rowIndex}`} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-[minmax(120px,0.4fr)_minmax(100px,0.35fr)_minmax(180px,1fr)]">
+                            <div key={`wizard-location-row-${rowIndex}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-2 xl:grid-cols-3">
                                 {wizardDataListField('ICAO code', row.icao, (value) => updateWizardLocationRow(rowIndex, 'icao', value), wizardLocationIcaoOptions, 'ICAO code', `icao-${rowIndex}`)}
                                 {wizardDataListField('IATA code', row.iata, (value) => updateWizardLocationRow(rowIndex, 'iata', value), wizardLocationIataOptions, 'IATA code', `iata-${rowIndex}`)}
                                 {wizardDataListField('Location name', row.name, (value) => updateWizardLocationRow(rowIndex, 'name', value), wizardLocationNameOptions, 'Location name', `location-name-${rowIndex}`)}
@@ -6851,7 +6851,7 @@ const InitialSetupWizard: React.FC<{
                     ['Scoring', scoringDraft || 'Not set'],
                     ['Staff currency events', staffCurrencyEventsDraft || 'Not set'],
                 ].map(([label, value]) => (
-                    <div key={label} className="grid gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[150px_minmax(0,1fr)]">
+                    <div key={label} className="grid min-w-0 gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 md:grid-cols-[120px_minmax(0,1fr)]">
                         <span className="font-black uppercase tracking-[0.12em] text-slate-500">{label}</span>
                         <span className="whitespace-pre-line font-bold text-slate-900">{value}</span>
                     </div>
@@ -6885,7 +6885,7 @@ const InitialSetupWizard: React.FC<{
     }
 
     const renderTemplatePanel = (className = 'h-fit') => (
-        <aside className={`${className} rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-900 shadow-sm`}>
+        <aside className={`${className} min-w-0 rounded-xl border border-slate-300 bg-slate-50 p-3 text-slate-900 shadow-sm`}>
             <h4 className="text-sm font-black text-slate-950">Templates and uploads</h4>
             <p className="mt-1 text-xs leading-5 text-slate-600">
                 This step can use a template. Download it, fill it in, then upload it here. I will check the format and explain anything that needs fixing in plain English.
@@ -6995,8 +6995,8 @@ const InitialSetupWizard: React.FC<{
                     if (pendingTemplateId) void handleTemplateFile(pendingTemplateId, file);
                 }}
             />
-            <div className={`grid gap-4 ${visibleTemplates.length > 0 && !placeTemplatesBelow ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : ''}`}>
-                <div className="space-y-3">
+            <div className={`grid max-w-full min-w-0 gap-3 overflow-hidden ${visibleTemplates.length > 0 && !placeTemplatesBelow ? 'xl:grid-cols-[minmax(0,1fr)_300px]' : ''}`}>
+                <div className="min-w-0 space-y-3">
                     {renderWizardDataEntry()}
                     {visibleTemplates.length > 0 && placeTemplatesBelow ? renderTemplatePanel('') : null}
                     {saveMessage ? (
@@ -7052,7 +7052,7 @@ const OrganisationSlideoutDiagram: React.FC<{
     const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : new Map<number, number>();
     const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
     return (
-        <div className="h-full overflow-auto px-5 py-4 text-slate-100">
+        <div className={`h-full overflow-y-auto px-5 py-4 text-slate-100 ${activeView === 'structure' ? 'overflow-x-auto' : 'overflow-x-hidden'}`}>
             <style>{`
                 /* Keep connector rules aligned with docs/organisation-chart-rendering.md. */
                 .org-chart { display: inline-flex; min-width: 100%; justify-content: center; padding: 10px 18px 22px; }
@@ -7167,15 +7167,17 @@ const OrganisationSlideoutDiagram: React.FC<{
                     onNavigateToSettingsSection={onNavigateToSettingsSection}
                 />
             ) : (
-                <InitialSetupWizard
-                    platformConfig={platformConfig}
-                    unitCode={unitCode}
-                    locationCode={locationCode}
-                    onUpdatePlatformConfig={onUpdatePlatformConfig}
-                    onNavigateToSettingsSection={onNavigateToSettingsSection}
-                    isSetupTestMode={isSetupTestMode}
-                    onSaveSetupTestPersonnel={onSaveSetupTestPersonnel}
-                />
+                <div className="max-w-full overflow-x-hidden">
+                    <InitialSetupWizard
+                        platformConfig={platformConfig}
+                        unitCode={unitCode}
+                        locationCode={locationCode}
+                        onUpdatePlatformConfig={onUpdatePlatformConfig}
+                        onNavigateToSettingsSection={onNavigateToSettingsSection}
+                        isSetupTestMode={isSetupTestMode}
+                        onSaveSetupTestPersonnel={onSaveSetupTestPersonnel}
+                    />
+                </div>
             )}
         </div>
     );
