@@ -25843,7 +25843,7 @@ const parseBoolean = (value) => {
   return Boolean(value);
 };
 const parseTraineeRow = (row) => {
-  const idValue = getNum(row, ["PMKeys/ID", "idNumber"]);
+  const idValue = getNum(row, ["PMKeys/ID", "PMKeys", "ID", "ID Number", "IDNumber", "Personnel ID", "Service ID", "Employee ID", "Employee Number", "Personnel Number", "Staff ID", "idNumber"]);
   if (idValue === void 0) return null;
   const parsed = { idNumber: idValue };
   const nameField = getStr(row, [
@@ -26065,6 +26065,7 @@ const TraineeBulkUploadFlyout = ({
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: file ? file.name : "Drag and drop a trainee spreadsheet here" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Accepted formats: .xlsx, .xls, .csv" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "ID column can be Personnel ID, Service ID, PMKeys/ID, ID Number, or Employee ID." }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => inputRef.current?.click(), className: "mt-4 rounded-md bg-gray-100 px-4 py-2 font-semibold text-gray-900 hover:bg-white", children: "Select File" })
             ]
           }
@@ -53102,7 +53103,7 @@ const BulkUpdateFlyout = ({
           ]
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Expected columns include Personnel ID or Service ID, Name or Srname/First name, Service, Rank, callsign number, Roles, Category, Seat config." }),
       statusMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: statusMessage })
     ] }) }),
     !isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [

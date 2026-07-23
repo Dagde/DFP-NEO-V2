@@ -411,7 +411,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                                     Add File
                                 </button>
                             </div>
-                            <p className="text-xs text-gray-500">Expected columns: PMKeys/ID, Srname, First name, Service, Rank, callsign number, Roles, Category, Seat config.</p>
+                            <p className="text-xs text-gray-500">Expected columns include Personnel ID or Service ID, Name or Srname/First name, Service, Rank, callsign number, Roles, Category, Seat config.</p>
                             {statusMessage && <p className="text-sm text-amber-300">{statusMessage}</p>}
                         </>
                     )}
