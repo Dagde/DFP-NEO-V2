@@ -50922,6 +50922,12 @@ const InstructorProfileFlyout = ({
     () => getSimIpDisplayLabel(personnelDisplaySettings),
     [personnelDisplaySettings]
   );
+  const configuredServiceOptions = reactExports.useMemo(() => {
+    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
+    const options = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
+    const currentService = String(instructor.service || "").trim();
+    return currentService && !options.some((option) => option.toLowerCase() === currentService.toLowerCase()) ? [...options, currentService] : options;
+  }, [instructor.service, personnelDisplaySettings]);
   const staffRoleOptions = reactExports.useMemo(() => {
     const legacyOptions = [
       { value: "QFI", label: instructorLabel },
@@ -50973,7 +50979,7 @@ const InstructorProfileFlyout = ({
     return assigned;
   }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
-  const [service, setService] = reactExports.useState(instructor.service);
+  const [service, setService] = reactExports.useState(instructor.service || "");
   const [category, setCategory] = reactExports.useState(instructor.category);
   const [seatConfig, setSeatConfig] = reactExports.useState(instructor.seatConfig);
   const [unavailabilityPeriods, setUnavailabilityPeriods] = reactExports.useState(instructor.unavailability || []);
@@ -51356,7 +51362,7 @@ const InstructorProfileFlyout = ({
       callsignNumber,
       callsign: displayCallsign,
       secondaryCallsign,
-      service,
+      service: service || void 0,
       category: savedCategory,
       seatConfig,
       crew,
@@ -52280,9 +52286,7 @@ const InstructorProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Crew", value: crew, onChange: (e) => setCrew(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Service", value: service || "", onChange: (e) => setService(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ARA", children: "ARA" })
+                configuredServiceOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
               ] }),
               isContractorStaffRoleValue(String(role)) ? /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Category", value: simIpDisplayLabel, onChange: () => {
               }, readOnly: true }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Category", value: category, onChange: (e) => setCategory(e.target.value), children: [
@@ -52368,7 +52372,7 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Service" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.service || "RAAF" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.service || "[None]" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }),

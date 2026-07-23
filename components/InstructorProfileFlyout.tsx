@@ -16,6 +16,7 @@ import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   getSimIpDisplayLabel,
   getRankOptionGroupsForGroup,
+  normalisePersonnelDisplaySettings,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
@@ -347,6 +348,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     () => getSimIpDisplayLabel(personnelDisplaySettings),
     [personnelDisplaySettings],
   );
+  const configuredServiceOptions = useMemo(() => {
+    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
+    const options = normalised.staffRankEquivalency.services
+      .map(serviceOption => String(serviceOption.name || '').trim())
+      .filter(Boolean);
+    const currentService = String(instructor.service || '').trim();
+    return currentService && !options.some(option => option.toLowerCase() === currentService.toLowerCase())
+      ? [...options, currentService]
+      : options;
+  }, [instructor.service, personnelDisplaySettings]);
   const staffRoleOptions = useMemo(() => {
     const legacyOptions = [
       { value: 'QFI', label: instructorLabel },
@@ -416,7 +427,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     return assigned;
   }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
-  const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
+  const [service, setService] = useState<string>(instructor.service || '');
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
   const [seatConfig, setSeatConfig] = useState<SeatConfig>(instructor.seatConfig);
   const [unavailabilityPeriods, setUnavailabilityPeriods] = useState<UnavailabilityPeriod[]>(instructor.unavailability || []);
@@ -845,7 +856,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       callsignNumber,
       callsign: displayCallsign,
       secondaryCallsign,
-      service,
+      service: (service || undefined) as Instructor['service'],
       category: savedCategory,
       seatConfig,
       crew,
@@ -1799,8 +1810,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <InputField label="Callsign" value={displayCallsign || 'Auto assigned'} onChange={() => {}} readOnly />
                       <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
                       <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
-                      <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value as any)}>
-                        <option value="">Select...</option><option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
+                      <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value)}>
+                        <option value="">Select...</option>
+                        {configuredServiceOptions.map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
                       </Dropdown>
                       {isContractorStaffRoleValue(String(role)) ? (
                         <InputField label="Category" value={simIpDisplayLabel} onChange={() => {}} readOnly />
@@ -1889,7 +1903,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || '[None]'}</span></div>
                         {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || 'RAAF'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || '[None]'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
