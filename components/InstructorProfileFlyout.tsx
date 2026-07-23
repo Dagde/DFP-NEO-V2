@@ -856,7 +856,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       callsignNumber,
       callsign: displayCallsign,
       secondaryCallsign,
-      service: (service || undefined) as Instructor['service'],
+      service: service || undefined,
       category: savedCategory,
       seatConfig,
       crew,

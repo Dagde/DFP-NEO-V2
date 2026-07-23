@@ -196,7 +196,7 @@ export interface Instructor {
   photoUrl?: string | null;  // Profile photo — base64 data URI or https URL; null/undefined = no photo
   role: string;
   callsignNumber: number;
-  service?: 'RAAF' | 'RAN' | 'ARA';
+  service?: string;
   category: InstructorCategory;
   isTestingOfficer: boolean;
   seatConfig: SeatConfig;
@@ -498,7 +498,7 @@ export interface Trainee {
   isPaused: boolean;
   unit: string;
   flight?: string;
-  service?: 'RAAF' | 'RAN' | 'ARA';
+  service?: string;
   unavailability: UnavailabilityPeriod[];
   lastEventDate?: string;
   lastFlightDate?: string;

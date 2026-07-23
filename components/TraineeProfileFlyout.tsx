@@ -1322,7 +1322,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             flight,
             phoneNumber,
             email,
-            service: (service || undefined) as Trainee['service'],
+            service: service || undefined,
             traineeCallsign,
             secondaryCallsign,
             crew,
