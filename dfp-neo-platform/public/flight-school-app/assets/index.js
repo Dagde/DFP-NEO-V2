@@ -25876,11 +25876,7 @@ const parseTraineeRow = (row) => {
   if (callsign) parsed.callsignNumber = parseInt(callsign, 10) || void 0;
   const serviceRaw = getStr(row, ["Service"]);
   if (serviceRaw) {
-    const svc = serviceRaw.trim().toLowerCase();
-    if (["raaf", "air force", "airforce", "royal australian air force"].includes(svc)) parsed.service = "RAAF";
-    else if (["ran", "navy", "royal australian navy"].includes(svc)) parsed.service = "RAN";
-    else if (["ara", "army", "australian army"].includes(svc)) parsed.service = "ARA";
-    else parsed.service = serviceRaw;
+    parsed.service = serviceRaw.trim();
   }
   const unit = getStr(row, ["Unit"]);
   if (unit) parsed.unit = unit;
@@ -52810,12 +52806,8 @@ const getStringFromRow = (row, possibleKeys) => {
 };
 const splitListValue = (value) => value.split(/\r?\n|;|,/).map((item) => item.trim()).filter(Boolean);
 const normaliseService = (value) => {
-  const cleanValue = value.trim().toLowerCase();
-  if (!cleanValue) return void 0;
-  if (["raaf", "air force", "airforce", "royal australian air force"].includes(cleanValue)) return "RAAF";
-  if (["ran", "navy", "royal australian navy"].includes(cleanValue)) return "RAN";
-  if (["ara", "army", "australian army"].includes(cleanValue)) return "ARA";
-  return value;
+  const cleanValue = value.trim();
+  return cleanValue || void 0;
 };
 const normaliseCategory = (value) => {
   const cleanValue = value.trim().toLowerCase();

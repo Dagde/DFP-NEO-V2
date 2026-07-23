@@ -54,12 +54,8 @@ const splitListValue = (value: string): string[] =>
         .filter(Boolean);
 
 const normaliseService = (value: string): Instructor['service'] | undefined => {
-    const cleanValue = value.trim().toLowerCase();
-    if (!cleanValue) return undefined;
-    if (['raaf', 'air force', 'airforce', 'royal australian air force'].includes(cleanValue)) return 'RAAF';
-    if (['ran', 'navy', 'royal australian navy'].includes(cleanValue)) return 'RAN';
-    if (['ara', 'army', 'australian army'].includes(cleanValue)) return 'ARA';
-    return value as Instructor['service'];
+    const cleanValue = value.trim();
+    return cleanValue || undefined;
 };
 
 const normaliseCategory = (value: string): InstructorCategory | undefined => {

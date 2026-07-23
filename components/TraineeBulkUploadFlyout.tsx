@@ -88,11 +88,7 @@ const parseTraineeRow = (row: any): Partial<Trainee> | null => {
     if (callsign) parsed.callsignNumber = parseInt(callsign, 10) || undefined;
     const serviceRaw = getStr(row, ['Service']);
     if (serviceRaw) {
-        const svc = serviceRaw.trim().toLowerCase();
-        if (['raaf', 'air force', 'airforce', 'royal australian air force'].includes(svc)) parsed.service = 'RAAF';
-        else if (['ran', 'navy', 'royal australian navy'].includes(svc)) parsed.service = 'RAN';
-        else if (['ara', 'army', 'australian army'].includes(svc)) parsed.service = 'ARA';
-        else parsed.service = serviceRaw as 'RAAF' | 'RAN' | 'ARA';
+        parsed.service = serviceRaw.trim();
     }
     const unit = getStr(row, ['Unit']);
     if (unit) parsed.unit = unit;
