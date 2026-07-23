@@ -81092,17 +81092,17 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     return continuationProfiles.find((candidate) => [candidate.name, candidate.code, candidate.currency].map(normaliseOptionKey).filter(Boolean).includes(key));
   };
   const normaliseRequestedTime = (value, fallback) => /^\d{2}:\d{2}$/.test(value) ? value : fallback;
-  const isNightContinuationEvent = (value) => /\bnight\b/i.test(value);
   const defaultDayRequestedTime = "15:00";
   const defaultNightRequestedTime = normaliseRequestedTime(nightContinuationDefaultTime, "18:30");
   const initialEvent = sctEvents[0] || "";
+  const getProfileRequestedTime = (value) => findContinuationProfile(value)?.dayNight === "Night" ? defaultNightRequestedTime : defaultDayRequestedTime;
   const [event, setEvent] = reactExports.useState(() => sctEvents[0] || "");
   const [flightType, setFlightType] = reactExports.useState("Dual");
   const [currency, setCurrency] = reactExports.useState("");
   const [currencyExpire, setCurrencyExpire] = reactExports.useState("");
   const [priority, setPriority] = reactExports.useState("Medium");
   const [notes, setNotes] = reactExports.useState("");
-  const [requestedTime, setRequestedTime] = reactExports.useState(() => isNightContinuationEvent(initialEvent) ? defaultNightRequestedTime : defaultDayRequestedTime);
+  const [requestedTime, setRequestedTime] = reactExports.useState(() => getProfileRequestedTime(initialEvent));
   const requestedTimeTouchedRef = reactExports.useRef(false);
   const [aircraftConfigId, setAircraftConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   reactExports.useEffect(() => {
@@ -81114,8 +81114,8 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
   }, [sctEvents]);
   reactExports.useEffect(() => {
     if (requestedTimeTouchedRef.current) return;
-    setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
-  }, [defaultNightRequestedTime, event]);
+    setRequestedTime(getProfileRequestedTime(event));
+  }, [continuationProfiles, defaultNightRequestedTime, event]);
   reactExports.useEffect(() => {
     const profile = findContinuationProfile(event);
     if (!profile) return;
@@ -81159,7 +81159,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       notes,
       dateRequested: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
       requestedTime,
-      dayNight: profile?.dayNight || (isNightContinuationEvent(event) ? "Night" : "Day"),
+      dayNight: profile?.dayNight || "Day",
       aircraftConfigId,
       acceptableAircraftConfigs: profile?.acceptableAircraftConfigs?.length ? profile.acceptableAircraftConfigs : [aircraftConfigId],
       aircraftCount: Math.max(1, Number(profile?.aircraftCount) || 1)

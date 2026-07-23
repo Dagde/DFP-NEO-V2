@@ -80,17 +80,19 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
     ));
   };
   const normaliseRequestedTime = (value: string, fallback: string) => (/^\d{2}:\d{2}$/.test(value) ? value : fallback);
-  const isNightContinuationEvent = (value: string) => /\bnight\b/i.test(value);
   const defaultDayRequestedTime = '15:00';
   const defaultNightRequestedTime = normaliseRequestedTime(nightContinuationDefaultTime, '18:30');
   const initialEvent = sctEvents[0] || '';
+  const getProfileRequestedTime = (value: string) => (
+    findContinuationProfile(value)?.dayNight === 'Night' ? defaultNightRequestedTime : defaultDayRequestedTime
+  );
   const [event, setEvent] = useState(() => sctEvents[0] || '');
   const [flightType, setFlightType] = useState<'Solo' | 'Dual'>('Dual');
   const [currency, setCurrency] = useState('');
   const [currencyExpire, setCurrencyExpire] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [notes, setNotes] = useState('');
-  const [requestedTime, setRequestedTime] = useState(() => isNightContinuationEvent(initialEvent) ? defaultNightRequestedTime : defaultDayRequestedTime);
+  const [requestedTime, setRequestedTime] = useState(() => getProfileRequestedTime(initialEvent));
   const requestedTimeTouchedRef = useRef(false);
   const [aircraftConfigId, setAircraftConfigId] = useState(BASE_AIRCRAFT_CONFIG.id);
 
@@ -104,8 +106,8 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
 
   useEffect(() => {
     if (requestedTimeTouchedRef.current) return;
-    setRequestedTime(isNightContinuationEvent(event) ? defaultNightRequestedTime : defaultDayRequestedTime);
-  }, [defaultNightRequestedTime, event]);
+    setRequestedTime(getProfileRequestedTime(event));
+  }, [continuationProfiles, defaultNightRequestedTime, event]);
   useEffect(() => {
     const profile = findContinuationProfile(event);
     if (!profile) return;
@@ -156,7 +158,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
       notes,
       dateRequested: new Date().toISOString().split('T')[0],
       requestedTime,
-      dayNight: profile?.dayNight || (isNightContinuationEvent(event) ? 'Night' : 'Day'),
+      dayNight: profile?.dayNight || 'Day',
       aircraftConfigId,
       acceptableAircraftConfigs: profile?.acceptableAircraftConfigs?.length ? profile.acceptableAircraftConfigs : [aircraftConfigId],
       aircraftCount: Math.max(1, Number(profile?.aircraftCount) || 1),
