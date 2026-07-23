@@ -228,6 +228,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             crewPositionTerminology={props.crewPositionTerminology}
             staffQualificationCatalogue={props.staffQualificationCatalogue}
             sctTerminology={props.sctTerminology}
+            defaultUnitCode={shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode}
           />
         )}
         {activeTab === 'schedule' && (

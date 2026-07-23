@@ -134,6 +134,7 @@ interface InstructorListViewProps {
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
+  defaultUnitCode?: string;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -177,13 +178,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     crewPositionTerminology,
     staffQualificationCatalogue,
     sctTerminology,
+    defaultUnitCode = '',
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -869,6 +871,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             instructorsData={instructorsData}
             crewPositionTerminology={crewPositionTerminology}
             staffQualificationCatalogue={staffQualificationCatalogue}
+            defaultUnitCode={defaultUnitCode}
         />
       )}
       {instructorToArchive && (

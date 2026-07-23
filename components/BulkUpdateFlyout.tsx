@@ -21,6 +21,7 @@ interface BulkUpdateFlyoutProps {
   onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  defaultUnitCode?: string;
 }
 
 // Helper to get a value from a row with fuzzy key matching
@@ -147,6 +148,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
   onBulkUpdateTrainees,
   crewPositionTerminology,
   staffQualificationCatalogue,
+  defaultUnitCode = '',
 }) => {
     const [selectedLocalFile, setSelectedLocalFile] = useState<File | null>(null);
     const [isDragActive, setIsDragActive] = useState(false);
@@ -258,7 +260,12 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
 
                 const unit = getStringFromRow(row, ['Unit', 'Unit Code']);
                 const normalisedUnit = normaliseImportedUnit(unit);
-                if (normalisedUnit) parsedData.unit = normalisedUnit;
+                if (normalisedUnit) {
+                    parsedData.unit = normalisedUnit;
+                } else {
+                    const fallbackUnit = normaliseImportedUnit(defaultUnitCode);
+                    if (fallbackUnit) parsedData.unit = fallbackUnit;
+                }
 
                 const flight = getStringFromRow(row, ['Flight', 'Flight/Sqn', 'Section']);
                 if (flight) parsedData.flight = flight;

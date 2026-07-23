@@ -52879,7 +52879,8 @@ const BulkUpdateFlyout = ({
   isTraineeMode = false,
   onBulkUpdateTrainees,
   crewPositionTerminology,
-  staffQualificationCatalogue
+  staffQualificationCatalogue,
+  defaultUnitCode = ""
 }) => {
   const [selectedLocalFile, setSelectedLocalFile] = reactExports.useState(null);
   const [isDragActive, setIsDragActive] = reactExports.useState(false);
@@ -52968,7 +52969,12 @@ const BulkUpdateFlyout = ({
         if (location) parsedData.location = location;
         const unit = getStringFromRow(row, ["Unit", "Unit Code"]);
         const normalisedUnit = normaliseImportedUnit(unit);
-        if (normalisedUnit) parsedData.unit = normalisedUnit;
+        if (normalisedUnit) {
+          parsedData.unit = normalisedUnit;
+        } else {
+          const fallbackUnit = normaliseImportedUnit(defaultUnitCode);
+          if (fallbackUnit) parsedData.unit = fallbackUnit;
+        }
         const flight = getStringFromRow(row, ["Flight", "Flight/Sqn", "Section"]);
         if (flight) parsedData.flight = flight;
         const crew = getStringFromRow(row, ["Crew", "Fixed Crew", "Crew Group", "Fixed Crew Group", "Crew Name"]);
@@ -53273,13 +53279,14 @@ const InstructorListView = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue,
-  sctTerminology
+  sctTerminology,
+  defaultUnitCode = ""
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -53832,7 +53839,8 @@ const InstructorListView = ({
         onBulkUpdateInstructors,
         instructorsData,
         crewPositionTerminology,
-        staffQualificationCatalogue
+        staffQualificationCatalogue,
+        defaultUnitCode
       }
     ),
     instructorToArchive && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -54282,7 +54290,8 @@ const StaffView = (props) => {
           operationalModel: props.operationalModel,
           crewPositionTerminology: props.crewPositionTerminology,
           staffQualificationCatalogue: props.staffQualificationCatalogue,
-          sctTerminology: props.sctTerminology
+          sctTerminology: props.sctTerminology,
+          defaultUnitCode: shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
