@@ -978,15 +978,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (await downloadStoredTemplate('organisation-structure')) return;
         const rows = [
             ['Level', 'Level Name', 'Option'],
-            [0, 'Department of the Air Force', 'Department of the Air Force'],
-            [1, 'Headquarters', 'HQ USAF'],
-            [2, 'Command', 'Air Force Global Strike Command'],
-            [3, 'Numbered Force', 'Eighth Air Force'],
-            [4, 'Wing', '2nd Bomb Wing'],
-            [5, 'Group', '2nd Operations Group'],
-            [6, 'Squadron', '96th Bomb Squadron'],
-            [7, 'Flight', 'Flight'],
-            [8, 'Crew', 'Aircrew'],
+            [0, 'Your Organisation', 'Your Organisation'],
+            [1, 'Division', 'Division A'],
+            [2, 'Group', 'Group A'],
+            [3, 'Department', 'Department A'],
+            [4, 'Team', 'Team A'],
+            [5, 'Sub-team', 'Sub-team A'],
+            [6, 'Section', 'Section A'],
+            [7, 'Cell', 'Cell A'],
+            [8, 'Role Group', 'Role Group A'],
         ];
         if (typeof XLSX !== 'undefined') {
             const worksheet = XLSX.utils.aoa_to_sheet(rows);
