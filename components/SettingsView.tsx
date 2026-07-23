@@ -32,6 +32,7 @@ import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { normaliseContinuationEventSettings } from '../utils/continuationEvents';
+import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 
 
 declare var XLSX: any;
@@ -976,35 +977,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleDownloadOrganisationStructureTemplate = async () => {
         if (await downloadStoredTemplate('organisation-structure')) return;
-        const rows = [
-            ['Level', 'Level Name', 'Option'],
-            [0, 'Your Organisation', 'Your Organisation'],
-            [1, 'Division', 'Division A'],
-            [2, 'Group', 'Group A'],
-            [3, 'Department', 'Department A'],
-            [4, 'Team', 'Team A'],
-            [5, 'Sub-team', 'Sub-team A'],
-            [6, 'Section', 'Section A'],
-            [7, 'Cell', 'Cell A'],
-            [8, 'Role Group', 'Role Group A'],
-        ];
-        if (typeof XLSX !== 'undefined') {
-            const worksheet = XLSX.utils.aoa_to_sheet(rows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Organisation Structure');
-            XLSX.writeFile(workbook, 'Organisation_Structure_Template.xlsx');
-            return;
-        }
-        const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'Organisation_Structure_Template.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        downloadOrganisationStructureTemplateFile();
     };
 
     const dataLoaderTemplateRows = [

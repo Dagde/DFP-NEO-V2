@@ -9901,6 +9901,62 @@ const stopEditableKeyPropagation = (event) => {
     event.stopPropagation();
   }
 };
+const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
+  const headers = ["Level", "Name", "Parent", "Notes"];
+  const rows = [
+    ["0", "Your Organisation", "", "Top level organisation"],
+    ["1", "Division A", "Your Organisation", "First organisation layer below the top level"],
+    ["2", "Group A", "Division A", "Second organisation layer"],
+    ["3", "Department A", "Group A", "Add as many levels as needed before units"],
+    ["4", "Team A", "Department A", "Optional deeper level"],
+    ["5", "Section A", "Team A", "Optional deeper level"],
+    ["6", "Element A", "Section A", "Optional deeper level"]
+  ];
+  const tableRows = [
+    `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join("")}</tr>`,
+    ...rows.map((row) => `<tr>${headers.map((_, index) => `<td>${escapeOrganisationTemplateHtml(row[index] || "")}</td>`).join("")}</tr>`)
+  ].join("");
+  const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+body { font-family: Arial, Helvetica, sans-serif; color: #162033; }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+col.level { width: 90px; }
+col.name { width: 260px; }
+col.parent { width: 260px; }
+col.notes { width: 420px; }
+.title { background: #143142; color: #ffffff; font-size: 20px; font-weight: 700; height: 34px; }
+.subtitle { background: #dbeafe; color: #143142; font-size: 12px; font-weight: 600; height: 28px; }
+.guide { background: #eef2f7; color: #334155; font-size: 11px; height: 24px; }
+th { background: #f97316; color: #ffffff; border: 1px solid #9a3412; font-size: 12px; font-weight: 700; height: 28px; text-align: left; padding: 6px; }
+td { border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 6px; vertical-align: top; }
+tr:nth-child(even) td { background: #f8fafc; }
+</style>
+</head>
+<body>
+<table>
+<colgroup><col class="level" /><col class="name" /><col class="parent" /><col class="notes" /></colgroup>
+<tr><td class="title" colspan="${headers.length}">DFP NEO Organisation Structure Template</td></tr>
+<tr><td class="subtitle" colspan="${headers.length}">Use this single table for all organisation levels before units. Add one row per organisation item.</td></tr>
+<tr><td class="guide" colspan="${headers.length}">Level 0 is the top organisation. Each lower level names its immediate parent in the Parent column.</td></tr>
+<tr><td colspan="${headers.length}"></td></tr>
+${tableRows}
+</table>
+</body>
+</html>`;
+  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName.replace(/\.csv$/i, ".xls").replace(/\.xlsx$/i, ".xls");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 const PIXELS_PER_HOUR$6 = 200;
 const ROW_HEIGHT$6 = 32;
 const START_HOUR$6 = 0;
@@ -10428,65 +10484,9 @@ const findWizardTemplateHeaderRowIndex = (rows, template) => {
   });
   return exactIndex >= 0 ? exactIndex : 0;
 };
-const escapeWizardTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const downloadOrganisationStructureTemplate = (template) => {
-  const headers = getWizardTemplateHeaders(template);
-  const rows = [
-    ["0", "Your Organisation", "", "Top level organisation"],
-    ["1", "Division A", "Your Organisation", "First organisation layer below the top level"],
-    ["2", "Group A", "Division A", "Second organisation layer"],
-    ["3", "Department A", "Group A", "Add as many levels as needed before units"],
-    ["4", "Team A", "Department A", "Optional deeper level"],
-    ["5", "Section A", "Team A", "Optional deeper level"],
-    ["6", "Element A", "Section A", "Optional deeper level"]
-  ];
-  const tableRows = [
-    `<tr>${headers.map((header) => `<th>${escapeWizardTemplateHtml(header)}</th>`).join("")}</tr>`,
-    ...rows.map((row) => `<tr>${headers.map((_, index) => `<td>${escapeWizardTemplateHtml(row[index] || "")}</td>`).join("")}</tr>`)
-  ].join("");
-  const html = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<style>
-body { font-family: Arial, Helvetica, sans-serif; color: #162033; }
-table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-col.level { width: 90px; }
-col.name { width: 260px; }
-col.parent { width: 260px; }
-col.notes { width: 420px; }
-.title { background: #143142; color: #ffffff; font-size: 20px; font-weight: 700; height: 34px; }
-.subtitle { background: #dbeafe; color: #143142; font-size: 12px; font-weight: 600; height: 28px; }
-.guide { background: #eef2f7; color: #334155; font-size: 11px; height: 24px; }
-th { background: #f97316; color: #ffffff; border: 1px solid #9a3412; font-size: 12px; font-weight: 700; height: 28px; text-align: left; padding: 6px; }
-td { border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 6px; vertical-align: top; }
-tr:nth-child(even) td { background: #f8fafc; }
-</style>
-</head>
-<body>
-<table>
-<colgroup><col class="level" /><col class="name" /><col class="parent" /><col class="notes" /></colgroup>
-<tr><td class="title" colspan="${headers.length}">DFP NEO Organisation Structure Template</td></tr>
-<tr><td class="subtitle" colspan="${headers.length}">Use this single table for all organisation levels before units. Add one row per organisation item.</td></tr>
-<tr><td class="guide" colspan="${headers.length}">Level 0 is the top organisation. Each lower level names its immediate parent in the Parent column.</td></tr>
-<tr><td colspan="${headers.length}"></td></tr>
-${tableRows}
-</table>
-</body>
-</html>`;
-  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = template.fileName.replace(/\.csv$/i, ".xls");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 const downloadWizardTemplate = (template) => {
   if (template.id === "organisation") {
-    downloadOrganisationStructureTemplate(template);
+    downloadOrganisationStructureTemplateFile(template.fileName);
     return;
   }
   const rows = [
@@ -61971,35 +61971,7 @@ const SettingsView = ({
   };
   const handleDownloadOrganisationStructureTemplate = async () => {
     if (await downloadStoredTemplate("organisation-structure")) return;
-    const rows = [
-      ["Level", "Level Name", "Option"],
-      [0, "Your Organisation", "Your Organisation"],
-      [1, "Division", "Division A"],
-      [2, "Group", "Group A"],
-      [3, "Department", "Department A"],
-      [4, "Team", "Team A"],
-      [5, "Sub-team", "Sub-team A"],
-      [6, "Section", "Section A"],
-      [7, "Cell", "Cell A"],
-      [8, "Role Group", "Role Group A"]
-    ];
-    if (typeof XLSX !== "undefined") {
-      const worksheet = XLSX.utils.aoa_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Organisation Structure");
-      XLSX.writeFile(workbook, "Organisation_Structure_Template.xlsx");
-      return;
-    }
-    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "Organisation_Structure_Template.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadOrganisationStructureTemplateFile();
   };
   const dataLoaderTemplateRows = [
     { key: "staff", label: "Staff", downloadLabel: "Staff Template (.xlsx)", onDownload: handleDownloadInstructorTemplate },
@@ -67105,6 +67077,9 @@ const PlatformConfigurationSettings = ({
     ));
     setOrganisationStructureUnlocked(true);
   };
+  const downloadOrganisationStructureTemplate = () => {
+    downloadOrganisationStructureTemplateFile();
+  };
   const applyImportedOrganisationStructure = (grouped, relationshipPaths) => {
     if (grouped.size === 0) {
       setOrganisationStructureImportError("No valid organisation structure rows found.");
@@ -67142,12 +67117,16 @@ const PlatformConfigurationSettings = ({
       const rawLevelNumber = Math.round(Number(rawLevel));
       const levelNumber = usesZeroBasedLevels ? rawLevelNumber : rawLevelNumber - 1;
       if (!Number.isFinite(levelNumber) || levelNumber < 0 || levelNumber > 11) return;
-      const levelName = String(row["Level Name"] ?? row.levelName ?? row.Name ?? row.name ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
-      const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? "").trim();
+      const levelName = String(row["Level Name"] ?? row.levelName ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
+      const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? row.Name ?? row.name ?? "").trim();
+      const parent = String(row.Parent ?? row.parent ?? row["Parent Organisation"] ?? row.parentOrganisation ?? "").trim();
       const current = grouped.get(levelNumber) || { name: levelName, options: [] };
       current.name = levelName || current.name;
       if (option) current.options.push(option);
       grouped.set(levelNumber, current);
+      if (parent && option) {
+        addOrganisationParentRelationship(grouped, levelNumber, current.name, parent, option);
+      }
     });
     return applyImportedOrganisationStructure(grouped);
   };
@@ -69660,6 +69639,19 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  className: platformActionButtonClass,
+                  onClick: downloadOrganisationStructureTemplate,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+                    "Download",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                    "Template"
+                  ] })
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {

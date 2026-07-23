@@ -77,6 +77,7 @@ import {
   type AlternateCrewCompositionProfile,
   type CurrencyProfile,
 } from '../utils/crewCompositionProfiles';
+import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import {
   DEFAULT_STAFF_QUALIFICATIONS,
   normaliseStaffQualificationCatalogue,
@@ -2525,27 +2526,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const downloadOrganisationStructureTemplate = () => {
-    const organisationName = String(primaryOrganisation?.name || 'Your Organisation').trim();
-    const rows = [
-      ['Level', 'Level Name', 'Option'],
-      [0, organisationName, organisationName],
-      [1, 'Division', 'Division A'],
-      [2, 'Group', 'Group A'],
-      [3, 'Department', 'Department A'],
-      [4, 'Team', 'Team A'],
-      [5, 'Sub-team', 'Sub-team A'],
-      [6, 'Section', 'Section A'],
-      [7, 'Cell', 'Cell A'],
-      [8, 'Role Group', 'Role Group A'],
-    ];
-    if (typeof XLSX !== 'undefined') {
-      const worksheet = XLSX.utils.aoa_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Organisation Structure');
-      XLSX.writeFile(workbook, 'Organisation_Structure_Template.xlsx');
-      return;
-    }
-    downloadTextFile('Organisation_Structure_Template.csv', rows.map((row) => row.join(',')).join('\n'), 'text/csv');
+    downloadOrganisationStructureTemplateFile();
   };
 
   const applyImportedOrganisationStructure = (
@@ -2589,12 +2570,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const rawLevelNumber = Math.round(Number(rawLevel));
       const levelNumber = usesZeroBasedLevels ? rawLevelNumber : rawLevelNumber - 1;
       if (!Number.isFinite(levelNumber) || levelNumber < 0 || levelNumber > 11) return;
-      const levelName = String(row['Level Name'] ?? row.levelName ?? row.Name ?? row.name ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
-      const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? '').trim();
+      const levelName = String(row['Level Name'] ?? row.levelName ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
+      const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? row.Name ?? row.name ?? '').trim();
+      const parent = String(row.Parent ?? row.parent ?? row['Parent Organisation'] ?? row.parentOrganisation ?? '').trim();
       const current = grouped.get(levelNumber) || { name: levelName, options: [] };
       current.name = levelName || current.name;
       if (option) current.options.push(option);
       grouped.set(levelNumber, current);
+      if (parent && option) {
+        addOrganisationParentRelationship(grouped, levelNumber, current.name, parent, option);
+      }
     });
     return applyImportedOrganisationStructure(grouped);
   };
@@ -5755,6 +5740,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <p className="mt-1 text-xs text-gray-400">{organisationStructure.levelCount} levels · {organisationStructure.levels.reduce((sum, level) => sum + level.options.length, 0)} options</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className={platformActionButtonClass}
+                  onClick={downloadOrganisationStructureTemplate}
+                >
+                  <span className="leading-tight">Download<br />Template</span>
+                </button>
                 <button
                   type="button"
                   className={platformActionButtonClass}
