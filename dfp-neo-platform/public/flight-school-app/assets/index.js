@@ -67921,7 +67921,7 @@ This permanently removes the organisation record from platform configuration and
       ...masterLmpAccessRules,
       {
         id: createClientRecordId("master-lmp-access"),
-        lmpCode: masterLmpOptions[0] || "BPC+IPC",
+        lmpCode: masterLmpOptions[0] || "",
         organisationCode: primaryOrganisation?.code || "DEFAULT",
         locationCode: null,
         unitCode: defaultUnit?.code || "",

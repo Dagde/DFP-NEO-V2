@@ -3591,7 +3591,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...masterLmpAccessRules,
       {
         id: createClientRecordId('master-lmp-access'),
-        lmpCode: masterLmpOptions[0] || 'BPC+IPC',
+        lmpCode: masterLmpOptions[0] || '',
         organisationCode: primaryOrganisation?.code || 'DEFAULT',
         locationCode: null,
         unitCode: defaultUnit?.code || '',
