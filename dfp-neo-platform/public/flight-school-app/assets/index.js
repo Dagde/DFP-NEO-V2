@@ -4535,6 +4535,7 @@ const normaliseCode$3 = (value, fallback) => {
 };
 const normaliseContinuationDayNight = (value, fallbackName = "") => {
   const text = normaliseText(value).toLowerCase();
+  if (text === "day") return "Day";
   if (text === "night") return "Night";
   if (text === "day/night" || text === "daynight" || text === "day and night") return "Day/Night";
   return /\bnight\b/i.test(fallbackName) ? "Night" : "Day";
