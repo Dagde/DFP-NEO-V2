@@ -53222,7 +53222,7 @@ const getStaffRoleFilterOption = (role, terminology, instructorLabel, simIpDispl
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
-const generateNewInstructorTemplate = () => ({
+const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "") => ({
   idNumber: generateRandomIdNumber$1(),
   name: "",
   rank: "FLTLT",
@@ -53234,8 +53234,8 @@ const generateNewInstructorTemplate = () => ({
   isExecutive: false,
   isFlyingSupervisor: false,
   isIRE: false,
-  location: "East Sale",
-  unit: "1FTS",
+  location: defaultLocation,
+  unit: defaultUnit,
   phoneNumber: "",
   email: "",
   unavailability: []
@@ -53586,7 +53586,7 @@ const InstructorListView = ({
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    const newTemplate = generateNewInstructorTemplate();
+    const newTemplate = generateNewInstructorTemplate(locations?.[0] || "", defaultUnitCode || units?.[0] || "");
     console.log("🔍 [DATA TRACKING] New instructor template created:", newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);

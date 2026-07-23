@@ -60,7 +60,7 @@ const getStaffRoleFilterOption = (
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
-const generateNewInstructorTemplate = (): Instructor => ({
+const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = ''): Instructor => ({
     idNumber: generateRandomIdNumber(),
     name: '',
     rank: 'FLTLT',
@@ -72,8 +72,8 @@ const generateNewInstructorTemplate = (): Instructor => ({
     isExecutive: false,
     isFlyingSupervisor: false,
     isIRE: false,
-    location: 'East Sale',
-    unit: '1FTS',
+    location: defaultLocation,
+    unit: defaultUnit,
     phoneNumber: '',
     email: '',
     unavailability: [],
@@ -547,7 +547,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    const newTemplate = generateNewInstructorTemplate();
+    const newTemplate = generateNewInstructorTemplate(locations?.[0] || '', defaultUnitCode || units?.[0] || '');
     console.log('🔍 [DATA TRACKING] New instructor template created:', newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
