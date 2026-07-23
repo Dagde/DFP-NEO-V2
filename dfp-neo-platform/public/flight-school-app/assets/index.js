@@ -61650,7 +61650,8 @@ const SettingsView = ({
   aircraftConfigurationDefinitions = [],
   activeUnitCode = "",
   activeUnitCodes = [],
-  activeCompositeUnitCode = ""
+  activeCompositeUnitCode = "",
+  activeAircraftTypeCode = ""
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
@@ -61717,6 +61718,11 @@ const SettingsView = ({
     activeUnitCode,
     ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
   ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+  const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
+  const applyContinuationEventDefaults = (event) => ({
+    ...event,
+    aircraftTypeCode: String(event.aircraftTypeCode || "").trim().toUpperCase() || activeContinuationAircraftTypeCode
+  });
   const updateTempSctEvent = (eventId, updates) => {
     setTempSctEvents((current) => current.map((event) => (event.id || event.name) === eventId ? { ...event, ...updates } : event));
   };
@@ -61869,7 +61875,7 @@ const SettingsView = ({
     setIsEditingBusinessRules(false);
   };
   const handleEditSctEvents = () => {
-    setTempSctEvents(normaliseContinuationEventSettings(sctEvents));
+    setTempSctEvents(normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults));
     setIsEditingSctEvents(true);
   };
   const handleSaveSctEvents = () => {
@@ -61900,12 +61906,12 @@ const SettingsView = ({
           code: name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8) || "CONT",
           unitCode: activeUnitCodeList[0] || "",
           compositeUnitCode: activeCompositeUnitCode || "",
-          aircraftTypeCode: "",
+          aircraftTypeCode: activeContinuationAircraftTypeCode,
           crew: "",
           config: "ANY",
           acceptableAircraftConfigs: ["ANY"],
           currency: activeCurrencyNames[0] || name,
-          dayNight: /\bnight\b/i.test(name) ? "Night" : "Day",
+          dayNight: "Day",
           flightType: "Dual",
           aircraftCount: 1,
           status: "ACTIVE"
@@ -120604,6 +120610,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             activeUnitCode: activeTrainingReportUnitCode,
             activeUnitCodes: activeContextUnitCodes,
             activeCompositeUnitCode: activeUnitCode,
+            activeAircraftTypeCode: activeRuntimeAircraftTypeCode,
             activeOperationalModel,
             activeUnitHasTrainees,
             fixedCrewTileColourMode: activeFixedCrewTileColourMode,

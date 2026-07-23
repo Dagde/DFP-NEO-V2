@@ -43049,6 +43049,7 @@ appliedUpdates.forEach(update => {
                        activeUnitCode={activeTrainingReportUnitCode}
                        activeUnitCodes={activeContextUnitCodes}
                        activeCompositeUnitCode={activeUnitCode}
+                       activeAircraftTypeCode={activeRuntimeAircraftTypeCode}
                        activeOperationalModel={activeOperationalModel}
                        activeUnitHasTrainees={activeUnitHasTrainees}
                        fixedCrewTileColourMode={activeFixedCrewTileColourMode}

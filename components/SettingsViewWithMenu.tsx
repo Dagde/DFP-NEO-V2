@@ -117,6 +117,7 @@ interface SettingsViewWithMenuProps {
     activeUnitCode?: string;
     activeUnitCodes?: string[];
     activeCompositeUnitCode?: string;
+    activeAircraftTypeCode?: string | null;
     activeOperationalModel?: string;
     activeUnitHasTrainees?: boolean;
     fixedCrewTileColourMode?: FixedCrewTileColourMode;

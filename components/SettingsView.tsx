@@ -89,6 +89,7 @@ interface SettingsViewProps {
     activeUnitCode?: string;
     activeUnitCodes?: string[];
     activeCompositeUnitCode?: string;
+    activeAircraftTypeCode?: string | null;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -577,6 +578,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     activeUnitCode = '',
     activeUnitCodes = [],
     activeCompositeUnitCode = '',
+    activeAircraftTypeCode = '',
 }) => {
     // --- STATE ---
     
@@ -665,6 +667,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         activeUnitCode,
         ...(Array.isArray(activeUnitCodes) ? activeUnitCodes : []),
     ].map(unit => String(unit || '').trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+    const activeContinuationAircraftTypeCode = useMemo(() => String(activeAircraftTypeCode || '').trim().toUpperCase(), [activeAircraftTypeCode]);
+    const applyContinuationEventDefaults = (event: ContinuationEventSetting): ContinuationEventSetting => ({
+        ...event,
+        aircraftTypeCode: String(event.aircraftTypeCode || '').trim().toUpperCase() || activeContinuationAircraftTypeCode,
+    });
     const updateTempSctEvent = (eventId: string, updates: Partial<ContinuationEventSetting>) => {
         setTempSctEvents(current => current.map(event => (
             (event.id || event.name) === eventId ? { ...event, ...updates } : event
@@ -852,7 +859,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     // SCT Events Handlers
     const handleEditSctEvents = () => {
-        setTempSctEvents(normaliseContinuationEventSettings(sctEvents));
+        setTempSctEvents(normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults));
         setIsEditingSctEvents(true);
     };
 
@@ -886,12 +893,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     code: name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'CONT',
                     unitCode: activeUnitCodeList[0] || '',
                     compositeUnitCode: activeCompositeUnitCode || '',
-                    aircraftTypeCode: '',
+                    aircraftTypeCode: activeContinuationAircraftTypeCode,
                     crew: '',
                     config: 'ANY',
                     acceptableAircraftConfigs: ['ANY'],
                     currency: activeCurrencyNames[0] || name,
-                    dayNight: /\bnight\b/i.test(name) ? 'Night' : 'Day',
+                    dayNight: 'Day',
                     flightType: 'Dual',
                     aircraftCount: 1,
                     status: 'ACTIVE',
