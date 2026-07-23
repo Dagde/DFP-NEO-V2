@@ -32,6 +32,7 @@ interface TrainingRecordsViewProps {
     activeLocationCode?: string;
     activeUnitCode?: string;
     platformConfig?: PlatformConfig | null;
+    serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
     hasTraineesEnabled?: boolean;
@@ -64,6 +65,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     activeLocationCode = '',
     activeUnitCode = '',
     platformConfig = null,
+    serviceDefinitions = [],
     resourceDisplayNames,
     instructorLabel = 'QFI',
     hasTraineesEnabled = true,
@@ -126,6 +128,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         activeUnitCode={activeUnitCode}
                         syllabusDetails={syllabusDetails}
                         platformConfig={platformConfig}
+                        serviceDefinitions={serviceDefinitions}
                     />
                 )}
                 {activeTab === 'export' && (

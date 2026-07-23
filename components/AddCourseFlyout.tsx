@@ -22,6 +22,7 @@ interface AddCourseFlyoutProps {
   activeLocationCode?: string;
   activeUnitCode?: string;
   platformConfig?: PlatformConfig | null;
+  serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
 }
 
 const ALL_COLORS = [
@@ -92,6 +93,17 @@ const resolveActiveUnitOption = (unitOptions: string[], activeUnitCode?: string)
     return unitOptions.find(unit => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || '';
 };
 
+const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
+    const labels = serviceDefinitions
+        .map(service => String(service.shortName || service.longName || '').trim())
+        .filter(Boolean);
+    return [
+        labels[0] || 'Group 1',
+        labels[1] || 'Group 2',
+        labels[2] || 'Group 3',
+    ];
+};
+
 const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
     onClose,
     onSave,
@@ -101,6 +113,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
     activeLocationCode = '',
     activeUnitCode = '',
     platformConfig = null,
+    serviceDefinitions = [],
 }) => {
     const locationOptions = useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
     const unitOptions = useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
@@ -121,6 +134,10 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
     const [armyStart, setArmyStart] = useState(0);
     const [location, setLocation] = useState(defaultLocation);
     const [unit, setUnit] = useState(defaultUnit);
+    const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
+        () => getServiceCountLabels(serviceDefinitions),
+        [serviceDefinitions],
+    );
 
     const availableColor = useMemo(() => {
         const usedColors = new Set(Object.values(existingCourses));
@@ -257,13 +274,13 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Initial Student Numbers</legend>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                             <Dropdown label="RAAF" id="raaf-start" value={raafStart} onChange={e => setRaafStart(parseInt(e.target.value))}>
+                             <Dropdown label={primaryStudentGroupLabel} id="raaf-start" value={raafStart} onChange={e => setRaafStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label="Navy" id="navy-start" value={navyStart} onChange={e => setNavyStart(parseInt(e.target.value))}>
+                             <Dropdown label={secondaryStudentGroupLabel} id="navy-start" value={navyStart} onChange={e => setNavyStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label="Army" id="army-start" value={armyStart} onChange={e => setArmyStart(parseInt(e.target.value))}>
+                             <Dropdown label={tertiaryStudentGroupLabel} id="army-start" value={armyStart} onChange={e => setArmyStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
                             <div>

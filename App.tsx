@@ -42313,6 +42313,7 @@ appliedUpdates.forEach(update => {
                     activeLocationCode={school}
                     activeUnitCode={activeUnitCode}
                     platformConfig={platformConfig}
+                    serviceDefinitions={serviceDefinitions}
                     resourceDisplayNames={resourceDisplayNames}
                     instructorLabel={instructorLabel}
                     hasTraineesEnabled={activeUnitHasTrainees}

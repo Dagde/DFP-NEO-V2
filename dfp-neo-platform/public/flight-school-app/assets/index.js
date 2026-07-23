@@ -7144,6 +7144,14 @@ const resolveActiveUnitOption = (unitOptions, activeUnitCode) => {
   if (!active) return unitOptions[0] || "";
   return unitOptions.find((unit) => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || "";
 };
+const getServiceCountLabels$1 = (serviceDefinitions = []) => {
+  const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
+  return [
+    labels[0] || "Group 1",
+    labels[1] || "Group 2",
+    labels[2] || "Group 3"
+  ];
+};
 const AddCourseFlyout = ({
   onClose,
   onSave,
@@ -7152,7 +7160,8 @@ const AddCourseFlyout = ({
   units = [],
   activeLocationCode = "",
   activeUnitCode = "",
-  platformConfig = null
+  platformConfig = null,
+  serviceDefinitions = []
 }) => {
   const locationOptions = reactExports.useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
   const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
@@ -7172,6 +7181,10 @@ const AddCourseFlyout = ({
   const [armyStart, setArmyStart] = reactExports.useState(0);
   const [location, setLocation] = reactExports.useState(defaultLocation);
   const [unit, setUnit] = reactExports.useState(defaultUnit);
+  const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
+    () => getServiceCountLabels$1(serviceDefinitions),
+    [serviceDefinitions]
+  );
   const availableColor = reactExports.useMemo(() => {
     const usedColors = new Set(Object.values(existingCourses));
     return ALL_COLORS.find((c) => !usedColors.has(c)) || "bg-gray-400/80";
@@ -7309,9 +7322,9 @@ const AddCourseFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Initial Student Numbers" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: "RAAF", id: "raaf-start", value: raafStart, onChange: (e) => setRaafStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: "Navy", id: "navy-start", value: navyStart, onChange: (e) => setNavyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: "Army", id: "army-start", value: armyStart, onChange: (e) => setArmyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: primaryStudentGroupLabel, id: "raaf-start", value: raafStart, onChange: (e) => setRaafStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: secondaryStudentGroupLabel, id: "navy-start", value: navyStart, onChange: (e) => setNavyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: tertiaryStudentGroupLabel, id: "army-start", value: armyStart, onChange: (e) => setArmyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Total" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700/50 rounded-md text-white h-[38px] flex items-center justify-center font-semibold", children: totalStart })
@@ -78548,6 +78561,14 @@ const EditCourseFlyout = ({
     }
   );
 };
+const getServiceCountLabels = (serviceDefinitions = []) => {
+  const labels = serviceDefinitions.map((service) => String(service.shortName || service.longName || "").trim()).filter(Boolean);
+  return [
+    labels[0] || "Group 1",
+    labels[1] || "Group 2",
+    labels[2] || "Group 3"
+  ];
+};
 const CoursesManagementView = ({
   courses,
   courseColors,
@@ -78563,7 +78584,8 @@ const CoursesManagementView = ({
   activeLocationCode = "",
   activeUnitCode = "",
   syllabusDetails = [],
-  platformConfig = null
+  platformConfig = null,
+  serviceDefinitions = []
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -78573,6 +78595,10 @@ const CoursesManagementView = ({
   const [showPinDialog, setShowPinDialog] = reactExports.useState(false);
   const [showChoiceDialog, setShowChoiceDialog] = reactExports.useState(false);
   const [courseToDelete, setCourseToDelete] = reactExports.useState(null);
+  const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
+    () => getServiceCountLabels(serviceDefinitions),
+    [serviceDefinitions]
+  );
   const groupedCourses = reactExports.useMemo(() => {
     const groups = {};
     const activeCourses = courses.filter((course) => courseColors.hasOwnProperty(course.name));
@@ -78707,15 +78733,18 @@ const CoursesManagementView = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                "RAAF: ",
+                primaryStudentGroupLabel,
+                ": ",
                 course.raafStart
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                "Navy: ",
+                secondaryStudentGroupLabel,
+                ": ",
                 course.navyStart
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                "Army: ",
+                tertiaryStudentGroupLabel,
+                ": ",
                 course.armyStart
               ] })
             ] })
@@ -78791,7 +78820,8 @@ const CoursesManagementView = ({
         units,
         activeLocationCode,
         activeUnitCode,
-        platformConfig
+        platformConfig,
+        serviceDefinitions
       }
     ),
     showEditFlyout && courseToEdit && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -80481,6 +80511,7 @@ const TrainingRecordsView = ({
   activeLocationCode = "",
   activeUnitCode = "",
   platformConfig = null,
+  serviceDefinitions = [],
   resourceDisplayNames,
   instructorLabel = "QFI",
   hasTraineesEnabled = true
@@ -80532,7 +80563,8 @@ const TrainingRecordsView = ({
           activeLocationCode,
           activeUnitCode,
           syllabusDetails,
-          platformConfig
+          platformConfig,
+          serviceDefinitions
         }
       ),
       activeTab === "export" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -119923,6 +119955,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             activeLocationCode: school,
             activeUnitCode,
             platformConfig,
+            serviceDefinitions,
             resourceDisplayNames,
             instructorLabel,
             hasTraineesEnabled: activeUnitHasTrainees

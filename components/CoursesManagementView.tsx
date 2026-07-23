@@ -22,7 +22,19 @@ interface CoursesManagementViewProps {
     activeUnitCode?: string;
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
+    serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
 }
+
+const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
+    const labels = serviceDefinitions
+        .map(service => String(service.shortName || service.longName || '').trim())
+        .filter(Boolean);
+    return [
+        labels[0] || 'Group 1',
+        labels[1] || 'Group 2',
+        labels[2] || 'Group 3',
+    ];
+};
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     courses,
@@ -40,6 +52,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     activeUnitCode = '',
     syllabusDetails = [],
     platformConfig = null,
+    serviceDefinitions = [],
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -49,6 +62,10 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const [showPinDialog, setShowPinDialog] = useState(false);
     const [showChoiceDialog, setShowChoiceDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
+    const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
+        () => getServiceCountLabels(serviceDefinitions),
+        [serviceDefinitions],
+    );
 
     // Course records stay in one course list; each course's LMP is edited inside the course.
     const groupedCourses = useMemo(() => {
@@ -205,9 +222,9 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                         <span className="font-semibold">{totalStudents}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                        <span className="text-gray-400">RAAF: {course.raafStart}</span>
-                        <span className="text-gray-400">Navy: {course.navyStart}</span>
-                        <span className="text-gray-400">Army: {course.armyStart}</span>
+                        <span className="text-gray-400">{primaryStudentGroupLabel}: {course.raafStart}</span>
+                        <span className="text-gray-400">{secondaryStudentGroupLabel}: {course.navyStart}</span>
+                        <span className="text-gray-400">{tertiaryStudentGroupLabel}: {course.armyStart}</span>
                     </div>
                 </div>
             </div>
@@ -285,6 +302,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     activeLocationCode={activeLocationCode}
                     activeUnitCode={activeUnitCode}
                     platformConfig={platformConfig}
+                    serviceDefinitions={serviceDefinitions}
                 />
             )}
 
