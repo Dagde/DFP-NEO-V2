@@ -1076,7 +1076,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                    : [evt.config || 'ANY'];
                                                return (
                                                    <div key={eventKey} className="rounded-lg border border-gray-700 bg-gray-900/70 p-3">
-                                                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_90px_110px_110px_minmax(0,1fr)_minmax(0,1fr)_80px_auto]">
+                                                       <div className="grid gap-3 xl:grid-cols-[minmax(0,0.48fr)_90px_110px_110px_minmax(0,0.4fr)_minmax(0,0.4fr)_80px_auto]">
                                                            <label className="min-w-0 text-[10px] font-black uppercase tracking-wide text-gray-400">
                                                                Event
                                                                <input
@@ -1158,7 +1158,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                                Delete
                                                            </button>
                                                        </div>
-                                                       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+                                                       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.4fr)_minmax(0,1.5fr)]">
                                                            <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">
                                                                Unit
                                                                <select
@@ -1212,7 +1212,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                    if (e.key === 'Enter') handleAddSctEvent();
                                                }}
                                                placeholder={`New ${sctShortLabel} event name`}
-                                               className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" 
+                                               className="w-[40%] min-w-[180px] bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
                                            />
                                            <button type="button" onClick={handleAddSctEvent} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">+</button>
                                        </div>
