@@ -5739,7 +5739,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <h5 className="text-sm font-bold text-white">Organisation Structure</h5>
                 <p className="mt-1 text-xs text-gray-400">{organisationStructure.levelCount} levels · {organisationStructure.levels.reduce((sum, level) => sum + level.options.length, 0)} options</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-[1px]">
                 <button
                   type="button"
                   className={platformActionButtonClass}

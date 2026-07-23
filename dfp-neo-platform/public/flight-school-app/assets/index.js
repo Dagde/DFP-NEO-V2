@@ -69638,7 +69638,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 " options"
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-[1px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
