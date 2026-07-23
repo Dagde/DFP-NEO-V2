@@ -23614,6 +23614,12 @@ const TraineeProfileFlyout = ({
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
     return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
   }, [personnelDisplaySettings, rank]);
+  const configuredServiceOptions = reactExports.useMemo(() => {
+    const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
+    const options = normalised.staffRankEquivalency.services.map((serviceOption) => String(serviceOption.name || "").trim()).filter(Boolean);
+    const currentService = String(trainee.service || "").trim();
+    return currentService && !options.some((option) => option.toLowerCase() === currentService.toLowerCase()) ? [...options, currentService] : options;
+  }, [personnelDisplaySettings, trainee.service]);
   const [service, setService] = reactExports.useState(trainee.service || "");
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
   const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "BPC+IPC");
@@ -23864,7 +23870,7 @@ const TraineeProfileFlyout = ({
       flight,
       phoneNumber,
       email,
-      service,
+      service: service || void 0,
       traineeCallsign,
       secondaryCallsign,
       crew,
@@ -24749,9 +24755,8 @@ ${errorText || `HTTP ${response.status}`}`);
                     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ARA", children: "ARA" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
+                      configuredServiceOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Course", value: course, onChange: (e) => handleCourseChange(e.target.value), children: (activeCourses || []).length > 0 ? (activeCourses || []).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No courses" }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp)) }),
@@ -24839,7 +24844,7 @@ ${errorText || `HTTP ${response.status}`}`);
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Service" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.service || "RAAF" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.service || "[None]" })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }),

@@ -18,6 +18,7 @@ import { DEFAULT_RESOURCE_DISPLAY_NAMES, formatResourceLabel as formatConfigured
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   getRankOptionGroupsForGroup,
+  normalisePersonnelDisplaySettings,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
@@ -979,6 +980,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         ? [...configuredGroups, { label: 'Current value', options: [currentRank] }]
         : configuredGroups;
     }, [personnelDisplaySettings, rank]);
+    const configuredServiceOptions = useMemo(() => {
+      const normalised = normalisePersonnelDisplaySettings(personnelDisplaySettings);
+      const options = normalised.staffRankEquivalency.services
+        .map(serviceOption => String(serviceOption.name || '').trim())
+        .filter(Boolean);
+      const currentService = String(trainee.service || '').trim();
+      return currentService && !options.some(option => option.toLowerCase() === currentService.toLowerCase())
+        ? [...options, currentService]
+        : options;
+    }, [personnelDisplaySettings, trainee.service]);
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
@@ -1311,7 +1322,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             flight,
             phoneNumber,
             email,
-            service,
+            service: (service || undefined) as Trainee['service'],
             traineeCallsign,
             secondaryCallsign,
             crew,
@@ -2337,7 +2348,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 ))}
                               </Dropdown>
                               <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
-                                <option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
+                                <option value="">Select...</option>
+                                {configuredServiceOptions.map(option => (
+                                  <option key={option} value={option}>{option}</option>
+                                ))}
                               </Dropdown>
                               <Dropdown label="Course" value={course} onChange={e => handleCourseChange(e.target.value)}>
                                 {(activeCourses || []).length > 0 ? (activeCourses || []).map(c => <option key={c} value={c}>{c}</option>) : <option disabled>No courses</option>}
@@ -2424,7 +2438,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
                               {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || 'RAAF'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || '[None]'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
