@@ -287,7 +287,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                         >
                             <p className="text-sm font-semibold text-white">{file ? file.name : 'Drag and drop a trainee spreadsheet here'}</p>
                             <p className="mt-1 text-xs text-gray-400">Accepted formats: .xlsx, .xls, .csv</p>
-                            <p className="mt-1 text-xs text-gray-500">ID column can be Personnel ID, Service ID, PMKeys/ID, ID Number, or Employee ID.</p>
+                            <p className="mt-1 text-xs text-gray-500">ID column can be Personnel ID, Service ID, ID Number, or Employee ID.</p>
                             <button type="button" onClick={() => inputRef.current?.click()} className="mt-4 rounded-md bg-gray-100 px-4 py-2 font-semibold text-gray-900 hover:bg-white">
                                 Select File
                             </button>

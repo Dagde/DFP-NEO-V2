@@ -26065,7 +26065,7 @@ const TraineeBulkUploadFlyout = ({
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-white", children: file ? file.name : "Drag and drop a trainee spreadsheet here" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Accepted formats: .xlsx, .xls, .csv" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "ID column can be Personnel ID, Service ID, PMKeys/ID, ID Number, or Employee ID." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "ID column can be Personnel ID, Service ID, ID Number, or Employee ID." }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => inputRef.current?.click(), className: "mt-4 rounded-md bg-gray-100 px-4 py-2 font-semibold text-gray-900 hover:bg-white", children: "Select File" })
             ]
           }
@@ -62802,7 +62802,7 @@ const UserListSection = ({
                         ${user.userType === "STAFF" ? "Staff" : user.userType === "TRAINEE" ? "Trainee" : "User"} Profile
                     </p>
                     <p class="mt-1 text-sm text-gray-300">
-                        ${user.name} (PMKeys ID: ${user.pmkeysId})
+                        ${user.name} (Personnel ID: ${user.pmkeysId})
                     </p>
                     <p class="mt-2 text-xs text-gray-400">
                         Navigation to profile page will be implemented
@@ -62873,7 +62873,7 @@ const UserListSection = ({
         "input",
         {
           type: "text",
-          placeholder: "Search by surname or PMKeys/ID...",
+          placeholder: "Search by surname or Personnel ID...",
           value: searchTerm,
           onChange: (e) => setSearchTerm(e.target.value),
           className: "w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -62885,7 +62885,7 @@ const UserListSection = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Name" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Rank/Service" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Unit" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "PMKeys/ID" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Personnel ID" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Actions" })
       ] }) }),
@@ -63258,7 +63258,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "rank", children: "RANK/SERVICE" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "unit", children: "UNIT" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "flight", children: "FLIGHT/LOCATION" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "idNumber", children: "PMKEYS/ID" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "idNumber", children: "PERSONNEL ID" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "type", children: "TYPE" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "role", children: "ROLE" }),
         isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ACTIONS" })
@@ -63619,7 +63619,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "rank", children: "RANK/SERVICE" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "course", children: "COURSE/LMP" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "unit", children: "UNIT/FLIGHT" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "idNumber", children: "PMKEYS/ID" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "idNumber", children: "PERSONNEL ID" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "primaryInstructor", children: "PRIMARY INSTR" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(SortableHeader, { field: "status", children: "STATUS" }),
         isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ACTIONS" })

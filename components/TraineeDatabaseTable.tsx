@@ -386,7 +386,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
               <SortableHeader field="rank">RANK/SERVICE</SortableHeader>
               <SortableHeader field="course">COURSE/LMP</SortableHeader>
               <SortableHeader field="unit">UNIT/FLIGHT</SortableHeader>
-              <SortableHeader field="idNumber">PMKEYS/ID</SortableHeader>
+              <SortableHeader field="idNumber">PERSONNEL ID</SortableHeader>
               <SortableHeader field="primaryInstructor">PRIMARY INSTR</SortableHeader>
               <SortableHeader field="status">STATUS</SortableHeader>
               {isAdmin && (

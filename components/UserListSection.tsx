@@ -137,7 +137,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                         ${user.userType === 'STAFF' ? 'Staff' : user.userType === 'TRAINEE' ? 'Trainee' : 'User'} Profile
                     </p>
                     <p class="mt-1 text-sm text-gray-300">
-                        ${user.name} (PMKeys ID: ${user.pmkeysId})
+                        ${user.name} (Personnel ID: ${user.pmkeysId})
                     </p>
                     <p class="mt-2 text-xs text-gray-400">
                         Navigation to profile page will be implemented
@@ -225,7 +225,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                     type="text"
-                    placeholder="Search by surname or PMKeys/ID..."
+                    placeholder="Search by surname or Personnel ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -247,7 +247,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                                 Unit
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                PMKeys/ID
+                                Personnel ID
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                 Type

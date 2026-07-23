@@ -417,7 +417,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
               <SortableHeader field="rank">RANK/SERVICE</SortableHeader>
               <SortableHeader field="unit">UNIT</SortableHeader>
               <SortableHeader field="flight">FLIGHT/LOCATION</SortableHeader>
-              <SortableHeader field="idNumber">PMKEYS/ID</SortableHeader>
+              <SortableHeader field="idNumber">PERSONNEL ID</SortableHeader>
               <SortableHeader field="type">TYPE</SortableHeader>
               <SortableHeader field="role">ROLE</SortableHeader>
               {isAdmin && (
