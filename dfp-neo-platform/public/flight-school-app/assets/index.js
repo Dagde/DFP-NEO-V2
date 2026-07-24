@@ -3166,7 +3166,8 @@ const DEFAULT_CREW_POSITION_TERMINOLOGY = {
     { id: "airborne-mission-commander", genericName: "Airborne Mission Commander", label: "Airborne Mission Commander", operationalModels: ["fixed_crew", "pooled_crew"] },
     { id: "flight-engineer", genericName: "Flight Engineer", label: "Flight Engineer", operationalModels: ["fixed_crew", "pooled_crew"] },
     { id: "loadmaster", genericName: "Loadmaster", label: "Loadmaster", operationalModels: ["pooled_crew"] },
-    { id: "crew", genericName: "Crew", label: "Crew", operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"] }
+    { id: "crew", genericName: "Crew", label: "Crew", operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"] },
+    { id: "trainee", genericName: "Trainee", label: "Trainee", operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"] }
   ]
 };
 const ALL_OPERATIONAL_MODEL_CODES$1 = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
@@ -23078,6 +23079,11 @@ const initialExperience$1 = {
   instrument: { sim: 0, actual: 0 },
   simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
+const TRAINEE_ROLE_VALUE = "Trainee";
+const getDefaultTraineeRole = (terminology, operationalModel) => {
+  const options = getCrewPositionOptions(terminology, [TRAINEE_ROLE_VALUE], operationalModel);
+  return options.find((option) => option.trim().toUpperCase() === TRAINEE_ROLE_VALUE.toUpperCase()) || options[0] || TRAINEE_ROLE_VALUE;
+};
 const reviewNumber = (value) => {
   const parsed = typeof value === "number" ? value : parseFloat(String(value ?? ""));
   return Number.isFinite(parsed) ? parsed : 0;
@@ -23168,7 +23174,8 @@ const TraineeProfileFlyout = ({
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   platformConfig = null,
   staffQualificationCatalogue,
-  operationalModel = "flight_school"
+  operationalModel = "flight_school",
+  crewPositionTerminology
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -23640,7 +23647,11 @@ const TraineeProfileFlyout = ({
     return currentService && !options.some((option) => option.toLowerCase() === currentService.toLowerCase()) ? [...options, currentService] : options;
   }, [personnelDisplaySettings, trainee.service]);
   const [service, setService] = reactExports.useState(trainee.service || "");
-  const [role, setRole] = reactExports.useState(trainee.role || "");
+  const defaultTraineeRole = reactExports.useMemo(
+    () => getDefaultTraineeRole(crewPositionTerminology, operationalModel),
+    [crewPositionTerminology, operationalModel]
+  );
+  const [role, setRole] = reactExports.useState(trainee.role || defaultTraineeRole);
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
   const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "");
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(trainee.academicLmpType || "");
@@ -23679,6 +23690,24 @@ const TraineeProfileFlyout = ({
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
+  const roleOptions = reactExports.useMemo(() => {
+    const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+    const options = getCrewPositionOptions(
+      crewPositionTerminology,
+      [TRAINEE_ROLE_VALUE, role].filter(Boolean),
+      operationalModel
+    ).map((value) => ({
+      value,
+      label: getCrewPositionDisplayLabel(value, crewPositionTerminology, crewLabelMap[value] || value)
+    }));
+    const byValue = /* @__PURE__ */ new Map();
+    options.forEach((option) => {
+      const key = option.value.trim().toUpperCase();
+      if (!key || byValue.has(key)) return;
+      byValue.set(key, option);
+    });
+    return Array.from(byValue.values());
+  }, [crewPositionTerminology, operationalModel, role]);
   const normalisedQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
     [staffQualificationCatalogue]
@@ -23777,7 +23806,7 @@ const TraineeProfileFlyout = ({
     setIdNumber(trainee.idNumber);
     setRank(trainee.rank);
     setService(trainee.service || "");
-    setRole(trainee.role || "");
+    setRole(trainee.role || defaultTraineeRole);
     setCourse(trainee.course || activeCourses[0] || "");
     setLmpType(trainee.lmpType || "");
     setAcademicLmpType(trainee.academicLmpType || "");
@@ -24806,7 +24835,7 @@ ${errorText || `HTTP ${response.status}`}`);
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Role", value: role, onChange: (e) => setRole(e.target.value) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: roleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
                       configuredServiceOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
@@ -26191,7 +26220,7 @@ const generateNewTraineeTemplate = () => ({
   // Will be constructed on save
   name: "",
   rank: "PLTOFF",
-  role: "",
+  role: "Trainee",
   course: "",
   seatConfig: "Normal",
   isPaused: false,
@@ -26277,7 +26306,8 @@ const CourseRosterView = ({
   trainingReportTemplate,
   platformConfig = null,
   staffQualificationCatalogue,
-  operationalModel = "flight_school"
+  operationalModel = "flight_school",
+  crewPositionTerminology
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -26586,6 +26616,7 @@ const CourseRosterView = ({
         platformConfig,
         staffQualificationCatalogue,
         operationalModel,
+        crewPositionTerminology,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -119504,6 +119535,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             trainingReportTemplate,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             operationalModel: activeOperationalModel,
+            crewPositionTerminology: activeCrewPositionTerminology,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,

@@ -19,6 +19,7 @@ import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -85,6 +86,7 @@ interface CourseRosterViewProps {
     platformConfig?: PlatformConfig | null;
     staffQualificationCatalogue?: StaffQualificationCatalogue;
     operationalModel?: OperationalModelCode | string;
+    crewPositionTerminology?: CrewPositionTerminology;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -92,7 +94,7 @@ const generateNewTraineeTemplate = (): Trainee => ({
     fullName: '', // Will be constructed on save
     name: '',
     rank: 'PLTOFF',
-    role: '',
+    role: 'Trainee',
     course: '',
     seatConfig: 'Normal',
     isPaused: false,
@@ -181,6 +183,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     platformConfig = null,
     staffQualificationCatalogue,
     operationalModel = 'flight_school',
+    crewPositionTerminology,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -557,6 +560,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     platformConfig={platformConfig}
                     staffQualificationCatalogue={staffQualificationCatalogue}
                     operationalModel={operationalModel}
+                    crewPositionTerminology={crewPositionTerminology}
                     pt051Assessments={pt051Assessments}
                     pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}

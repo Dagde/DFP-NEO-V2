@@ -52,6 +52,12 @@ import {
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
 import type { OperationalModelCode } from '../utils/platformConfigService';
+import {
+  getCrewPositionDisplayLabel,
+  getCrewPositionLabelMap,
+  getCrewPositionOptions,
+  type CrewPositionTerminology,
+} from '../utils/crewPositionTerminology';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -111,6 +117,7 @@ interface TraineeProfileFlyoutProps {
   platformConfig?: PlatformConfig | null;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   operationalModel?: OperationalModelCode | string;
+  crewPositionTerminology?: CrewPositionTerminology;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -321,6 +328,18 @@ const initialExperience: LogbookExperience = {
     simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
 
+const TRAINEE_ROLE_VALUE = 'Trainee';
+
+const getDefaultTraineeRole = (
+  terminology?: CrewPositionTerminology,
+  operationalModel?: OperationalModelCode | string,
+): string => {
+  const options = getCrewPositionOptions(terminology, [TRAINEE_ROLE_VALUE], operationalModel);
+  return options.find(option => option.trim().toUpperCase() === TRAINEE_ROLE_VALUE.toUpperCase())
+    || options[0]
+    || TRAINEE_ROLE_VALUE;
+};
+
 type TraineeReviewPoint = {
     code: string;
     date: string;
@@ -440,6 +459,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   platformConfig = null,
   staffQualificationCatalogue,
   operationalModel = 'flight_school',
+  crewPositionTerminology,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -1004,7 +1024,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         : options;
     }, [personnelDisplaySettings, trainee.service]);
     const [service, setService] = useState(trainee.service || '');
-    const [role, setRole] = useState(trainee.role || '');
+    const defaultTraineeRole = useMemo(
+        () => getDefaultTraineeRole(crewPositionTerminology, operationalModel),
+        [crewPositionTerminology, operationalModel],
+    );
+    const [role, setRole] = useState(trainee.role || defaultTraineeRole);
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || '');
   const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
@@ -1045,6 +1069,24 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
+    const roleOptions = useMemo(() => {
+        const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
+        const options = getCrewPositionOptions(
+            crewPositionTerminology,
+            [TRAINEE_ROLE_VALUE, role].filter(Boolean),
+            operationalModel,
+        ).map(value => ({
+            value,
+            label: getCrewPositionDisplayLabel(value, crewPositionTerminology, crewLabelMap[value] || value),
+        }));
+        const byValue = new Map<string, { value: string; label: string }>();
+        options.forEach(option => {
+            const key = option.value.trim().toUpperCase();
+            if (!key || byValue.has(key)) return;
+            byValue.set(key, option);
+        });
+        return Array.from(byValue.values());
+    }, [crewPositionTerminology, operationalModel, role]);
     const normalisedQualificationCatalogue = useMemo(
         () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
         [staffQualificationCatalogue],
@@ -1168,7 +1210,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setIdNumber(trainee.idNumber);
         setRank(trainee.rank);
         setService(trainee.service || '');
-        setRole(trainee.role || '');
+        setRole(trainee.role || defaultTraineeRole);
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || '');
         setAcademicLmpType((trainee as any).academicLmpType || '');
@@ -2405,7 +2447,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   </optgroup>
                                 ))}
                               </Dropdown>
-                              <InputField label="Role" value={role} onChange={e => setRole(e.target.value)} />
+                              <Dropdown label="Role" value={role} onChange={e => setRole(e.target.value)}>
+                                {roleOptions.map(option => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </Dropdown>
                               <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
                                 <option value="">Select...</option>
                                 {configuredServiceOptions.map(option => (

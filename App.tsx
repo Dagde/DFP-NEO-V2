@@ -41715,6 +41715,7 @@ appliedUpdates.forEach(update => {
                             trainingReportTemplate={trainingReportTemplate}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
                             operationalModel={activeOperationalModel}
+                            crewPositionTerminology={activeCrewPositionTerminology}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}

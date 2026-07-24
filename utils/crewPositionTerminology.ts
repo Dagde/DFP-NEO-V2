@@ -25,6 +25,7 @@ export const DEFAULT_CREW_POSITION_TERMINOLOGY: CrewPositionTerminology = {
     { id: 'flight-engineer', genericName: 'Flight Engineer', label: 'Flight Engineer', operationalModels: ['fixed_crew', 'pooled_crew'] },
     { id: 'loadmaster', genericName: 'Loadmaster', label: 'Loadmaster', operationalModels: ['pooled_crew'] },
     { id: 'crew', genericName: 'Crew', label: 'Crew', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'pooled_crew'] },
+    { id: 'trainee', genericName: 'Trainee', label: 'Trainee', operationalModels: ['flight_school', 'air_combat', 'fixed_crew', 'pooled_crew'] },
   ],
 };
 
