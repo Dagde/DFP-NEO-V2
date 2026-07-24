@@ -66,7 +66,7 @@ interface TraineeProfileFlyoutProps {
   trainee: Trainee;
   traineesData?: Trainee[];
   onClose: () => void;
-  onUpdateTrainee: (data: Trainee) => void;
+  onUpdateTrainee: (data: Trainee) => void | Promise<void>;
   events: ScheduleEvent[];
   school: string;
   onNavigateToHateSheet: (trainee: Trainee) => void;
@@ -1266,7 +1266,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     };
 
-    const confirmPause = () => {
+    const confirmPause = async () => {
         const nextIsPaused = !isPaused;
         const nextPermissions = getVisiblePermissions(permissions);
         const updatedTrainee: Trainee = {
@@ -1274,7 +1274,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             isPaused: nextIsPaused,
             permissions: nextPermissions,
         };
-        onUpdateTrainee(updatedTrainee);
+        try {
+            await Promise.resolve(onUpdateTrainee(updatedTrainee));
+        } catch (error) {
+            console.error('Failed to update trainee pause state:', error);
+            alert('The trainee status could not be saved. Please try again.');
+            return;
+        }
         setIsPaused(updatedTrainee.isPaused);
         setPermissions(nextPermissions);
         setShowPauseConfirm(false);
@@ -1455,7 +1461,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             }
         }
 
-        onUpdateTrainee(updatedTrainee);
+        try {
+            await Promise.resolve(onUpdateTrainee(updatedTrainee));
+        } catch (error) {
+            console.error('Failed to save trainee profile:', error);
+            alert('The trainee could not be saved. Please check the details and try again.');
+            return;
+        }
 
         setIsEditing(false);
         if (isCreating) {

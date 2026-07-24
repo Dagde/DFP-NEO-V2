@@ -29,8 +29,8 @@ interface CourseRosterViewProps {
     personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
     onNavigateToHateSheet: (trainee: Trainee) => void;
     onRestoreCourse: (courseNumber: string) => void;
-    onUpdateTrainee: (data: Trainee) => void;
-    onAddTrainee: (data: Trainee) => void;
+    onUpdateTrainee: (data: Trainee) => void | Promise<void>;
+    onAddTrainee: (data: Trainee) => void | Promise<void>;
     onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
     onReplaceTrainees?: (trainees: Trainee[]) => void;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
@@ -89,21 +89,22 @@ interface CourseRosterViewProps {
     crewPositionTerminology?: CrewPositionTerminology;
 }
 
-const generateNewTraineeTemplate = (): Trainee => ({
+const generateNewTraineeTemplate = (defaults: Partial<Pick<Trainee, 'course' | 'unit' | 'location' | 'service'>> = {}): Trainee => ({
     idNumber: Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000,
     fullName: '', // Will be constructed on save
     name: '',
     rank: 'PLTOFF',
     role: 'Trainee',
-    course: '',
+    course: defaults.course || '',
     seatConfig: 'Normal',
     isPaused: false,
-    unit: '1FTS',
-    service: 'RAAF',
+    unit: defaults.unit || '',
+    service: defaults.service || '',
     unavailability: [],
     permissions: ['Trainee'],
     preferences: { qualifications: [] },
     traineeCallsign: '',
+    location: defaults.location || '',
     secondaryCallsign: '',
     crew: 'N/A',
     priorExperience: {
@@ -288,7 +289,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     };
 
     const handleAddTraineeClick = () => {
-        setNewTraineeTemplate(generateNewTraineeTemplate());
+        setNewTraineeTemplate(generateNewTraineeTemplate({
+            course: activeCourseNumbers[0] || '',
+            unit: units[0] || '',
+            location: locations[0] || '',
+        }));
         setIsCreatingNew(true);
         setSelectedTrainee(null);
     };

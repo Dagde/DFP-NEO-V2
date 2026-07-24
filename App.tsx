@@ -30772,17 +30772,50 @@ const App: React.FC = () => {
         setBuildDfpDate(getLocalDateString(currentDate));
     };
 
-    const handleAddTrainee = useCallback((newTrainee: Trainee) => {
-        setTraineesData(prev => [...prev, newTrainee]);
+    const handleAddTrainee = useCallback(async (newTrainee: Trainee) => {
+        const traineeToCreate = {
+            ...newTrainee,
+            unit: newTrainee.unit || activeUnitCode,
+            location: newTrainee.location || school,
+            role: newTrainee.role || 'Trainee',
+        };
+        let savedTrainee: Trainee = traineeToCreate;
 
-        const lmpType = getConfiguredLmpTypeForTrainee(newTrainee);
+        try {
+            const response = await fetch(scopedApiPath('/api/trainees'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(traineeToCreate),
+            });
+            if (!response.ok) {
+                const message = await response.text();
+                throw new Error(message || `Save failed (${response.status})`);
+            }
+            const json = await response.json();
+            savedTrainee = {
+                ...(json?.trainee || traineeToCreate),
+                _dataSource: 'database' as const,
+            };
+        } catch (error) {
+            console.error('❌ Failed to create trainee:', error);
+            setErrorMessage(`Could not save ${newTrainee.fullName || newTrainee.name || 'new trainee'} to the database.`);
+            throw error;
+        }
+
+        setTraineesData(prev => {
+            const withoutDuplicate = prev.filter(t => t.idNumber !== savedTrainee.idNumber);
+            return [...withoutDuplicate, savedTrainee];
+        });
+
+        const lmpType = getConfiguredLmpTypeForTrainee(savedTrainee);
         if (!lmpType) {
-            setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || 'new trainee'} because no Master LMP is assigned to the trainee or course.`);
+            setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || 'new trainee'} because no Master LMP is assigned to the trainee or course.`);
             return;
         }
-        const traineeUnitCode = newTrainee.unit || activeUnitCode;
+        const traineeUnitCode = savedTrainee.unit || activeUnitCode;
         if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
-            setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || 'new trainee'} with Master LMP "${lmpType}" for ${traineeUnitCode || 'this unit'}.`);
+            setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || 'new trainee'} with Master LMP "${lmpType}" for ${traineeUnitCode || 'this unit'}.`);
             return;
         }
         const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
@@ -30790,14 +30823,14 @@ const App: React.FC = () => {
         if (masterLMP.length > 0) {
             setTraineeLMPs(prev => {
                 const newLMPs = new Map(prev);
-                newLMPs.set(newTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(newTrainee.fullName), masterLMP));
-                console.log(`[Individual LMP] Initialized ${newTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
+                newLMPs.set(savedTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(savedTrainee.fullName), masterLMP));
+                console.log(`[Individual LMP] Initialized ${savedTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
                 return newLMPs;
             });
         }
 
         setSuccessMessage('New Trainee Added!');
-    }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, syllabusDetails]);
+    }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, school, scopedApiPath, syllabusDetails]);
 
     // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
     const handleUpdateTrainee = useCallback(async (data: Trainee) => {

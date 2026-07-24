@@ -23856,7 +23856,7 @@ const TraineeProfileFlyout = ({
       setShowPauseConfirm(true);
     }
   };
-  const confirmPause = () => {
+  const confirmPause = async () => {
     const nextIsPaused = !isPaused;
     const nextPermissions = getVisiblePermissions(permissions);
     const updatedTrainee = {
@@ -23864,7 +23864,13 @@ const TraineeProfileFlyout = ({
       isPaused: nextIsPaused,
       permissions: nextPermissions
     };
-    onUpdateTrainee(updatedTrainee);
+    try {
+      await Promise.resolve(onUpdateTrainee(updatedTrainee));
+    } catch (error) {
+      console.error("Failed to update trainee pause state:", error);
+      alert("The trainee status could not be saved. Please try again.");
+      return;
+    }
     setIsPaused(updatedTrainee.isPaused);
     setPermissions(nextPermissions);
     setShowPauseConfirm(false);
@@ -23982,7 +23988,13 @@ const TraineeProfileFlyout = ({
         });
       }
     }
-    onUpdateTrainee(updatedTrainee);
+    try {
+      await Promise.resolve(onUpdateTrainee(updatedTrainee));
+    } catch (error) {
+      console.error("Failed to save trainee profile:", error);
+      alert("The trainee could not be saved. Please check the details and try again.");
+      return;
+    }
     setIsEditing(false);
     if (isCreating) {
       onClose();
@@ -26214,22 +26226,23 @@ const TraineeBulkUploadFlyout = ({
     )
   ] });
 };
-const generateNewTraineeTemplate = () => ({
+const generateNewTraineeTemplate = (defaults = {}) => ({
   idNumber: Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6,
   fullName: "",
   // Will be constructed on save
   name: "",
   rank: "PLTOFF",
   role: "Trainee",
-  course: "",
+  course: defaults.course || "",
   seatConfig: "Normal",
   isPaused: false,
-  unit: "1FTS",
-  service: "RAAF",
+  unit: defaults.unit || "",
+  service: defaults.service || "",
   unavailability: [],
   permissions: ["Trainee"],
   preferences: { qualifications: [] },
   traineeCallsign: "",
+  location: defaults.location || "",
   secondaryCallsign: "",
   crew: "N/A",
   priorExperience: {
@@ -26381,7 +26394,11 @@ const CourseRosterView = ({
     setCourseToRestore(null);
   };
   const handleAddTraineeClick = () => {
-    setNewTraineeTemplate(generateNewTraineeTemplate());
+    setNewTraineeTemplate(generateNewTraineeTemplate({
+      course: activeCourseNumbers[0] || "",
+      unit: units[0] || "",
+      location: locations[0] || ""
+    }));
     setIsCreatingNew(true);
     setSelectedTrainee(null);
   };
@@ -110551,29 +110568,60 @@ ${error instanceof Error ? error.message : String(error)}`,
     setNextDayBuildEvents([]);
     setBuildDfpDate(getLocalDateString2(currentDate));
   };
-  const handleAddTrainee = reactExports.useCallback((newTrainee) => {
-    setTraineesData((prev) => [...prev, newTrainee]);
-    const lmpType = getConfiguredLmpTypeForTrainee(newTrainee);
+  const handleAddTrainee = reactExports.useCallback(async (newTrainee) => {
+    const traineeToCreate = {
+      ...newTrainee,
+      unit: newTrainee.unit || activeUnitCode,
+      location: newTrainee.location || school,
+      role: newTrainee.role || "Trainee"
+    };
+    let savedTrainee = traineeToCreate;
+    try {
+      const response = await fetch(scopedApiPath("/api/trainees"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(traineeToCreate)
+      });
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `Save failed (${response.status})`);
+      }
+      const json = await response.json();
+      savedTrainee = {
+        ...json?.trainee || traineeToCreate,
+        _dataSource: "database"
+      };
+    } catch (error) {
+      console.error("❌ Failed to create trainee:", error);
+      setErrorMessage(`Could not save ${newTrainee.fullName || newTrainee.name || "new trainee"} to the database.`);
+      throw error;
+    }
+    setTraineesData((prev) => {
+      const withoutDuplicate = prev.filter((t) => t.idNumber !== savedTrainee.idNumber);
+      return [...withoutDuplicate, savedTrainee];
+    });
+    const lmpType = getConfiguredLmpTypeForTrainee(savedTrainee);
     if (!lmpType) {
-      setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} because no Master LMP is assigned to the trainee or course.`);
+      setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} because no Master LMP is assigned to the trainee or course.`);
       return;
     }
-    const traineeUnitCode = newTrainee.unit || activeUnitCode;
+    const traineeUnitCode = savedTrainee.unit || activeUnitCode;
     if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
-      setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
+      setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
       return;
     }
     const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
     if (masterLMP.length > 0) {
       setTraineeLMPs((prev) => {
         const newLMPs = new Map(prev);
-        newLMPs.set(newTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(newTrainee.fullName), masterLMP));
-        console.log(`[Individual LMP] Initialized ${newTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
+        newLMPs.set(savedTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(savedTrainee.fullName), masterLMP));
+        console.log(`[Individual LMP] Initialized ${savedTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
         return newLMPs;
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, syllabusDetails]);
+  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, school, scopedApiPath, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
