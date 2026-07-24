@@ -51962,7 +51962,7 @@ const InstructorProfileFlyout = ({
                   {
                     type: "button",
                     onClick: () => setShowAirCombatInsertEventModal(true),
-                    disabled: !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || !onInsertAirCombatTrainingEvent,
+                    disabled: !selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || insertEventTypes.length === 0 || !onInsertAirCombatTrainingEvent,
                     className: airCombatPanelButtonClass,
                     children: [
                       "Insert",
@@ -52682,6 +52682,7 @@ const InstructorProfileFlyout = ({
       {
         traineeLmp: selectedAirCombatTraining.sequenceItems,
         insertEventTypes,
+        selectedAnchorItem: selectedAirCombatTrainingItem,
         description: "Create an Air Combat course/package event with the scheduling fields NEO Build needs.",
         onCancel: () => setShowAirCombatInsertEventModal(false),
         onSave: async (request) => {

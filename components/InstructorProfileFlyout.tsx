@@ -1452,7 +1452,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <button
                         type="button"
                         onClick={() => setShowAirCombatInsertEventModal(true)}
-                        disabled={!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || !onInsertAirCombatTrainingEvent}
+                        disabled={!selectedAirCombatTraining || selectedAirCombatTraining.sequenceItems.length === 0 || insertEventTypes.length === 0 || !onInsertAirCombatTrainingEvent}
                         className={airCombatPanelButtonClass}
                       >
                         Insert<br />Event
@@ -2203,6 +2203,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         <InsertEventModal
           traineeLmp={selectedAirCombatTraining.sequenceItems}
           insertEventTypes={insertEventTypes}
+          selectedAnchorItem={selectedAirCombatTrainingItem}
           description="Create an Air Combat course/package event with the scheduling fields NEO Build needs."
           onCancel={() => setShowAirCombatInsertEventModal(false)}
           onSave={async (request) => {
