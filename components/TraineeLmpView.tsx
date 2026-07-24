@@ -325,12 +325,22 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
 export const InsertEventModal: React.FC<{
     traineeLmp: SyllabusItemDetail[];
     insertEventTypes: InsertEventTypeConfig[];
+    selectedAnchorItem?: SyllabusItemDetail | null;
     description?: string;
     onCancel: () => void;
     onSave: (request: InsertLmpEventRequest) => void;
-}> = ({ traineeLmp, insertEventTypes, description = 'Create an Individual LMP event with the scheduling fields NEO Build needs.', onCancel, onSave }) => {
+}> = ({ traineeLmp, insertEventTypes, selectedAnchorItem, description = 'Create an Individual LMP event with the scheduling fields NEO Build needs.', onCancel, onSave }) => {
     const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
-    const [selectedLabel, setSelectedLabel] = useState(options[0]?.label || 'GF');
+    const initialAnchorItem = selectedAnchorItem && traineeLmp.some(item => (item.id || item.code) === (selectedAnchorItem.id || selectedAnchorItem.code))
+        ? selectedAnchorItem
+        : traineeLmp[0];
+    const initialEventType = (() => {
+        if (!initialAnchorItem) return options[0];
+        const exactMatch = options.find(option => option.syllabusType === initialAnchorItem.type && option.dayNight === initialAnchorItem.dayNight);
+        if (exactMatch) return exactMatch;
+        return options.find(option => option.syllabusType === initialAnchorItem.type) || options[0];
+    })();
+    const [selectedLabel, setSelectedLabel] = useState(initialEventType?.label || options[0]?.label || 'GF');
     const selectedType = options.find(option => option.label === selectedLabel) || options[0];
     const [label, setLabel] = useState((selectedType?.label || '').slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
     const [dayNight, setDayNight] = useState<InsertEventDayNight>(selectedType?.dayNight || 'Day');
@@ -340,7 +350,7 @@ export const InsertEventModal: React.FC<{
     const [preFlightTime, setPreFlightTime] = useState(selectedType?.preFlightTime || 0);
     const [postFlightTime, setPostFlightTime] = useState(selectedType?.postFlightTime || 0);
     const [resourceCount, setResourceCount] = useState(selectedType?.resourceCount || 0);
-    const [followsEventId, setFollowsEventId] = useState(traineeLmp[0]?.id || traineeLmp[0]?.code || '');
+    const [followsEventId, setFollowsEventId] = useState(initialAnchorItem?.id || initialAnchorItem?.code || '');
     const [validationMessage, setValidationMessage] = useState('');
 
     const handleTypeChange = (nextLabel: string) => {
@@ -1106,6 +1116,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                 <InsertEventModal
                     traineeLmp={traineeLmp}
                     insertEventTypes={insertEventTypes}
+                    selectedAnchorItem={selectedItem}
                     onCancel={() => setShowInsertEventModal(false)}
                     onSave={async (request) => {
                         const inserted = await onInsertCustomEvent?.(trainee, request);

@@ -20530,9 +20530,16 @@ const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsx
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
-const InsertEventModal = ({ traineeLmp, insertEventTypes, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
+const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
   const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
-  const [selectedLabel, setSelectedLabel] = reactExports.useState(options[0]?.label || "GF");
+  const initialAnchorItem = selectedAnchorItem && traineeLmp.some((item) => (item.id || item.code) === (selectedAnchorItem.id || selectedAnchorItem.code)) ? selectedAnchorItem : traineeLmp[0];
+  const initialEventType = (() => {
+    if (!initialAnchorItem) return options[0];
+    const exactMatch = options.find((option) => option.syllabusType === initialAnchorItem.type && option.dayNight === initialAnchorItem.dayNight);
+    if (exactMatch) return exactMatch;
+    return options.find((option) => option.syllabusType === initialAnchorItem.type) || options[0];
+  })();
+  const [selectedLabel, setSelectedLabel] = reactExports.useState(initialEventType?.label || options[0]?.label || "GF");
   const selectedType = options.find((option) => option.label === selectedLabel) || options[0];
   const [label, setLabel] = reactExports.useState((selectedType?.label || "").slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
   const [dayNight, setDayNight] = reactExports.useState(selectedType?.dayNight || "Day");
@@ -20542,7 +20549,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, description = "Create 
   const [preFlightTime, setPreFlightTime] = reactExports.useState(selectedType?.preFlightTime || 0);
   const [postFlightTime, setPostFlightTime] = reactExports.useState(selectedType?.postFlightTime || 0);
   const [resourceCount, setResourceCount] = reactExports.useState(selectedType?.resourceCount || 0);
-  const [followsEventId, setFollowsEventId] = reactExports.useState(traineeLmp[0]?.id || traineeLmp[0]?.code || "");
+  const [followsEventId, setFollowsEventId] = reactExports.useState(initialAnchorItem?.id || initialAnchorItem?.code || "");
   const [validationMessage, setValidationMessage] = reactExports.useState("");
   const handleTypeChange = (nextLabel) => {
     const nextType = options.find((option) => option.label === nextLabel) || options[0];
@@ -21171,6 +21178,7 @@ const TraineeLmpView = ({
       {
         traineeLmp,
         insertEventTypes,
+        selectedAnchorItem: selectedItem,
         onCancel: () => setShowInsertEventModal(false),
         onSave: async (request) => {
           const inserted = await onInsertCustomEvent?.(trainee, request);
