@@ -38417,8 +38417,8 @@ appliedUpdates.forEach(update => {
             const normalisedRole =
                 roleText === 'sim ip' || roleText === 'contractor staff' ? 'SIM IP' :
                 roleText === 'pilot' ? 'Pilot' :
-                roleText === 'qfi' || roleText === 'instructor' ? 'QFI' :
-                normaliseFixedCrewStaffRole(instructor.role, unitCode) || 'QFI';
+                roleText === 'qfi' || roleText === 'instructor' ? 'Pilot' :
+                normaliseFixedCrewStaffRole(instructor.role, unitCode) || 'Pilot';
             const isContractorStaff = normalisedRole === 'SIM IP';
             const nextInstructor: Instructor = {
                 ...instructor,

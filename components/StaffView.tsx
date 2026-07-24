@@ -114,8 +114,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
       }
 
       // First sort by Role - flying staff before SIM IPs
-      const roleA = a.role === 'QFI' || a.role === 'Pilot' ? 0 : 1;
-      const roleB = b.role === 'QFI' || b.role === 'Pilot' ? 0 : 1;
+      const roleA = a.isQFI || a.role === 'Pilot' ? 0 : 1;
+      const roleB = b.isQFI || b.role === 'Pilot' ? 0 : 1;
       if (roleA !== roleB) {
         return roleA - roleB;
       }

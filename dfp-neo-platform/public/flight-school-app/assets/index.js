@@ -54222,8 +54222,8 @@ const StaffView = (props) => {
       if (unitA !== unitB) return unitA.localeCompare(unitB);
       return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
     }
-    const roleA = a.role === "QFI" || a.role === "Pilot" ? 0 : 1;
-    const roleB = b.role === "QFI" || b.role === "Pilot" ? 0 : 1;
+    const roleA = a.isQFI || a.role === "Pilot" ? 0 : 1;
+    const roleB = b.isQFI || b.role === "Pilot" ? 0 : 1;
     if (roleA !== roleB) {
       return roleA - roleB;
     }
@@ -116729,7 +116729,7 @@ ${conflictLines.join("\n")}${moreText}`,
       const roleText = String(instructor.role || "").trim().toLowerCase();
       String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const normalisedRole = roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "QFI" : normaliseFixedCrewStaffRole(instructor.role) || "QFI";
+      const normalisedRole = roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "Pilot" : normaliseFixedCrewStaffRole(instructor.role) || "Pilot";
       const isContractorStaff = normalisedRole === "SIM IP";
       const nextInstructor = {
         ...instructor,
