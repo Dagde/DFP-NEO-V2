@@ -2433,7 +2433,7 @@ const normaliseMasterLmpCatalogue = (config) => {
   const configured = config?.organisations?.[0]?.settings?.masterLmpCatalogue;
   const configuredEntries = Array.isArray(configured) ? configured : [];
   const accessRuleCodes = normaliseMasterLmpAccessRules(config).map((rule) => rule.lmpCode);
-  const source = configuredEntries.length > 0 ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
+  const source = Array.isArray(configured) ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
   const entriesByCode = /* @__PURE__ */ new Map();
   source.forEach((entry, index) => {
     const rawCode = String(entry?.code || entry?.lmpCode || entry?.name || "");
