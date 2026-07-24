@@ -77510,7 +77510,7 @@ const CourseProgressView = ({
       id: "dux",
       name: "Dux",
       course: "",
-      lmpType: "BPC+IPC",
+      lmpType: "",
       includeAllScoredEvents: true,
       minimumScoredEvents: 1,
       criteria: [
@@ -77558,6 +77558,7 @@ const CourseProgressView = ({
     }
   }, [activeCourses, defaultCourseByProgress, scoreCourse]);
   const activeAward = awards.find((award) => award.id === activeAwardId) || awards[0];
+  const getCourseMasterLmp = (courseName) => activeCourses.find((course) => course.name === courseName)?.lmpType || "";
   const getAwardDisplayName = (award) => {
     return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
   };
@@ -77585,17 +77586,17 @@ const CourseProgressView = ({
         if (itemLmpType && itemLmpType !== "Staff CAT" && itemLmpType !== "Master LMP") {
           lmpTypes.add(itemLmpType);
         }
-        if (!itemLmpType && item.type !== "Academics") {
-          lmpTypes.add("BPC+IPC");
-        }
-        if (item.courses?.some((course) => course.includes("FIC"))) {
-          lmpTypes.add("FIC");
-        }
       });
     });
-    if (lmpTypes.size === 0) lmpTypes.add("BPC+IPC");
     return Array.from(lmpTypes).sort();
   }, [activeCourses, traineeLMPs]);
+  reactExports.useEffect(() => {
+    if (!activeAward || activeAward.lmpType) return;
+    const courseMasterLmp = getCourseMasterLmp(activeAward.course);
+    const nextLmpType = courseMasterLmp || availableAwardLmpTypes[0] || "";
+    if (!nextLmpType) return;
+    setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, lmpType: nextLmpType } : award));
+  }, [activeAward, activeCourses, availableAwardLmpTypes]);
   const eventOrder = reactExports.useMemo(() => {
     const order = /* @__PURE__ */ new Map();
     let index = 0;
@@ -77616,7 +77617,8 @@ const CourseProgressView = ({
     if (item.courses?.some((course) => course === lmpType || course.includes(lmpType))) {
       return true;
     }
-    return lmpType === "BPC+IPC" && !itemLmpType && item.type !== "Academics";
+    const courseMasterLmp = activeAward?.course && activeAward.course !== "all" ? getCourseMasterLmp(activeAward.course) : "";
+    return Boolean(courseMasterLmp && lmpType === courseMasterLmp && !itemLmpType && item.type !== "Academics");
   };
   const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
   const getValidEventCode = (item) => {
@@ -77717,7 +77719,7 @@ const CourseProgressView = ({
     const nextCourseLmp = activeCourses.find((course) => course.name === courseName)?.lmpType;
     updateActiveAward({
       course: courseName,
-      lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "BPC+IPC",
+      lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "",
       includeAllScoredEvents: true
     });
   };
@@ -77811,7 +77813,7 @@ const CourseProgressView = ({
   const addAward = () => {
     const id = `award-${Date.now()}`;
     const defaultCourse = scoreCourse || activeCourses[0]?.name || "all";
-    const defaultLmpType = activeCourses.find((course) => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || "BPC+IPC";
+    const defaultLmpType = activeCourses.find((course) => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || "";
     setAwards((prev) => [...prev, {
       id,
       name: "New Award",
@@ -78120,7 +78122,7 @@ const CourseProgressView = ({
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
                       "LMP: ",
-                      activeAward.lmpType
+                      activeAward.lmpType || "Not configured"
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
                       "Events: ",
@@ -78146,13 +78148,16 @@ const CourseProgressView = ({
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
                         "Award LMP",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
                           "select",
                           {
                             value: activeAward.lmpType,
                             onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
                             className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                            children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
+                            children: [
+                              availableAwardLmpTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No Master LMP configured" }),
+                              availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
+                            ]
                           }
                         )
                       ] }),

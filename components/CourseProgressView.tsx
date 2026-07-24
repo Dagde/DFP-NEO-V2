@@ -66,7 +66,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             id: 'dux',
             name: 'Dux',
             course: '',
-            lmpType: 'BPC+IPC',
+            lmpType: '',
             includeAllScoredEvents: true,
             minimumScoredEvents: 1,
             criteria: [
@@ -137,6 +137,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, [activeCourses, defaultCourseByProgress, scoreCourse]);
 
     const activeAward = awards.find(award => award.id === activeAwardId) || awards[0];
+    const getCourseMasterLmp = (courseName: string): string => (
+        activeCourses.find(course => course.name === courseName)?.lmpType || ''
+    );
 
     const getAwardDisplayName = (award: CourseAward) => {
         return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
@@ -171,18 +174,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                 if (itemLmpType && itemLmpType !== 'Staff CAT' && itemLmpType !== 'Master LMP') {
                     lmpTypes.add(itemLmpType);
                 }
-                if (!itemLmpType && item.type !== 'Academics') {
-                    lmpTypes.add('BPC+IPC');
-                }
-                if (item.courses?.some(course => course.includes('FIC'))) {
-                    lmpTypes.add('FIC');
-                }
             });
         });
 
-        if (lmpTypes.size === 0) lmpTypes.add('BPC+IPC');
         return Array.from(lmpTypes).sort();
     }, [activeCourses, traineeLMPs]);
+
+    useEffect(() => {
+        if (!activeAward || activeAward.lmpType) return;
+        const courseMasterLmp = getCourseMasterLmp(activeAward.course);
+        const nextLmpType = courseMasterLmp || availableAwardLmpTypes[0] || '';
+        if (!nextLmpType) return;
+        setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, lmpType: nextLmpType } : award));
+    }, [activeAward, activeCourses, availableAwardLmpTypes]);
 
     const eventOrder = useMemo(() => {
         const order = new Map<string, number>();
@@ -205,7 +209,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         if (item.courses?.some(course => course === lmpType || course.includes(lmpType))) {
             return true;
         }
-        return lmpType === 'BPC+IPC' && !itemLmpType && item.type !== 'Academics';
+        const courseMasterLmp = activeAward?.course && activeAward.course !== 'all'
+            ? getCourseMasterLmp(activeAward.course)
+            : '';
+        return Boolean(courseMasterLmp && lmpType === courseMasterLmp && !itemLmpType && item.type !== 'Academics');
     };
 
     const isUuidLike = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
@@ -339,7 +346,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         const nextCourseLmp = activeCourses.find(course => course.name === courseName)?.lmpType;
         updateActiveAward({
             course: courseName,
-            lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || 'BPC+IPC',
+            lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || '',
             includeAllScoredEvents: true,
         });
     };
@@ -482,7 +489,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const addAward = () => {
         const id = `award-${Date.now()}`;
         const defaultCourse = scoreCourse || activeCourses[0]?.name || 'all';
-        const defaultLmpType = activeCourses.find(course => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || 'BPC+IPC';
+        const defaultLmpType = activeCourses.find(course => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || '';
         setAwards(prev => [...prev, {
             id,
             name: 'New Award',
@@ -796,7 +803,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                             <div className="rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3">
                                                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
                                                     <span className="rounded bg-gray-800 px-2 py-1">Course: {activeAward.course === 'all' ? 'All active courses' : activeAward.course}</span>
-                                                    <span className="rounded bg-gray-800 px-2 py-1">LMP: {activeAward.lmpType}</span>
+                                                    <span className="rounded bg-gray-800 px-2 py-1">LMP: {activeAward.lmpType || 'Not configured'}</span>
                                                     <span className="rounded bg-gray-800 px-2 py-1">Events: {selectedAwardEventRows.length}</span>
                                                     <span className="rounded bg-gray-800 px-2 py-1">Minimum scores: {activeAward.minimumScoredEvents}</span>
                                                 </div>
@@ -821,6 +828,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 >
+                                                    {availableAwardLmpTypes.length === 0 && <option value="">No Master LMP configured</option>}
                                                     {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
                                                 </select>
                                             </label>
