@@ -40,11 +40,11 @@ import {
 import { isExternalDataAllowed } from '../utils/externalDataControls';
 import {
   filterMasterLmpCodesForAccess,
+  normaliseMasterLmpCatalogue,
   type PlatformConfig,
 } from '../utils/platformConfigService';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 
-const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
 interface TraineeProfileFlyoutProps {
@@ -992,7 +992,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     }, [personnelDisplaySettings, trainee.service]);
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
-  const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
+  const [lmpType, setLmpType] = useState(trainee.lmpType || '');
   const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
@@ -1005,7 +1005,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
 
     const assignableMasterLmps = useMemo(() => {
-        const courseCodes = new Set<string>(COURSE_MASTER_LMPS.filter(lmp => lmp !== 'Staff CAT'));
+        const courseCodes = new Set<string>();
+        normaliseMasterLmpCatalogue(platformConfig).forEach(entry => {
+            const code = String(entry.code || entry.name || '').trim();
+            if (code && code !== 'Staff CAT') courseCodes.add(code);
+        });
         syllabusDetails.forEach(s => {
             if (s.type === 'Academics' || s.lmpType === 'Staff CAT') return;
             (s.courses || []).forEach(c => courseCodes.add(c));
@@ -1134,7 +1138,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setRank(trainee.rank);
         setService(trainee.service || '');
         setCourse(trainee.course || activeCourses[0] || '');
-        setLmpType(trainee.lmpType || 'BPC+IPC');
+        setLmpType(trainee.lmpType || '');
         setAcademicLmpType((trainee as any).academicLmpType || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
@@ -1347,7 +1351,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
             if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
             if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
-            if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || 'BPC+IPC'} → ${lmpType}`);
+            if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || 'None'} → ${lmpType || 'None'}`);
             if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
             if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
             if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
@@ -2357,6 +2361,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 {(activeCourses || []).length > 0 ? (activeCourses || []).map(c => <option key={c} value={c}>{c}</option>) : <option disabled>No courses</option>}
                               </Dropdown>
                               <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
+                                <option value="">None</option>
                                 {assignableMasterLmps.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                               </Dropdown>
                               <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
@@ -2431,7 +2436,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 className={`font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
                                 style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
                               >{trainee.course}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{(trainee as any).academicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>

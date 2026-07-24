@@ -23007,7 +23007,6 @@ const setTraineeSuspendedMarker = (permissions, isSuspended) => {
   const visiblePermissions = getVisiblePermissions(permissions);
   return isSuspended ? [...visiblePermissions, TRAINEE_SUSPENDED_MARKER] : visiblePermissions;
 };
-const COURSE_MASTER_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -23640,7 +23639,7 @@ const TraineeProfileFlyout = ({
   }, [personnelDisplaySettings, trainee.service]);
   const [service, setService] = reactExports.useState(trainee.service || "");
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
-  const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "BPC+IPC");
+  const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "");
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(trainee.academicLmpType || "");
   const [seatConfig, setSeatConfig] = reactExports.useState(trainee.seatConfig);
   const [isPaused, setIsPaused] = reactExports.useState(trainee.isPaused);
@@ -23652,7 +23651,11 @@ const TraineeProfileFlyout = ({
   const [email, setEmail] = reactExports.useState(trainee.email || "");
   const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
   const assignableMasterLmps = reactExports.useMemo(() => {
-    const courseCodes = new Set(COURSE_MASTER_LMPS.filter((lmp) => lmp !== "Staff CAT"));
+    const courseCodes = /* @__PURE__ */ new Set();
+    normaliseMasterLmpCatalogue(platformConfig).forEach((entry) => {
+      const code = String(entry.code || entry.name || "").trim();
+      if (code && code !== "Staff CAT") courseCodes.add(code);
+    });
     syllabusDetails.forEach((s) => {
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
@@ -23760,7 +23763,7 @@ const TraineeProfileFlyout = ({
     setRank(trainee.rank);
     setService(trainee.service || "");
     setCourse(trainee.course || activeCourses[0] || "");
-    setLmpType(trainee.lmpType || "BPC+IPC");
+    setLmpType(trainee.lmpType || "");
     setAcademicLmpType(trainee.academicLmpType || "");
     setSeatConfig(trainee.seatConfig);
     setIsPaused(trainee.isPaused);
@@ -23908,7 +23911,7 @@ const TraineeProfileFlyout = ({
       if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
       if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
       if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
-      if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || "BPC+IPC"} → ${lmpType}`);
+      if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || "None"} → ${lmpType || "None"}`);
       if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
       if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
       if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
@@ -24777,7 +24780,10 @@ ${errorText || `HTTP ${response.status}`}`);
                       configuredServiceOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Course", value: course, onChange: (e) => handleCourseChange(e.target.value), children: (activeCourses || []).length > 0 ? (activeCourses || []).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No courses" }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp)) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
+                      assignableMasterLmps.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                    ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Academic LMP", value: academicLmpType, onChange: (e) => setAcademicLmpType(e.target.value), children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
                       academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
@@ -24838,7 +24844,7 @@ ${errorText || `HTTP ${response.status}`}`);
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "LMP" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: trainee.lmpType || "BPC+IPC" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: trainee.lmpType || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Academic LMP" }),
