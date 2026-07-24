@@ -10195,16 +10195,16 @@ app.post('/api/historical-data/seed', async (req, res) => {
       select: { id: true, name: true, rank: true, role: true, unit: true, isQFI: true }
     });
 
-    const qfiInstructors = instructors.filter(i => i.isQFI || i.role === 'QFI');
+    const instructorQualifiedStaff = instructors.filter(i => i.isQFI || i.role === 'QFI' || i.role === 'INSTRUCTOR');
 
     if (trainees.length === 0) {
       return res.status(400).json({ error: 'No active trainees found in database' });
     }
-    if (qfiInstructors.length === 0) {
-      return res.status(400).json({ error: 'No QFI instructors found in database' });
+    if (instructorQualifiedStaff.length === 0) {
+      return res.status(400).json({ error: 'No instructor-qualified staff found in database' });
     }
 
-    console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${qfiInstructors.length} instructors`);
+    console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${instructorQualifiedStaff.length} instructor-qualified staff`);
 
     // Course configuration
     // progressRange: [startEvent, endEvent] - trainee is randomly placed anywhere in this range
@@ -10550,7 +10550,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
       const dateOffsetDays = Math.floor(rand() * 29) - 14;
 
       // Pick 3-4 instructors to use for this trainee (realistic - not all instructors every time)
-      const shuffledInstructors = [...qfiInstructors].sort(() => rand() - 0.5);
+      const shuffledInstructors = [...instructorQualifiedStaff].sort(() => rand() - 0.5);
       const traineeInstructors = shuffledInstructors.slice(0, 3 + Math.floor(rand() * 2));
 
       // Initialise completed events tracker for this trainee

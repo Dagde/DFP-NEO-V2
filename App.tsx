@@ -20684,7 +20684,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
         const conclusions: string[] = [];
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
-        if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin Pilot/QFI staff were available in the active Air Combat staff pool.');
+        if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.');
         if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat tasking events matched the build date.');
         const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
         if (crewRoleShortfalls.length > 0) {
@@ -31360,7 +31360,7 @@ const App: React.FC = () => {
             resourceNumber: request.resourceCount,
             resourceCount: request.resourceCount,
             acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
-            resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : ['QFI', 'Trainee'],
+            resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : [instructorLabel || 'Instructor', 'Trainee'],
             completedAt: null,
             masterEventId: undefined,
             lmpSource: 'custom',
