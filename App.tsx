@@ -5738,6 +5738,23 @@ const mergeIndividualLmpWithMaster = (
     return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
 };
 
+const getAssignableMasterLmpItemsForType = (
+    syllabusItems: SyllabusItemDetail[],
+    lmpType: string,
+    unitCode: string | undefined,
+    filterForAccess: (items: SyllabusItemDetail[], requiredAccess: 'View' | 'Assign' | 'Manage', unitCode?: string | null) => SyllabusItemDetail[]
+): SyllabusItemDetail[] => {
+    const requestedType = String(lmpType || '').trim();
+    if (!requestedType) return [];
+    const requestedTypeKey = requestedType.toUpperCase();
+    return filterForAccess(syllabusItems, 'Assign', unitCode).filter(item => {
+        if (requestedTypeKey === 'BPC+IPC') {
+            return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
+        }
+        return Array.isArray(item.courses) && item.courses.some(course => String(course || '').trim().toUpperCase() === requestedTypeKey);
+    });
+};
+
 const calculateTotalDutyHoursForPeriod = (instructorName: string, events: ScheduleEvent[], startTime: number, endTime: number, syllabusDetails: SyllabusItemDetail[]): number => {
     const instructorEvents = events.filter(e =>
         eventHasPerson(e, instructorName) &&
@@ -24168,7 +24185,11 @@ const App: React.FC = () => {
                                                 completed: isCompleted || (item as any).completed === true,
                                             };
                                         });
-                                        newLMPs.set(lmp.traineeFullName, hydratedEvents);
+                                        const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                                        const scopedEvents = masterLMP.length > 0
+                                            ? mergeIndividualLmpWithMaster(hydratedEvents, masterLMP)
+                                            : hydratedEvents;
+                                        newLMPs.set(lmp.traineeFullName, scopedEvents);
                                         hydrated++;
                                     });
                                     pushDfpDataDiag('startup:lmp-hydrate:state-seeded', {
@@ -24327,7 +24348,11 @@ const App: React.FC = () => {
                                                 };
                                             });
 
-                                            newLMPs.set(lmp.traineeFullName, updatedLMP);
+                                            const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmp.lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+                                            const scopedLMP = masterLMP.length > 0
+                                                ? mergeIndividualLmpWithMaster(updatedLMP, masterLMP)
+                                                : updatedLMP;
+                                            newLMPs.set(lmp.traineeFullName, scopedLMP);
                                             console.log(`[LMP Sync] Updated Individual LMP for ${lmp.traineeFullName} with ${lmp.completedEventIds.length} completed events`);
                                         });
                                         console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs updated with completion status`);
@@ -24416,12 +24441,7 @@ const App: React.FC = () => {
                             const alreadySet = newLMPs.has(trainee.fullName);
 
                             if (!alreadySet) {
-                                const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', traineeUnitCode).filter(item => {
-                                    if (lmpType === 'BPC+IPC') {
-                                        return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
-                                    }
-                                    return item.courses && item.courses.includes(lmpType);
-                                });
+                                const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
                                 if (masterLMP.length > 0) {
                                     newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                                     console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)`);
@@ -24572,12 +24592,7 @@ const App: React.FC = () => {
                     return;
                 }
                 if (!alreadySet) {
-                    const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', traineeUnitCode).filter(item => {
-                        if (lmpType === 'BPC+IPC') {
-                            return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
-                        }
-                        return item.courses && item.courses.includes(lmpType);
-                    });
+                    const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
                     if (masterLMP.length > 0) {
                         newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                         console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
@@ -29957,13 +29972,18 @@ const App: React.FC = () => {
                 return null;
             }
 
+            const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
+            const scopedPersistedLmp = masterLMP.length > 0
+                ? mergeIndividualLmpWithMaster(persistedLmp, masterLMP)
+                : persistedLmp;
+
             setTraineeLMPs(prev => {
                 const updated = new Map(prev);
-                updated.set(trainee.fullName, persistedLmp);
+                updated.set(trainee.fullName, scopedPersistedLmp);
                 return updated;
             });
-            console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${persistedLmp.length} events)`);
-            return persistedLmp;
+            console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${scopedPersistedLmp.length} events)`);
+            return scopedPersistedLmp;
         } catch (error) {
             pushDfpDataDiag('report-lmp:load:error', {
                 traineeFullName: trainee.fullName,
@@ -29973,7 +29993,7 @@ const App: React.FC = () => {
             console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
             return null;
         }
-    }, [activeUnitCode, allTraineesData, hasMasterLmpUnitAccess, pushDfpDataDiag]);
+    }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, pushDfpDataDiag, syllabusDetails]);
 
     const loadPersistedPt051Assessment = useCallback(async (
         trainee: Trainee,
@@ -30765,12 +30785,7 @@ const App: React.FC = () => {
             setErrorMessage(`Cannot initialise ${newTrainee.fullName || newTrainee.name || 'new trainee'} with Master LMP "${lmpType}" for ${traineeUnitCode || 'this unit'}.`);
             return;
         }
-        const masterLMP = filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', traineeUnitCode).filter(item => {
-            if (lmpType === 'BPC+IPC') {
-                return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
-            }
-            return item.courses && item.courses.includes(lmpType);
-        });
+        const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
 
         if (masterLMP.length > 0) {
             setTraineeLMPs(prev => {
@@ -44676,10 +44691,8 @@ appliedUpdates.forEach(update => {
                                     return;
                                 }
 
-                                const masterSyllabus = syllabusDetails.filter((item: any) => {
-                                    if (lmpType === 'BPC+IPC') return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
-                                    return item.courses && item.courses.includes(lmpType);
-                                });
+                                const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'Assign');
+                                const masterSyllabus = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
 
                                 const completedSet = new Set(completedEventIds);
                                 const lmpEvents = masterSyllabus.map((item: any) => ({
