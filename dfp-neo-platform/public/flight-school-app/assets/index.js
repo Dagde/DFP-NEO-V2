@@ -53227,11 +53227,15 @@ const getStaffRoleFilterOption = (role, terminology, instructorLabel, simIpDispl
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
-const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "") => ({
+const getDefaultNewStaffRole = (operationalModel, terminology) => {
+  if (operationalModel === "flight_school") return "QFI";
+  return getCrewPositionOptions(terminology, [], operationalModel)[0] || "QFI";
+};
+const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "", defaultRole = "QFI") => ({
   idNumber: generateRandomIdNumber$1(),
   name: "",
   rank: "FLTLT",
-  role: "QFI",
+  role: defaultRole,
   callsignNumber: 0,
   category: "C",
   isTestingOfficer: false,
@@ -53588,7 +53592,11 @@ const InstructorListView = ({
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    const newTemplate = generateNewInstructorTemplate(defaultLocationName || locations?.[0] || "", defaultUnitCode || units?.[0] || "");
+    const newTemplate = generateNewInstructorTemplate(
+      defaultLocationName || locations?.[0] || "",
+      defaultUnitCode || units?.[0] || "",
+      getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology)
+    );
     console.log("🔍 [DATA TRACKING] New instructor template created:", newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);

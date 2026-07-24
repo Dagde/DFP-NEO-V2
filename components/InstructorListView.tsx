@@ -17,10 +17,10 @@ import {
     splitPersonName,
     type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
-import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
+import { isFixedCrewLikeOperationalModel, normaliseOperationalModel, type OperationalModelCode } from '../utils/platformConfigService';
 import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
-import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
@@ -69,11 +69,19 @@ const getStaffRoleFilterOption = (
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
-const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = ''): Instructor => ({
+const getDefaultNewStaffRole = (
+    operationalModel: OperationalModelCode,
+    terminology?: CrewPositionTerminology,
+): string => {
+    if (operationalModel === 'flight_school') return 'QFI';
+    return getCrewPositionOptions(terminology, [], operationalModel)[0] || 'QFI';
+};
+
+const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = '', defaultRole = 'QFI'): Instructor => ({
     idNumber: generateRandomIdNumber(),
     name: '',
     rank: 'FLTLT',
-    role: 'QFI',
+    role: defaultRole,
     callsignNumber: 0,
     category: 'C',
     isTestingOfficer: false,
@@ -554,7 +562,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    const newTemplate = generateNewInstructorTemplate(defaultLocationName || locations?.[0] || '', defaultUnitCode || units?.[0] || '');
+    const newTemplate = generateNewInstructorTemplate(
+        defaultLocationName || locations?.[0] || '',
+        defaultUnitCode || units?.[0] || '',
+        getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology),
+    );
     console.log('🔍 [DATA TRACKING] New instructor template created:', newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
