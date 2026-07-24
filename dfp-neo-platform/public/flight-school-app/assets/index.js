@@ -68016,10 +68016,11 @@ This permanently removes the organisation record from platform configuration and
     updateInsertEventTypes(next);
   };
   const addInsertEventType = () => {
+    const sourceEventType = insertEventTypes[insertEventTypes.length - 1];
     updateInsertEventTypes([
       ...insertEventTypes,
       {
-        ...DEFAULT_INSERT_EVENT_TYPES[0],
+        ...sourceEventType,
         label: `EVT${insertEventTypes.length + 1}`.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)
       }
     ]);

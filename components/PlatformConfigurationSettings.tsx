@@ -104,7 +104,6 @@ import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { CurrencyRequirement, FormationCallsign, MasterCurrency, SyllabusItemDetail } from '../types';
 import {
-  DEFAULT_INSERT_EVENT_TYPES,
   INSERT_EVENT_LABEL_MAX_LENGTH,
   normaliseInsertEventTypes,
   type InsertEventTypeConfig,
@@ -3633,10 +3632,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addInsertEventType = () => {
+    const sourceEventType = insertEventTypes[insertEventTypes.length - 1];
     updateInsertEventTypes([
       ...insertEventTypes,
       {
-        ...DEFAULT_INSERT_EVENT_TYPES[0],
+        ...sourceEventType,
         label: `EVT${insertEventTypes.length + 1}`.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH),
       },
     ]);
