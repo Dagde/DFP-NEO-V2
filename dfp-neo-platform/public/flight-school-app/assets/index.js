@@ -53286,7 +53286,8 @@ const InstructorListView = ({
   crewPositionTerminology,
   staffQualificationCatalogue,
   sctTerminology,
-  defaultUnitCode = ""
+  defaultUnitCode = "",
+  defaultLocationName = ""
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
@@ -53587,7 +53588,7 @@ const InstructorListView = ({
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    const newTemplate = generateNewInstructorTemplate(locations?.[0] || "", defaultUnitCode || units?.[0] || "");
+    const newTemplate = generateNewInstructorTemplate(defaultLocationName || locations?.[0] || "", defaultUnitCode || units?.[0] || "");
     console.log("🔍 [DATA TRACKING] New instructor template created:", newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
@@ -54293,7 +54294,8 @@ const StaffView = (props) => {
           crewPositionTerminology: props.crewPositionTerminology,
           staffQualificationCatalogue: props.staffQualificationCatalogue,
           sctTerminology: props.sctTerminology,
-          defaultUnitCode: shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode
+          defaultUnitCode: shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode,
+          defaultLocationName: props.defaultLocationName
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -120325,7 +120327,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
-            activeUnitCode
+            activeUnitCode,
+            defaultLocationName: activeLocationDisplayName
           }
         );
       case "Instructors":
@@ -120448,7 +120451,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
-            sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
+            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            defaultLocationName: activeLocationDisplayName
           }
         );
       case "Trainees":

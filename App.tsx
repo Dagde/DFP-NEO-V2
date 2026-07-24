@@ -42720,6 +42720,7 @@ appliedUpdates.forEach(update => {
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             sharedUnitTabs={fixedCrewSharedResourceUnitTabs}
                             activeUnitCode={activeUnitCode}
+                            defaultLocationName={activeLocationDisplayName}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -42850,6 +42851,7 @@ appliedUpdates.forEach(update => {
                             crewPositionTerminology={activeCrewPositionTerminology}
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
+                            defaultLocationName={activeLocationDisplayName}
                         />;
                 case 'Trainees':
                     return <TraineeListView

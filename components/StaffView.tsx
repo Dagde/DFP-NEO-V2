@@ -52,6 +52,7 @@ interface StaffViewProps {
   sctTerminology?: SctTerminology;
   sharedUnitTabs?: string[];
   activeUnitCode?: string;
+  defaultLocationName?: string;
 
   // Props for InstructorScheduleView
   date: string;
@@ -229,6 +230,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             staffQualificationCatalogue={props.staffQualificationCatalogue}
             sctTerminology={props.sctTerminology}
             defaultUnitCode={shouldShowUnitTabs ? activeUnitTab : props.activeUnitCode}
+            defaultLocationName={props.defaultLocationName}
           />
         )}
         {activeTab === 'schedule' && (

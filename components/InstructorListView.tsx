@@ -144,6 +144,7 @@ interface InstructorListViewProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
   defaultUnitCode?: string;
+  defaultLocationName?: string;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -188,6 +189,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     staffQualificationCatalogue,
     sctTerminology,
     defaultUnitCode = '',
+    defaultLocationName = '',
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
@@ -552,7 +554,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    const newTemplate = generateNewInstructorTemplate(locations?.[0] || '', defaultUnitCode || units?.[0] || '');
+    const newTemplate = generateNewInstructorTemplate(defaultLocationName || locations?.[0] || '', defaultUnitCode || units?.[0] || '');
     console.log('🔍 [DATA TRACKING] New instructor template created:', newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
