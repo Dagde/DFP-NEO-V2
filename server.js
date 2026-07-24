@@ -289,6 +289,7 @@ async function runPrismaRuntimeMaintenance(db) {
     await ensureAppSettingsTable(db);
     // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
     await ensureCommercialConfigTables(db);
+    await migrateLegacyQfiPersonnelRoles(db);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(db);
     // Ensure Course.lmpType column exists (migration for existing DBs)
@@ -321,6 +322,46 @@ function schedulePrismaRuntimeMaintenance(db) {
   });
   console.log(`🛠️ Prisma runtime maintenance scheduled in ${delayMs}ms`);
   return prismaMaintenancePromise;
+}
+
+async function migrateLegacyQfiPersonnelRoles(db) {
+  const personnel = await db.personnel.findMany({
+    select: {
+      id: true,
+      name: true,
+      role: true,
+      isQFI: true,
+      preferences: true,
+    },
+  });
+
+  let updatedCount = 0;
+  for (const person of personnel) {
+    const roleCode = String(person.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ');
+    const hasLegacyInstructorRole = roleCode === 'QFI' || roleCode === 'INSTRUCTOR';
+    const nextPreferences = (hasLegacyInstructorRole || person.isQFI)
+      ? addStaffQualificationToPreferences(person.preferences, 'qfi')
+      : person.preferences;
+    const existingQualifications = Array.isArray(person.preferences?.qualifications) ? person.preferences.qualifications : [];
+    const hasQfiQualification = existingQualifications.some((value) => String(value || '').trim().toLowerCase() === 'qfi');
+
+    const data = {};
+    if (hasLegacyInstructorRole) {
+      data.role = 'Pilot';
+      data.isQFI = true;
+    } else if (person.isQFI && !hasQfiQualification) {
+      data.isQFI = true;
+    }
+    if ((hasLegacyInstructorRole || person.isQFI) && !hasQfiQualification) {
+      data.preferences = nextPreferences;
+    }
+
+    if (Object.keys(data).length === 0) continue;
+    await db.personnel.update({ where: { id: person.id }, data });
+    updatedCount++;
+  }
+
+  console.log(`✅ migrateLegacyQfiPersonnelRoles: updated ${updatedCount} personnel record(s)`);
 }
 
 function logApiTiming(label, startedAt, details = {}) {
@@ -360,6 +401,14 @@ function schedulePrismaPrewarm() {
 
 function normalisePersonnelPayloadForUnit(body = {}) {
   const roleCode = String(body.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ');
+  if (roleCode === 'QFI' || roleCode === 'INSTRUCTOR') {
+    return {
+      ...body,
+      role: 'Pilot',
+      isQFI: body.isQFI ?? true,
+      preferences: addStaffQualificationToPreferences(body.preferences, 'qfi'),
+    };
+  }
   if (
     roleCode === 'AEA'
     || roleCode === 'ACOUSTIC ELECTRONICS ANALYST'
@@ -371,6 +420,18 @@ function normalisePersonnelPayloadForUnit(body = {}) {
     };
   }
   return body;
+}
+
+function addStaffQualificationToPreferences(preferences = {}, qualificationId = '') {
+  const source = preferences && typeof preferences === 'object' && !Array.isArray(preferences) ? preferences : {};
+  const existing = Array.isArray(source.qualifications) ? source.qualifications : [];
+  const qualificationKey = String(qualificationId || '').trim();
+  if (!qualificationKey) return source;
+  const hasQualification = existing.some((value) => String(value || '').trim().toLowerCase() === qualificationKey.toLowerCase());
+  return {
+    ...source,
+    qualifications: hasQualification ? existing : [...existing, qualificationKey],
+  };
 }
 
 const LOCATION_NAME_BY_CODE = {
