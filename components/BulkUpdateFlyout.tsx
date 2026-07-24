@@ -92,7 +92,7 @@ const normaliseImportedStaffRole = (
     const cleanLower = cleanValue.toLowerCase();
     if (!cleanValue) return undefined;
     if (['sim ip', 'simulator ip', 'sim instructor', 'simulator instructor', 'contractor staff'].includes(cleanLower)) return 'SIM IP';
-    if (['qfi', 'instructor', 'flight instructor'].includes(cleanLower)) return 'QFI';
+    if (['qfi', 'instructor', 'flight instructor'].includes(cleanLower)) return undefined;
 
     const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
     if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? 'Pilot' : cleanValue;
@@ -134,7 +134,7 @@ const applyQualificationRoles = (
     } else if (rolesLower.includes('pilot')) {
         parsedData.role = 'Pilot';
     } else if (rolesLower.includes('qfi') || rolesLower.includes('instructor')) {
-        parsedData.role = 'QFI';
+        parsedData.role = 'Pilot';
     }
 };
 
@@ -306,7 +306,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                         idNumber,
                         name: 'Unnamed Instructor',
                         rank: 'FLTLT',
-                        role: 'QFI',
+                        role: 'Pilot',
                         callsignNumber: 0,
                         category: 'C',
                         isTestingOfficer: false,

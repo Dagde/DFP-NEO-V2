@@ -73,11 +73,10 @@ const getDefaultNewStaffRole = (
     operationalModel: OperationalModelCode,
     terminology?: CrewPositionTerminology,
 ): string => {
-    if (operationalModel === 'flight_school') return 'QFI';
-    return getCrewPositionOptions(terminology, [], operationalModel)[0] || 'QFI';
+    return getCrewPositionOptions(terminology, [], operationalModel)[0] || 'Pilot';
 };
 
-const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = '', defaultRole = 'QFI'): Instructor => ({
+const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = '', defaultRole = 'Pilot', defaultIsQfi = false): Instructor => ({
     idNumber: generateRandomIdNumber(),
     name: '',
     rank: 'FLTLT',
@@ -89,6 +88,7 @@ const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = '', d
     isExecutive: false,
     isFlyingSupervisor: false,
     isIRE: false,
+    isQFI: defaultIsQfi,
     location: defaultLocation,
     unit: defaultUnit,
     phoneNumber: '',
@@ -566,6 +566,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         defaultLocationName || locations?.[0] || '',
         defaultUnitCode || units?.[0] || '',
         getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology),
+        activeOperationalModel === 'flight_school',
     );
     console.log('🔍 [DATA TRACKING] New instructor template created:', newTemplate);
     setNewInstructorTemplate(newTemplate);

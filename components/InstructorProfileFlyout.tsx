@@ -61,6 +61,20 @@ const isContractorStaffRoleValue = (value?: string | null): boolean => (
   String(value || '').trim().toUpperCase() === 'SIM IP'
 );
 
+const isLegacyInstructorRoleValue = (value?: string | null): boolean => {
+  const token = String(value || '').trim().toUpperCase();
+  return token === 'QFI' || token === 'INSTRUCTOR';
+};
+
+const getEditableStaffRole = (
+  value: string | undefined,
+  operationalModel: unknown,
+  terminology?: CrewPositionTerminology,
+): string => {
+  if (!isLegacyInstructorRoleValue(value)) return String(value || '').trim();
+  return getCrewPositionOptions(terminology, [], operationalModel)[0] || 'Pilot';
+};
+
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
   onClose: () => void;
@@ -343,7 +357,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       ? [...configuredGroups, { label: 'Current value', options: [currentRank] }]
       : configuredGroups;
   }, [personnelDisplaySettings, rank]);
-  const [role, setRole] = useState<StaffRole>(instructor.role);
+  const [role, setRole] = useState<StaffRole>(() => getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology));
   const simIpDisplayLabel = useMemo(
     () => getSimIpDisplayLabel(personnelDisplaySettings),
     [personnelDisplaySettings],
@@ -360,13 +374,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   }, [instructor.service, personnelDisplaySettings]);
   const staffRoleOptions = useMemo(() => {
     const legacyOptions = [
-      { value: 'QFI', label: instructorLabel },
       { value: 'SIM IP', label: simIpDisplayLabel },
     ];
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewOptions = getCrewPositionOptions(
       crewPositionTerminology,
-      role ? [String(role)] : [],
+      role && !isLegacyInstructorRoleValue(String(role)) ? [String(role)] : [],
       operationalModel,
     ).map((value) => ({
       value,
@@ -424,8 +437,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     if (isContractorStaffRoleValue(source.role)) {
       assigned = normaliseContractorStaffQualifications(assigned);
     }
+    if (isLegacyInstructorRoleValue(source.role) && qfiQualificationIds.length > 0) {
+      assigned = Array.from(new Set([...assigned, ...qfiQualificationIds]));
+    }
     return assigned;
-  }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications]);
+  }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications, qfiQualificationIds]);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<string>(instructor.service || '');
   const [category, setCategory] = useState<InstructorCategory>(instructor.category);
@@ -451,7 +467,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [isDeputyFlightCommander, setIsDeputyFlightCommander] = useState(instructor.isDeputyFlightCommander || false);
   const [isContractor, setIsContractor] = useState(instructor.isContractor || false);
   const [isAdminStaff, setIsAdminStaff] = useState(instructor.isAdminStaff || false);
-  const [isQFI, setIsQFI] = useState(instructor.isQFI || false);
+  const [isQFI, setIsQFI] = useState(Boolean(instructor.isQFI || isLegacyInstructorRoleValue(instructor.role)));
   const [isOFI, setIsOFI] = useState(instructor.isOFI || false);
 
   // ── Profile photo state ──────────────────────────────────────────────────────
@@ -715,7 +731,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const resetState = () => {
     setIdNumber(instructor.idNumber); setName(instructor.name); setRank(instructor.rank);
-    setRole(instructor.role); setCallsignNumber(instructor.callsignNumber); setService(instructor.service);
+    setRole(getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology)); setCallsignNumber(instructor.callsignNumber); setService(instructor.service);
     setCategory(instructor.category); setSeatConfig(instructor.seatConfig);
     setUnavailabilityPeriods(instructor.unavailability || []); setLocation(instructor.location || '');
     setUnit(instructor.unit || ''); setFlight(instructor.flight || '');
@@ -729,7 +745,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     setIsCommandingOfficer(instructor.isCommandingOfficer || false); setIsCFI(instructor.isCFI || false);
     setIsDeputyFlightCommander(instructor.isDeputyFlightCommander || false);
     setIsContractor(instructor.isContractor || false); setIsAdminStaff(instructor.isAdminStaff || false);
-    setIsQFI(instructor.isQFI || false); setIsOFI(instructor.isOFI || false);
+    setIsQFI(Boolean(instructor.isQFI || isLegacyInstructorRoleValue(instructor.role))); setIsOFI(instructor.isOFI || false);
     setPhotoUrl(instructor.photoUrl || null);
     setPendingPhotoDataUrl(null);
     setPendingPhotoRemoved(false);
@@ -789,7 +805,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       ? normaliseContractorStaffQualifications(assignedQualifications)
       : assignedQualifications;
     const savedCategory = savedAsContractorStaff ? 'UnCat' : category;
-    const savedIsQFI = savedAsContractorStaff ? false : isQFI;
+    const savedHasQfiQualification = qfiQualificationIds.some(id => savedQualifications.includes(id));
+    const savedIsQFI = savedAsContractorStaff ? false : savedHasQfiQualification;
     const savedIsContractor = savedAsContractorStaff ? true : isContractor;
 
     // ── Handle pending photo changes ──────────────────────────────────────────

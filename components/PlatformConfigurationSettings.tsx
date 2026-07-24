@@ -5299,7 +5299,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model))
     ));
     const roleOptions = [
-      { value: 'QFI', label: personnelDisplaySettings.instructorLabel || 'QFI' },
       { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
       ...visibleCrewPositions.map((entry) => ({
         value: entry.genericName,

@@ -50729,6 +50729,14 @@ const LEGACY_QUALIFICATION_FIELD_BY_ID = {
   "admin-staff": "isAdminStaff"
 };
 const isContractorStaffRoleValue = (value) => String(value || "").trim().toUpperCase() === "SIM IP";
+const isLegacyInstructorRoleValue = (value) => {
+  const token = String(value || "").trim().toUpperCase();
+  return token === "QFI" || token === "INSTRUCTOR";
+};
+const getEditableStaffRole = (value, operationalModel, terminology) => {
+  if (!isLegacyInstructorRoleValue(value)) return String(value || "").trim();
+  return getCrewPositionOptions(terminology, [], operationalModel)[0] || "Pilot";
+};
 const InputField = ({ label, value, onChange, readOnly, type = "text" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-1", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50919,7 +50927,7 @@ const InstructorProfileFlyout = ({
     const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
     return currentRank && !hasCurrentRank ? [...configuredGroups, { label: "Current value", options: [currentRank] }] : configuredGroups;
   }, [personnelDisplaySettings, rank]);
-  const [role, setRole] = reactExports.useState(instructor.role);
+  const [role, setRole] = reactExports.useState(() => getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology));
   const simIpDisplayLabel = reactExports.useMemo(
     () => getSimIpDisplayLabel(personnelDisplaySettings),
     [personnelDisplaySettings]
@@ -50932,13 +50940,12 @@ const InstructorProfileFlyout = ({
   }, [instructor.service, personnelDisplaySettings]);
   const staffRoleOptions = reactExports.useMemo(() => {
     const legacyOptions = [
-      { value: "QFI", label: instructorLabel },
       { value: "SIM IP", label: simIpDisplayLabel }
     ];
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewOptions = getCrewPositionOptions(
       crewPositionTerminology,
-      role ? [String(role)] : [],
+      role && !isLegacyInstructorRoleValue(String(role)) ? [String(role)] : [],
       operationalModel
     ).map((value) => ({
       value,
@@ -50978,8 +50985,11 @@ const InstructorProfileFlyout = ({
     if (isContractorStaffRoleValue(source.role)) {
       assigned = normaliseContractorStaffQualifications(assigned);
     }
+    if (isLegacyInstructorRoleValue(source.role) && qfiQualificationIds.length > 0) {
+      assigned = Array.from(/* @__PURE__ */ new Set([...assigned, ...qfiQualificationIds]));
+    }
     return assigned;
-  }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications]);
+  }, [normalisedQualificationCatalogue, normaliseContractorStaffQualifications, qfiQualificationIds]);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service || "");
   const [category, setCategory] = reactExports.useState(instructor.category);
@@ -51004,7 +51014,7 @@ const InstructorProfileFlyout = ({
   const [isDeputyFlightCommander, setIsDeputyFlightCommander] = reactExports.useState(instructor.isDeputyFlightCommander || false);
   const [isContractor, setIsContractor] = reactExports.useState(instructor.isContractor || false);
   const [isAdminStaff, setIsAdminStaff] = reactExports.useState(instructor.isAdminStaff || false);
-  const [isQFI, setIsQFI] = reactExports.useState(instructor.isQFI || false);
+  const [isQFI, setIsQFI] = reactExports.useState(Boolean(instructor.isQFI || isLegacyInstructorRoleValue(instructor.role)));
   const [isOFI, setIsOFI] = reactExports.useState(instructor.isOFI || false);
   const [photoUrl, setPhotoUrl] = reactExports.useState(instructor.photoUrl || null);
   const [pendingPhotoDataUrl, setPendingPhotoDataUrl] = reactExports.useState(null);
@@ -51216,7 +51226,7 @@ const InstructorProfileFlyout = ({
     setIdNumber(instructor.idNumber);
     setName(instructor.name);
     setRank(instructor.rank);
-    setRole(instructor.role);
+    setRole(getEditableStaffRole(instructor.role, operationalModel, crewPositionTerminology));
     setCallsignNumber(instructor.callsignNumber);
     setService(instructor.service);
     setCategory(instructor.category);
@@ -51241,7 +51251,7 @@ const InstructorProfileFlyout = ({
     setIsDeputyFlightCommander(instructor.isDeputyFlightCommander || false);
     setIsContractor(instructor.isContractor || false);
     setIsAdminStaff(instructor.isAdminStaff || false);
-    setIsQFI(instructor.isQFI || false);
+    setIsQFI(Boolean(instructor.isQFI || isLegacyInstructorRoleValue(instructor.role)));
     setIsOFI(instructor.isOFI || false);
     setPhotoUrl(instructor.photoUrl || null);
     setPendingPhotoDataUrl(null);
@@ -51303,7 +51313,8 @@ const InstructorProfileFlyout = ({
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
     const savedQualifications = savedAsContractorStaff ? normaliseContractorStaffQualifications(assignedQualifications) : assignedQualifications;
     const savedCategory = savedAsContractorStaff ? "UnCat" : category;
-    const savedIsQFI = savedAsContractorStaff ? false : isQFI;
+    const savedHasQfiQualification = qfiQualificationIds.some((id) => savedQualifications.includes(id));
+    const savedIsQFI = savedAsContractorStaff ? false : savedHasQfiQualification;
     const savedIsContractor = savedAsContractorStaff ? true : isContractor;
     let finalPhotoUrl = photoUrl;
     const dbId = instructor.id;
@@ -52837,7 +52848,7 @@ const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   const cleanLower = cleanValue.toLowerCase();
   if (!cleanValue) return void 0;
   if (["sim ip", "simulator ip", "sim instructor", "simulator instructor", "contractor staff"].includes(cleanLower)) return "SIM IP";
-  if (["qfi", "instructor", "flight instructor"].includes(cleanLower)) return "QFI";
+  if (["qfi", "instructor", "flight instructor"].includes(cleanLower)) return void 0;
   const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
   if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? "Pilot" : cleanValue;
   if (["pilot", "aircrew pilot", "captain"].includes(cleanLower)) return "Pilot";
@@ -52869,7 +52880,7 @@ const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology
   } else if (rolesLower.includes("pilot")) {
     parsedData.role = "Pilot";
   } else if (rolesLower.includes("qfi") || rolesLower.includes("instructor")) {
-    parsedData.role = "QFI";
+    parsedData.role = "Pilot";
   }
 };
 const BulkUpdateFlyout = ({
@@ -53008,7 +53019,7 @@ const BulkUpdateFlyout = ({
             idNumber,
             name: "Unnamed Instructor",
             rank: "FLTLT",
-            role: "QFI",
+            role: "Pilot",
             callsignNumber: 0,
             category: "C",
             isTestingOfficer: false,
@@ -53228,10 +53239,9 @@ const getStaffRoleFilterOption = (role, terminology, instructorLabel, simIpDispl
 };
 const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 const getDefaultNewStaffRole = (operationalModel, terminology) => {
-  if (operationalModel === "flight_school") return "QFI";
-  return getCrewPositionOptions(terminology, [], operationalModel)[0] || "QFI";
+  return getCrewPositionOptions(terminology, [], operationalModel)[0] || "Pilot";
 };
-const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "", defaultRole = "QFI") => ({
+const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "", defaultRole = "Pilot", defaultIsQfi = false) => ({
   idNumber: generateRandomIdNumber$1(),
   name: "",
   rank: "FLTLT",
@@ -53243,6 +53253,7 @@ const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "", d
   isExecutive: false,
   isFlyingSupervisor: false,
   isIRE: false,
+  isQFI: defaultIsQfi,
   location: defaultLocation,
   unit: defaultUnit,
   phoneNumber: "",
@@ -53595,7 +53606,8 @@ const InstructorListView = ({
     const newTemplate = generateNewInstructorTemplate(
       defaultLocationName || locations?.[0] || "",
       defaultUnitCode || units?.[0] || "",
-      getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology)
+      getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology),
+      activeOperationalModel === "flight_school"
     );
     console.log("🔍 [DATA TRACKING] New instructor template created:", newTemplate);
     setNewInstructorTemplate(newTemplate);
@@ -69348,7 +69360,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     const visibleModelSet = new Set(visibleOperationalModelOptions.map((option) => option.value));
     const visibleCrewPositions = crewPositionTerminology.positions.filter((entry) => visibleModelSet.size === 0 || visibleOperationalModelOptions.length === OPERATIONAL_MODEL_OPTIONS.length || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model)));
     const roleOptions = [
-      { value: "QFI", label: personnelDisplaySettings.instructorLabel || "QFI" },
       { value: "SIM IP", label: personnelDisplaySettings.simIpDisplayLabel || "Contractor Staff" },
       ...visibleCrewPositions.map((entry) => ({
         value: entry.genericName,
