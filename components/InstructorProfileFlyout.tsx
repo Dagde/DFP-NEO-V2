@@ -21,7 +21,7 @@ import {
 } from '../utils/personnelDisplaySettings';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { normaliseAirCombatTrainingAssignments, normaliseAirCombatTrainingReports } from '../utils/airCombatTraining';
-import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
+import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import {
   getCrewPositionDisplayLabel,
@@ -324,7 +324,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
   locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
-  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES, aircraftConfigurations = [],
+  insertEventTypes = [], aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport,
   onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],

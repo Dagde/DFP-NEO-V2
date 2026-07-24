@@ -4,7 +4,6 @@ import AuditButton from './AuditButton';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
-    DEFAULT_INSERT_EVENT_TYPES,
     INSERT_EVENT_LABEL_MAX_LENGTH,
     type InsertEventDayNight,
     type InsertEventTypeConfig,
@@ -330,7 +329,7 @@ export const InsertEventModal: React.FC<{
     onCancel: () => void;
     onSave: (request: InsertLmpEventRequest) => void;
 }> = ({ traineeLmp, insertEventTypes, selectedAnchorItem, description = 'Create an Individual LMP event with the scheduling fields NEO Build needs.', onCancel, onSave }) => {
-    const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
+    const options = insertEventTypes;
     const initialAnchorItem = selectedAnchorItem && traineeLmp.some(item => (item.id || item.code) === (selectedAnchorItem.id || selectedAnchorItem.code))
         ? selectedAnchorItem
         : traineeLmp[0];
@@ -352,6 +351,25 @@ export const InsertEventModal: React.FC<{
     const [resourceCount, setResourceCount] = useState(selectedType?.resourceCount || 0);
     const [followsEventId, setFollowsEventId] = useState(initialAnchorItem?.id || initialAnchorItem?.code || '');
     const [validationMessage, setValidationMessage] = useState('');
+
+    if (options.length === 0) {
+        return (
+            <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
+                <div className="w-full max-w-md rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
+                    <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
+                        <h2 className="text-lg font-bold text-white">Insert Event</h2>
+                        <button type="button" onClick={onCancel} className="text-2xl leading-none text-gray-400 hover:text-white">×</button>
+                    </div>
+                    <div className="p-5 text-sm text-gray-300">
+                        No insert event types are configured.
+                    </div>
+                    <div className="flex justify-end border-t border-gray-700 px-5 py-4">
+                        <button type="button" onClick={onCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Close</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const handleTypeChange = (nextLabel: string) => {
         const nextType = options.find(option => option.label === nextLabel) || options[0];
@@ -1016,7 +1034,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onAccessDenied,
     onDeleteRemedialItem,
     onGeneratePt051ForItem,
-    insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+    insertEventTypes = [],
     onInsertCustomEvent,
     onUpdateLmpItem,
 }) => {

@@ -20531,7 +20531,7 @@ const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsx
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
 const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
-  const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
+  const options = insertEventTypes;
   const initialAnchorItem = selectedAnchorItem && traineeLmp.some((item) => (item.id || item.code) === (selectedAnchorItem.id || selectedAnchorItem.code)) ? selectedAnchorItem : traineeLmp[0];
   const initialEventType = (() => {
     if (!initialAnchorItem) return options[0];
@@ -20551,6 +20551,16 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
   const [resourceCount, setResourceCount] = reactExports.useState(selectedType?.resourceCount || 0);
   const [followsEventId, setFollowsEventId] = reactExports.useState(initialAnchorItem?.id || initialAnchorItem?.code || "");
   const [validationMessage, setValidationMessage] = reactExports.useState("");
+  if (options.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Insert Event" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-2xl leading-none text-gray-400 hover:text-white", children: "×" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5 text-sm text-gray-300", children: "No insert event types are configured." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end border-t border-gray-700 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Close" }) })
+    ] }) });
+  }
   const handleTypeChange = (nextLabel) => {
     const nextType = options.find((option) => option.label === nextLabel) || options[0];
     setSelectedLabel(nextLabel);
@@ -21080,7 +21090,7 @@ const TraineeLmpView = ({
   onAccessDenied,
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
-  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+  insertEventTypes = [],
   onInsertCustomEvent,
   onUpdateLmpItem
 }) => {
@@ -50896,7 +50906,7 @@ const InstructorProfileFlyout = ({
   events = [],
   scheduleHistoryEvents = [],
   syllabusDetails = [],
-  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+  insertEventTypes = [],
   aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent,
   onUpdateAirCombatTrainingEvent,
@@ -53277,7 +53287,7 @@ const InstructorListView = ({
   archivedInstructorsData,
   scheduleHistoryEvents = [],
   syllabusDetails = [],
-  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+  insertEventTypes = [],
   aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent,
   onUpdateAirCombatTrainingEvent,

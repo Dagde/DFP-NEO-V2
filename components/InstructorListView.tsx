@@ -18,7 +18,7 @@ import {
     type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel, type OperationalModelCode } from '../utils/platformConfigService';
-import { DEFAULT_INSERT_EVENT_TYPES, type InsertEventTypeConfig } from '../utils/insertEventTypes';
+import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
@@ -163,7 +163,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     archivedInstructorsData,
     scheduleHistoryEvents = [],
     syllabusDetails = [],
-    insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+    insertEventTypes = [],
     aircraftConfigurations = [],
     onInsertAirCombatTrainingEvent,
     onUpdateAirCombatTrainingEvent,
