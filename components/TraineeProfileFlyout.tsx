@@ -43,6 +43,15 @@ import {
   normaliseMasterLmpCatalogue,
   type PlatformConfig,
 } from '../utils/platformConfigService';
+import {
+  getQualificationsForOperationalModel,
+  normaliseAssignedQualificationIds,
+  normaliseStaffQualificationCatalogue,
+  qualificationMatches,
+  type StaffQualificationCatalogue,
+  type StaffQualificationDefinition,
+} from '../utils/staffQualifications';
+import type { OperationalModelCode } from '../utils/platformConfigService';
 import { DEFAULT_PHRASE_BANK } from '../config/phraseBankConfig';
 
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -100,6 +109,8 @@ interface TraineeProfileFlyoutProps {
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
   platformConfig?: PlatformConfig | null;
+  staffQualificationCatalogue?: StaffQualificationCatalogue;
+  operationalModel?: OperationalModelCode | string;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -427,6 +438,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   platformConfig = null,
+  staffQualificationCatalogue,
+  operationalModel = 'flight_school',
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -991,6 +1004,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         : options;
     }, [personnelDisplaySettings, trainee.service]);
     const [service, setService] = useState(trainee.service || '');
+    const [role, setRole] = useState(trainee.role || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || '');
   const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
@@ -1031,6 +1045,23 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
+    const normalisedQualificationCatalogue = useMemo(
+        () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+        [staffQualificationCatalogue],
+    );
+    const activeQualificationOptions = useMemo(
+        () => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel),
+        [normalisedQualificationCatalogue, operationalModel],
+    );
+    const [assignedQualifications, setAssignedQualifications] = useState<string[]>(
+        () => normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue),
+    );
+    const assignedQualificationLabels = useMemo(() => (
+        assignedQualifications
+            .map(id => activeQualificationOptions.find(qualification => qualificationMatches(id, qualification)))
+            .filter((qualification): qualification is StaffQualificationDefinition => Boolean(qualification))
+            .map(qualification => qualification.code || qualification.name)
+    ), [activeQualificationOptions, assignedQualifications]);
     const isSuspended = useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
     const traineeStatusLabel = isSuspended ? 'Suspended' : (isPaused ? 'Paused' : 'Active');
 
@@ -1137,6 +1168,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setIdNumber(trainee.idNumber);
         setRank(trainee.rank);
         setService(trainee.service || '');
+        setRole(trainee.role || '');
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || '');
         setAcademicLmpType((trainee as any).academicLmpType || '');
@@ -1149,6 +1181,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPhoneNumber(trainee.phoneNumber || '');
         setEmail(trainee.email || '');
         setPermissions(trainee.permissions || []);
+        setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
         setPriorExperience(trainee.priorExperience || initialExperience);
     };
 
@@ -1318,6 +1351,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             lmpType,
             academicLmpType,
             rank,
+            role,
             seatConfig,
             isPaused: isSuspended ? true : isPaused,
             unavailability,
@@ -1331,6 +1365,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             secondaryCallsign,
             crew,
             permissions,
+            preferences: {
+                ...(trainee.preferences && typeof trainee.preferences === 'object' ? trainee.preferences : {}),
+                qualifications: assignedQualifications,
+            },
             priorExperience
         };
 
@@ -1350,12 +1388,20 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             const changes: string[] = [];
             if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
             if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
+            if ((trainee.role || '') !== role) changes.push(`Role: ${trainee.role || 'None'} → ${role || 'None'}`);
             if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
             if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || 'None'} → ${lmpType || 'None'}`);
             if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
             if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
             if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
             if (trainee.isPaused !== isPaused) changes.push(`Paused: ${trainee.isPaused} → ${isPaused}`);
+            const previousQualifications = normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue);
+            if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
+                const labelsFor = (ids: string[]) => ids
+                    .map(id => activeQualificationOptions.find(definition => qualificationMatches(id, definition))?.code || id)
+                    .join(', ') || 'None';
+                changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
+            }
 
             if (changes.length > 0) {
                 logAudit({
@@ -1388,6 +1434,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPermissions(prev =>
             isChecked ? [...prev, permission] : prev.filter(p => p !== permission)
         );
+    };
+
+    const handleQualificationChange = (qualificationId: string, isChecked: boolean) => {
+        setAssignedQualifications(prev => (
+            isChecked
+                ? Array.from(new Set([...prev, qualificationId]))
+                : prev.filter(id => id !== qualificationId)
+        ));
     };
 
     const handleHateSheetClick = () => {
@@ -2351,6 +2405,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   </optgroup>
                                 ))}
                               </Dropdown>
+                              <InputField label="Role" value={role} onChange={e => setRole(e.target.value)} />
                               <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
                                 <option value="">Select...</option>
                                 {configuredServiceOptions.map(option => (
@@ -2394,6 +2449,27 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
                               </div>
                             </div>
+                          </div>
+
+                          <div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2">Qualifications</div>
+                            {activeQualificationOptions.length > 0 ? (
+                              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-2">
+                                {activeQualificationOptions.map(qualification => (
+                                  <label key={qualification.id} className="flex items-center space-x-2 cursor-pointer text-xs text-white">
+                                    <input
+                                      type="checkbox"
+                                      checked={assignedQualifications.some(id => qualificationMatches(id, qualification))}
+                                      onChange={e => handleQualificationChange(qualification.id, e.target.checked)}
+                                      className="h-3 w-3 accent-sky-500"
+                                    />
+                                    <span className="truncate" title={qualification.name}>{qualification.code || qualification.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500">No qualifications configured for this operational model.</p>
+                            )}
                           </div>
 
                           <div>
@@ -2443,18 +2519,27 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
                               {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{trainee.role || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || '[None]'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
                               {/* Row 3 */}
+                              <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
                               <div></div>
                               <div></div>
                               <div></div>
                               <div></div>
+                            </div>
+                            <div className="bg-gray-700/30 rounded p-2">
+                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Qualifications</div>
+                              <div className="flex flex-wrap gap-1">
+                                {assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map(label => (
+                                  <span key={label} className="px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]">{label}</span>
+                                )) : <span className="text-gray-500 text-[10px]">None</span>}
+                              </div>
                             </div>
                           </div>
 

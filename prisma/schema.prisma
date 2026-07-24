@@ -167,6 +167,7 @@ model Trainee {
   name                String
   fullName            String
   rank                String?
+  role                String?
   service             String?
   course              String?
   lmpType             String?   @default("BPC+IPC")
@@ -187,6 +188,7 @@ model Trainee {
   currencyStatus      Json?
   permissions         String[]  @default([])
   priorExperience     Json?
+  preferences         Json?
   isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt

@@ -493,6 +493,7 @@ export interface Trainee {
   fullName: string;
   name: string;
   rank: TraineeRank;
+  role?: string;
   course: string;
   seatConfig: SeatConfig;
   isPaused: boolean;
@@ -516,6 +517,7 @@ export interface Trainee {
   crew?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
+  preferences?: PersonnelPreferences;
 }
 
 export interface Score {

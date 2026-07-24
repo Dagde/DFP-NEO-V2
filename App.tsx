@@ -30838,6 +30838,7 @@ const App: React.FC = () => {
                     name: data.name,
                     fullName: data.fullName,
                     rank: data.rank,
+                    role: data.role || '',
                     course: data.course,
                     lmpType: data.lmpType,
                     academicLmpType: (data as any).academicLmpType || '',
@@ -30853,6 +30854,7 @@ const App: React.FC = () => {
                     phoneNumber: data.phoneNumber,
                     email: data.email,
                     permissions: data.permissions || [],
+                    preferences: data.preferences || {},
                     unavailability: data.unavailability || [],
                 };
 
@@ -30867,6 +30869,7 @@ const App: React.FC = () => {
                         name: data.name,
                         fullName: data.fullName,
                         rank: data.rank,
+                        role: data.role || '',
                         course: data.course,
                         lmpType: data.lmpType,
                         academicLmpType: (data as any).academicLmpType || '',
@@ -30882,6 +30885,7 @@ const App: React.FC = () => {
                         phoneNumber: data.phoneNumber,
                         email: data.email,
                         permissions: data.permissions || [],
+                        preferences: data.preferences || {},
                         unavailability: data.unavailability || [],
                     })
                 });
@@ -41709,6 +41713,8 @@ appliedUpdates.forEach(update => {
                             personnelDisplaySettings={personnelDisplaySettings}
                             trainingReportTerminology={trainingReportTerminology}
                             trainingReportTemplate={trainingReportTemplate}
+                            staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                            operationalModel={activeOperationalModel}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}

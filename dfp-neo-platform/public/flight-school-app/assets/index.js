@@ -23166,7 +23166,9 @@ const TraineeProfileFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
-  platformConfig = null
+  platformConfig = null,
+  staffQualificationCatalogue,
+  operationalModel = "flight_school"
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -23638,6 +23640,7 @@ const TraineeProfileFlyout = ({
     return currentService && !options.some((option) => option.toLowerCase() === currentService.toLowerCase()) ? [...options, currentService] : options;
   }, [personnelDisplaySettings, trainee.service]);
   const [service, setService] = reactExports.useState(trainee.service || "");
+  const [role, setRole] = reactExports.useState(trainee.role || "");
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
   const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "");
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(trainee.academicLmpType || "");
@@ -23676,6 +23679,18 @@ const TraineeProfileFlyout = ({
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
+  const normalisedQualificationCatalogue = reactExports.useMemo(
+    () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue),
+    [staffQualificationCatalogue]
+  );
+  const activeQualificationOptions = reactExports.useMemo(
+    () => getQualificationsForOperationalModel(normalisedQualificationCatalogue, operationalModel),
+    [normalisedQualificationCatalogue, operationalModel]
+  );
+  const [assignedQualifications, setAssignedQualifications] = reactExports.useState(
+    () => normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue)
+  );
+  const assignedQualificationLabels = reactExports.useMemo(() => assignedQualifications.map((id) => activeQualificationOptions.find((qualification) => qualificationMatches(id, qualification))).filter((qualification) => Boolean(qualification)).map((qualification) => qualification.code || qualification.name), [activeQualificationOptions, assignedQualifications]);
   const isSuspended = reactExports.useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
   const traineeStatusLabel = isSuspended ? "Suspended" : isPaused ? "Paused" : "Active";
   const [priorExperience, setPriorExperience] = reactExports.useState(trainee.priorExperience || initialExperience$1);
@@ -23762,6 +23777,7 @@ const TraineeProfileFlyout = ({
     setIdNumber(trainee.idNumber);
     setRank(trainee.rank);
     setService(trainee.service || "");
+    setRole(trainee.role || "");
     setCourse(trainee.course || activeCourses[0] || "");
     setLmpType(trainee.lmpType || "");
     setAcademicLmpType(trainee.academicLmpType || "");
@@ -23774,6 +23790,7 @@ const TraineeProfileFlyout = ({
     setPhoneNumber(trainee.phoneNumber || "");
     setEmail(trainee.email || "");
     setPermissions(trainee.permissions || []);
+    setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
     setPriorExperience(trainee.priorExperience || initialExperience$1);
   };
   reactExports.useEffect(() => {
@@ -23883,6 +23900,7 @@ const TraineeProfileFlyout = ({
       lmpType,
       academicLmpType,
       rank,
+      role,
       seatConfig,
       isPaused: isSuspended ? true : isPaused,
       unavailability,
@@ -23896,6 +23914,10 @@ const TraineeProfileFlyout = ({
       secondaryCallsign,
       crew,
       permissions,
+      preferences: {
+        ...trainee.preferences && typeof trainee.preferences === "object" ? trainee.preferences : {},
+        qualifications: assignedQualifications
+      },
       priorExperience
     };
     flushPendingAudits();
@@ -23910,12 +23932,18 @@ const TraineeProfileFlyout = ({
       const changes = [];
       if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
       if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
+      if ((trainee.role || "") !== role) changes.push(`Role: ${trainee.role || "None"} → ${role || "None"}`);
       if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
       if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || "None"} → ${lmpType || "None"}`);
       if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
       if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
       if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
       if (trainee.isPaused !== isPaused) changes.push(`Paused: ${trainee.isPaused} → ${isPaused}`);
+      const previousQualifications = normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue);
+      if (JSON.stringify(previousQualifications) !== JSON.stringify(assignedQualifications)) {
+        const labelsFor = (ids) => ids.map((id) => activeQualificationOptions.find((definition) => qualificationMatches(id, definition))?.code || id).join(", ") || "None";
+        changes.push(`Qualifications: ${labelsFor(previousQualifications)} → ${labelsFor(assignedQualifications)}`);
+      }
       if (changes.length > 0) {
         logAudit({
           action: "Edit",
@@ -23943,6 +23971,9 @@ const TraineeProfileFlyout = ({
     setPermissions(
       (prev) => isChecked ? [...prev, permission] : prev.filter((p) => p !== permission)
     );
+  };
+  const handleQualificationChange = (qualificationId, isChecked) => {
+    setAssignedQualifications((prev) => isChecked ? Array.from(/* @__PURE__ */ new Set([...prev, qualificationId])) : prev.filter((id) => id !== qualificationId));
   };
   const handleHateSheetClick = () => {
     if (!canViewPt051) {
@@ -24248,7 +24279,7 @@ ${errorText || `HTTP ${response.status}`}`);
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Roles" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 min-h-[10rem] p-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-x-3 gap-y-2", children: allRoles.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 min-h-[10rem] p-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-x-3 gap-y-2", children: allRoles.map((role2) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -24257,8 +24288,8 @@ ${errorText || `HTTP ${response.status}`}`);
             className: "h-4 w-4 accent-sky-500 bg-gray-600 rounded"
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[11px]", children: role })
-      ] }, role)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 text-white list-disc list-inside", children: /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "list-none italic text-gray-500", children: "No roles assigned." }) }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[11px]", children: role2 })
+      ] }, role2)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 text-white list-disc list-inside", children: /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "list-none italic text-gray-500", children: "No roles assigned." }) }) })
     ] })
   ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -24775,6 +24806,7 @@ ${errorText || `HTTP ${response.status}`}`);
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Role", value: role, onChange: (e) => setRole(e.target.value) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
                       configuredServiceOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option))
@@ -24808,6 +24840,21 @@ ${errorText || `HTTP ${response.status}`}`);
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) })
                   ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Qualifications" }),
+                  activeQualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-2", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer text-xs text-white", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: assignedQualifications.some((id) => qualificationMatches(id, qualification)),
+                        onChange: (e) => handleQualificationChange(qualification.id, e.target.checked),
+                        className: "h-3 w-3 accent-sky-500"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", title: qualification.name, children: qualification.code || qualification.name })
+                  ] }, qualification.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "No qualifications configured for this operational model." })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Permissions" }),
@@ -24867,6 +24914,10 @@ ${errorText || `HTTP ${response.status}`}`);
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.rank })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Role" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-300 font-medium", children: trainee.role || /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "None" }) })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Service" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.service || "[None]" })
                       ] }),
@@ -24898,6 +24949,10 @@ ${errorText || `HTTP ${response.status}`}`);
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", {})
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Qualifications" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: assignedQualificationLabels.length > 0 ? assignedQualificationLabels.map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-teal-900/80 text-teal-200 rounded text-[9px]", children: label }, label)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
                     ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 flex-shrink-0 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
@@ -26136,6 +26191,7 @@ const generateNewTraineeTemplate = () => ({
   // Will be constructed on save
   name: "",
   rank: "PLTOFF",
+  role: "",
   course: "",
   seatConfig: "Normal",
   isPaused: false,
@@ -26143,6 +26199,7 @@ const generateNewTraineeTemplate = () => ({
   service: "RAAF",
   unavailability: [],
   permissions: ["Trainee"],
+  preferences: { qualifications: [] },
   traineeCallsign: "",
   secondaryCallsign: "",
   crew: "N/A",
@@ -26218,7 +26275,9 @@ const CourseRosterView = ({
   personnelDisplaySettings,
   trainingReportTerminology,
   trainingReportTemplate,
-  platformConfig = null
+  platformConfig = null,
+  staffQualificationCatalogue,
+  operationalModel = "flight_school"
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -26525,6 +26584,8 @@ const CourseRosterView = ({
         personnelDisplaySettings,
         trainingReportTerminology,
         platformConfig,
+        staffQualificationCatalogue,
+        operationalModel,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -110514,6 +110575,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           name: data.name,
           fullName: data.fullName,
           rank: data.rank,
+          role: data.role || "",
           course: data.course,
           lmpType: data.lmpType,
           academicLmpType: data.academicLmpType || "",
@@ -110529,6 +110591,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           phoneNumber: data.phoneNumber,
           email: data.email,
           permissions: data.permissions || [],
+          preferences: data.preferences || {},
           unavailability: data.unavailability || []
         };
         console.log("📝 [APP] PATCH body to send:", patchBody);
@@ -110541,6 +110604,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             name: data.name,
             fullName: data.fullName,
             rank: data.rank,
+            role: data.role || "",
             course: data.course,
             lmpType: data.lmpType,
             academicLmpType: data.academicLmpType || "",
@@ -110556,6 +110620,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             phoneNumber: data.phoneNumber,
             email: data.email,
             permissions: data.permissions || [],
+            preferences: data.preferences || {},
             unavailability: data.unavailability || []
           })
         });
@@ -119437,6 +119502,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelDisplaySettings,
             trainingReportTerminology,
             trainingReportTemplate,
+            staffQualificationCatalogue: activeStaffQualificationCatalogue,
+            operationalModel: activeOperationalModel,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,

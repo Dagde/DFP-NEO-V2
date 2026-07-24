@@ -17,7 +17,8 @@ import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
-import type { PlatformConfig } from '../utils/platformConfigService';
+import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
+import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -82,6 +83,8 @@ interface CourseRosterViewProps {
     trainingReportTerminology?: TrainingReportTerminology;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     platformConfig?: PlatformConfig | null;
+    staffQualificationCatalogue?: StaffQualificationCatalogue;
+    operationalModel?: OperationalModelCode | string;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -89,6 +92,7 @@ const generateNewTraineeTemplate = (): Trainee => ({
     fullName: '', // Will be constructed on save
     name: '',
     rank: 'PLTOFF',
+    role: '',
     course: '',
     seatConfig: 'Normal',
     isPaused: false,
@@ -96,6 +100,7 @@ const generateNewTraineeTemplate = (): Trainee => ({
     service: 'RAAF',
     unavailability: [],
     permissions: ['Trainee'],
+    preferences: { qualifications: [] },
     traineeCallsign: '',
     secondaryCallsign: '',
     crew: 'N/A',
@@ -174,6 +179,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     trainingReportTerminology,
     trainingReportTemplate,
     platformConfig = null,
+    staffQualificationCatalogue,
+    operationalModel = 'flight_school',
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -548,6 +555,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     personnelDisplaySettings={personnelDisplaySettings}
                     trainingReportTerminology={trainingReportTerminology}
                     platformConfig={platformConfig}
+                    staffQualificationCatalogue={staffQualificationCatalogue}
+                    operationalModel={operationalModel}
                     pt051Assessments={pt051Assessments}
                     pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}

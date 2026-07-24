@@ -4973,10 +4973,10 @@ app.post('/api/trainees', async (req, res) => {
   try {
     const db = await getPrisma();
     const {
-      idNumber, name, fullName, rank, course, lmpType,
+      idNumber, name, fullName, rank, role, course, lmpType,
       unit, flight, location, service, seatConfig, isPaused,
       traineeCallsign, primaryInstructor, secondaryInstructor,
-      phoneNumber, email, permissions, unavailability
+      phoneNumber, email, permissions, preferences, unavailability
     } = req.body;
 
     if (!idNumber || !name) {
@@ -4993,6 +4993,7 @@ app.post('/api/trainees', async (req, res) => {
           name: name || existing.name,
           fullName: fullName || name,
           rank: rank || existing.rank,
+          role: role !== undefined ? role : existing.role,
           course: course || existing.course,
           lmpType: lmpType || existing.lmpType,
           unit: unit !== undefined ? unit : existing.unit,
@@ -5007,6 +5008,7 @@ app.post('/api/trainees', async (req, res) => {
           phoneNumber: phoneNumber !== undefined ? phoneNumber : existing.phoneNumber,
           email: email !== undefined ? email : existing.email,
           permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : existing.permissions),
+          preferences: preferences && typeof preferences === 'object' && !Array.isArray(preferences) ? preferences : existing.preferences,
           unavailability: unavailability || existing.unavailability,
           isActive: true,
         }
@@ -5023,6 +5025,7 @@ app.post('/api/trainees', async (req, res) => {
         name,
         fullName: fullName || name,
         rank: rank || 'FLGOFF',
+        role: role || '',
         course: course || '',
         lmpType: lmpType || '',
         unit: unit || '',
@@ -5037,6 +5040,7 @@ app.post('/api/trainees', async (req, res) => {
         phoneNumber: phoneNumber || null,
         email: email || null,
         permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : []),
+        preferences: preferences && typeof preferences === 'object' && !Array.isArray(preferences) ? preferences : {},
         unavailability: unavailability || [],
         isActive: true,
       }
@@ -5109,6 +5113,7 @@ app.post('/api/trainees/bulk', async (req, res) => {
           name: t.name,
           fullName: t.fullName || t.name,
           rank: t.rank || 'FLGOFF',
+          role: t.role !== undefined ? t.role : (existing?.role || ''),
           course: t.course || course || '',
           lmpType: t.lmpType || '',
           unit: t.unit || '',
@@ -5123,6 +5128,7 @@ app.post('/api/trainees/bulk', async (req, res) => {
           phoneNumber: t.phoneNumber || null,
           email: t.email || null,
           permissions: Array.isArray(t.permissions) ? t.permissions : (t.permissions ? [t.permissions] : []),
+          preferences: t.preferences && typeof t.preferences === 'object' && !Array.isArray(t.preferences) ? t.preferences : (existing?.preferences || {}),
           unavailability: t.unavailability || [],
           isActive: true,
         };
@@ -5185,11 +5191,11 @@ app.patch('/api/trainees/:id', async (req, res) => {
     // Sanitize: only include fields that exist in the Trainee schema
     // Strip client-side fields like _dataSource, id (managed by DB), scores, etc.
     const TRAINEE_FIELDS = [
-      'name', 'fullName', 'rank', 'service', 'course', 'lmpType', 'traineeCallsign',
+      'name', 'fullName', 'rank', 'role', 'service', 'course', 'lmpType', 'traineeCallsign',
       'seatConfig', 'isPaused', 'unavailability', 'unit', 'flight', 'location',
       'phoneNumber', 'email', 'primaryInstructor', 'secondaryInstructor',
       'lastEventDate', 'lastFlightDate', 'currencyStatus', 'permissions',
-      'priorExperience', 'isActive', 'userId'
+      'priorExperience', 'preferences', 'isActive', 'userId'
     ];
     const sanitizedUpdates = {};
     for (const field of TRAINEE_FIELDS) {
@@ -8865,6 +8871,17 @@ async function ensureAcademicLmpTypeColumns(db) {
     console.log('✅ Trainee.academicLmpType column ready');
   } catch (err) {
     console.error('❌ Failed to ensure Trainee.academicLmpType column:', err.message);
+  }
+  try {
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "role" TEXT;
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "preferences" JSONB;
+    `);
+    console.log('✅ Trainee role/preferences columns ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Trainee role/preferences columns:', err.message);
   }
   try {
     // Add academicLmpType column to Course table if it doesn't exist
