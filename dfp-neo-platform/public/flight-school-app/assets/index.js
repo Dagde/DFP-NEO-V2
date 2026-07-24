@@ -4831,7 +4831,7 @@ const cleanDayNight = (value, fallback) => {
   return value === "Day" || value === "Night" || value === "Day/Night" ? value : fallback;
 };
 const normaliseInsertEventTypes = (input) => {
-  const source = Array.isArray(input) && input.length > 0 ? input : DEFAULT_INSERT_EVENT_TYPES;
+  const source = Array.isArray(input) ? input : DEFAULT_INSERT_EVENT_TYPES;
   return source.map((item, index) => {
     const fallback = DEFAULT_INSERT_EVENT_TYPES[index] || DEFAULT_INSERT_EVENT_TYPES[0];
     const syllabusType = cleanSyllabusType(item?.syllabusType || item?.type, fallback.syllabusType);
@@ -4853,7 +4853,7 @@ const normaliseInsertEventTypes = (input) => {
 const getInsertEventTypes = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes || null);
+  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes);
 };
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
   permanent: "Permanent",
@@ -21140,7 +21140,7 @@ const TraineeLmpView = ({
           "button",
           {
             onClick: () => setShowInsertEventModal(true),
-            disabled: !onInsertCustomEvent || traineeLmp.length === 0,
+            disabled: !onInsertCustomEvent || traineeLmp.length === 0 || insertEventTypes.length === 0,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
             children: [
               "Insert",
@@ -68016,7 +68016,17 @@ This permanently removes the organisation record from platform configuration and
     updateInsertEventTypes(next);
   };
   const addInsertEventType = () => {
-    const sourceEventType = insertEventTypes[insertEventTypes.length - 1];
+    const sourceEventType = insertEventTypes[insertEventTypes.length - 1] || {
+      label: "EVT",
+      syllabusType: "Flight",
+      dayNight: "Day",
+      duration: 1,
+      flightOrSimHours: 1,
+      totalEventHours: 1,
+      preFlightTime: 0,
+      postFlightTime: 0,
+      resourceCount: 1
+    };
     updateInsertEventTypes([
       ...insertEventTypes,
       {
@@ -68026,7 +68036,6 @@ This permanently removes the organisation record from platform configuration and
     ]);
   };
   const removeInsertEventType = (index) => {
-    if (insertEventTypes.length <= 1) return;
     updateInsertEventTypes(insertEventTypes.filter((_, eventTypeIndex) => eventTypeIndex !== index));
   };
   const toggleDeploymentReadiness = (itemId, checked) => {
@@ -73591,54 +73600,57 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] }),
             canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, disabled: !canEditSection("platform-scheduling-rule-sets"), className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50", children: "Add Event Type" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Field,
-              {
-                label: "Label",
-                value: eventType.label,
-                disabled: !canEditSection("platform-scheduling-rule-sets"),
-                maxLength: INSERT_EVENT_LABEL_MAX_LENGTH,
-                onChange: (value) => updateInsertEventType(eventTypeIndex, { label: value })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              SelectField,
-              {
-                label: "Build Type",
-                value: eventType.syllabusType,
-                disabled: !canEditSection("platform-scheduling-rule-sets"),
-                options: ["Flight", "FTD", "Ground School", "Academics"],
-                onChange: (value) => updateInsertEventType(eventTypeIndex, { syllabusType: value })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              SelectField,
-              {
-                label: "Day/Night",
-                value: eventType.dayNight,
-                disabled: !canEditSection("platform-scheduling-rule-sets"),
-                options: ["Day", "Night", "Day/Night"],
-                onChange: (value) => updateInsertEventType(eventTypeIndex, { dayNight: value })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration", value: eventType.duration, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { duration: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre Time", value: eventType.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post Time", value: eventType.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                disabled: !canEditSection("platform-scheduling-rule-sets") || insertEventTypes.length <= 1,
-                onClick: () => removeInsertEventType(eventTypeIndex),
-                className: "h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50",
-                children: "Remove"
-              }
-            ) })
-          ] }, `${eventType.label}-${eventTypeIndex}`)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Field,
+                {
+                  label: "Label",
+                  value: eventType.label,
+                  disabled: !canEditSection("platform-scheduling-rule-sets"),
+                  maxLength: INSERT_EVENT_LABEL_MAX_LENGTH,
+                  onChange: (value) => updateInsertEventType(eventTypeIndex, { label: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Build Type",
+                  value: eventType.syllabusType,
+                  disabled: !canEditSection("platform-scheduling-rule-sets"),
+                  options: ["Flight", "FTD", "Ground School", "Academics"],
+                  onChange: (value) => updateInsertEventType(eventTypeIndex, { syllabusType: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Day/Night",
+                  value: eventType.dayNight,
+                  disabled: !canEditSection("platform-scheduling-rule-sets"),
+                  options: ["Day", "Night", "Day/Night"],
+                  onChange: (value) => updateInsertEventType(eventTypeIndex, { dayNight: value })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration", value: eventType.duration, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { duration: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre Time", value: eventType.preFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post Time", value: eventType.postFlightTime, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: !canEditSection("platform-scheduling-rule-sets"),
+                  onClick: () => removeInsertEventType(eventTypeIndex),
+                  className: "h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: "Remove"
+                }
+              ) })
+            ] }, `${eventType.label}-${eventTypeIndex}`)),
+            insertEventTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 p-4 text-sm text-gray-400", children: "No Individual LMP insert event types are configured." })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-scheduling-rule-records", className: "rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 shadow-[inset_4px_0_0_rgba(251,191,36,0.28)]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [

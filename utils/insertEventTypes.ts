@@ -48,7 +48,7 @@ const cleanDayNight = (value: unknown, fallback: InsertEventDayNight): InsertEve
 };
 
 export const normaliseInsertEventTypes = (input: unknown): InsertEventTypeConfig[] => {
-  const source = Array.isArray(input) && input.length > 0 ? input : DEFAULT_INSERT_EVENT_TYPES;
+  const source = Array.isArray(input) ? input : DEFAULT_INSERT_EVENT_TYPES;
   return source.map((item: any, index) => {
     const fallback = DEFAULT_INSERT_EVENT_TYPES[index] || DEFAULT_INSERT_EVENT_TYPES[0];
     const syllabusType = cleanSyllabusType(item?.syllabusType || item?.type, fallback.syllabusType);
@@ -71,5 +71,5 @@ export const normaliseInsertEventTypes = (input: unknown): InsertEventTypeConfig
 export const getInsertEventTypes = (config?: PlatformConfig | null): InsertEventTypeConfig[] => {
   const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
-  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes || null);
+  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes);
 };

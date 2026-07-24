@@ -1085,7 +1085,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     {activeTab === 'neo' && (
                         <button
                             onClick={() => setShowInsertEventModal(true)}
-                            disabled={!onInsertCustomEvent || traineeLmp.length === 0}
+                            disabled={!onInsertCustomEvent || traineeLmp.length === 0 || insertEventTypes.length === 0}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Insert<br />Event

@@ -3632,7 +3632,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addInsertEventType = () => {
-    const sourceEventType = insertEventTypes[insertEventTypes.length - 1];
+    const sourceEventType = insertEventTypes[insertEventTypes.length - 1] || {
+      label: 'EVT',
+      syllabusType: 'Flight' as InsertEventSyllabusType,
+      dayNight: 'Day' as InsertEventDayNight,
+      duration: 1,
+      flightOrSimHours: 1,
+      totalEventHours: 1,
+      preFlightTime: 0,
+      postFlightTime: 0,
+      resourceCount: 1,
+    };
     updateInsertEventTypes([
       ...insertEventTypes,
       {
@@ -3643,7 +3653,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const removeInsertEventType = (index: number) => {
-    if (insertEventTypes.length <= 1) return;
     updateInsertEventTypes(insertEventTypes.filter((_, eventTypeIndex) => eventTypeIndex !== index));
   };
 
@@ -9772,7 +9781,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <div className="flex items-end">
                     <button
                       type="button"
-                      disabled={!canEditSection('platform-scheduling-rule-sets') || insertEventTypes.length <= 1}
+                      disabled={!canEditSection('platform-scheduling-rule-sets')}
                       onClick={() => removeInsertEventType(eventTypeIndex)}
                       className="h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -9781,6 +9790,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 </div>
               ))}
+              {insertEventTypes.length === 0 && (
+                <div className="rounded border border-gray-700 bg-gray-950 p-4 text-sm text-gray-400">
+                  No Individual LMP insert event types are configured.
+                </div>
+              )}
             </div>
           </div>
           <div id="platform-scheduling-rule-records" className="rounded-lg border border-amber-400/30 bg-amber-500/[0.06] p-3 shadow-[inset_4px_0_0_rgba(251,191,36,0.28)]">
