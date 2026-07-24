@@ -163,13 +163,25 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const availableAwardLmpTypes = useMemo(() => {
         const lmpTypes = new Set<string>();
+        const selectedCourseName = activeAward?.course || '';
+        const courseIsSelected = (courseName: string) => (
+            !selectedCourseName || selectedCourseName === 'all' || courseName === selectedCourseName
+        );
 
         activeCourses.forEach(course => {
-            if (course.lmpType) lmpTypes.add(course.lmpType);
+            if (courseIsSelected(course.name) && course.lmpType) lmpTypes.add(course.lmpType);
         });
 
-        traineeLMPs.forEach(lmp => {
+        const selectedTraineeNames = new Set(
+            activeTrainees
+                .filter(trainee => courseIsSelected(trainee.course))
+                .flatMap(trainee => [trainee.fullName, trainee.name].filter(Boolean))
+        );
+
+        traineeLMPs.forEach((lmp, traineeName) => {
+            if (selectedTraineeNames.size > 0 && !selectedTraineeNames.has(traineeName)) return;
             lmp.forEach(item => {
+                if (item.type === 'Academics') return;
                 const itemLmpType = item.lmpType ? String(item.lmpType) : '';
                 if (itemLmpType && itemLmpType !== 'Staff CAT' && itemLmpType !== 'Master LMP') {
                     lmpTypes.add(itemLmpType);
@@ -178,7 +190,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         });
 
         return Array.from(lmpTypes).sort();
-    }, [activeCourses, traineeLMPs]);
+    }, [activeAward, activeCourses, activeTrainees, traineeLMPs]);
 
     useEffect(() => {
         if (!activeAward || activeAward.lmpType) return;
