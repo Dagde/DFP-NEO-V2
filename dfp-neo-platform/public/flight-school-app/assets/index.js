@@ -66645,6 +66645,7 @@ const PlatformConfigurationSettings = ({
   const [unitTypesDraft, setUnitTypesDraft] = reactExports.useState("");
   const [isEditingUnitTypes, setIsEditingUnitTypes] = reactExports.useState(false);
   const [unitCallsignDrafts, setUnitCallsignDrafts] = reactExports.useState({});
+  const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   reactExports.useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
   }, [isEditingUnitTypes, unitTypeOptions]);
@@ -67897,6 +67898,27 @@ This permanently removes the organisation record from platform configuration and
           }
         } : unit)
       };
+    });
+  };
+  const updateTrainingReportNameDraft = (key, value, maxLength) => {
+    setTrainingReportNameDrafts((previous) => ({
+      ...previous,
+      [key]: value.slice(0, maxLength)
+    }));
+  };
+  const beginTrainingReportNameDraft = (key) => {
+    setTrainingReportNameDrafts((previous) => ({
+      ...previous,
+      [key]: previous[key] ?? trainingReportTemplate[key]
+    }));
+  };
+  const commitTrainingReportNameDraft = (key) => {
+    if (!(key in trainingReportNameDrafts)) return;
+    updateTrainingReportTemplate({ [key]: trainingReportNameDrafts[key] ?? "" });
+    setTrainingReportNameDrafts((previous) => {
+      if (!(key in previous)) return previous;
+      const { [key]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
     });
   };
   const updateTrainingReportModule = (moduleKey, changes) => {
@@ -72403,10 +72425,12 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             Field,
             {
               label: "Generic Form Name",
-              value: trainingReportTemplate.genericName,
+              value: trainingReportNameDrafts.genericName ?? trainingReportTemplate.genericName,
               disabled: !canEditTrainingReportTemplate,
               maxLength: TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH,
-              onChange: (value) => updateTrainingReportTemplate({ genericName: value }),
+              onChange: (value) => updateTrainingReportNameDraft("genericName", value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
+              onFocus: () => beginTrainingReportNameDraft("genericName"),
+              onBlur: () => commitTrainingReportNameDraft("genericName"),
               info: "Generic form name used across models. Example: Training Report."
             }
           ),
@@ -72414,10 +72438,12 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             Field,
             {
               label: "Organisation Form Name",
-              value: trainingReportTemplate.displayName,
+              value: trainingReportNameDrafts.displayName ?? trainingReportTemplate.displayName,
               disabled: !canEditTrainingReportTemplate,
               maxLength: TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
-              onChange: (value) => updateTrainingReportTemplate({ displayName: value }),
+              onChange: (value) => updateTrainingReportNameDraft("displayName", value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
+              onFocus: () => beginTrainingReportNameDraft("displayName"),
+              onBlur: () => commitTrainingReportNameDraft("displayName"),
               info: "Customer-specific name. Example: PT-051."
             }
           ),

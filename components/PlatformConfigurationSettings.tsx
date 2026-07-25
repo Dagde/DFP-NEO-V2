@@ -1804,6 +1804,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [unitTypesDraft, setUnitTypesDraft] = useState('');
   const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
   const [unitCallsignDrafts, setUnitCallsignDrafts] = useState<Record<string, string>>({});
+  const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
 
   useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
@@ -3326,6 +3327,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             }
           : unit),
       };
+    });
+  };
+
+  const updateTrainingReportNameDraft = (
+    key: 'genericName' | 'displayName',
+    value: string,
+    maxLength: number,
+  ) => {
+    setTrainingReportNameDrafts((previous) => ({
+      ...previous,
+      [key]: value.slice(0, maxLength),
+    }));
+  };
+
+  const beginTrainingReportNameDraft = (key: 'genericName' | 'displayName') => {
+    setTrainingReportNameDrafts((previous) => ({
+      ...previous,
+      [key]: previous[key] ?? trainingReportTemplate[key],
+    }));
+  };
+
+  const commitTrainingReportNameDraft = (key: 'genericName' | 'displayName') => {
+    if (!(key in trainingReportNameDrafts)) return;
+    updateTrainingReportTemplate({ [key]: trainingReportNameDrafts[key] ?? '' });
+    setTrainingReportNameDrafts((previous) => {
+      if (!(key in previous)) return previous;
+      const { [key]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
     });
   };
 
@@ -8388,18 +8417,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="grid gap-3 lg:grid-cols-3">
             <Field
               label="Generic Form Name"
-              value={trainingReportTemplate.genericName}
+              value={trainingReportNameDrafts.genericName ?? trainingReportTemplate.genericName}
               disabled={!canEditTrainingReportTemplate}
               maxLength={TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH}
-              onChange={(value) => updateTrainingReportTemplate({ genericName: value })}
+              onChange={(value) => updateTrainingReportNameDraft('genericName', value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH)}
+              onFocus={() => beginTrainingReportNameDraft('genericName')}
+              onBlur={() => commitTrainingReportNameDraft('genericName')}
               info="Generic form name used across models. Example: Training Report."
             />
             <Field
               label="Organisation Form Name"
-              value={trainingReportTemplate.displayName}
+              value={trainingReportNameDrafts.displayName ?? trainingReportTemplate.displayName}
               disabled={!canEditTrainingReportTemplate}
               maxLength={TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH}
-              onChange={(value) => updateTrainingReportTemplate({ displayName: value })}
+              onChange={(value) => updateTrainingReportNameDraft('displayName', value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH)}
+              onFocus={() => beginTrainingReportNameDraft('displayName')}
+              onBlur={() => commitTrainingReportNameDraft('displayName')}
               info="Customer-specific name. Example: PT-051."
             />
             <div>
