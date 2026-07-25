@@ -6,6 +6,7 @@ import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, 
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PlatformConfig } from '../utils/platformConfigService';
+import type { TrainingReportTemplate } from '../utils/trainingReportTerminology';
 
 interface TrainingRecordsViewProps {
     courses: Course[];
@@ -35,6 +36,7 @@ interface TrainingRecordsViewProps {
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
+    trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     hasTraineesEnabled?: boolean;
 }
 
@@ -67,7 +69,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     platformConfig = null,
     serviceDefinitions = [],
     resourceDisplayNames,
-    instructorLabel = 'QFI',
+    instructorLabel = 'Report Instructor',
+    trainingReportTemplate = null,
     hasTraineesEnabled = true,
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
@@ -147,6 +150,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onSavePT051Assessment={onSavePT051Assessment}
                         resourceDisplayNames={resourceDisplayNames}
                         instructorLabel={instructorLabel}
+                        trainingReportTemplate={trainingReportTemplate}
                         hasTraineesEnabled={hasTraineesEnabled}
                     />
                 )}

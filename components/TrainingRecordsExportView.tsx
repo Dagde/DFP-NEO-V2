@@ -4,6 +4,11 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { getTraineeStatusLabel } from '../utils/traineeStatus';
+import {
+    DEFAULT_TRAINING_REPORT_TEMPLATE,
+    normaliseTrainingReportTemplate,
+    type TrainingReportTemplate,
+} from '../utils/trainingReportTerminology';
 
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
@@ -20,6 +25,7 @@ interface TrainingRecordsExportViewProps {
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
+    trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
     hasTraineesEnabled?: boolean;
 }
 
@@ -72,9 +78,18 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     pt051Assessments,
     onSavePT051Assessment,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-    instructorLabel = 'QFI',
+    instructorLabel = 'Report Instructor',
+    trainingReportTemplate = null,
     hasTraineesEnabled = true
 }) => {
+    const activeTrainingReportTemplate = useMemo(
+        () => normaliseTrainingReportTemplate(trainingReportTemplate || DEFAULT_TRAINING_REPORT_TEMPLATE),
+        [trainingReportTemplate],
+    );
+    const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || 'Training Report';
+    const exportAssessmentTitle = `${exportReportName} Training Assessment`;
+    const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || 'Report Instructor';
+
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
     const [timePeriod, setTimePeriod] = useState<TimePeriod>('all-time');
@@ -725,7 +740,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         
         pdf.setFontSize(16);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('RAAF PT-051 Training Assessment', pageWidth / 2, y, { align: 'center' });
+        pdf.text(exportAssessmentTitle, pageWidth / 2, y, { align: 'center' });
         y += 10;
         
         pdf.setLineWidth(0.5);
@@ -986,7 +1001,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             <div style="font-family: Arial, sans-serif; padding: 10px; background: white; color: black; font-size: 9px;">
                 <!-- Header -->
                 <div style="text-align: center; margin-bottom: 8px; border-bottom: 2px solid black; padding-bottom: 5px;">
-                    <h1 style="margin: 0; font-size: 16px; font-weight: bold;">RAAF PT-051 Training Assessment</h1>
+                    <h1 style="margin: 0; font-size: 16px; font-weight: bold;">${escapeHtml(exportAssessmentTitle)}</h1>
                 </div>
                 
                 <!-- Info Grid - Compact 2-column layout -->
@@ -1037,7 +1052,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 
                 <!-- Comments Section - Compact -->
                 <div style="border: 1px solid black; padding: 6px;">
-                    <div style="margin-bottom: 4px;"><strong>${escapeHtml(instructorLabel)} Comments:</strong></div>
+                    <div style="margin-bottom: 4px;"><strong>${escapeHtml(exportAssessorLabel)} Comments:</strong></div>
                     <div style="border: 1px solid #d1d5db; padding: 4px; min-height: 30px; background: #f9fafb; font-size: 8px;">
                         ${eventScore?.comments || 'No comments provided'}
                     </div>

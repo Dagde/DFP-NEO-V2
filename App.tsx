@@ -42371,6 +42371,7 @@ appliedUpdates.forEach(update => {
                     serviceDefinitions={serviceDefinitions}
                     resourceDisplayNames={resourceDisplayNames}
                     instructorLabel={instructorLabel}
+                    trainingReportTemplate={trainingReportTemplate}
                     hasTraineesEnabled={activeUnitHasTrainees}
                 />;
             case 'ArchivedCourses':

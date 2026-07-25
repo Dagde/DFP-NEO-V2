@@ -79134,9 +79134,17 @@ const TrainingRecordsExportView = ({
   pt051Assessments,
   onSavePT051Assessment,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "QFI",
+  instructorLabel = "Report Instructor",
+  trainingReportTemplate = null,
   hasTraineesEnabled = true
 }) => {
+  const activeTrainingReportTemplate = reactExports.useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate || DEFAULT_TRAINING_REPORT_TEMPLATE),
+    [trainingReportTemplate]
+  );
+  const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || "Training Report";
+  const exportAssessmentTitle = `${exportReportName} Training Assessment`;
+  activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || "Report Instructor";
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -79647,7 +79655,7 @@ const TrainingRecordsExportView = ({
     const contentWidth = pageWidth - 2 * margin;
     pdf.setFontSize(16);
     pdf.setFont("helvetica", "bold");
-    pdf.text("RAAF PT-051 Training Assessment", pageWidth / 2, y, { align: "center" });
+    pdf.text(exportAssessmentTitle, pageWidth / 2, y, { align: "center" });
     y += 10;
     pdf.setLineWidth(0.5);
     pdf.line(margin, y, pageWidth - margin, y);
@@ -80705,7 +80713,8 @@ const TrainingRecordsView = ({
   platformConfig = null,
   serviceDefinitions = [],
   resourceDisplayNames,
-  instructorLabel = "QFI",
+  instructorLabel = "Report Instructor",
+  trainingReportTemplate = null,
   hasTraineesEnabled = true
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("courses");
@@ -80776,6 +80785,7 @@ const TrainingRecordsView = ({
           onSavePT051Assessment,
           resourceDisplayNames,
           instructorLabel,
+          trainingReportTemplate,
           hasTraineesEnabled
         }
       )
@@ -120190,6 +120200,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             serviceDefinitions,
             resourceDisplayNames,
             instructorLabel,
+            trainingReportTemplate,
             hasTraineesEnabled: activeUnitHasTrainees
           }
         );
