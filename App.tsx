@@ -9890,7 +9890,7 @@ function generateDfpInternal(
 
         if (!picQualification) {
             diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-            diag.conclusion = ['Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings - Staff Qualifications.'];
+            diag.conclusion = ['Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings - Personnel Qualifications.'];
             saveNeoBuildDiag('final');
             return generatedEvents;
         }

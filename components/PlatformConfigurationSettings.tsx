@@ -9114,9 +9114,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div id="platform-staff-qualifications" className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h5 className="text-sm font-bold text-emerald-100">Staff Qualifications</h5>
+                <h5 className="text-sm font-bold text-emerald-100">Personnel Qualifications</h5>
                 <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
-                  Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff Profile qualification options are drawn from this list.
+                  Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -9141,7 +9141,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={entry.name}
                     disabled={!canEditRankTerminology}
                     onChange={(value) => updateStaffQualificationEntry(entry.id, { name: value })}
-                    info="The full qualification name shown in Staff Profile."
+                    info="The full qualification name shown in personnel profiles."
                   />
                   <Field
                     label="Code"
@@ -9157,7 +9157,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onChange={(value) => updateStaffQualificationEntry(entry.id, {
                       roleRestrictions: value.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean),
                     })}
-                    info="Optional comma-separated staff roles this qualification applies to. Leave blank for all roles."
+                    info="Optional comma-separated roles this qualification applies to. Leave blank for all roles."
                   />
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operational Models</label>

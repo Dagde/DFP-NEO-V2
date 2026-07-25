@@ -24791,7 +24791,7 @@ ${errorText || `HTTP ${response.status}`}`);
                     trainee,
                     event: inlinePt051Event,
                     initialAssessment: currentAssessment,
-                    instructorLabel: "QFI",
+                    instructorLabel: activeTrainingReportTemplate.modules.comments.fields.assessor || "Report Instructor",
                     trainingReportTerminology,
                     trainingReportTemplate: activeTrainingReportTemplate,
                     trainingReportUnitCode: activeTrainingReportUnitCode,
@@ -73160,8 +73160,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-staff-qualifications", className: "rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Staff Qualifications" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff Profile qualification options are drawn from this list." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Personnel Qualifications" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               renderRankTerminologySectionAction(),
@@ -73185,7 +73185,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: entry.name,
                 disabled: !canEditRankTerminology,
                 onChange: (value) => updateStaffQualificationEntry(entry.id, { name: value }),
-                info: "The full qualification name shown in Staff Profile."
+                info: "The full qualification name shown in personnel profiles."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -73207,7 +73207,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 onChange: (value) => updateStaffQualificationEntry(entry.id, {
                   roleRestrictions: value.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean)
                 }),
-                info: "Optional comma-separated staff roles this qualification applies to. Leave blank for all roles."
+                info: "Optional comma-separated roles this qualification applies to. Leave blank for all roles."
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -93378,7 +93378,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     if (!picQualification) {
       diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-      diag.conclusion = ["Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings - Staff Qualifications."];
+      diag.conclusion = ["Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings - Personnel Qualifications."];
       saveNeoBuildDiag("final");
       return generatedEvents;
     }
