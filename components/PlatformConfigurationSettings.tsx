@@ -3330,6 +3330,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const applyTrainingReportNameDraftsToConfig = (
+    sourceConfig: PlatformConfig,
+    drafts: Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>,
+  ): PlatformConfig => {
+    if (activeTrainingReportUnitIndex < 0) return sourceConfig;
+    const nextDrafts: Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>> = {};
+    if ('genericName' in drafts) {
+      nextDrafts.genericName = String(drafts.genericName ?? '').slice(0, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH);
+    }
+    if ('displayName' in drafts) {
+      nextDrafts.displayName = String(drafts.displayName ?? '').slice(0, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH);
+    }
+    if (!('genericName' in nextDrafts) && !('displayName' in nextDrafts)) return sourceConfig;
+
+    const targetUnit = sourceConfig.units[activeTrainingReportUnitIndex];
+    if (!targetUnit) return sourceConfig;
+    const orgSettings = sourceConfig.organisations[0]?.settings || {};
+    const currentTemplate = normaliseTrainingReportTemplate(
+      targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
+      targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null,
+    );
+    const nextTemplate = normaliseTrainingReportTemplate({
+      ...currentTemplate,
+      ...nextDrafts,
+    });
+
+    return {
+      ...sourceConfig,
+      units: sourceConfig.units.map((unit, index) => index === activeTrainingReportUnitIndex
+        ? {
+            ...unit,
+            settings: {
+              ...(unit.settings || {}),
+              trainingReportTemplate: nextTemplate,
+              trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+              trainingReportPhraseBank,
+            },
+          }
+        : unit),
+    };
+  };
+
   const updateTrainingReportNameDraft = (
     key: 'genericName' | 'displayName',
     value: string,
@@ -3350,12 +3392,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const commitTrainingReportNameDraft = (key: 'genericName' | 'displayName') => {
     if (!(key in trainingReportNameDrafts)) return;
-    updateTrainingReportTemplate({ [key]: trainingReportNameDrafts[key] ?? '' });
+    setConfig((previous) => applyTrainingReportNameDraftsToConfig(previous, { [key]: trainingReportNameDrafts[key] ?? '' }));
     setTrainingReportNameDrafts((previous) => {
       if (!(key in previous)) return previous;
       const { [key]: _committedDraft, ...remainingDrafts } = previous;
       return remainingDrafts;
     });
+  };
+
+  const saveTrainingReportTemplateSettings = async () => {
+    const configToSave = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
+    setConfig(configToSave);
+    setTrainingReportNameDrafts({});
+    const saved = await save(configToSave, 'platform-training-report-template', {
+      reloadPage: false,
+      successMessage: 'Training Report settings saved.',
+    });
+    if (saved) {
+      setTrainingReportTemplateUnlocked(false);
+    }
   };
 
   const updateTrainingReportModule = (
@@ -8339,10 +8394,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             trainingReportTemplateUnlocked ? (
               <button
                 type="button"
-                onClick={() => setTrainingReportTemplateUnlocked(false)}
+                disabled={saving || applyingChanges}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={saveTrainingReportTemplateSettings}
                 className={platformActionButtonClass}
               >
-                Lock
+                Save
               </button>
             ) : (
               <button
@@ -8520,7 +8577,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.resource} value={getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.callsign} value={trainingReportPreviewCallsign} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.unit} value={trainingReportPreviewUnitCode} />
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.date} value="2026-06-07" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.date} value="07 Jun 26" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.assessor} value="SQNLDR Burns" />
                   </div>
                 </TrainingReportModulePreview>

@@ -145,10 +145,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Format date as dd MMM yy
     const formatDate = (dateStr: string): string => {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = date.toLocaleString('en-GB', { month: 'short' });
-        const year = String(date.getFullYear()).slice(-2);
+        const isoMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const date = isoMatch
+            ? new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3])))
+            : new Date(dateStr);
+        if (Number.isNaN(date.getTime())) return dateStr;
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        const month = date.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+        const year = String(date.getUTCFullYear()).slice(-2);
         return `${day} ${month} ${year}`;
     };
 
@@ -1009,7 +1013,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     <div><strong>Trainee:</strong> ${trainee?.rank || ''} ${trainee?.name || event.student || event.pilot || 'N/A'}</div>
                     <div><strong>Course:</strong> ${trainee?.course || 'N/A'}</div>
                     <div><strong>Instructor:</strong> ${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</div>
-                    <div><strong>Date:</strong> ${event.date || 'N/A'}</div>
+                    <div><strong>Date:</strong> ${formatDate(event.date) || 'N/A'}</div>
                     <div><strong>Flight:</strong> ${event.flightNumber || 'N/A'}</div>
                     <div><strong>Duration:</strong> ${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</div>
                 </div>

@@ -21296,6 +21296,16 @@ PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
+const formatTrainingReportDisplayDate = (dateString) => {
+  if (!dateString) return "";
+  const isoMatch = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = isoMatch ? new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]))) : new Date(dateString);
+  if (Number.isNaN(date.getTime())) return String(dateString);
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = date.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+  const year = String(date.getUTCFullYear()).slice(-2);
+  return `${day} ${month} ${year}`;
+};
 const stripGeneratedFollowUpNotes$1 = (value, generatedPrefix = "") => {
   const lines = String(value || "").split("\n");
   const cleanedPrefix = generatedPrefix.trim();
@@ -22077,6 +22087,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       const completionLabel = printReportTemplate.completionResults.find((option) => option.code === dcoResult)?.label || dcoResult || "None";
       const overallResultLabel = overallResult === "P" ? printReportTemplate.overallResults.passLabel : overallResult === "F" ? showDoubleMarginalWarning ? printReportTemplate.overallResults.doubleRepeatLabel : printReportTemplate.overallResults.failLabel : "Not selected";
       const reportDate = assessment.date || currentEvent.date || event.date || "";
+      const displayReportDate = formatTrainingReportDisplayDate(reportDate);
       const startTime = currentEvent.startTime ?? event.startTime ?? 0;
       const duration = currentEvent.duration ?? event.duration ?? 0;
       const endTime = startTime + duration;
@@ -22088,7 +22099,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(80);
-      doc.text(`${assessment.flightNumber || event.flightNumber || "Event"} - ${trainee.rank || ""} ${trainee.name || trainee.fullName || ""} - ${reportDate}`, margin, y);
+      doc.text(`${assessment.flightNumber || event.flightNumber || "Event"} - ${trainee.rank || ""} ${trainee.name || trainee.fullName || ""} - ${displayReportDate}`, margin, y);
       y += 8;
       addSectionTitle(printReportTemplate.modules.overview.title || "Event Details");
       addKeyValueRows([
@@ -22096,7 +22107,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         [printOverviewFields.type, getEventDescription()],
         ["Trainee", `${trainee.rank || ""} ${trainee.name || trainee.fullName || ""}`.trim()],
         ["Course", trainee.course || "N/A"],
-        [printOverviewFields.date, reportDate || "N/A"],
+        [printOverviewFields.date, displayReportDate || "N/A"],
         [printOverviewFields.timing, `${formatTime$6(startTime)} - ${formatTime$6(endTime)}`],
         [printOverviewFields.assessor, assessment.instructorName || event.instructor || "N/A"],
         [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
@@ -22151,7 +22162,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         printReportName,
         assessment.flightNumber || event.flightNumber || "Training-Report",
         trainee.name || trainee.fullName || "Person",
-        reportDate || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
+        displayReportDate || formatTrainingReportDisplayDate((/* @__PURE__ */ new Date()).toISOString().slice(0, 10))
       ].join("-").replace(/[^a-z0-9_-]+/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
       doc.save(`${safeName}.pdf`);
     } catch (error) {
@@ -22170,7 +22181,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
     const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?
 
 Trainee: ${assessment.traineeFullName}
-Date: ${assessment.date}
+Date: ${formatTrainingReportDisplayDate(assessment.date) || "N/A"}
 Grade: ${assessment.overallGrade || "N/A"}
 
 This action cannot be undone.`;
@@ -67900,6 +67911,40 @@ This permanently removes the organisation record from platform configuration and
       };
     });
   };
+  const applyTrainingReportNameDraftsToConfig = (sourceConfig, drafts) => {
+    if (activeTrainingReportUnitIndex < 0) return sourceConfig;
+    const nextDrafts = {};
+    if ("genericName" in drafts) {
+      nextDrafts.genericName = String(drafts.genericName ?? "").slice(0, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH);
+    }
+    if ("displayName" in drafts) {
+      nextDrafts.displayName = String(drafts.displayName ?? "").slice(0, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH);
+    }
+    if (!("genericName" in nextDrafts) && !("displayName" in nextDrafts)) return sourceConfig;
+    const targetUnit = sourceConfig.units[activeTrainingReportUnitIndex];
+    if (!targetUnit) return sourceConfig;
+    const orgSettings = sourceConfig.organisations[0]?.settings || {};
+    const currentTemplate = normaliseTrainingReportTemplate(
+      targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
+      targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null
+    );
+    const nextTemplate = normaliseTrainingReportTemplate({
+      ...currentTemplate,
+      ...nextDrafts
+    });
+    return {
+      ...sourceConfig,
+      units: sourceConfig.units.map((unit, index) => index === activeTrainingReportUnitIndex ? {
+        ...unit,
+        settings: {
+          ...unit.settings || {},
+          trainingReportTemplate: nextTemplate,
+          trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+          trainingReportPhraseBank
+        }
+      } : unit)
+    };
+  };
   const updateTrainingReportNameDraft = (key, value, maxLength) => {
     setTrainingReportNameDrafts((previous) => ({
       ...previous,
@@ -67914,12 +67959,24 @@ This permanently removes the organisation record from platform configuration and
   };
   const commitTrainingReportNameDraft = (key) => {
     if (!(key in trainingReportNameDrafts)) return;
-    updateTrainingReportTemplate({ [key]: trainingReportNameDrafts[key] ?? "" });
+    setConfig((previous) => applyTrainingReportNameDraftsToConfig(previous, { [key]: trainingReportNameDrafts[key] ?? "" }));
     setTrainingReportNameDrafts((previous) => {
       if (!(key in previous)) return previous;
       const { [key]: _committedDraft, ...remainingDrafts } = previous;
       return remainingDrafts;
     });
+  };
+  const saveTrainingReportTemplateSettings = async () => {
+    const configToSave = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
+    setConfig(configToSave);
+    setTrainingReportNameDrafts({});
+    const saved = await save(configToSave, "platform-training-report-template", {
+      reloadPage: false,
+      successMessage: "Training Report settings saved."
+    });
+    if (saved) {
+      setTrainingReportTemplateUnlocked(false);
+    }
   };
   const updateTrainingReportModule = (moduleKey, changes) => {
     updateTrainingReportTemplate((template) => ({
@@ -72352,9 +72409,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             "button",
             {
               type: "button",
-              onClick: () => setTrainingReportTemplateUnlocked(false),
+              disabled: saving || applyingChanges,
+              onMouseDown: (event) => event.preventDefault(),
+              onClick: saveTrainingReportTemplateSettings,
               className: platformActionButtonClass,
-              children: "Lock"
+              children: "Save"
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -72544,7 +72603,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: trainingReportPreviewCallsign }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: trainingReportPreviewUnitCode }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "2026-06-07" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "07 Jun 26" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.assessor, value: "SQNLDR Burns" })
               ] }) })
             ] }),
@@ -79213,10 +79272,12 @@ const TrainingRecordsExportView = ({
   };
   const formatDate2 = (dateStr) => {
     if (!dateStr) return "";
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("en-GB", { month: "short" });
-    const year = String(date.getFullYear()).slice(-2);
+    const isoMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const date = isoMatch ? new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]))) : new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const month = date.toLocaleString("en-GB", { month: "short", timeZone: "UTC" });
+    const year = String(date.getUTCFullYear()).slice(-2);
     return `${day} ${month} ${year}`;
   };
   const allEvents = reactExports.useMemo(() => {

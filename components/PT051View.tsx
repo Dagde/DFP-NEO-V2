@@ -60,6 +60,19 @@ const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
 
+const formatTrainingReportDisplayDate = (dateString?: string): string => {
+    if (!dateString) return '';
+    const isoMatch = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const date = isoMatch
+        ? new Date(Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3])))
+        : new Date(dateString);
+    if (Number.isNaN(date.getTime())) return String(dateString);
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = date.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+    const year = String(date.getUTCFullYear()).slice(-2);
+    return `${day} ${month} ${year}`;
+};
+
 const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): string => {
     const lines = String(value || '').split('\n');
     const cleanedPrefix = generatedPrefix.trim();
@@ -1032,6 +1045,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     ? (showDoubleMarginalWarning ? printReportTemplate.overallResults.doubleRepeatLabel : printReportTemplate.overallResults.failLabel)
                     : 'Not selected';
             const reportDate = assessment.date || currentEvent.date || event.date || '';
+            const displayReportDate = formatTrainingReportDisplayDate(reportDate);
             const startTime = currentEvent.startTime ?? event.startTime ?? 0;
             const duration = currentEvent.duration ?? event.duration ?? 0;
             const endTime = startTime + duration;
@@ -1044,7 +1058,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             doc.setTextColor(80);
-            doc.text(`${assessment.flightNumber || event.flightNumber || 'Event'} - ${trainee.rank || ''} ${trainee.name || trainee.fullName || ''} - ${reportDate}`, margin, y);
+            doc.text(`${assessment.flightNumber || event.flightNumber || 'Event'} - ${trainee.rank || ''} ${trainee.name || trainee.fullName || ''} - ${displayReportDate}`, margin, y);
             y += 8;
 
             addSectionTitle(printReportTemplate.modules.overview.title || 'Event Details');
@@ -1053,7 +1067,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 [printOverviewFields.type, getEventDescription()],
                 ['Trainee', `${trainee.rank || ''} ${trainee.name || trainee.fullName || ''}`.trim()],
                 ['Course', trainee.course || 'N/A'],
-                [printOverviewFields.date, reportDate || 'N/A'],
+                [printOverviewFields.date, displayReportDate || 'N/A'],
                 [printOverviewFields.timing, `${formatTime(startTime)} - ${formatTime(endTime)}`],
                 [printOverviewFields.assessor, assessment.instructorName || event.instructor || 'N/A'],
                 [printOverviewFields.resource, formatTrainingReportResource(currentEvent.resourceId || event.resourceId)],
@@ -1114,7 +1128,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 printReportName,
                 assessment.flightNumber || event.flightNumber || 'Training-Report',
                 trainee.name || trainee.fullName || 'Person',
-                reportDate || new Date().toISOString().slice(0, 10),
+                displayReportDate || formatTrainingReportDisplayDate(new Date().toISOString().slice(0, 10)),
             ]
                 .join('-')
                 .replace(/[^a-z0-9_-]+/gi, '-')
@@ -1137,7 +1151,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const confirmDeleteAssessment = async () => {
         // Simple confirmation - no PIN required
-        const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${assessment.date}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
+        const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${formatTrainingReportDisplayDate(assessment.date) || 'N/A'}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
         
         console.log('🗑️ PT051View: Delete button clicked');
         // Use custom dark confirm modal instead of browser default
