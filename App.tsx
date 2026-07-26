@@ -31435,6 +31435,10 @@ const App: React.FC = () => {
             request.resourceCount === 1 ? 'Aircraft' : `Aircraft ${index + 1}`
         ));
 
+        const peopleRequired = request.peopleRequired.length > 0
+            ? request.peopleRequired
+            : (request.eventType.syllabusType === 'Academics' ? [] : [instructorLabel || 'Instructor', 'Trainee']);
+
         const newItem: SyllabusItemDetail = {
             id: `custom-${Date.now()}-${eventCode}`,
             code: eventCode,
@@ -31460,7 +31464,7 @@ const App: React.FC = () => {
             resourceNumber: request.resourceCount,
             resourceCount: request.resourceCount,
             acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
-            resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : [instructorLabel || 'Instructor', 'Trainee'],
+            resourcesHuman: peopleRequired,
             completedAt: null,
             masterEventId: undefined,
             lmpSource: 'custom',
@@ -31497,6 +31501,7 @@ const App: React.FC = () => {
                     `Type: ${request.eventType.label}`,
                     `Day/Night: ${request.dayNight}`,
                     `Resources: ${request.resourceCount}`,
+                    `People Required: ${peopleRequired.join(', ') || 'None'}`,
                     `Follows: ${followsItem.code}`,
                     `Trainee: ${trainee.rank ? `${trainee.rank} ` : ''}${trainee.name}`,
                 ].join('; ')
@@ -39151,6 +39156,10 @@ appliedUpdates.forEach(update => {
             request.resourceCount === 1 ? 'Aircraft' : `Aircraft ${index + 1}`
         ));
 
+        const peopleRequired = request.peopleRequired.length > 0
+            ? request.peopleRequired
+            : (request.eventType.syllabusType === 'Academics' ? [] : ['Pilot']);
+
         const newItem = {
             code: eventCode,
             phase: followsItem.phase || assignment.code,
@@ -39174,7 +39183,7 @@ appliedUpdates.forEach(update => {
             resourcesPhysical: physicalResources,
             resourceNumber: request.resourceCount,
             acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
-            resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : ['Pilot'],
+            resourcesHuman: peopleRequired,
             location: assignment.locationCode || followsItem.location || school,
             unit: assignment.unitCode || followsItem.unit || activeUnitCode,
             courses: [assignment.code],

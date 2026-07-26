@@ -20523,6 +20523,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
 };
 const splitListInput = (value) => value.split("\n").map((item) => item.trim()).filter(Boolean);
 const joinListInput = (items) => (items || []).join("\n");
+const getDefaultPeopleRequiredForInsertType = (eventType) => eventType?.syllabusType === "Academics" ? [] : ["Instructor", "Trainee"];
 const alignPhysicalResourcesToResourceNumber = (resources, resourceNumber, resourceLabel = "Aircraft") => {
   const count = Math.max(0, Math.round(Number(resourceNumber) || 0));
   const existing = resources.filter((resource) => String(resource || "").trim().length > 0);
@@ -20761,6 +20762,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
   const [preFlightTime, setPreFlightTime] = reactExports.useState(selectedType?.preFlightTime || 0);
   const [postFlightTime, setPostFlightTime] = reactExports.useState(selectedType?.postFlightTime || 0);
   const [resourceCount, setResourceCount] = reactExports.useState(selectedType?.resourceCount || 0);
+  const [peopleRequired, setPeopleRequired] = reactExports.useState(joinListInput(getDefaultPeopleRequiredForInsertType(selectedType)));
   const [followsEventId, setFollowsEventId] = reactExports.useState(initialAnchorItem?.id || initialAnchorItem?.code || "");
   const [validationMessage, setValidationMessage] = reactExports.useState("");
   if (options.length === 0) {
@@ -20784,6 +20786,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
     setPreFlightTime(nextType?.preFlightTime || 0);
     setPostFlightTime(nextType?.postFlightTime || 0);
     setResourceCount(nextType?.resourceCount || 0);
+    setPeopleRequired(joinListInput(getDefaultPeopleRequiredForInsertType(nextType)));
   };
   const handleSave = () => {
     const trimmedLabel = label.trim().slice(0, INSERT_EVENT_LABEL_MAX_LENGTH);
@@ -20809,6 +20812,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
       preFlightTime: Math.max(0, preFlightTime),
       postFlightTime: Math.max(0, postFlightTime),
       resourceCount: Math.max(0, Math.round(resourceCount)),
+      peopleRequired: splitListInput(peopleRequired),
       followsEventId
     });
   };
@@ -20867,8 +20871,12 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Resources Required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Aircraft / Resources Required" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "1", min: "0", value: resourceCount, onChange: (event) => setResourceCount(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "People Required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: peopleRequired, onChange: (event) => setPeopleRequired(event.target.value) })
       ] })
     ] }),
     validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
@@ -111122,6 +111130,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const followsItem = originalTraineeLMP[insertionIndex];
     const nextMasterItem = originalTraineeLMP.slice(insertionIndex + 1).find((item) => !isLmpOverlayItem(item));
     const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
+    const peopleRequired = request.peopleRequired.length > 0 ? request.peopleRequired : request.eventType.syllabusType === "Academics" ? [] : [instructorLabel || "Instructor", "Trainee"];
     const newItem = {
       id: `custom-${Date.now()}-${eventCode2}`,
       code: eventCode2,
@@ -111147,7 +111156,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       resourceNumber: request.resourceCount,
       resourceCount: request.resourceCount,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
-      resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : [instructorLabel || "Instructor", "Trainee"],
+      resourcesHuman: peopleRequired,
       completedAt: null,
       masterEventId: void 0,
       lmpSource: "custom",
@@ -111182,6 +111191,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           `Type: ${request.eventType.label}`,
           `Day/Night: ${request.dayNight}`,
           `Resources: ${request.resourceCount}`,
+          `People Required: ${peopleRequired.join(", ") || "None"}`,
           `Follows: ${followsItem.code}`,
           `Trainee: ${trainee.rank ? `${trainee.rank} ` : ""}${trainee.name}`
         ].join("; ")
@@ -117461,6 +117471,7 @@ ${conflictLines.join("\n")}${moreText}`,
     const nextSort = Number(nextItem?.sortOrder);
     const sortOrder = Number.isFinite(nextSort) && nextSort > followsSort + 1 ? Math.floor((followsSort + nextSort) / 2) : followsSort + 1;
     const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
+    const peopleRequired = request.peopleRequired.length > 0 ? request.peopleRequired : request.eventType.syllabusType === "Academics" ? [] : ["Pilot"];
     const newItem = {
       code: eventCode2,
       phase: followsItem.phase || assignment.code,
@@ -117484,7 +117495,7 @@ ${conflictLines.join("\n")}${moreText}`,
       resourcesPhysical: physicalResources,
       resourceNumber: request.resourceCount,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
-      resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : ["Pilot"],
+      resourcesHuman: peopleRequired,
       location: assignment.locationCode || followsItem.location || school,
       unit: assignment.unitCode || followsItem.unit || activeUnitCode,
       courses: [assignment.code],

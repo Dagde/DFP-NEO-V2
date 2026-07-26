@@ -46,6 +46,7 @@ export interface InsertLmpEventRequest {
     preFlightTime: number;
     postFlightTime: number;
     resourceCount: number;
+    peopleRequired: string[];
     followsEventId: string;
 }
 
@@ -56,6 +57,10 @@ const splitListInput = (value: string): string[] =>
         .filter(Boolean);
 
 const joinListInput = (items?: string[]): string => (items || []).join('\n');
+
+const getDefaultPeopleRequiredForInsertType = (eventType?: InsertEventTypeConfig): string[] => (
+    eventType?.syllabusType === 'Academics' ? [] : ['Instructor', 'Trainee']
+);
 
 const alignPhysicalResourcesToResourceNumber = (
     resources: string[],
@@ -349,6 +354,7 @@ export const InsertEventModal: React.FC<{
     const [preFlightTime, setPreFlightTime] = useState(selectedType?.preFlightTime || 0);
     const [postFlightTime, setPostFlightTime] = useState(selectedType?.postFlightTime || 0);
     const [resourceCount, setResourceCount] = useState(selectedType?.resourceCount || 0);
+    const [peopleRequired, setPeopleRequired] = useState(joinListInput(getDefaultPeopleRequiredForInsertType(selectedType)));
     const [followsEventId, setFollowsEventId] = useState(initialAnchorItem?.id || initialAnchorItem?.code || '');
     const [validationMessage, setValidationMessage] = useState('');
 
@@ -382,6 +388,7 @@ export const InsertEventModal: React.FC<{
         setPreFlightTime(nextType?.preFlightTime || 0);
         setPostFlightTime(nextType?.postFlightTime || 0);
         setResourceCount(nextType?.resourceCount || 0);
+        setPeopleRequired(joinListInput(getDefaultPeopleRequiredForInsertType(nextType)));
     };
 
     const handleSave = () => {
@@ -408,6 +415,7 @@ export const InsertEventModal: React.FC<{
             preFlightTime: Math.max(0, preFlightTime),
             postFlightTime: Math.max(0, postFlightTime),
             resourceCount: Math.max(0, Math.round(resourceCount)),
+            peopleRequired: splitListInput(peopleRequired),
             followsEventId,
         });
     };
@@ -469,8 +477,12 @@ export const InsertEventModal: React.FC<{
                         <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
                     </label>
                     <label className="space-y-1">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Resources Required</span>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Aircraft / Resources Required</span>
                         <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="1" min="0" value={resourceCount} onChange={(event) => setResourceCount(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1 md:col-span-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">People Required</span>
+                        <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={peopleRequired} onChange={(event) => setPeopleRequired(event.target.value)} />
                     </label>
                 </div>
                 {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
