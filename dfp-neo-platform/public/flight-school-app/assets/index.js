@@ -31065,21 +31065,29 @@ const isPersonDropdownKey = (key) => Boolean(
   key && (key === "pic-dropdown-portal" || key === "copilot-dropdown-portal" || key.startsWith("formation-pic-dropdown-") || key.startsWith("formation-crew-dropdown-"))
 );
 const usePersistentDropdownOpen = (dropdownKey) => {
-  const [open, setLocalOpen] = reactExports.useState(() => activeAddFlightDropdownKey === dropdownKey);
+  const [open, setLocalOpen] = reactExports.useState(false);
   reactExports.useEffect(() => {
     const listener = (activeKey) => {
       setLocalOpen(activeKey === dropdownKey);
     };
     addFlightDropdownListeners.add(listener);
-    listener(activeAddFlightDropdownKey);
     return () => {
       addFlightDropdownListeners.delete(listener);
+      if (activeAddFlightDropdownKey === dropdownKey) {
+        setActiveAddFlightDropdownKey(null);
+      }
     };
   }, [dropdownKey]);
   const setOpen = reactExports.useCallback((next) => {
-    const current = activeAddFlightDropdownKey === dropdownKey;
-    const nextOpen = typeof next === "function" ? next(current) : next;
-    setActiveAddFlightDropdownKey(nextOpen ? dropdownKey : null);
+    setLocalOpen((currentOpen) => {
+      const nextOpen = typeof next === "function" ? next(currentOpen) : next;
+      if (nextOpen) {
+        setActiveAddFlightDropdownKey(dropdownKey);
+      } else if (activeAddFlightDropdownKey === dropdownKey) {
+        setActiveAddFlightDropdownKey(null);
+      }
+      return nextOpen;
+    });
   }, [dropdownKey]);
   return [open, setOpen];
 };

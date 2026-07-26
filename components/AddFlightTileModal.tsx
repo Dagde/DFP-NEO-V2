@@ -198,23 +198,31 @@ const isPersonDropdownKey = (key: string | null) => Boolean(
 );
 
 const usePersistentDropdownOpen = (dropdownKey: string) => {
-  const [open, setLocalOpen] = useState(() => activeAddFlightDropdownKey === dropdownKey);
+  const [open, setLocalOpen] = useState(false);
 
   useEffect(() => {
     const listener = (activeKey: string | null) => {
       setLocalOpen(activeKey === dropdownKey);
     };
     addFlightDropdownListeners.add(listener);
-    listener(activeAddFlightDropdownKey);
     return () => {
       addFlightDropdownListeners.delete(listener);
+      if (activeAddFlightDropdownKey === dropdownKey) {
+        setActiveAddFlightDropdownKey(null);
+      }
     };
   }, [dropdownKey]);
 
   const setOpen = useCallback((next: boolean | ((current: boolean) => boolean)) => {
-    const current = activeAddFlightDropdownKey === dropdownKey;
-    const nextOpen = typeof next === 'function' ? next(current) : next;
-    setActiveAddFlightDropdownKey(nextOpen ? dropdownKey : null);
+    setLocalOpen(currentOpen => {
+      const nextOpen = typeof next === 'function' ? next(currentOpen) : next;
+      if (nextOpen) {
+        setActiveAddFlightDropdownKey(dropdownKey);
+      } else if (activeAddFlightDropdownKey === dropdownKey) {
+        setActiveAddFlightDropdownKey(null);
+      }
+      return nextOpen;
+    });
   }, [dropdownKey]);
 
   return [open, setOpen] as const;
