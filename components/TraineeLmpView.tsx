@@ -279,7 +279,7 @@ export const LmpEventEditModal: React.FC<{
                         <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={resourcesPhysical} onChange={(event) => setResourcesPhysical(event.target.value)} />
                     </label>
                     <label className="space-y-1 md:col-span-2">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Human Resources</span>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">People Required</span>
                         <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={resourcesHuman} onChange={(event) => setResourcesHuman(event.target.value)} />
                     </label>
                     <label className="space-y-1">
@@ -660,7 +660,7 @@ const DetailView: React.FC<{
             <legend className="px-2 text-sm font-semibold text-gray-300">Resources</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                 <DetailList title="Physical Resources" items={item.resourcesPhysical} />
-                <DetailList title="Human Resources" items={item.resourcesHuman} />
+                <DetailList title="People Required" items={item.resourcesHuman} />
             </div>
         </fieldset>
     </div>

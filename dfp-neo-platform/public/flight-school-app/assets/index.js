@@ -20719,7 +20719,7 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
         /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: resourcesPhysical, onChange: (event) => setResourcesPhysical(event.target.value) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Human Resources" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "People Required" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: resourcesHuman, onChange: (event) => setResourcesHuman(event.target.value) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
@@ -21012,7 +21012,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Resources" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Physical Resources", items: item.resourcesPhysical }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Human Resources", items: item.resourcesHuman })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "People Required", items: item.resourcesHuman })
     ] })
   ] })
 ] });
@@ -55233,10 +55233,10 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Resources" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Physical Resources", items: currentItem.resourcesPhysical, onChange: (val) => handleFieldChange("resourcesPhysical", val) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Human Resources", items: currentItem.resourcesHuman, onChange: (val) => handleFieldChange("resourcesHuman", val) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "People Required", items: currentItem.resourcesHuman, onChange: (val) => handleFieldChange("resourcesHuman", val) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Physical Resources", items: item.resourcesPhysical }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Human Resources", items: item.resourcesHuman })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "People Required", items: item.resourcesHuman })
       ] }) })
     ] }),
     isEditing && onDeleteEvent && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-4 border-t border-gray-700 mt-2 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(

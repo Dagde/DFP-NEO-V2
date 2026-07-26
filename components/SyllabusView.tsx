@@ -892,12 +892,12 @@ const DetailView: React.FC<{
                  {isEditing ? (
                     <>
                         <EditableList title="Physical Resources" items={currentItem.resourcesPhysical} onChange={(val) => handleFieldChange('resourcesPhysical', val)} />
-                        <EditableList title="Human Resources" items={currentItem.resourcesHuman} onChange={(val) => handleFieldChange('resourcesHuman', val)} />
+                        <EditableList title="People Required" items={currentItem.resourcesHuman} onChange={(val) => handleFieldChange('resourcesHuman', val)} />
                     </>
                  ) : (
                     <>
                         <DetailList title="Physical Resources" items={item.resourcesPhysical} />
-                        <DetailList title="Human Resources" items={item.resourcesHuman} />
+                        <DetailList title="People Required" items={item.resourcesHuman} />
                     </>
                  )}
             </div>
