@@ -38914,7 +38914,7 @@ appliedUpdates.forEach(update => {
     const [isManualSyncing, setIsManualSyncing] = useState(false);
     const [lastPollTime, setLastPollTime] = useState<string>('');
     const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
-    const isAddFlightTileModalOpen = Boolean(selectedEvent && isAddingTile);
+    const isAddFlightTileModalOpen = isAddingTile;
 
     useEffect(() => {
         try {

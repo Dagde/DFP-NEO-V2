@@ -117996,7 +117996,7 @@ ${conflictLines.join("\n")}${moreText}`,
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
   const [lastPollTime, setLastPollTime] = reactExports.useState("");
   const [lastPollChanged, setLastPollChanged] = reactExports.useState(false);
-  const isAddFlightTileModalOpen = Boolean(selectedEvent && isAddingTile);
+  const isAddFlightTileModalOpen = isAddingTile;
   reactExports.useEffect(() => {
     try {
       window.localStorage.setItem("dfp_live_sync_enabled", liveSyncEnabled ? "true" : "false");
