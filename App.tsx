@@ -39010,6 +39010,22 @@ appliedUpdates.forEach(update => {
         return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     }, [isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, selectedEvent]);
 
+    useEffect(() => {
+        const handleLivePeopleChange = (event: Event) => {
+            if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+            const change = (event as CustomEvent)?.detail || {};
+            const path = String(change.path || '');
+            const isPeoplePath = path === '/api/personnel'
+                || path.startsWith('/api/personnel/')
+                || path === '/api/trainees'
+                || path.startsWith('/api/trainees/');
+            if (!isPeoplePath) return;
+            void handleDatabaseDataChanged();
+        };
+        window.addEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
+        return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
+    }, [handleDatabaseDataChanged, isAddFlightTileModalOpen, liveSyncEnabled, selectedEvent]);
+
 
     // ── Alert response polling ──────────────────────────────────────────────
     // Poll alert statuses for the current date every 5 seconds

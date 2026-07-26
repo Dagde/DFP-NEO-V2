@@ -117982,6 +117982,18 @@ ${conflictLines.join("\n")}${moreText}`,
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
   }, [isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, selectedEvent]);
+  reactExports.useEffect(() => {
+    const handleLivePeopleChange = (event) => {
+      if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+      const change = event?.detail || {};
+      const path = String(change.path || "");
+      const isPeoplePath = path === "/api/personnel" || path.startsWith("/api/personnel/") || path === "/api/trainees" || path.startsWith("/api/trainees/");
+      if (!isPeoplePath) return;
+      void handleDatabaseDataChanged();
+    };
+    window.addEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
+    return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
+  }, [handleDatabaseDataChanged, isAddFlightTileModalOpen, liveSyncEnabled, selectedEvent]);
   const syncAlertsForCurrentDate = reactExports.useCallback(async () => {
     try {
       const apiBase = getAppApiBase();
