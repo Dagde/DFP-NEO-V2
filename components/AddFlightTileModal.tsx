@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { loadUserPreferences, saveUserPreference } from '../utils/userPreferencesService';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
@@ -1662,7 +1661,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   currentLocationName,
   locationOpAreas = {},
   formationCallsigns = [],
-  userId,
   aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   aircraftConfigurationDefinitions = [],
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
@@ -2002,104 +2000,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [instructorsData, normalisePersonNameForAddTile, personnelData, traineesData]);
   const selectedPicHasIndividualCallsign = useMemo(() => Boolean(resolveAssignedCallsign(picName)), [picName, resolveAssignedCallsign]);
 
-  // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
-  type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
-  const LAYOUT_ELEM_KEYS: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
-  const MODAL_DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
-    startTime: { x: 14,  y: 7 },
-    picName:   { x: 83, y: 9 },
-    coPilot:   { x: 83, y: 36 },
-    duration:  { x: 410, y: 1 },
-    event:     { x: 486, y: 1 },
-    aircraft:  { x: 14, y: 57 },
-    area:      { x: 476, y: 58 },
-    callsign:  { x: 532, y: 59 },
-  };
-  const LAYOUT_PREF_KEY = 'flightTileLayout_v8';
-
-  // Helper: validate a positions object has all required keys
-  const isValidPositions = (posData: any): posData is Record<ElemKey, { x: number; y: number }> => {
-    return posData && typeof posData === 'object' &&
-      LAYOUT_ELEM_KEYS.every((k: ElemKey) => posData[k] && typeof posData[k].x === 'number');
-  };
-
-  // Helper: read from localStorage fallback
-  const readLocalLayout = (): Record<ElemKey, { x: number; y: number }> | null => {
-    try {
-      const raw = localStorage.getItem(LAYOUT_PREF_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.positions && isValidPositions(parsed.positions)) return parsed.positions;
-      }
-    } catch { /* ignore */ }
-    return null;
-  };
-
-  // Helper: write to localStorage fallback
-  const writeLocalLayout = (pos: Record<ElemKey, { x: number; y: number }>) => {
-    try { localStorage.setItem(LAYOUT_PREF_KEY, JSON.stringify({ positions: pos })); } catch { /* ignore */ }
-  };
-
-  // Initialise from localStorage immediately (synchronous, no flash)
-  const _localInit = readLocalLayout();
-  const [tileEditMode,      setTileEditMode]      = useState(false);
-  const [tileLayoutSaved,   setTileLayoutSaved]   = useState(_localInit !== null);
-  const [tilePositions,     setTilePositions]     = useState<Record<ElemKey, { x: number; y: number }>>(_localInit ?? MODAL_DEFAULT_POSITIONS);
-  const [tileSavedPositions,setTileSavedPositions]= useState<Record<ElemKey, { x: number; y: number }>>(_localInit ?? MODAL_DEFAULT_POSITIONS);
-
-  // Load from DB when userId is available — DB is authoritative over localStorage
-  useEffect(() => {
-    if (!userId) {
-      console.log('[TileLayout] No userId available — using localStorage only');
-      return;
-    }
-    console.log('[TileLayout] Loading layout from DB for userId:', userId);
-    loadUserPreferences(userId).then(prefs => {
-      const stored = prefs[LAYOUT_PREF_KEY];
-      if (stored && typeof stored === 'object' && 'positions' in stored) {
-        const posData = stored.positions as Record<ElemKey, { x: number; y: number }>;
-        if (isValidPositions(posData)) {
-          console.log('[TileLayout] Restored layout from DB');
-          setTilePositions(posData);
-          setTileSavedPositions(posData);
-          setTileLayoutSaved(true);
-          writeLocalLayout(posData); // keep localStorage in sync
-        }
-      } else {
-        console.log('[TileLayout] No layout found in DB');
-      }
-    }).catch(err => console.warn('[TileLayout] DB load failed:', err));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  // Handlers passed down to FlightTile
-  const handleEnterEditMode = () => setTileEditMode(true);
-
-  const handleExitEditMode = (save: boolean) => {
-    if (save) {
-      setTileSavedPositions({ ...tilePositions });
-      setTileLayoutSaved(true);
-      // Write to localStorage immediately (synchronous — no flash on next open)
-      writeLocalLayout(tilePositions);
-      // Write to DB (async — authoritative store)
-      if (userId) {
-        console.log('[TileLayout] Saving layout to DB for userId:', userId);
-        saveUserPreference(userId, LAYOUT_PREF_KEY, { positions: tilePositions })
-          .then(ok => console.log('[TileLayout] DB save result:', ok))
-          .catch(err => console.warn('[TileLayout] DB save failed:', err));
-      } else {
-        console.warn('[TileLayout] No userId — layout saved to localStorage only');
-      }
-    } else {
-      setTilePositions({ ...tileSavedPositions });
-    }
-    setTileEditMode(false);
-  };
-
-  const handleDragPosition = (key: string, pos: { x: number; y: number }) => {
-    setTilePositions(prev => ({ ...prev, [key]: pos }));
-  };
-
   // ── Determine the current location full name from school ──────────────────
   const locationFullName = currentLocationName || school;
 
@@ -2338,7 +2238,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return (t.course && courseColors[t.course]) || 'bg-gray-500';
   }, [picName, studentName, flightType, traineesData, courseColors, eventCategory]);
   const isManualFormation = isSctFormationCode(flightNumber);
-  const previewCallsign = isManualFormation && formationType ? `${formationType}1` : callsign;
 
   // ── Syllabus by course (for event dropdown) ───────────────────────────────
   const syllabusByCourse = useMemo(() => {
@@ -3469,26 +3368,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           {/* Interactive flight tile input for Flight School / Air Combat. Fixed Crew uses the structured controls above. */}
           {!isDeploy && !isFixedCrewModel && (
             <div>
-              <div className="mb-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3">
+              <div className="rounded-md border border-sky-900/70 bg-slate-950/45 p-3">
                 <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300">Flight Details</div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">PIC</label>
-                    <select
-                      value={picName}
-                      onChange={event => handlePicNameChange(event.target.value)}
-                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
-                    >
-                      <option value="">Select PIC</option>
-                      {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
-                        <optgroup key={group} label={group}>
-                          {standardPersonOptions.filter(person => person.group === group).map(person => (
-                            <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Event</label>
                     <select
@@ -3506,114 +3388,30 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Start Time</label>
-                    <select
-                      value={String(startTime)}
-                      onChange={event => { setStartTime(Number(event.target.value)); setGuidedStep('trainee'); }}
-                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
-                    >
-                      {timeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
+                    {isSingleSeatAircraft ? (
+                      <div className="rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-100">
+                        Solo - single-seat aircraft
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFlightType('Dual')}
+                          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Dual' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                        >
+                          Dual
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFlightType('Solo')}
+                          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Solo' ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                        >
+                          Solo
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {flightType === 'Dual' && eventCategory !== 'twr_di' && (
-                    <div>
-                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
-                      <select
-                        value={studentName}
-                        onChange={event => { setStudentName(event.target.value); setGuidedStep('instructor'); }}
-                        className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
-                      >
-                        <option value="">Select second person</option>
-                        {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
-                          <optgroup key={group} label={group}>
-                            {standardPersonOptions.filter(person => person.group === group && person.value !== picName).map(person => (
-                              <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Flight Preview</label>
-                {!tileEditMode && (
-                  <button type="button" onClick={handleEnterEditMode} className="rounded border border-gray-600 bg-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-100 hover:bg-gray-600">
-                    Edit Preview Layout
-                  </button>
-                )}
-              </div>
-              <div style={{ padding: '0 2px', pointerEvents: tileEditMode ? 'auto' : 'none' }}>
-                <FlightTile
-                  flightType={flightType}
-                  startTime={startTime}
-                  picName={picName}
-                  studentName={studentName}
-                  duration={duration}
-                  flightNumber={flightNumber}
-                  area={area}
-                  aircraftNumber={aircraftNumber}
-                  aircraftNumberPrefix={aircraftNumberPrefix}
-                  aircraftNumberSettings={aircraftNumberSettings}
-                  callsign={previewCallsign}
-                  color={tileColor}
-                  timeOptions={timeOptions}
-                  durationOptions={durationOptions}
-                  areaOptions={areaOptions}
-                  aircraftOptions={aircraftOptions}
-                  callsignOptions={callsignOptions}
-                  formationCallsigns={formationCallsigns}
-                  editMode={tileEditMode}
-                  layoutSaved={tileLayoutSaved}
-                  positions={tilePositions}
-                  savedPositions={tileSavedPositions}
-                  activeStep={guidedStep}
-                  onEnterEditMode={handleEnterEditMode}
-                  onExitEditMode={handleExitEditMode}
-                  onDragPosition={handleDragPosition}
-                  allUnits={allUnits}
-                  getLayer2={getLayer2}
-                  getNames={getNames}
-                  getPicNames={getPicNames}
-                  getDisplayLabel={getDisplayLabel}
-                  courseOptions={courseOptions}
-                  getEventsForCourse={getEventsForCourse}
-                  nextLMPEvent={nextLMPEvent}
-                  eventCategory={eventCategory}
-                  getCourseDisplayLabel={getCourseDisplayLabel}
-                  getEventDisplayLabel={getContinuationDisplayLabel}
-                  continuationEventOptions={getContinuationEventNames(sctEvents)}
-                  onFlightTypeChange={setFlightType}
-                  onStartTimeChange={(value) => {
-                    setStartTime(value);
-                    setGuidedStep('trainee');
-                  }}
-                  onPicNameChange={handlePicNameChange}
-                  onStudentNameChange={(name) => {
-                    setStudentName(name);
-                    setGuidedStep('instructor');
-                  }}
-                  onDurationChange={setDuration}
-                  onFlightNumberChange={handleFlightNumberChange}
-                  onAreaChange={(value) => {
-                    setArea(value);
-                    setGuidedStep('aircraft');
-                  }}
-                  onAircraftChange={(value) => {
-                    setAircraftNumber(value);
-                    setGuidedStep('done');
-                  }}
-                  onAircraftPrefixChange={setAircraftNumberPrefix}
-                  onCallsignChange={setCallsign}
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                The preview updates as you enter flight details. Use Edit Preview Layout only when you need to reposition preview text.
-              </p>
-              <div className="mt-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3">
-                <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300">Flight Details</div>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Start Time</label>
                     <select
@@ -3661,20 +3459,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     </div>
                   )}
                   <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Event</label>
-                    <select
-                      value={flightNumber}
-                      disabled={eventCategory === 'twr_di'}
-                      onChange={event => handleFlightNumberChange(event.target.value)}
-                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <option value="">Select event</option>
-                      {standardEventGroups.map(group => (
-                        <optgroup key={group.label} label={group.label}>
-                          {group.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
+                    <SelectLikeDropdown
+                      value={aircraftConfigId}
+                      onChange={setAircraftConfigId}
+                      width={260}
+                      dropdownKey="add-flight-config"
+                      options={aircraftConfigOptions.map(definition => ({ value: definition.id, label: definition.label }))}
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Duration</label>
@@ -3911,43 +3703,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             {/* Flight type toggle + Location + Date + Notes — hidden when deploying */}
             {!isDeploy && !isFixedCrewModel && (
               <>
-                {!isFixedCrewModel && <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
-                    {isSingleSeatAircraft ? (
-                      <div className="rounded-md border border-amber-400/50 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-100">
-                        Solo - single-seat aircraft
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setFlightType('Dual')}
-                          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Dual' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                        >
-                          Dual
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFlightType('Solo')}
-                          className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Solo' ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                        >
-                          Solo
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
-                    <SelectLikeDropdown
-                      value={aircraftConfigId}
-                      onChange={setAircraftConfigId}
-                      width={260}
-                      dropdownKey="add-flight-config"
-                      options={aircraftConfigOptions.map(definition => ({ value: definition.id, label: definition.label }))}
-                    />
-                  </div>
-                </div>}
                 {!isFixedCrewModel && !selectedPicHasIndividualCallsign && unitCallsignEntries.length > 0 && (
                   <div className="mb-4 rounded-lg border border-sky-500/25 bg-sky-950/20 p-3">
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Unit Callsign</label>
