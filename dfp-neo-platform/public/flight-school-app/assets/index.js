@@ -33918,8 +33918,80 @@ const AddFlightTileModal = ({
                 ] })
               ] }),
               !isDeploy && !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Flight Tile" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "0 2px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300", children: "Flight Details" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "PIC" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "select",
+                        {
+                          value: picName,
+                          onChange: (event) => handlePicNameChange(event.target.value),
+                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
+                          ]
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Event" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "select",
+                        {
+                          value: flightNumber,
+                          disabled: eventCategory === "twr_di",
+                          onChange: (event) => handleFlightNumberChange(event.target.value),
+                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select event" }),
+                            standardEventGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) }, group.label))
+                          ]
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Start Time" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: String(startTime),
+                          onChange: (event) => {
+                            setStartTime(Number(event.target.value));
+                            setGuidedStep("trainee");
+                          },
+                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
+                          children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
+                        }
+                      )
+                    ] }),
+                    flightType === "Dual" && eventCategory !== "twr_di" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Second Person" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "select",
+                        {
+                          value: studentName,
+                          onChange: (event) => {
+                            setStudentName(event.target.value);
+                            setGuidedStep("instructor");
+                          },
+                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second person" }),
+                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group && person.value !== picName).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
+                          ]
+                        }
+                      )
+                    ] })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wider text-gray-400", children: "Flight Preview" }),
+                  !tileEditMode && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleEnterEditMode, className: "rounded border border-gray-600 bg-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-100 hover:bg-gray-600", children: "Edit Preview Layout" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "0 2px", pointerEvents: tileEditMode ? "auto" : "none" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   FlightTile,
                   {
                     flightType,
@@ -33984,7 +34056,7 @@ const AddFlightTileModal = ({
                     onCallsignChange: setCallsign
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: "The tile updates as you enter the flight details below. The tile fields can also be used to make quick adjustments." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-2", children: "The preview updates as you enter flight details. Use Edit Preview Layout only when you need to reposition preview text." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300", children: "Flight Details" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2", children: [

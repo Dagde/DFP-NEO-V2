@@ -3469,8 +3469,82 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           {/* Interactive flight tile input for Flight School / Air Combat. Fixed Crew uses the structured controls above. */}
           {!isDeploy && !isFixedCrewModel && (
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Flight Tile</label>
-              <div style={{ padding: '0 2px' }}>
+              <div className="mb-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300">Flight Details</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">PIC</label>
+                    <select
+                      value={picName}
+                      onChange={event => handlePicNameChange(event.target.value)}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      <option value="">Select PIC</option>
+                      {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
+                        <optgroup key={group} label={group}>
+                          {standardPersonOptions.filter(person => person.group === group).map(person => (
+                            <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Event</label>
+                    <select
+                      value={flightNumber}
+                      disabled={eventCategory === 'twr_di'}
+                      onChange={event => handleFlightNumberChange(event.target.value)}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <option value="">Select event</option>
+                      {standardEventGroups.map(group => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Start Time</label>
+                    <select
+                      value={String(startTime)}
+                      onChange={event => { setStartTime(Number(event.target.value)); setGuidedStep('trainee'); }}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      {timeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+                  {flightType === 'Dual' && eventCategory !== 'twr_di' && (
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
+                      <select
+                        value={studentName}
+                        onChange={event => { setStudentName(event.target.value); setGuidedStep('instructor'); }}
+                        className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                      >
+                        <option value="">Select second person</option>
+                        {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
+                          <optgroup key={group} label={group}>
+                            {standardPersonOptions.filter(person => person.group === group && person.value !== picName).map(person => (
+                              <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">Flight Preview</label>
+                {!tileEditMode && (
+                  <button type="button" onClick={handleEnterEditMode} className="rounded border border-gray-600 bg-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-100 hover:bg-gray-600">
+                    Edit Preview Layout
+                  </button>
+                )}
+              </div>
+              <div style={{ padding: '0 2px', pointerEvents: tileEditMode ? 'auto' : 'none' }}>
                 <FlightTile
                   flightType={flightType}
                   startTime={startTime}
@@ -3535,7 +3609,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                The tile updates as you enter the flight details below. The tile fields can also be used to make quick adjustments.
+                The preview updates as you enter flight details. Use Edit Preview Layout only when you need to reposition preview text.
               </p>
               <div className="mt-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3">
                 <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300">Flight Details</div>
