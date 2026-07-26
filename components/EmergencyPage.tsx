@@ -4,6 +4,7 @@ import { useSystemFreeze, AllowedActions } from '../context/SystemFreezeContext'
 interface EmergencyPageProps {
     currentUserRole?: string;
     onShowSuccess?: (message: string) => void;
+    trainingReportDisplayName?: string;
 }
 
 const defaultAllowedActions: AllowedActions = {
@@ -15,12 +16,14 @@ const defaultAllowedActions: AllowedActions = {
 
 const EmergencyPage: React.FC<EmergencyPageProps> = ({
     currentUserRole,
-    onShowSuccess
+    onShowSuccess,
+    trainingReportDisplayName
 }) => {
     const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze();
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [pendingAllowedActions, setPendingAllowedActions] = useState<AllowedActions>(defaultAllowedActions);
+    const reportDisplayName = String(trainingReportDisplayName || '').trim() || 'Training Report';
 
     const handleAllowedActionChange = (action: keyof AllowedActions) => {
         setPendingAllowedActions(prev => ({
@@ -205,8 +208,8 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                                     className="w-5 h-5 rounded border-gray-500 text-amber-500 focus:ring-amber-500 focus:ring-offset-gray-800"
                                 />
                                 <div>
-                                    <span className="text-white font-medium">PT-051 Entries</span>
-                                    <p className="text-gray-400 text-xs">Allow PT-051 form submissions</p>
+                                    <span className="text-white font-medium">{reportDisplayName} Entries</span>
+                                    <p className="text-gray-400 text-xs">Allow {reportDisplayName} submissions</p>
                                 </div>
                             </label>
 
@@ -255,7 +258,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                             <span className={freezeState.allowedActions.postFlightTimes ? 'text-green-400' : 'text-gray-500'}>Post Flight Times</span>
                         </div>
                         <div className={`p-3 rounded-lg ${freezeState.allowedActions.pt051Entries ? 'bg-green-900/30 border border-green-500/30' : 'bg-gray-700/30 border border-gray-600'}`}>
-                            <span className={freezeState.allowedActions.pt051Entries ? 'text-green-400' : 'text-gray-500'}>PT-051 Entries</span>
+                            <span className={freezeState.allowedActions.pt051Entries ? 'text-green-400' : 'text-gray-500'}>{reportDisplayName} Entries</span>
                         </div>
                         <div className={`p-3 rounded-lg ${freezeState.allowedActions.flightAuthorisation ? 'bg-green-900/30 border border-green-500/30' : 'bg-gray-700/30 border border-gray-600'}`}>
                             <span className={freezeState.allowedActions.flightAuthorisation ? 'text-green-400' : 'text-gray-500'}>Flight Authorisation</span>
@@ -311,7 +314,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                                 ) : (
                                     <>
                                         {pendingAllowedActions.postFlightTimes && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Post Flight Times</span>}
-                                        {pendingAllowedActions.pt051Entries && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">PT-051</span>}
+                                        {pendingAllowedActions.pt051Entries && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">{reportDisplayName}</span>}
                                         {pendingAllowedActions.flightAuthorisation && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Flight Auth</span>}
                                         {pendingAllowedActions.aircraftAvailability && <span className="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Aircraft Availability</span>}
                                     </>

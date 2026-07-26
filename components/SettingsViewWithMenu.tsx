@@ -112,6 +112,7 @@ interface SettingsViewWithMenuProps {
     dayFlyingEnd?: string;
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
+    trainingReportDisplayName?: string;
     instructorLabel?: string;
     canUsePlatformPermission?: (permissionId: string) => boolean;
     activeUnitCode?: string;

@@ -85,6 +85,7 @@ interface SettingsViewProps {
     resourceDisplayNames?: ResourceDisplayNames;
     sctTerminology?: SctTerminology;
     personnelDisplaySettings?: PersonnelDisplaySettings;
+    trainingReportDisplayName?: string;
     aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
     activeUnitCode?: string;
     activeUnitCodes?: string[];
@@ -574,6 +575,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
     personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+    trainingReportDisplayName = 'Training Report',
     aircraftConfigurationDefinitions = [],
     activeUnitCode = '',
     activeUnitCodes = [],
@@ -1754,6 +1756,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    <EmergencyPage
                        currentUserRole={currentUserPermission}
                        onShowSuccess={onShowSuccess}
+                       trainingReportDisplayName={trainingReportDisplayName}
                    />
                    )}
                </div>

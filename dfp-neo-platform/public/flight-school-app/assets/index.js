@@ -61170,12 +61170,14 @@ const defaultAllowedActions = {
 };
 const EmergencyPage = ({
   currentUserRole,
-  onShowSuccess
+  onShowSuccess,
+  trainingReportDisplayName
 }) => {
   const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
   const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
   const [isProcessing, setIsProcessing] = reactExports.useState(false);
   const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
+  const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
   const handleAllowedActionChange = (action) => {
     setPendingAllowedActions((prev) => ({
       ...prev,
@@ -61307,8 +61309,15 @@ const EmergencyPage = ({
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: "PT-051 Entries" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Allow PT-051 form submissions" })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-white font-medium", children: [
+                reportDisplayName,
+                " Entries"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs", children: [
+                "Allow ",
+                reportDisplayName,
+                " submissions"
+              ] })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors", children: [
@@ -61351,7 +61360,10 @@ const EmergencyPage = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 mb-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.postFlightTimes ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.postFlightTimes ? "text-green-400" : "text-gray-500", children: "Post Flight Times" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.pt051Entries ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.pt051Entries ? "text-green-400" : "text-gray-500", children: "PT-051 Entries" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.pt051Entries ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: freezeState.allowedActions.pt051Entries ? "text-green-400" : "text-gray-500", children: [
+          reportDisplayName,
+          " Entries"
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.flightAuthorisation ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.flightAuthorisation ? "text-green-400" : "text-gray-500", children: "Flight Authorisation" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `p-3 rounded-lg ${freezeState.allowedActions.aircraftAvailability ? "bg-green-900/30 border border-green-500/30" : "bg-gray-700/30 border border-gray-600"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: freezeState.allowedActions.aircraftAvailability ? "text-green-400" : "text-gray-500", children: "Aircraft Availability" }) })
       ] }),
@@ -61382,7 +61394,7 @@ const EmergencyPage = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-2", children: "Operations allowed during freeze:" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: isEverythingFrozen() ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 text-sm font-medium", children: "None (Full Freeze)" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           pendingAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Post Flight Times" }),
-          pendingAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "PT-051" }),
+          pendingAllowedActions.pt051Entries && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: reportDisplayName }),
           pendingAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Flight Auth" }),
           pendingAllowedActions.aircraftAvailability && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs", children: "Aircraft Availability" })
         ] }) })
@@ -61840,6 +61852,7 @@ const SettingsView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  trainingReportDisplayName = "Training Report",
   aircraftConfigurationDefinitions = [],
   activeUnitCode = "",
   activeUnitCodes = [],
@@ -62865,7 +62878,8 @@ const SettingsView = ({
         EmergencyPage,
         {
           currentUserRole: currentUserPermission,
-          onShowSuccess
+          onShowSuccess,
+          trainingReportDisplayName
         }
       )
     ] }),
@@ -121085,6 +121099,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateExcludedCourses: handleUpdateExcludedCourses,
             resourceDisplayNames,
             personnelDisplaySettings,
+            trainingReportDisplayName: trainingReportTemplate.displayName,
             instructorLabel,
             canUsePlatformPermission,
             activeUnitCode: activeTrainingReportUnitCode,

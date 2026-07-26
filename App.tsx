@@ -43103,6 +43103,7 @@ appliedUpdates.forEach(update => {
                        onUpdateExcludedCourses={handleUpdateExcludedCourses}
                        resourceDisplayNames={resourceDisplayNames}
                        personnelDisplaySettings={personnelDisplaySettings}
+                       trainingReportDisplayName={trainingReportTemplate.displayName}
                        instructorLabel={instructorLabel}
                        canUsePlatformPermission={canUsePlatformPermission}
                        activeUnitCode={activeTrainingReportUnitCode}
