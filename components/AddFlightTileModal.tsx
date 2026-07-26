@@ -205,11 +205,9 @@ const usePersistentDropdownOpen = (dropdownKey: string) => {
       setLocalOpen(activeKey === dropdownKey);
     };
     addFlightDropdownListeners.add(listener);
+    listener(activeAddFlightDropdownKey);
     return () => {
       addFlightDropdownListeners.delete(listener);
-      if (activeAddFlightDropdownKey === dropdownKey) {
-        setActiveAddFlightDropdownKey(null);
-      }
     };
   }, [dropdownKey]);
 
@@ -657,10 +655,6 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       left: Math.max(8, left),
     });
   }, [closeDropdown]);
-
-  useEffect(() => () => {
-    if (activeAddFlightDropdownKey === dropdownKey) setActiveAddFlightDropdownKey(null);
-  }, [dropdownKey]);
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
@@ -1654,6 +1648,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   sctEvents = [],
   nightContinuationDefaultStartTime = 18.5,
 }) => {
+  useEffect(() => () => {
+    setActiveAddFlightDropdownKey(null);
+    personDropdownColumnState.clear();
+  }, []);
+
   const resolvedSctTerminology = useMemo(
     () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
     [sctTerminology],

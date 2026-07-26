@@ -31071,11 +31071,9 @@ const usePersistentDropdownOpen = (dropdownKey) => {
       setLocalOpen(activeKey === dropdownKey);
     };
     addFlightDropdownListeners.add(listener);
+    listener(activeAddFlightDropdownKey);
     return () => {
       addFlightDropdownListeners.delete(listener);
-      if (activeAddFlightDropdownKey === dropdownKey) {
-        setActiveAddFlightDropdownKey(null);
-      }
     };
   }, [dropdownKey]);
   const setOpen = reactExports.useCallback((next) => {
@@ -31456,9 +31454,6 @@ const PersonDropdown = ({
       left: Math.max(8, left)
     });
   }, [closeDropdown]);
-  reactExports.useEffect(() => () => {
-    if (activeAddFlightDropdownKey === dropdownKey) setActiveAddFlightDropdownKey(null);
-  }, [dropdownKey]);
   reactExports.useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -32382,6 +32377,10 @@ const AddFlightTileModal = ({
   sctEvents = [],
   nightContinuationDefaultStartTime = 18.5
 }) => {
+  reactExports.useEffect(() => () => {
+    setActiveAddFlightDropdownKey(null);
+    personDropdownColumnState.clear();
+  }, []);
   const resolvedSctTerminology = reactExports.useMemo(
     () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
     [sctTerminology]
