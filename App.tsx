@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { initDB } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
-import { initialiseLiveChangeBus } from './utils/liveChangeBus';
+import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
 import {
     buildPlatformDataScopeQuery,
     getPlatformDataScopeForLocation,
@@ -38995,6 +38995,20 @@ appliedUpdates.forEach(update => {
         const pollInterval = setInterval(syncUnavailabilityFromDatabase, 5 * 1000);
         return () => clearInterval(pollInterval);
     }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
+
+    useEffect(() => {
+        const handleLiveDfpSnapshotChange = (event: Event) => {
+            if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+            const change = (event as CustomEvent)?.detail || {};
+            if (String(change.path || '') !== '/api/daily-snapshot/save') return;
+            const snapshotDate = String(change.detail?.date || '').trim();
+            const targetDate = snapshotDate.split('__')[0];
+            if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return;
+            void loadSnapshotForDate(targetDate, { force: true, replace: true, useCache: false });
+        };
+        window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
+        return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
+    }, [isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, selectedEvent]);
 
 
     // ── Alert response polling ──────────────────────────────────────────────

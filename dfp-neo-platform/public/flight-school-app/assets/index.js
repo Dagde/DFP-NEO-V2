@@ -117969,6 +117969,19 @@ ${conflictLines.join("\n")}${moreText}`,
     const pollInterval = setInterval(syncUnavailabilityFromDatabase, 5 * 1e3);
     return () => clearInterval(pollInterval);
   }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
+  reactExports.useEffect(() => {
+    const handleLiveDfpSnapshotChange = (event) => {
+      if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+      const change = event?.detail || {};
+      if (String(change.path || "") !== "/api/daily-snapshot/save") return;
+      const snapshotDate = String(change.detail?.date || "").trim();
+      const targetDate = snapshotDate.split("__")[0];
+      if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return;
+      void loadSnapshotForDate(targetDate, { force: true, replace: true, useCache: false });
+    };
+    window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
+    return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
+  }, [isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, selectedEvent]);
   const syncAlertsForCurrentDate = reactExports.useCallback(async () => {
     try {
       const apiBase = getAppApiBase();

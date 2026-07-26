@@ -267,10 +267,19 @@ app.use('/api', (req, res, next) => {
   res.on('finish', () => {
     if (!shouldBroadcast) return;
     if (res.statusCode < 200 || res.statusCode >= 400) return;
+    const detail = pathName === '/api/daily-snapshot/save'
+      ? {
+          date: req.body?.date || null,
+          locationCode: req.body?.locationCode || null,
+          unitCode: req.body?.unitCode || null,
+          eventCount: Array.isArray(req.body?.scheduleEvents) ? req.body.scheduleEvents.length : null,
+        }
+      : {};
     broadcastLiveChange({
       sourceClientId: String(req.headers['x-neo-client-id'] || '').trim(),
       method,
       path: pathName,
+      detail,
     });
   });
   next();
