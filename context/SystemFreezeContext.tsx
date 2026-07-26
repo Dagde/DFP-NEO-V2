@@ -46,28 +46,29 @@ const SystemFreezeContext = createContext<SystemFreezeContextValue>({
 
 const STORAGE_KEY = 'systemFreezeState';
 
+const parseStoredFreezeState = (raw: string | null): SystemFreezeState => {
+    if (!raw) return defaultFreezeState;
+    try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed?.isFrozen === 'boolean') {
+            return {
+                ...defaultFreezeState,
+                ...parsed,
+                allowedActions: {
+                    ...defaultFreezeState.allowedActions,
+                    ...(parsed.allowedActions || {})
+                }
+            };
+        }
+    } catch (e) {
+        console.error('Failed to parse freeze state:', e);
+    }
+    return defaultFreezeState;
+};
+
 export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [freezeState, setFreezeState] = useState<SystemFreezeState>(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // Validate the structure
-                if (typeof parsed.isFrozen === 'boolean') {
-                    return {
-                        ...defaultFreezeState,
-                        ...parsed,
-                        allowedActions: {
-                            ...defaultFreezeState.allowedActions,
-                            ...(parsed.allowedActions || {})
-                        }
-                    };
-                }
-            }
-        } catch (e) {
-            console.error('Failed to parse freeze state:', e);
-        }
-        return defaultFreezeState;
+        return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY));
     });
 
     // Persist state to localStorage
@@ -78,6 +79,23 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
             localStorage.removeItem(STORAGE_KEY);
         }
     }, [freezeState]);
+
+    useEffect(() => {
+        const syncFreezeState = () => {
+            setFreezeState(parseStoredFreezeState(localStorage.getItem(STORAGE_KEY)));
+        };
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === STORAGE_KEY) {
+                setFreezeState(parseStoredFreezeState(event.newValue));
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        window.addEventListener('systemFreezeChanged', syncFreezeState);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('systemFreezeChanged', syncFreezeState);
+        };
+    }, []);
 
     const freezeSystem = useCallback((reason: string, allowedActions: AllowedActions, frozenBy?: string) => {
         setFreezeState({

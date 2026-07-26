@@ -83,27 +83,28 @@ const SystemFreezeContext = reactExports.createContext({
   checkAndWarn: () => true
 });
 const STORAGE_KEY = "systemFreezeState";
+const parseStoredFreezeState = (raw) => {
+  if (!raw) return defaultFreezeState;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.isFrozen === "boolean") {
+      return {
+        ...defaultFreezeState,
+        ...parsed,
+        allowedActions: {
+          ...defaultFreezeState.allowedActions,
+          ...parsed.allowedActions || {}
+        }
+      };
+    }
+  } catch (e) {
+    console.error("Failed to parse freeze state:", e);
+  }
+  return defaultFreezeState;
+};
 const SystemFreezeProvider = ({ children }) => {
   const [freezeState, setFreezeState] = reactExports.useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed.isFrozen === "boolean") {
-          return {
-            ...defaultFreezeState,
-            ...parsed,
-            allowedActions: {
-              ...defaultFreezeState.allowedActions,
-              ...parsed.allowedActions || {}
-            }
-          };
-        }
-      }
-    } catch (e) {
-      console.error("Failed to parse freeze state:", e);
-    }
-    return defaultFreezeState;
+    return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY));
   });
   reactExports.useEffect(() => {
     if (freezeState.isFrozen) {
@@ -112,6 +113,22 @@ const SystemFreezeProvider = ({ children }) => {
       localStorage.removeItem(STORAGE_KEY);
     }
   }, [freezeState]);
+  reactExports.useEffect(() => {
+    const syncFreezeState = () => {
+      setFreezeState(parseStoredFreezeState(localStorage.getItem(STORAGE_KEY)));
+    };
+    const handleStorage = (event) => {
+      if (event.key === STORAGE_KEY) {
+        setFreezeState(parseStoredFreezeState(event.newValue));
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("systemFreezeChanged", syncFreezeState);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("systemFreezeChanged", syncFreezeState);
+    };
+  }, []);
   const freezeSystem = reactExports.useCallback((reason, allowedActions, frozenBy) => {
     setFreezeState({
       isFrozen: true,
