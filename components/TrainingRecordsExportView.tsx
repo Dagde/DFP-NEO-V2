@@ -48,6 +48,9 @@ const escapeHtml = (value: string): string =>
         return entities[char] || char;
     });
 
+const normaliseCourseFilterValue = (value?: string): string =>
+    String(value || '').trim().toLowerCase();
+
 interface ExportTemplate {
     name: string;
     recordType: RecordType;
@@ -315,7 +318,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
         // Course filter - FIXED: Handle course suffix in event names
         if (selectedCourses.length > 0) {
-            const courseTrainees = allTrainees.filter(t => selectedCourses.includes(t.course));
+            const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+            const courseTrainees = allTrainees.filter(t => selectedCourseSet.has(normaliseCourseFilterValue(t.course)));
             const traineeNames = courseTrainees.map(t => t.name);
             console.log('📊 Course filter - Selected courses:', selectedCourses);
             console.log('📊 Course filter - Trainees in selected courses:', courseTrainees.length);
@@ -348,7 +352,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
         return filtered;
     }, [allEvents, timePeriod, singleDate, startDate, endDate, selectedEventTypes, 
-        statusFilter, remedialFilter, selectedTrainees, selectedStaff, selectedCourses, traineesData]);
+        statusFilter, remedialFilter, selectedTrainees, selectedStaff, selectedCourses, allTrainees, scores]);
 
     // Get trainees scheduled for selected courses and date range (for mass completion)
     const getScheduledTraineesForCompletion = useMemo(() => {
@@ -403,6 +407,13 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         console.log('📊 filteredData calculation - filteredEvents:', filteredEvents.length);
         console.log('📊 filteredData calculation - allTrainees:', allTrainees.length);
         console.log('📊 filteredData calculation - allInstructors:', allInstructors.length);
+        const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+        const exportTrainees = selectedCourses.length > 0
+            ? allTrainees.filter(t => selectedCourseSet.has(normaliseCourseFilterValue(t.course)))
+            : allTrainees;
+        const exportStaff = selectedStaff.length > 0
+            ? allInstructors.filter(instructor => selectedStaff.includes(instructor.name))
+            : allInstructors;
         
         // For "events only", return only events with no people records
         if (recordType === 'events') {
@@ -413,17 +424,21 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // This matches user expectation: "Trainee records" = all trainees, not just those with events
         
         if (recordType === 'trainees' && canExportTraineeRecords) {
-            console.log('📊 Returning all trainees:', allTrainees.length);
-            return { events: filteredEvents, trainees: allTrainees, staff: [] };
+            console.log('📊 Returning filtered trainees:', exportTrainees.length);
+            return { events: filteredEvents, trainees: exportTrainees, staff: [] };
         } else if (recordType === 'staff') {
-            console.log('📊 Returning all staff:', allInstructors.length);
-            return { events: filteredEvents, trainees: [], staff: allInstructors };
+            console.log('📊 Returning filtered staff:', exportStaff.length);
+            return { events: filteredEvents, trainees: [], staff: exportStaff };
         } else {
             // recordType === 'all'
             console.log('📊 Returning all permitted people and events');
-            return { events: filteredEvents, trainees: canExportTraineeRecords ? allTrainees : [], staff: allInstructors };
+            return {
+                events: filteredEvents,
+                trainees: canExportTraineeRecords ? exportTrainees : [],
+                staff: selectedCourses.length > 0 && selectedStaff.length === 0 ? [] : exportStaff,
+            };
         }
-    }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords]);
+    }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords, selectedCourses, selectedStaff]);
 
     // Calculate record count
     const recordCount = useMemo(() => {
@@ -814,11 +829,12 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             pdf.setFontSize(8);
             const descText = pdf.splitTextToSize(flightDesc, contentWidth - 40);
             pdf.text(descText, col1X + 40, y);
-            y += (descText.length * 3.5);
+            y += Math.max(5, descText.length * 4);
             pdf.setFontSize(9);
         } else {
             pdf.setFont('helvetica', 'normal');
             pdf.text('N/A', col1X + 40, y);
+            y += 5;
         }
         y += 2;
         

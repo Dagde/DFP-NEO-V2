@@ -79205,6 +79205,7 @@ const CoursesManagementView = ({
     ] }) })
   ] });
 };
+const normaliseCourseFilterValue = (value) => String(value || "").trim().toLowerCase();
 const TrainingRecordsExportView = ({
   traineesData,
   instructorsData,
@@ -79408,7 +79409,8 @@ const TrainingRecordsExportView = ({
       );
     }
     if (selectedCourses.length > 0) {
-      const courseTrainees = allTrainees.filter((t) => selectedCourses.includes(t.course));
+      const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+      const courseTrainees = allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course)));
       const traineeNames = courseTrainees.map((t) => t.name);
       console.log("📊 Course filter - Selected courses:", selectedCourses);
       console.log("📊 Course filter - Trainees in selected courses:", courseTrainees.length);
@@ -79443,7 +79445,8 @@ const TrainingRecordsExportView = ({
     selectedTrainees,
     selectedStaff,
     selectedCourses,
-    traineesData
+    allTrainees,
+    scores
   ]);
   const getScheduledTraineesForCompletion = reactExports.useMemo(() => {
     if (selectedCourses.length === 0) return [];
@@ -79481,20 +79484,27 @@ const TrainingRecordsExportView = ({
     console.log("📊 filteredData calculation - filteredEvents:", filteredEvents.length);
     console.log("📊 filteredData calculation - allTrainees:", allTrainees.length);
     console.log("📊 filteredData calculation - allInstructors:", allInstructors.length);
+    const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+    const exportTrainees = selectedCourses.length > 0 ? allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course))) : allTrainees;
+    const exportStaff = selectedStaff.length > 0 ? allInstructors.filter((instructor) => selectedStaff.includes(instructor.name)) : allInstructors;
     if (recordType === "events") {
       return { events: filteredEvents, trainees: [], staff: [] };
     }
     if (recordType === "trainees" && canExportTraineeRecords) {
-      console.log("📊 Returning all trainees:", allTrainees.length);
-      return { events: filteredEvents, trainees: allTrainees, staff: [] };
+      console.log("📊 Returning filtered trainees:", exportTrainees.length);
+      return { events: filteredEvents, trainees: exportTrainees, staff: [] };
     } else if (recordType === "staff") {
-      console.log("📊 Returning all staff:", allInstructors.length);
-      return { events: filteredEvents, trainees: [], staff: allInstructors };
+      console.log("📊 Returning filtered staff:", exportStaff.length);
+      return { events: filteredEvents, trainees: [], staff: exportStaff };
     } else {
       console.log("📊 Returning all permitted people and events");
-      return { events: filteredEvents, trainees: canExportTraineeRecords ? allTrainees : [], staff: allInstructors };
+      return {
+        events: filteredEvents,
+        trainees: canExportTraineeRecords ? exportTrainees : [],
+        staff: selectedCourses.length > 0 && selectedStaff.length === 0 ? [] : exportStaff
+      };
     }
-  }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords]);
+  }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords, selectedCourses, selectedStaff]);
   const recordCount = reactExports.useMemo(() => {
     let count = 0;
     if ((recordType === "all" || recordType === "trainees") && canExportTraineeRecords) count += filteredData.trainees.length;
@@ -79796,11 +79806,12 @@ const TrainingRecordsExportView = ({
       pdf.setFontSize(8);
       const descText = pdf.splitTextToSize(flightDesc, contentWidth - 40);
       pdf.text(descText, col1X + 40, y);
-      y += descText.length * 3.5;
+      y += Math.max(5, descText.length * 4);
       pdf.setFontSize(9);
     } else {
       pdf.setFont("helvetica", "normal");
       pdf.text("N/A", col1X + 40, y);
+      y += 5;
     }
     y += 2;
     pdf.setFont("helvetica", "bold");
