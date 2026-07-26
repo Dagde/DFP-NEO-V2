@@ -79698,7 +79698,7 @@ const TrainingRecordsExportView = ({
     );
     y += eventNumberRowHeight;
     pdf.setFontSize(8);
-    y += drawLabelValue("Event Description", flightDesc || "N/A", col1X, col1X + 42, y, contentWidth - 44);
+    y += drawLabelValue("Event Description", flightDesc || "N/A", col1X, col1X + 34, y, contentWidth - 36);
     pdf.setFontSize(9);
     y += 8;
     pdf.setFillColor(243, 244, 246);
