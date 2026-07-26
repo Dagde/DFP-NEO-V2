@@ -79207,6 +79207,12 @@ const CoursesManagementView = ({
 };
 const normaliseCourseFilterValue = (value) => String(value || "").trim().toLowerCase();
 const ALL_COURSES_FILTER_VALUE = "__all_courses__";
+const normalisePersonFilterValue = (value) => String(value || "").replace(/\s+[–-]\s+.+$/, "").replace(/\s+/g, " ").trim().toLowerCase();
+const eventPersonMatchesSelection = (eventName, selectedName) => {
+  const normalisedEventName = normalisePersonFilterValue(eventName);
+  const normalisedSelectedName = normalisePersonFilterValue(selectedName);
+  return Boolean(normalisedEventName && normalisedSelectedName && normalisedEventName === normalisedSelectedName);
+};
 const TrainingRecordsExportView = ({
   traineesData,
   instructorsData,
@@ -79242,6 +79248,8 @@ const TrainingRecordsExportView = ({
   const [showFilters, setShowFilters] = reactExports.useState(false);
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   const [selectedStaff, setSelectedStaff] = reactExports.useState([]);
+  const [useSpecificTraineeFilter, setUseSpecificTraineeFilter] = reactExports.useState(false);
+  const [useSpecificStaffFilter, setUseSpecificStaffFilter] = reactExports.useState(false);
   const [selectedCourses, setSelectedCourses] = reactExports.useState([]);
   const [selectedEventTypes, setSelectedEventTypes] = reactExports.useState([]);
   const [statusFilter, setStatusFilter] = reactExports.useState("all");
@@ -79400,24 +79408,20 @@ const TrainingRecordsExportView = ({
       filtered = filtered.filter((e) => !e.isRemedial);
       console.log("🔍 FILTER DEBUG - After remedial=no filter:", filtered.length);
     }
-    if (selectedTrainees.length > 0) {
+    if (useSpecificTraineeFilter && selectedTrainees.length > 0) {
       console.log("📊 Trainee filter - Selected trainees:", selectedTrainees);
       console.log("📊 Trainee filter - Events before filter:", filtered.length);
       filtered = filtered.filter((e) => {
         const studentName = e.student || e.pilot;
         if (!studentName) return false;
-        const matches = selectedTrainees.some((selectedTrainee) => {
-          if (studentName === selectedTrainee) return true;
-          if (studentName.startsWith(selectedTrainee + " –") || studentName.startsWith(selectedTrainee + " -")) return true;
-          return false;
-        });
+        const matches = selectedTrainees.some((selectedTrainee) => eventPersonMatchesSelection(studentName, selectedTrainee));
         return matches;
       });
       console.log("📊 Trainee filter - Events after filter:", filtered.length);
     }
-    if (selectedStaff.length > 0) {
+    if (useSpecificStaffFilter && selectedStaff.length > 0) {
       filtered = filtered.filter(
-        (e) => e.instructor && selectedStaff.includes(e.instructor)
+        (e) => e.instructor && selectedStaff.some((selectedInstructor) => eventPersonMatchesSelection(e.instructor, selectedInstructor))
       );
     }
     if (selectedCourses.length > 0) {
@@ -79456,6 +79460,8 @@ const TrainingRecordsExportView = ({
     remedialFilter,
     selectedTrainees,
     selectedStaff,
+    useSpecificTraineeFilter,
+    useSpecificStaffFilter,
     selectedCourses,
     allTrainees,
     scores
@@ -79498,13 +79504,14 @@ const TrainingRecordsExportView = ({
     console.log("📊 filteredData calculation - allInstructors:", allInstructors.length);
     const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
     const exportTrainees = selectedCourses.length > 0 ? allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course))) : allTrainees;
-    const exportStaff = selectedStaff.length > 0 ? allInstructors.filter((instructor) => selectedStaff.includes(instructor.name)) : allInstructors;
+    const personFilteredTrainees = useSpecificTraineeFilter && selectedTrainees.length > 0 ? exportTrainees.filter((trainee) => selectedTrainees.some((selectedTrainee) => eventPersonMatchesSelection(trainee.name, selectedTrainee))) : exportTrainees;
+    const exportStaff = useSpecificStaffFilter && selectedStaff.length > 0 ? allInstructors.filter((instructor) => selectedStaff.includes(instructor.name)) : allInstructors;
     if (recordType === "events") {
       return { events: filteredEvents, trainees: [], staff: [] };
     }
     if (recordType === "trainees" && canExportTraineeRecords) {
-      console.log("📊 Returning filtered trainees:", exportTrainees.length);
-      return { events: filteredEvents, trainees: exportTrainees, staff: [] };
+      console.log("📊 Returning filtered trainees:", personFilteredTrainees.length);
+      return { events: filteredEvents, trainees: personFilteredTrainees, staff: [] };
     } else if (recordType === "staff") {
       console.log("📊 Returning filtered staff:", exportStaff.length);
       return { events: filteredEvents, trainees: [], staff: exportStaff };
@@ -79512,11 +79519,11 @@ const TrainingRecordsExportView = ({
       console.log("📊 Returning all permitted people and events");
       return {
         events: filteredEvents,
-        trainees: canExportTraineeRecords ? exportTrainees : [],
-        staff: selectedCourses.length > 0 && selectedStaff.length === 0 ? [] : exportStaff
+        trainees: canExportTraineeRecords ? personFilteredTrainees : [],
+        staff: selectedCourses.length > 0 && !(useSpecificStaffFilter && selectedStaff.length > 0) ? [] : exportStaff
       };
     }
-  }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords, selectedCourses, selectedStaff]);
+  }, [recordType, filteredEvents, allTrainees, allInstructors, canExportTraineeRecords, selectedCourses, selectedTrainees, selectedStaff, useSpecificTraineeFilter, useSpecificStaffFilter]);
   const recordCount = reactExports.useMemo(() => {
     let count = 0;
     if ((recordType === "all" || recordType === "trainees") && canExportTraineeRecords) count += filteredData.trainees.length;
@@ -79963,6 +79970,8 @@ const TrainingRecordsExportView = ({
       outputFormat,
       selectedTrainees,
       selectedStaff,
+      useSpecificTraineeFilter,
+      useSpecificStaffFilter,
       selectedCourses,
       selectedEventTypes,
       statusFilter,
@@ -79981,6 +79990,8 @@ const TrainingRecordsExportView = ({
     setOutputFormat(template.outputFormat);
     setSelectedTrainees(template.selectedTrainees);
     setSelectedStaff(template.selectedStaff);
+    setUseSpecificTraineeFilter(Boolean(template.useSpecificTraineeFilter));
+    setUseSpecificStaffFilter(Boolean(template.useSpecificStaffFilter));
     setSelectedCourses(template.selectedCourses);
     setSelectedEventTypes(template.selectedEventTypes);
     setStatusFilter(template.statusFilter);
@@ -80452,7 +80463,21 @@ const TrainingRecordsExportView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple" })
           ] }),
           canExportTraineeRecords && (recordType === "all" || recordType === "trainees") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-300 mb-3", children: "Specific Trainees (Active & Archived)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-300", children: "Specific Trainees (Active & Archived)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-medium text-gray-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: useSpecificTraineeFilter,
+                    onChange: (event) => setUseSpecificTraineeFilter(event.target.checked),
+                    className: "h-4 w-4 text-sky-500"
+                  }
+                ),
+                "Only selected trainee records"
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
@@ -80488,7 +80513,21 @@ const TrainingRecordsExportView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple" })
           ] }),
           (recordType === "all" || recordType === "staff") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-300 mb-3", children: "Specific Staff (Active & Archived)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-300", children: "Specific Staff (Active & Archived)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-medium text-gray-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: useSpecificStaffFilter,
+                    onChange: (event) => setUseSpecificStaffFilter(event.target.checked),
+                    className: "h-4 w-4 text-sky-500"
+                  }
+                ),
+                "Only selected staff records"
+              ] })
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
