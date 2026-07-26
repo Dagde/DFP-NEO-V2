@@ -79048,6 +79048,37 @@ const eventPersonMatchesSelection = (eventName, selectedName) => {
   return Boolean(normalisedEventName && normalisedSelectedName && normalisedEventName === normalisedSelectedName);
 };
 const getEventPersonName = (event) => event.student || event.pilot || "";
+const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
+  { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
+  { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
+  { category: "Takeoff", elements: ["Stationary"] },
+  { category: "Departure", elements: ["Visual"] },
+  { category: "Core Handling Skills", elements: ["Effects of Control", "Trimming", "Straight and Level"] },
+  { category: "Turns", elements: ["Level medium Turn", "Level Steep turn"] },
+  { category: "Recovery", elements: ["Visual - Initial & Pitch"] },
+  { category: "Landing", elements: ["Landing", "Crosswind"] },
+  { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
+];
+const DEFAULT_EXPORT_ASSESSED_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
+const getDefaultAssessmentCategory = (element) => DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.find((category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase()))?.category || "Additional Elements";
+const buildExportAssessmentStructure = (elements) => {
+  const seen = /* @__PURE__ */ new Set();
+  const selectedElements = (Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS).map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
+    const key = element.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const categories = DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.map((category) => category.category);
+  const grouped = /* @__PURE__ */ new Map();
+  selectedElements.forEach((element) => {
+    const category = getDefaultAssessmentCategory(element);
+    if (!categories.includes(category)) categories.push(category);
+    grouped.set(category, [...grouped.get(category) || [], element]);
+  });
+  const structure = categories.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
+  return structure.length > 0 ? structure : [{ category: "Core Dimensions", elements: DEFAULT_EXPORT_ASSESSED_ELEMENTS }];
+};
 const TrainingRecordsExportView = ({
   traineesData,
   instructorsData,
@@ -79179,6 +79210,16 @@ const TrainingRecordsExportView = ({
     const archivedCourseNames = Object.keys(archivedCourses);
     return [.../* @__PURE__ */ new Set([...activeCourses, ...archivedCourseNames])];
   }, [courses, archivedCourses]);
+  const findSyllabusDetailForEventNumber = (eventNumber) => {
+    const eventNum = String(eventNumber || "").trim();
+    if (!eventNum) return void 0;
+    const normalisedEventNum = eventNum.replace(/\s+/g, "").toLowerCase();
+    return syllabusDetails.find((detail) => {
+      const id = String(detail.id || "").trim();
+      const code = String(detail.code || "").trim();
+      return id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase() || id.replace(/\s+/g, "").toLowerCase() === normalisedEventNum || code.replace(/\s+/g, "").toLowerCase() === normalisedEventNum;
+    });
+  };
   const filteredCourses = reactExports.useMemo(() => {
     return allCourseNames.filter(
       (name) => name.toLowerCase().includes(courseSearch.toLowerCase())
@@ -79626,17 +79667,6 @@ const TrainingRecordsExportView = ({
     const eventScore = traineeScores?.find((s) => s.syllabusId === event.flightNumber && s.date === event.date);
     const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ""] || "N/A";
     const commentSections = parseComments2(eventScore?.comments);
-    const pt051Structure = [
-      { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
-      { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
-      { category: "Takeoff", elements: ["Stationary"] },
-      { category: "Departure", elements: ["Visual"] },
-      { category: "Core Handling Skills", elements: ["Effects of Control", "Trimming", "Straight and Level"] },
-      { category: "Turns", elements: ["Level medium Turn", "Level Steep turn"] },
-      { category: "Recovery", elements: ["Visual - Initial &amp; Pitch"] },
-      { category: "Landing", elements: ["Landing", "Crosswind"] },
-      { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
-    ];
     let y = 15;
     const margin = 15;
     const pageWidth = 210;
@@ -79679,18 +79709,8 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "normal");
     pdf.text(formatDate22(event.date), col2X + 20, y);
     y += 5;
-    const eventNum = (event.flightNumber || "").trim();
-    const syllabusDetail = syllabusDetails.find((d) => {
-      const id = (d.id || "").trim();
-      const code = (d.code || "").trim();
-      if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
-        return true;
-      }
-      if (id.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase() || code.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase()) {
-        return true;
-      }
-      return false;
-    });
+    const syllabusDetail = findSyllabusDetailForEventNumber(event.flightNumber);
+    const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements);
     const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || "";
     const eventNumberRowHeight = Math.max(
       drawLabelValue("Event Number", event.flightNumber || "N/A", col1X, col1X + 34, y, 55),
@@ -79783,7 +79803,7 @@ const TrainingRecordsExportView = ({
       // Green
     };
     pdf.setFontSize(7);
-    pt051Structure.forEach((cat) => {
+    assessmentStructure.forEach((cat) => {
       pdf.setFillColor(229, 231, 235);
       pdf.rect(margin, y - 3, contentWidth, 5, "F");
       pdf.setDrawColor(156, 163, 175);
