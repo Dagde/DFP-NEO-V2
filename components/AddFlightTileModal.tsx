@@ -3372,6 +3372,42 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300">Flight Details</div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">PIC</label>
+                    <select
+                      value={picName}
+                      onChange={event => handlePicNameChange(event.target.value)}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      <option value="">Select PIC</option>
+                      {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
+                        <optgroup key={group} label={group}>
+                          {standardPersonOptions.filter(person => person.group === group).map(person => (
+                            <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  {flightType === 'Dual' && eventCategory !== 'twr_di' && (
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
+                      <select
+                        value={studentName}
+                        onChange={event => { setStudentName(event.target.value); setGuidedStep('instructor'); }}
+                        className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                      >
+                        <option value="">Select second person</option>
+                        {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
+                          <optgroup key={group} label={group}>
+                            {standardPersonOptions.filter(person => person.group === group && person.value !== picName).map(person => (
+                              <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Event</label>
                     <select
                       value={flightNumber}
@@ -3422,42 +3458,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       {timeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">PIC</label>
-                    <select
-                      value={picName}
-                      onChange={event => handlePicNameChange(event.target.value)}
-                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
-                    >
-                      <option value="">Select PIC</option>
-                      {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
-                        <optgroup key={group} label={group}>
-                          {standardPersonOptions.filter(person => person.group === group).map(person => (
-                            <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                  {flightType === 'Dual' && eventCategory !== 'twr_di' && (
-                    <div>
-                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
-                      <select
-                        value={studentName}
-                        onChange={event => { setStudentName(event.target.value); setGuidedStep('instructor'); }}
-                        className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
-                      >
-                        <option value="">Select second person</option>
-                        {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
-                          <optgroup key={group} label={group}>
-                            {standardPersonOptions.filter(person => person.group === group && person.value !== picName).map(person => (
-                              <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">CONFIG</label>
                     <SelectLikeDropdown

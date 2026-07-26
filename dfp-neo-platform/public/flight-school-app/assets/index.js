@@ -33080,6 +33080,39 @@ const AddFlightTileModal = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300", children: "Flight Details" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "PIC" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "select",
+                        {
+                          value: picName,
+                          onChange: (event) => handlePicNameChange(event.target.value),
+                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
+                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
+                          ]
+                        }
+                      )
+                    ] }),
+                    flightType === "Dual" && eventCategory !== "twr_di" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Second Person" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "select",
+                        {
+                          value: studentName,
+                          onChange: (event) => {
+                            setStudentName(event.target.value);
+                            setGuidedStep("instructor");
+                          },
+                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second person" }),
+                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group && person.value !== picName).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
+                          ]
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Event" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "select",
@@ -33130,39 +33163,6 @@ const AddFlightTileModal = ({
                           },
                           className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
                           children: timeOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value))
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "PIC" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                        "select",
-                        {
-                          value: picName,
-                          onChange: (event) => handlePicNameChange(event.target.value),
-                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
-                          children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
-                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
-                          ]
-                        }
-                      )
-                    ] }),
-                    flightType === "Dual" && eventCategory !== "twr_di" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400", children: "Second Person" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                        "select",
-                        {
-                          value: studentName,
-                          onChange: (event) => {
-                            setStudentName(event.target.value);
-                            setGuidedStep("instructor");
-                          },
-                          className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
-                          children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second person" }),
-                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group && person.value !== picName).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
-                          ]
                         }
                       )
                     ] }),
