@@ -66,6 +66,48 @@ const eventPersonMatchesSelection = (eventName: string | undefined, selectedName
 const getEventPersonName = (event: ScheduleEvent): string =>
     event.student || event.pilot || '';
 
+const normaliseEventNumber = (value?: string): string =>
+    String(value || '').replace(/\s+/g, '').toLowerCase();
+
+const findSyllabusDetailByEventNumber = (
+    syllabusDetails: SyllabusItemDetail[],
+    eventNumber?: string,
+): SyllabusItemDetail | undefined => {
+    const eventNum = String(eventNumber || '').trim();
+    if (!eventNum) return undefined;
+    const compactEventNum = normaliseEventNumber(eventNum);
+    return syllabusDetails.find(detail => {
+        const id = String(detail.id || '').trim();
+        const code = String(detail.code || '').trim();
+        return id.toLowerCase() === eventNum.toLowerCase()
+            || code.toLowerCase() === eventNum.toLowerCase()
+            || normaliseEventNumber(id) === compactEventNum
+            || normaliseEventNumber(code) === compactEventNum;
+    });
+};
+
+const normaliseExportEventType = (
+    event: Partial<ScheduleEvent>,
+    syllabusDetail?: SyllabusItemDetail,
+): EventType | '' => {
+    const syllabusType = String(syllabusDetail?.type || '').trim().toLowerCase();
+    const scheduleType = String(event.type || '').trim().toLowerCase();
+    const eventCode = String(event.flightNumber || '').trim().toUpperCase();
+    const resource = String(event.resourceId || '').trim().toLowerCase();
+    const sourceType = syllabusType || scheduleType;
+
+    if (sourceType.includes('ground') || sourceType.includes('academic')) return 'Ground';
+    if (sourceType.includes('ftd') || sourceType.includes('sim')) return 'FTD';
+    if (sourceType.includes('cpt')) return 'CPT';
+    if (sourceType.includes('flight')) return 'Flight';
+    if (resource.startsWith('ftd') || resource.startsWith('sim')) return 'FTD';
+    if (resource.startsWith('cpt')) return 'CPT';
+    if (/\b(MB|TUT|QUIZ|GS)\d*/.test(eventCode)) return 'Ground';
+    if (/\bCPT\d*/.test(eventCode)) return 'CPT';
+    if (/\bFTD\d*/.test(eventCode)) return 'FTD';
+    return '';
+};
+
 const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
     { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
     { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
@@ -255,11 +297,16 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                         eventPersonMatchesSelection(getEventPersonName(event), assessment.traineeFullName)
                     )
                 ));
+                const matchingSyllabusDetail = findSyllabusDetailByEventNumber(syllabusDetails, assessment.flightNumber);
+                const inferredEventType = normaliseExportEventType(
+                    matchingScheduleEvent || { flightNumber: assessment.flightNumber },
+                    matchingSyllabusDetail,
+                );
                 return {
                     ...(matchingScheduleEvent || {}),
                     id: assessment.eventId || assessment.id,
                     date: assessment.date,
-                    type: matchingScheduleEvent?.type || 'flight',
+                    type: matchingScheduleEvent?.type || inferredEventType || matchingSyllabusDetail?.type || '',
                     instructor: assessment.instructorName || matchingScheduleEvent?.instructor || '',
                     student: assessment.traineeFullName,
                     pilot: matchingScheduleEvent?.pilot || assessment.traineeFullName,
@@ -286,7 +333,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 String(getEventPersonName(a)).localeCompare(String(getEventPersonName(b))) ||
                 String(a.flightNumber || '').localeCompare(String(b.flightNumber || ''))
             ));
-    }, [allEvents, pt051Assessments]);
+    }, [allEvents, pt051Assessments, syllabusDetails]);
 
     const exportSourceEvents = allReportEvents.length > 0 ? allReportEvents : allEvents;
     
@@ -304,18 +351,64 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         return [...new Set([...activeCourses, ...archivedCourseNames])];
     }, [courses, archivedCourses]);
 
-    const findSyllabusDetailForEventNumber = (eventNumber?: string): SyllabusItemDetail | undefined => {
-        const eventNum = String(eventNumber || '').trim();
-        if (!eventNum) return undefined;
-        const normalisedEventNum = eventNum.replace(/\s+/g, '').toLowerCase();
-        return syllabusDetails.find(detail => {
-            const id = String(detail.id || '').trim();
-            const code = String(detail.code || '').trim();
-            return id.toLowerCase() === eventNum.toLowerCase()
-                || code.toLowerCase() === eventNum.toLowerCase()
-                || id.replace(/\s+/g, '').toLowerCase() === normalisedEventNum
-                || code.replace(/\s+/g, '').toLowerCase() === normalisedEventNum;
-        });
+    const findSyllabusDetailForEventNumber = (eventNumber?: string): SyllabusItemDetail | undefined =>
+        findSyllabusDetailByEventNumber(syllabusDetails, eventNumber);
+
+    const pt051AssessmentList = useMemo(() => Array.from(pt051Assessments.values()), [pt051Assessments]);
+
+    const findAssessmentForEvent = (event: ScheduleEvent): Pt051Assessment | undefined => {
+        const eventPerson = getEventPersonName(event);
+        return pt051AssessmentList.find(assessment => (
+            (Boolean(event.id) && assessment.eventId === event.id) ||
+            (
+                assessment.flightNumber === event.flightNumber &&
+                assessment.date === event.date &&
+                eventPersonMatchesSelection(eventPerson, assessment.traineeFullName)
+            )
+        ));
+    };
+
+    const findScoreForEvent = (event: ScheduleEvent): any => {
+        const eventPerson = getEventPersonName(event);
+        if (!eventPerson) return undefined;
+        let traineeScores = scores.get(eventPerson);
+        if (!traineeScores) {
+            for (const [scorePerson, scoreRows] of scores.entries()) {
+                if (eventPersonMatchesSelection(scorePerson, eventPerson)) {
+                    traineeScores = scoreRows;
+                    break;
+                }
+            }
+        }
+        return traineeScores?.find((score: any) => (
+            (score.syllabusId || score.event) === event.flightNumber &&
+            score.date === event.date
+        ));
+    };
+
+    const getEventStatusBucket = (event: ScheduleEvent): StatusFilter | '' => {
+        const assessment = findAssessmentForEvent(event);
+        const eventScore = findScoreForEvent(event);
+        const completionResult = String(assessment?.dcoResult || eventScore?.dcoResult || eventScore?.outcome || '').trim().toUpperCase();
+        const overallResult = String(assessment?.overallResult || eventScore?.overallResult || eventScore?.outcome || '').trim().toUpperCase();
+
+        if (completionResult === 'DCO') return 'dco';
+        if (completionResult === 'DNCO') return 'dnco';
+        if (overallResult === 'P' || overallResult === 'PASS') return 'pass';
+        if (overallResult === 'F' || overallResult === 'FAIL') return 'fail';
+        return '';
+    };
+
+    const isExportEventRemedial = (event: ScheduleEvent): boolean => {
+        const syllabusDetail = findSyllabusDetailForEventNumber(event.flightNumber);
+        const eventCode = String(event.flightNumber || '').toUpperCase();
+        return Boolean(
+            event.isRemedial ||
+            syllabusDetail?.isRemedial ||
+            eventCode.includes('-REM-') ||
+            eventCode.endsWith('-RF') ||
+            eventCode.endsWith(' RF')
+        );
     };
     
     // Filtered lists for dropdowns
@@ -369,17 +462,17 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             console.log('🔍 FILTER DEBUG - After date-range filter:', filtered.length);
         }
 
-        // Event type filter - FIXED: Case-insensitive comparison
+        // Event type filter
         if (selectedEventTypes.length > 0) {
             console.log('🔍 FILTER DEBUG - selectedEventTypes:', selectedEventTypes);
             console.log('🔍 FILTER DEBUG - Sample event types from data (first 5):', filtered.slice(0, 5).map(e => e.type));
             console.log('🔍 FILTER DEBUG - Unique event types in data:', [...new Set(filtered.map(e => e.type))]);
             
-            // Convert both to lowercase for case-insensitive comparison
-            const selectedTypesLower = selectedEventTypes.map(t => t.toLowerCase());
+            const selectedTypeSet = new Set(selectedEventTypes);
             filtered = filtered.filter(e => {
-                const eventTypeLower = (e.type as string).toLowerCase();
-                return selectedTypesLower.includes(eventTypeLower);
+                const syllabusDetail = findSyllabusDetailForEventNumber(e.flightNumber);
+                const exportType = normaliseExportEventType(e, syllabusDetail);
+                return Boolean(exportType && selectedTypeSet.has(exportType));
             });
             
             console.log('🔍 FILTER DEBUG - After event type filter:', filtered.length);
@@ -388,52 +481,18 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // Status filter - based on saved training report outcomes
         console.log('🔍 FILTER DEBUG - statusFilter:', statusFilter);
         console.log('🔍 FILTER DEBUG - Before status filter:', filtered.length);
-        if (statusFilter === 'dco') {
-            filtered = filtered.filter(e => {
-                const trainee = getEventPersonName(e);
-                if (!trainee) return false;
-                const traineeScores = scores.get(trainee);
-                if (!traineeScores) return false;
-                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
-                return eventScore?.outcome === 'DCO';
-            });
-        } else if (statusFilter === 'dnco') {
-            filtered = filtered.filter(e => {
-                const trainee = getEventPersonName(e);
-                if (!trainee) return false;
-                const traineeScores = scores.get(trainee);
-                if (!traineeScores) return false;
-                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
-                return eventScore?.outcome === 'DNCO';
-            });
-        } else if (statusFilter === 'pass') {
-            filtered = filtered.filter(e => {
-                const trainee = getEventPersonName(e);
-                if (!trainee) return false;
-                const traineeScores = scores.get(trainee);
-                if (!traineeScores) return false;
-                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
-                return eventScore?.outcome === 'Pass';
-            });
-        } else if (statusFilter === 'fail') {
-            filtered = filtered.filter(e => {
-                const trainee = getEventPersonName(e);
-                if (!trainee) return false;
-                const traineeScores = scores.get(trainee);
-                if (!traineeScores) return false;
-                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
-                return eventScore?.outcome === 'Fail';
-            });
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(e => getEventStatusBucket(e) === statusFilter);
         }
         console.log('🔍 FILTER DEBUG - After all status filters:', filtered.length);
 
         // Remedial filter
         console.log('🔍 FILTER DEBUG - remedialFilter:', remedialFilter);
         if (remedialFilter === 'yes') {
-            filtered = filtered.filter(e => e.isRemedial);
+            filtered = filtered.filter(e => isExportEventRemedial(e));
             console.log('🔍 FILTER DEBUG - After remedial=yes filter:', filtered.length);
         } else if (remedialFilter === 'no') {
-            filtered = filtered.filter(e => !e.isRemedial);
+            filtered = filtered.filter(e => !isExportEventRemedial(e));
             console.log('🔍 FILTER DEBUG - After remedial=no filter:', filtered.length);
         }
 
@@ -495,7 +554,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
         return filtered;
     }, [exportSourceEvents, timePeriod, singleDate, startDate, endDate, selectedEventTypes,
-        statusFilter, remedialFilter, selectedTrainees, selectedStaff, useSpecificTraineeFilter, useSpecificStaffFilter, selectedCourses, allTrainees, scores]);
+        statusFilter, remedialFilter, selectedTrainees, selectedStaff, useSpecificTraineeFilter, useSpecificStaffFilter, selectedCourses, allTrainees, scores, syllabusDetails, pt051AssessmentList]);
 
     // Get trainees scheduled for selected courses and date range (for mass completion)
     const getScheduledTraineesForCompletion = useMemo(() => {
