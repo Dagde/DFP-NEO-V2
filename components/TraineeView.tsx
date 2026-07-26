@@ -8,6 +8,7 @@ import type { TrainingReportTerminology } from '../utils/trainingReportTerminolo
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { PlatformConfig } from '../utils/platformConfigService';
 
 interface TraineeViewProps {
@@ -67,6 +68,7 @@ interface TraineeViewProps {
   onInsertCustomLmpEvent?: (trainee: any, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
   insertEventTypes?: InsertEventTypeConfig[];
   aircraftConfigurations?: AircraftConfigurationDefinition[];
+  aircraftCrewComposition?: AircraftCrewComposition;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -175,6 +177,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onUpdateLmpItem={props.onUpdateLmpItem}
             insertEventTypes={props.insertEventTypes}
             aircraftConfigurations={props.aircraftConfigurations}
+            aircraftCrewComposition={props.aircraftCrewComposition}
             onOpenInstructorProfile={props.onOpenInstructorProfile}
             onUpdateCourseNumber={props.onUpdateCourseNumber}
             onUpdateCourseUnit={props.onUpdateCourseUnit}

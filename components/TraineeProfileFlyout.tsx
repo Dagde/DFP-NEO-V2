@@ -32,6 +32,7 @@ import {
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import {
   getVisiblePermissions,
   isTraineeSuspended,
@@ -110,6 +111,7 @@ interface TraineeProfileFlyoutProps {
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
   insertEventTypes?: InsertEventTypeConfig[];
   aircraftConfigurations?: AircraftConfigurationDefinition[];
+  aircraftCrewComposition?: AircraftCrewComposition;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
@@ -452,6 +454,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onUpdateLmpItem,
   insertEventTypes,
   aircraftConfigurations = [],
+  aircraftCrewComposition,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -2424,6 +2427,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             onUpdateLmpItem={onUpdateLmpItem}
                             insertEventTypes={insertEventTypes}
                             aircraftConfigurations={aircraftConfigurations}
+                            aircraftCrewComposition={aircraftCrewComposition}
                           />
                         </div>
                       );

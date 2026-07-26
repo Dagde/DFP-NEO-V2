@@ -20523,7 +20523,26 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
 };
 const splitListInput = (value) => value.split("\n").map((item) => item.trim()).filter(Boolean);
 const joinListInput = (items) => (items || []).join("\n");
-const getDefaultPeopleRequiredForInsertType = (eventType) => eventType?.syllabusType === "Academics" ? [] : ["Instructor", "Trainee"];
+const getInsertEventCrewResourceKind = (eventType) => {
+  const syllabusType = String(eventType?.syllabusType || "").trim().toLowerCase();
+  if (!syllabusType || syllabusType === "academics") return null;
+  if (syllabusType === "ftd" || syllabusType === "sim" || syllabusType === "simulator") return "sim";
+  if (syllabusType === "cpt" || syllabusType === "procedural trainer") return "cpt";
+  return "flight";
+};
+const getInsertEventCrewSeats = (eventType, aircraftCrewComposition) => {
+  const resourceKind = getInsertEventCrewResourceKind(eventType);
+  if (!resourceKind) return [];
+  return filterAircraftCrewCompositionForResource(
+    aircraftCrewComposition || DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+    resourceKind
+  ).seats;
+};
+const getDefaultPeopleRequiredForInsertType = (eventType, aircraftCrewComposition) => getInsertEventCrewSeats(eventType, aircraftCrewComposition).map((seat) => {
+  const resourceKind = getInsertEventCrewResourceKind(eventType);
+  const eligibleRoles = resourceKind ? getAircraftSeatEligibleRolesForResource(seat, resourceKind) : [];
+  return eligibleRoles.find((role) => role.toUpperCase() === String(seat.role || "").trim().toUpperCase()) || eligibleRoles[0] || seat.role;
+}).filter(Boolean);
 const alignPhysicalResourcesToResourceNumber = (resources, resourceNumber, resourceLabel = "Aircraft") => {
   const count = Math.max(0, Math.round(Number(resourceNumber) || 0));
   const existing = resources.filter((resource) => String(resource || "").trim().length > 0);
@@ -20743,7 +20762,7 @@ const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsx
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
-const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
+const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION, description = "Create an Individual LMP event with the scheduling fields NEO Build needs.", onCancel, onSave }) => {
   const options = insertEventTypes;
   const initialAnchorItem = selectedAnchorItem && traineeLmp.some((item) => (item.id || item.code) === (selectedAnchorItem.id || selectedAnchorItem.code)) ? selectedAnchorItem : traineeLmp[0];
   const initialEventType = (() => {
@@ -20762,9 +20781,27 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
   const [preFlightTime, setPreFlightTime] = reactExports.useState(selectedType?.preFlightTime || 0);
   const [postFlightTime, setPostFlightTime] = reactExports.useState(selectedType?.postFlightTime || 0);
   const [resourceCount, setResourceCount] = reactExports.useState(selectedType?.resourceCount || 0);
-  const [peopleRequired, setPeopleRequired] = reactExports.useState(joinListInput(getDefaultPeopleRequiredForInsertType(selectedType)));
+  const [peopleRequired, setPeopleRequired] = reactExports.useState(() => getDefaultPeopleRequiredForInsertType(selectedType, aircraftCrewComposition));
   const [followsEventId, setFollowsEventId] = reactExports.useState(initialAnchorItem?.id || initialAnchorItem?.code || "");
   const [validationMessage, setValidationMessage] = reactExports.useState("");
+  const peopleRequiredSeats = reactExports.useMemo(
+    () => getInsertEventCrewSeats(selectedType, aircraftCrewComposition),
+    [aircraftCrewComposition, selectedType]
+  );
+  reactExports.useEffect(() => {
+    setPeopleRequired((current) => {
+      if (peopleRequiredSeats.length === 0) return current.length === 0 ? current : [];
+      const resourceKind = getInsertEventCrewResourceKind(selectedType);
+      const next = peopleRequiredSeats.map((seat, index) => {
+        const eligibleRoles = resourceKind ? getAircraftSeatEligibleRolesForResource(seat, resourceKind) : [];
+        const currentRole = current[index];
+        if (currentRole && eligibleRoles.some((role) => role.toUpperCase() === currentRole.toUpperCase())) return currentRole;
+        return eligibleRoles.find((role) => role.toUpperCase() === String(seat.role || "").trim().toUpperCase()) || eligibleRoles[0] || seat.role || "";
+      });
+      if (next.length === current.length && next.every((value, index) => value === current[index])) return current;
+      return next;
+    });
+  }, [peopleRequiredSeats, selectedType]);
   if (options.length === 0) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-md rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
@@ -20786,7 +20823,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
     setPreFlightTime(nextType?.preFlightTime || 0);
     setPostFlightTime(nextType?.postFlightTime || 0);
     setResourceCount(nextType?.resourceCount || 0);
-    setPeopleRequired(joinListInput(getDefaultPeopleRequiredForInsertType(nextType)));
+    setPeopleRequired(getDefaultPeopleRequiredForInsertType(nextType, aircraftCrewComposition));
   };
   const handleSave = () => {
     const trimmedLabel = label.trim().slice(0, INSERT_EVENT_LABEL_MAX_LENGTH);
@@ -20812,7 +20849,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
       preFlightTime: Math.max(0, preFlightTime),
       postFlightTime: Math.max(0, postFlightTime),
       resourceCount: Math.max(0, Math.round(resourceCount)),
-      peopleRequired: splitListInput(peopleRequired),
+      peopleRequired: peopleRequired.map((item) => item.trim()).filter(Boolean),
       followsEventId
     });
   };
@@ -20874,9 +20911,28 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, de
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Aircraft / Resources Required" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "1", min: "0", value: resourceCount, onChange: (event) => setResourceCount(Number(event.target.value)) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 md:col-span-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "People Required" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: peopleRequired, onChange: (event) => setPeopleRequired(event.target.value) })
+        peopleRequiredSeats.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-2", children: peopleRequiredSeats.map((seat, index) => {
+          const resourceKind = getInsertEventCrewResourceKind(selectedType);
+          const eligibleRoles = resourceKind ? getAircraftSeatEligibleRolesForResource(seat, resourceKind) : [];
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[11px] font-semibold uppercase tracking-wide text-gray-500", children: seat.role || `Position ${index + 1}` }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+                value: peopleRequired[index] || eligibleRoles[0] || "",
+                onChange: (event) => {
+                  const next = [...peopleRequired];
+                  next[index] = event.target.value;
+                  setPeopleRequired(next);
+                },
+                children: eligibleRoles.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: role, children: role }, role))
+              }
+            )
+          ] }, seat.id || index);
+        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-400", children: "No people required for this event type." })
       ] })
     ] }),
     validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
@@ -21306,6 +21362,7 @@ const TraineeLmpView = ({
   onOpenPt051ForLesson,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   aircraftConfigurations = [],
+  aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   canOpenPt051 = true,
   onAccessDenied,
   onDeleteRemedialItem,
@@ -21409,6 +21466,7 @@ const TraineeLmpView = ({
         traineeLmp,
         insertEventTypes,
         selectedAnchorItem: selectedItem,
+        aircraftCrewComposition,
         onCancel: () => setShowInsertEventModal(false),
         onSave: async (request) => {
           const inserted = await onInsertCustomEvent?.(trainee, request);
@@ -23398,6 +23456,7 @@ const TraineeProfileFlyout = ({
   onUpdateLmpItem,
   insertEventTypes,
   aircraftConfigurations = [],
+  aircraftCrewComposition,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -25059,7 +25118,8 @@ ${errorText || `HTTP ${response.status}`}`);
                     onInsertCustomEvent: onInsertCustomLmpEvent,
                     onUpdateLmpItem,
                     insertEventTypes,
-                    aircraftConfigurations
+                    aircraftConfigurations,
+                    aircraftCrewComposition
                   }
                 ) });
               })(),
@@ -26542,6 +26602,7 @@ const CourseRosterView = ({
   onUpdateLmpItem,
   insertEventTypes,
   aircraftConfigurations = [],
+  aircraftCrewComposition,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
@@ -26879,6 +26940,7 @@ const CourseRosterView = ({
         onUpdateLmpItem,
         insertEventTypes,
         aircraftConfigurations,
+        aircraftCrewComposition,
         onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
@@ -54170,6 +54232,7 @@ const TraineeView = (props) => {
           onUpdateLmpItem: props.onUpdateLmpItem,
           insertEventTypes: props.insertEventTypes,
           aircraftConfigurations: props.aircraftConfigurations,
+          aircraftCrewComposition: props.aircraftCrewComposition,
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
           onUpdateCourseUnit: props.onUpdateCourseUnit,
@@ -119524,6 +119587,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
             insertEventTypes,
             aircraftConfigurations,
+            aircraftCrewComposition: activeAircraftCrewComposition,
             onAccessDenied: denyPlatformAction,
             locations,
             units,
@@ -119683,6 +119747,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateLmpItem: handleUpdateIndividualLmpItem,
             insertEventTypes,
             aircraftConfigurations,
+            aircraftCrewComposition: activeAircraftCrewComposition,
             onAccessDenied: denyPlatformAction,
             locations,
             units,

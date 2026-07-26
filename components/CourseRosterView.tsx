@@ -17,6 +17,7 @@ import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
+import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
@@ -78,6 +79,7 @@ interface CourseRosterViewProps {
     onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
     insertEventTypes?: InsertEventTypeConfig[];
     aircraftConfigurations?: AircraftConfigurationDefinition[];
+    aircraftCrewComposition?: AircraftCrewComposition;
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -176,6 +178,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onUpdateLmpItem,
     insertEventTypes,
     aircraftConfigurations = [],
+    aircraftCrewComposition,
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
@@ -581,6 +584,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onUpdateLmpItem={onUpdateLmpItem}
                     insertEventTypes={insertEventTypes}
                     aircraftConfigurations={aircraftConfigurations}
+                    aircraftCrewComposition={aircraftCrewComposition}
                     onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
                         assessment

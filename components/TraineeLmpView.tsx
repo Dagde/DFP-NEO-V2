@@ -14,6 +14,14 @@ import {
     normaliseSelectedAircraftConfigurations,
     type AircraftConfigurationDefinition,
 } from '../utils/aircraftConfigurationSettings';
+import {
+    DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+    filterAircraftCrewCompositionForResource,
+    getAircraftSeatEligibleRolesForResource,
+    type AircraftCrewComposition,
+    type AircraftCrewResourceKind,
+    type AircraftSeatRole,
+} from '../utils/aircraftCrewComposition';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -29,6 +37,7 @@ interface TraineeLmpViewProps {
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftConfigurations?: AircraftConfigurationDefinition[];
+  aircraftCrewComposition?: AircraftCrewComposition;
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
   onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   insertEventTypes?: InsertEventTypeConfig[];
@@ -58,9 +67,36 @@ const splitListInput = (value: string): string[] =>
 
 const joinListInput = (items?: string[]): string => (items || []).join('\n');
 
-const getDefaultPeopleRequiredForInsertType = (eventType?: InsertEventTypeConfig): string[] => (
-    eventType?.syllabusType === 'Academics' ? [] : ['Instructor', 'Trainee']
-);
+const getInsertEventCrewResourceKind = (eventType?: InsertEventTypeConfig): AircraftCrewResourceKind | null => {
+    const syllabusType = String(eventType?.syllabusType || '').trim().toLowerCase();
+    if (!syllabusType || syllabusType === 'academics') return null;
+    if (syllabusType === 'ftd' || syllabusType === 'sim' || syllabusType === 'simulator') return 'sim';
+    if (syllabusType === 'cpt' || syllabusType === 'procedural trainer') return 'cpt';
+    return 'flight';
+};
+
+const getInsertEventCrewSeats = (
+    eventType?: InsertEventTypeConfig,
+    aircraftCrewComposition?: AircraftCrewComposition,
+): AircraftSeatRole[] => {
+    const resourceKind = getInsertEventCrewResourceKind(eventType);
+    if (!resourceKind) return [];
+    return filterAircraftCrewCompositionForResource(
+        aircraftCrewComposition || DEFAULT_AIRCRAFT_CREW_COMPOSITION,
+        resourceKind,
+    ).seats;
+};
+
+const getDefaultPeopleRequiredForInsertType = (
+    eventType?: InsertEventTypeConfig,
+    aircraftCrewComposition?: AircraftCrewComposition,
+): string[] => getInsertEventCrewSeats(eventType, aircraftCrewComposition)
+    .map((seat) => {
+        const resourceKind = getInsertEventCrewResourceKind(eventType);
+        const eligibleRoles = resourceKind ? getAircraftSeatEligibleRolesForResource(seat, resourceKind) : [];
+        return eligibleRoles.find(role => role.toUpperCase() === String(seat.role || '').trim().toUpperCase()) || eligibleRoles[0] || seat.role;
+    })
+    .filter(Boolean);
 
 const alignPhysicalResourcesToResourceNumber = (
     resources: string[],
@@ -330,10 +366,11 @@ export const InsertEventModal: React.FC<{
     traineeLmp: SyllabusItemDetail[];
     insertEventTypes: InsertEventTypeConfig[];
     selectedAnchorItem?: SyllabusItemDetail | null;
+    aircraftCrewComposition?: AircraftCrewComposition;
     description?: string;
     onCancel: () => void;
     onSave: (request: InsertLmpEventRequest) => void;
-}> = ({ traineeLmp, insertEventTypes, selectedAnchorItem, description = 'Create an Individual LMP event with the scheduling fields NEO Build needs.', onCancel, onSave }) => {
+}> = ({ traineeLmp, insertEventTypes, selectedAnchorItem, aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION, description = 'Create an Individual LMP event with the scheduling fields NEO Build needs.', onCancel, onSave }) => {
     const options = insertEventTypes;
     const initialAnchorItem = selectedAnchorItem && traineeLmp.some(item => (item.id || item.code) === (selectedAnchorItem.id || selectedAnchorItem.code))
         ? selectedAnchorItem
@@ -354,9 +391,28 @@ export const InsertEventModal: React.FC<{
     const [preFlightTime, setPreFlightTime] = useState(selectedType?.preFlightTime || 0);
     const [postFlightTime, setPostFlightTime] = useState(selectedType?.postFlightTime || 0);
     const [resourceCount, setResourceCount] = useState(selectedType?.resourceCount || 0);
-    const [peopleRequired, setPeopleRequired] = useState(joinListInput(getDefaultPeopleRequiredForInsertType(selectedType)));
+    const [peopleRequired, setPeopleRequired] = useState<string[]>(() => getDefaultPeopleRequiredForInsertType(selectedType, aircraftCrewComposition));
     const [followsEventId, setFollowsEventId] = useState(initialAnchorItem?.id || initialAnchorItem?.code || '');
     const [validationMessage, setValidationMessage] = useState('');
+    const peopleRequiredSeats = useMemo(
+        () => getInsertEventCrewSeats(selectedType, aircraftCrewComposition),
+        [aircraftCrewComposition, selectedType],
+    );
+
+    useEffect(() => {
+        setPeopleRequired(current => {
+            if (peopleRequiredSeats.length === 0) return current.length === 0 ? current : [];
+            const resourceKind = getInsertEventCrewResourceKind(selectedType);
+            const next = peopleRequiredSeats.map((seat, index) => {
+                const eligibleRoles = resourceKind ? getAircraftSeatEligibleRolesForResource(seat, resourceKind) : [];
+                const currentRole = current[index];
+                if (currentRole && eligibleRoles.some(role => role.toUpperCase() === currentRole.toUpperCase())) return currentRole;
+                return eligibleRoles.find(role => role.toUpperCase() === String(seat.role || '').trim().toUpperCase()) || eligibleRoles[0] || seat.role || '';
+            });
+            if (next.length === current.length && next.every((value, index) => value === current[index])) return current;
+            return next;
+        });
+    }, [peopleRequiredSeats, selectedType]);
 
     if (options.length === 0) {
         return (
@@ -388,7 +444,7 @@ export const InsertEventModal: React.FC<{
         setPreFlightTime(nextType?.preFlightTime || 0);
         setPostFlightTime(nextType?.postFlightTime || 0);
         setResourceCount(nextType?.resourceCount || 0);
-        setPeopleRequired(joinListInput(getDefaultPeopleRequiredForInsertType(nextType)));
+        setPeopleRequired(getDefaultPeopleRequiredForInsertType(nextType, aircraftCrewComposition));
     };
 
     const handleSave = () => {
@@ -415,7 +471,7 @@ export const InsertEventModal: React.FC<{
             preFlightTime: Math.max(0, preFlightTime),
             postFlightTime: Math.max(0, postFlightTime),
             resourceCount: Math.max(0, Math.round(resourceCount)),
-            peopleRequired: splitListInput(peopleRequired),
+            peopleRequired: peopleRequired.map(item => item.trim()).filter(Boolean),
             followsEventId,
         });
     };
@@ -480,10 +536,37 @@ export const InsertEventModal: React.FC<{
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Aircraft / Resources Required</span>
                         <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="1" min="0" value={resourceCount} onChange={(event) => setResourceCount(Number(event.target.value))} />
                     </label>
-                    <label className="space-y-1 md:col-span-2">
+                    <div className="space-y-2 md:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">People Required</span>
-                        <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={peopleRequired} onChange={(event) => setPeopleRequired(event.target.value)} />
-                    </label>
+                        {peopleRequiredSeats.length > 0 ? (
+                            <div className="grid gap-2 md:grid-cols-2">
+                                {peopleRequiredSeats.map((seat, index) => {
+                                    const resourceKind = getInsertEventCrewResourceKind(selectedType);
+                                    const eligibleRoles = resourceKind ? getAircraftSeatEligibleRolesForResource(seat, resourceKind) : [];
+                                    return (
+                                        <label key={seat.id || index} className="space-y-1">
+                                            <span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                                                {seat.role || `Position ${index + 1}`}
+                                            </span>
+                                            <select
+                                                className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+                                                value={peopleRequired[index] || eligibleRoles[0] || ''}
+                                                onChange={(event) => {
+                                                    const next = [...peopleRequired];
+                                                    next[index] = event.target.value;
+                                                    setPeopleRequired(next);
+                                                }}
+                                            >
+                                                {eligibleRoles.map(role => <option key={role} value={role}>{role}</option>)}
+                                            </select>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-400">No people required for this event type.</div>
+                        )}
+                    </div>
                 </div>
                 {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
                 <div className="flex justify-end gap-px border-t border-gray-700 px-5 py-4">
@@ -1042,6 +1125,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onOpenPt051ForLesson,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     aircraftConfigurations = [],
+    aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
     canOpenPt051 = true,
     onAccessDenied,
     onDeleteRemedialItem,
@@ -1147,6 +1231,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     traineeLmp={traineeLmp}
                     insertEventTypes={insertEventTypes}
                     selectedAnchorItem={selectedItem}
+                    aircraftCrewComposition={aircraftCrewComposition}
                     onCancel={() => setShowInsertEventModal(false)}
                     onSave={async (request) => {
                         const inserted = await onInsertCustomEvent?.(trainee, request);
