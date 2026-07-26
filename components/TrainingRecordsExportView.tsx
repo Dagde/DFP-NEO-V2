@@ -109,6 +109,11 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const exportAssessmentTitle = `${exportReportName} Training Assessment`;
     const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || 'Report Instructor';
     const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
+    const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
+    const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce<Record<string, string>>((acc, result) => {
+        if (result.enabled !== false) acc[result.code] = result.label || result.code;
+        return acc;
+    }, {});
 
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -812,6 +817,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // Get scores for this event
         const traineeScores = scores.get(event.student || event.pilot || '');
         const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
+        const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ''] || 'N/A';
         
         // Parse comments into sections
         const commentSections = parseComments(eventScore?.comments);
@@ -849,6 +855,21 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const col1X = margin;
         const col2X = pageWidth / 2 + 5;
         const assessorValueOffset = Math.min(45, Math.max(20, exportAssessorLabel.length * 2.1));
+        const drawLabelValue = (
+            label: string,
+            value: string,
+            x: number,
+            valueX: number,
+            rowY: number,
+            maxWidth: number,
+        ): number => {
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${label}:`, x, rowY);
+            pdf.setFont('helvetica', 'normal');
+            const lines = pdf.splitTextToSize(value || 'N/A', maxWidth);
+            pdf.text(lines, valueX, rowY);
+            return Math.max(6, lines.length * 4 + 2);
+        };
         
         pdf.setFont('helvetica', 'bold');
         pdf.text('Trainee:', col1X, y);
@@ -872,16 +893,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.text(formatDate(event.date), col2X + 20, y);
         y += 5;
         
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Flight:', col1X, y);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(event.flightNumber || 'N/A', col1X + 20, y);
-        y += 5;
-        
-        // Event Description label and content
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Event Description:', col1X, y);
-        
         // Get flight description from syllabus details with flexible matching
         const eventNum = (event.flightNumber || '').trim();
         const syllabusDetail = syllabusDetails.find(d => {
@@ -899,31 +910,15 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             return false;
         });
         const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || '';
-        
-        if (flightDesc) {
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(8);
-            const descText = pdf.splitTextToSize(flightDesc, contentWidth - 40);
-            pdf.text(descText, col1X + 40, y);
-            y += Math.max(5, descText.length * 4);
-            pdf.setFontSize(9);
-        } else {
-            pdf.setFont('helvetica', 'normal');
-            pdf.text('N/A', col1X + 40, y);
-            y += 5;
-        }
-        y += 2;
-        
-        // Event Number (repeated from above)
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Event Number:', col1X, y);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(event.flightNumber || 'N/A', col1X + 30, y);
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Duration:', col2X, y);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A', col2X + 20, y);
+
+        const eventNumberRowHeight = Math.max(
+            drawLabelValue('Event Number', event.flightNumber || 'N/A', col1X, col1X + 34, y, 55),
+            drawLabelValue('Duration', event.duration ? `${event.duration.toFixed(1)} hrs` : 'N/A', col2X, col2X + 26, y, 45),
+        );
+        y += eventNumberRowHeight;
+        pdf.setFontSize(8);
+        y += drawLabelValue('Event Description', flightDesc || 'N/A', col1X, col1X + 42, y, contentWidth - 44);
+        pdf.setFontSize(9);
         y += 8;
         
         pdf.setFillColor(243, 244, 246);
@@ -932,19 +927,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.rect(margin, y - 4, contentWidth, 10, 'S');
         
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Overall Grade:', col1X, y);
+        pdf.text(`${exportOverallFieldLabels.overallGrade || 'Overall Grade'}:`, col1X, y);
         pdf.setFont('helvetica', 'normal');
         pdf.text(eventScore?.outcome || 'Not Assessed', col1X + 30, y);
         
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Result:', col2X, y);
+        pdf.text(`${exportOverallFieldLabels.result || 'Mission Status'}:`, col2X, y);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(eventScore?.outcome === 'Pass' ? 'PASS' : eventScore?.outcome === 'Fail' ? 'FAIL' : 'N/A', col2X + 15, y);
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('DCO:', col2X + 40, y);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(eventScore?.outcome === 'DCO' ? 'Yes' : 'No', col2X + 50, y);
+        pdf.text(missionStatus, col2X + 34, y);
         y += 12;
         
         // Add configured comment boxes with compact layout
@@ -1076,6 +1066,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // Get scores for this event
         const traineeScores = scores.get(event.student || event.pilot || '');
         const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
+        const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ''] || 'N/A';
         
         // Training report structure with all elements
         const pt051Structure = [
@@ -1114,10 +1105,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 
                 <!-- Overall Assessment -->
                 <div style="border: 1px solid black; padding: 6px; margin-bottom: 8px; background: #f3f4f6;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        <div><strong>Overall Grade:</strong> ${eventScore?.outcome || 'Not Assessed'}</div>
-                        <div><strong>Result:</strong> ${eventScore?.outcome === 'Pass' ? 'PASS' : eventScore?.outcome === 'Fail' ? 'FAIL' : 'N/A'}</div>
-                        <div><strong>DCO:</strong> ${eventScore?.outcome === 'DCO' ? 'Yes' : 'No'}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div><strong>${escapeHtml(exportOverallFieldLabels.overallGrade || 'Overall Grade')}:</strong> ${eventScore?.outcome || 'Not Assessed'}</div>
+                        <div><strong>${escapeHtml(exportOverallFieldLabels.result || 'Mission Status')}:</strong> ${missionStatus}</div>
                     </div>
                 </div>
                 

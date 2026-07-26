@@ -79074,6 +79074,11 @@ const TrainingRecordsExportView = ({
   const exportAssessmentTitle = `${exportReportName} Training Assessment`;
   const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || "Report Instructor";
   const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
+  const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
+  const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce((acc, result) => {
+    if (result.enabled !== false) acc[result.code] = result.label || result.code;
+    return acc;
+  }, {});
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -79619,6 +79624,7 @@ const TrainingRecordsExportView = ({
     };
     const traineeScores = scores.get(event.student || event.pilot || "");
     const eventScore = traineeScores?.find((s) => s.syllabusId === event.flightNumber && s.date === event.date);
+    const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ""] || "N/A";
     const commentSections = parseComments2(eventScore?.comments);
     const pt051Structure = [
       { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
@@ -79647,6 +79653,14 @@ const TrainingRecordsExportView = ({
     const col1X = margin;
     const col2X = pageWidth / 2 + 5;
     const assessorValueOffset = Math.min(45, Math.max(20, exportAssessorLabel.length * 2.1));
+    const drawLabelValue = (label, value, x, valueX, rowY, maxWidth) => {
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`${label}:`, x, rowY);
+      pdf.setFont("helvetica", "normal");
+      const lines = pdf.splitTextToSize(value || "N/A", maxWidth);
+      pdf.text(lines, valueX, rowY);
+      return Math.max(6, lines.length * 4 + 2);
+    };
     pdf.setFont("helvetica", "bold");
     pdf.text("Trainee:", col1X, y);
     pdf.setFont("helvetica", "normal");
@@ -79665,13 +79679,6 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "normal");
     pdf.text(formatDate22(event.date), col2X + 20, y);
     y += 5;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Flight:", col1X, y);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(event.flightNumber || "N/A", col1X + 20, y);
-    y += 5;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Event Description:", col1X, y);
     const eventNum = (event.flightNumber || "").trim();
     const syllabusDetail = syllabusDetails.find((d) => {
       const id = (d.id || "").trim();
@@ -79685,44 +79692,27 @@ const TrainingRecordsExportView = ({
       return false;
     });
     const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || "";
-    if (flightDesc) {
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8);
-      const descText = pdf.splitTextToSize(flightDesc, contentWidth - 40);
-      pdf.text(descText, col1X + 40, y);
-      y += Math.max(5, descText.length * 4);
-      pdf.setFontSize(9);
-    } else {
-      pdf.setFont("helvetica", "normal");
-      pdf.text("N/A", col1X + 40, y);
-      y += 5;
-    }
-    y += 2;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Event Number:", col1X, y);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(event.flightNumber || "N/A", col1X + 30, y);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Duration:", col2X, y);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(event.duration ? event.duration.toFixed(1) + " hrs" : "N/A", col2X + 20, y);
+    const eventNumberRowHeight = Math.max(
+      drawLabelValue("Event Number", event.flightNumber || "N/A", col1X, col1X + 34, y, 55),
+      drawLabelValue("Duration", event.duration ? `${event.duration.toFixed(1)} hrs` : "N/A", col2X, col2X + 26, y, 45)
+    );
+    y += eventNumberRowHeight;
+    pdf.setFontSize(8);
+    y += drawLabelValue("Event Description", flightDesc || "N/A", col1X, col1X + 42, y, contentWidth - 44);
+    pdf.setFontSize(9);
     y += 8;
     pdf.setFillColor(243, 244, 246);
     pdf.rect(margin, y - 4, contentWidth, 10, "F");
     pdf.setDrawColor(0);
     pdf.rect(margin, y - 4, contentWidth, 10, "S");
     pdf.setFont("helvetica", "bold");
-    pdf.text("Overall Grade:", col1X, y);
+    pdf.text(`${exportOverallFieldLabels.overallGrade || "Overall Grade"}:`, col1X, y);
     pdf.setFont("helvetica", "normal");
     pdf.text(eventScore?.outcome || "Not Assessed", col1X + 30, y);
     pdf.setFont("helvetica", "bold");
-    pdf.text("Result:", col2X, y);
+    pdf.text(`${exportOverallFieldLabels.result || "Mission Status"}:`, col2X, y);
     pdf.setFont("helvetica", "normal");
-    pdf.text(eventScore?.outcome === "Pass" ? "PASS" : eventScore?.outcome === "Fail" ? "FAIL" : "N/A", col2X + 15, y);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("DCO:", col2X + 40, y);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(eventScore?.outcome === "DCO" ? "Yes" : "No", col2X + 50, y);
+    pdf.text(missionStatus, col2X + 34, y);
     y += 12;
     pdf.setFontSize(8);
     const boxHeight = 12;
