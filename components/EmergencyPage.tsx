@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSystemFreeze, AllowedActions } from '../context/SystemFreezeContext';
 import {
     hasEmergencyFreezeAuthority,
@@ -6,6 +6,8 @@ import {
     type EmergencyFreezeAuthoritySettings,
 } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface EmergencyPageProps {
     currentUserRole?: string;
@@ -38,9 +40,14 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze();
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isEditingAuthority, setIsEditingAuthority] = useState(false);
+    const [authorityDraft, setAuthorityDraft] = useState<EmergencyFreezeAuthoritySettings>(() => (
+        normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority)
+    ));
     const [pendingAllowedActions, setPendingAllowedActions] = useState<AllowedActions>(defaultAllowedActions);
     const reportDisplayName = String(trainingReportDisplayName || '').trim() || 'Training Report';
     const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+    const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
     const canActivateFreeze = hasEmergencyFreezeAuthority({
         action: 'activate',
         settings: authoritySettings,
@@ -54,20 +61,75 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
         userPermission: currentUserRole,
     });
 
+    useEffect(() => {
+        if (!isEditingAuthority) {
+            setAuthorityDraft(authoritySettings);
+        }
+    }, [authoritySettings, isEditingAuthority]);
+
+    const requestPassword = async (message: string, title: string): Promise<boolean> => {
+        const password = await showDarkPrompt({
+            title,
+            message,
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Confirm',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return false;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', title, 'warning');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+            return false;
+        }
+    };
+
     const handleAuthorityChange = (
         action: keyof EmergencyFreezeAuthoritySettings,
         qualificationId: string,
         checked: boolean,
     ) => {
-        if (!onUpdateEmergencyFreezeAuthority) return;
-        const current = authoritySettings[action] || [];
+        const current = authorityDraft[action] || [];
         const next = checked
             ? Array.from(new Set([...current, qualificationId]))
             : current.filter(id => id !== qualificationId);
-        onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
-            ...authoritySettings,
+        setAuthorityDraft(normaliseEmergencyFreezeAuthoritySettings({
+            ...authorityDraft,
             [action]: next,
         }));
+    };
+
+    const handleEditAuthority = () => {
+        if (!canEditEmergencyAuthority) return;
+        setAuthorityDraft(authoritySettings);
+        setIsEditingAuthority(true);
+    };
+
+    const handleCancelAuthority = () => {
+        setAuthorityDraft(authoritySettings);
+        setIsEditingAuthority(false);
+    };
+
+    const handleSaveAuthority = async () => {
+        if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
+        const unlocked = await requestPassword(
+            'Enter your password to save emergency freeze authority changes.',
+            'Emergency Authority Password Required',
+        );
+        if (!unlocked) return;
+        onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(authorityDraft));
+        setIsEditingAuthority(false);
+        if (onShowSuccess) {
+            onShowSuccess('Emergency freeze authority saved');
+        }
     };
 
     const handleAllowedActionChange = (action: keyof AllowedActions) => {
@@ -90,13 +152,18 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
 
     const handleFreezeClick = () => {
         if (!canActivateFreeze) {
-            alert('You are not authorised to activate an emergency freeze.');
+            showDarkAlert('You are not authorised to activate an emergency freeze.', 'Emergency Freeze Locked', 'warning');
             return;
         }
         setShowConfirmDialog(true);
     };
 
     const handleFreezeConfirm = async () => {
+        const unlocked = await requestPassword(
+            'Enter your password to activate the emergency freeze.',
+            'Emergency Freeze Password Required',
+        );
+        if (!unlocked) return;
         setIsProcessing(true);
         
         freezeSystem('Aircraft Emergency', pendingAllowedActions, currentUserRole);
@@ -110,9 +177,14 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
 
     const handleUnfreeze = async () => {
         if (!canDeactivateFreeze) {
-            alert('You are not authorised to deactivate an emergency freeze.');
+            showDarkAlert('You are not authorised to deactivate an emergency freeze.', 'Emergency Freeze Locked', 'warning');
             return;
         }
+        const unlocked = await requestPassword(
+            'Enter your password to deactivate the emergency freeze.',
+            'Emergency Freeze Password Required',
+        );
+        if (!unlocked) return;
         setIsProcessing(true);
         unfreezeSystem();
         setIsProcessing(false);
@@ -132,6 +204,25 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
             minute: '2-digit'
         });
     };
+
+    const getQualificationLabel = (qualificationId: string): string => {
+        const match = qualificationOptions.find(qualification => qualification.id === qualificationId);
+        return match?.code || match?.name || qualificationId;
+    };
+
+    const renderSelectedQualifications = (qualificationIds: string[]) => (
+        qualificationIds.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+                {qualificationIds.map(id => (
+                    <span key={id} className="rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-200">
+                        {getQualificationLabel(id)}
+                    </span>
+                ))}
+            </div>
+        ) : (
+            <span className="text-sm text-gray-500">No qualifications selected.</span>
+        )
+    );
 
     return (
         <div className="p-6 space-y-6">
@@ -186,6 +277,93 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                 </div>
             </div>
 
+            <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 className="text-lg font-semibold text-white">Emergency Freeze Authority</h3>
+                        <p className="text-sm text-gray-400">Qualifications authorised to activate and deactivate freeze.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {isEditingAuthority ? (
+                            <>
+                                <button
+                                    onClick={handleCancelAuthority}
+                                    className="rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveAuthority}
+                                    className="rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500"
+                                >
+                                    Save
+                                </button>
+                            </>
+                        ) : canEditEmergencyAuthority ? (
+                            <button
+                                onClick={handleEditAuthority}
+                                className="rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600"
+                            >
+                                Edit
+                            </button>
+                        ) : (
+                            <span className="rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200">Read-only</span>
+                        )}
+                    </div>
+                </div>
+                {qualificationOptions.length > 0 ? (
+                    isEditingAuthority ? (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate</h4>
+                                <div className="space-y-2">
+                                    {qualificationOptions.map(qualification => (
+                                        <label key={`activate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
+                                            <input
+                                                type="checkbox"
+                                                checked={displayedAuthoritySettings.activateQualificationIds.includes(qualification.id)}
+                                                onChange={event => handleAuthorityChange('activateQualificationIds', qualification.id, event.target.checked)}
+                                                className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                            />
+                                            <span>{qualification.code || qualification.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Deactivate</h4>
+                                <div className="space-y-2">
+                                    {qualificationOptions.map(qualification => (
+                                        <label key={`deactivate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
+                                            <input
+                                                type="checkbox"
+                                                checked={displayedAuthoritySettings.deactivateQualificationIds.includes(qualification.id)}
+                                                onChange={event => handleAuthorityChange('deactivateQualificationIds', qualification.id, event.target.checked)}
+                                                className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                            />
+                                            <span>{qualification.code || qualification.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate</h4>
+                                {renderSelectedQualifications(authoritySettings.activateQualificationIds)}
+                            </div>
+                            <div>
+                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Deactivate</h4>
+                                {renderSelectedQualifications(authoritySettings.deactivateQualificationIds)}
+                            </div>
+                        </div>
+                    )
+                ) : (
+                    <p className="text-sm text-gray-500">No active qualifications are configured for this unit model.</p>
+                )}
+            </div>
+
             {/* If NOT frozen - show freeze options */}
             {!freezeState.isFrozen && (
                 <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6">
@@ -218,58 +396,6 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                             </div>
                         </button>
                     </div>
-                    <div className="mb-6 rounded-xl border border-gray-700 bg-gray-900/60 p-4">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                            <div>
-                                <h3 className="text-sm font-semibold text-white">Emergency Freeze Authority</h3>
-                                <p className="text-xs text-gray-400">Qualifications authorised to activate and deactivate freeze.</p>
-                            </div>
-                            {!canEditEmergencyAuthority && (
-                                <span className="rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200">Read-only</span>
-                            )}
-                        </div>
-                        {qualificationOptions.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <div>
-                                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate</h4>
-                                    <div className="space-y-2">
-                                        {qualificationOptions.map(qualification => (
-                                            <label key={`activate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={authoritySettings.activateQualificationIds.includes(qualification.id)}
-                                                    disabled={!canEditEmergencyAuthority}
-                                                    onChange={event => handleAuthorityChange('activateQualificationIds', qualification.id, event.target.checked)}
-                                                    className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                                                />
-                                                <span>{qualification.code || qualification.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Deactivate</h4>
-                                    <div className="space-y-2">
-                                        {qualificationOptions.map(qualification => (
-                                            <label key={`deactivate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={authoritySettings.deactivateQualificationIds.includes(qualification.id)}
-                                                    disabled={!canEditEmergencyAuthority}
-                                                    onChange={event => handleAuthorityChange('deactivateQualificationIds', qualification.id, event.target.checked)}
-                                                    className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                                                />
-                                                <span>{qualification.code || qualification.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-sm text-gray-500">No active qualifications are configured for this unit model.</p>
-                        )}
-                    </div>
-
                     {/* Allowed Actions Selection */}
                     <div className="border-t border-gray-700 pt-4 mt-4">
                         <h4 className="text-sm font-medium text-gray-300 mb-3">

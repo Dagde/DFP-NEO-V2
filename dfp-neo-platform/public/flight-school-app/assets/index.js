@@ -7049,6 +7049,29 @@ const SystemFreezeBanner = ({ canUnfreeze = false }) => {
       minute: "2-digit"
     });
   };
+  const handleUnfreeze = async () => {
+    const password = await showDarkPrompt({
+      title: "Emergency Freeze Password Required",
+      message: "Enter your password to deactivate the emergency freeze.",
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", "Emergency Freeze Password Required", "warning");
+        return;
+      }
+      unfreezeSystem();
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+    }
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-red-600 text-white px-4 py-2 flex items-center justify-center gap-4 animate-pulse", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
@@ -7065,7 +7088,7 @@ const SystemFreezeBanner = ({ canUnfreeze = false }) => {
     canUnfreeze ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
-        onClick: unfreezeSystem,
+        onClick: handleUnfreeze,
         className: "ml-4 px-3 py-1 bg-white text-red-600 rounded text-sm font-semibold hover:bg-red-100 transition-colors",
         children: "Unfreeze"
       }
@@ -61228,9 +61251,12 @@ const EmergencyPage = ({
   const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
   const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
   const [isProcessing, setIsProcessing] = reactExports.useState(false);
+  const [isEditingAuthority, setIsEditingAuthority] = reactExports.useState(false);
+  const [authorityDraft, setAuthorityDraft] = reactExports.useState(() => normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority));
   const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
   const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
   const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+  const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
   const canActivateFreeze = hasEmergencyFreezeAuthority({
     action: "activate",
     settings: authoritySettings,
@@ -61243,14 +61269,64 @@ const EmergencyPage = ({
     userQualificationIds: currentUserQualificationIds,
     userPermission: currentUserRole
   });
+  reactExports.useEffect(() => {
+    if (!isEditingAuthority) {
+      setAuthorityDraft(authoritySettings);
+    }
+  }, [authoritySettings, isEditingAuthority]);
+  const requestPassword = async (message, title) => {
+    const password = await showDarkPrompt({
+      title,
+      message,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return false;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", title, "warning");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+      return false;
+    }
+  };
   const handleAuthorityChange = (action, qualificationId, checked) => {
-    if (!onUpdateEmergencyFreezeAuthority) return;
-    const current = authoritySettings[action] || [];
+    const current = authorityDraft[action] || [];
     const next = checked ? Array.from(/* @__PURE__ */ new Set([...current, qualificationId])) : current.filter((id) => id !== qualificationId);
-    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
-      ...authoritySettings,
+    setAuthorityDraft(normaliseEmergencyFreezeAuthoritySettings({
+      ...authorityDraft,
       [action]: next
     }));
+  };
+  const handleEditAuthority = () => {
+    if (!canEditEmergencyAuthority) return;
+    setAuthorityDraft(authoritySettings);
+    setIsEditingAuthority(true);
+  };
+  const handleCancelAuthority = () => {
+    setAuthorityDraft(authoritySettings);
+    setIsEditingAuthority(false);
+  };
+  const handleSaveAuthority = async () => {
+    if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
+    const unlocked = await requestPassword(
+      "Enter your password to save emergency freeze authority changes.",
+      "Emergency Authority Password Required"
+    );
+    if (!unlocked) return;
+    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(authorityDraft));
+    setIsEditingAuthority(false);
+    if (onShowSuccess) {
+      onShowSuccess("Emergency freeze authority saved");
+    }
   };
   const handleAllowedActionChange = (action) => {
     setPendingAllowedActions((prev) => ({
@@ -61266,12 +61342,17 @@ const EmergencyPage = ({
   };
   const handleFreezeClick = () => {
     if (!canActivateFreeze) {
-      alert("You are not authorised to activate an emergency freeze.");
+      showDarkAlert("You are not authorised to activate an emergency freeze.", "Emergency Freeze Locked", "warning");
       return;
     }
     setShowConfirmDialog(true);
   };
   const handleFreezeConfirm = async () => {
+    const unlocked = await requestPassword(
+      "Enter your password to activate the emergency freeze.",
+      "Emergency Freeze Password Required"
+    );
+    if (!unlocked) return;
     setIsProcessing(true);
     freezeSystem("Aircraft Emergency", pendingAllowedActions, currentUserRole);
     setShowConfirmDialog(false);
@@ -61282,9 +61363,14 @@ const EmergencyPage = ({
   };
   const handleUnfreeze = async () => {
     if (!canDeactivateFreeze) {
-      alert("You are not authorised to deactivate an emergency freeze.");
+      showDarkAlert("You are not authorised to deactivate an emergency freeze.", "Emergency Freeze Locked", "warning");
       return;
     }
+    const unlocked = await requestPassword(
+      "Enter your password to deactivate the emergency freeze.",
+      "Emergency Freeze Password Required"
+    );
+    if (!unlocked) return;
     setIsProcessing(true);
     unfreezeSystem();
     setIsProcessing(false);
@@ -61302,6 +61388,11 @@ const EmergencyPage = ({
       minute: "2-digit"
     });
   };
+  const getQualificationLabel = (qualificationId) => {
+    const match = qualificationOptions.find((qualification) => qualification.id === qualificationId);
+    return match?.code || match?.name || qualificationId;
+  };
+  const renderSelectedQualifications = (qualificationIds) => qualificationIds.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: qualificationIds.map((id) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-200", children: getQualificationLabel(id) }, id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "No qualifications selected." });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg shadow-red-900/30", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-8 h-8 text-white", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }) }),
@@ -61326,6 +61417,80 @@ const EmergencyPage = ({
       !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 rounded-full bg-green-500 animate-pulse" }),
       freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 rounded-full bg-red-500 animate-pulse" })
     ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-gray-700 bg-gray-800/50 p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Emergency Freeze Authority" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Qualifications authorised to activate and deactivate freeze." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleCancelAuthority,
+              className: "rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+              children: "Cancel"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleSaveAuthority,
+              className: "rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-500",
+              children: "Save"
+            }
+          )
+        ] }) : canEditEmergencyAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleEditAuthority,
+            className: "rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+            children: "Edit"
+          }
+        ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" }) })
+      ] }),
+      qualificationOptions.length > 0 ? isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: displayedAuthoritySettings.activateQualificationIds.includes(qualification.id),
+                onChange: (event) => handleAuthorityChange("activateQualificationIds", qualification.id, event.target.checked),
+                className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+          ] }, `activate-${qualification.id}`)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Deactivate" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: displayedAuthoritySettings.deactivateQualificationIds.includes(qualification.id),
+                onChange: (event) => handleAuthorityChange("deactivateQualificationIds", qualification.id, event.target.checked),
+                className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+          ] }, `deactivate-${qualification.id}`)) })
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate" }),
+          renderSelectedQualifications(authoritySettings.activateQualificationIds)
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Deactivate" }),
+          renderSelectedQualifications(authoritySettings.deactivateQualificationIds)
+        ] })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No active qualifications are configured for this unit model." })
+    ] }),
     !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-xl border border-gray-700 p-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-lg font-semibold text-white mb-4 flex items-center gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
@@ -61348,49 +61513,6 @@ const EmergencyPage = ({
           ]
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 rounded-xl border border-gray-700 bg-gray-900/60 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Emergency Freeze Authority" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Qualifications authorised to activate and deactivate freeze." })
-          ] }),
-          !canEditEmergencyAuthority && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" })
-        ] }),
-        qualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: authoritySettings.activateQualificationIds.includes(qualification.id),
-                  disabled: !canEditEmergencyAuthority,
-                  onChange: (event) => handleAuthorityChange("activateQualificationIds", qualification.id, event.target.checked),
-                  className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
-            ] }, `activate-${qualification.id}`)) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Deactivate" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: authoritySettings.deactivateQualificationIds.includes(qualification.id),
-                  disabled: !canEditEmergencyAuthority,
-                  onChange: (event) => handleAuthorityChange("deactivateQualificationIds", qualification.id, event.target.checked),
-                  className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
-            ] }, `deactivate-${qualification.id}`)) })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No active qualifications are configured for this unit model." })
-      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4 mt-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-medium text-gray-300 mb-3", children: "Select operations to allow during freeze:" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
@@ -61990,6 +62112,7 @@ const SettingsView = ({
   activeAircraftTypeCode = ""
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
+  const canEditEmergencyAuthority = ["Super Admin", "Admin"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
   const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
   const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
@@ -63014,7 +63137,7 @@ const SettingsView = ({
           onUpdateEmergencyFreezeAuthority,
           qualificationOptions,
           currentUserQualificationIds,
-          canEditEmergencyAuthority: canEditSettings
+          canEditEmergencyAuthority
         }
       )
     ] }),

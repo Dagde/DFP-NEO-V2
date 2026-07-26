@@ -596,6 +596,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     
     // Permission Check - Only Super Admin, Admin, and Scheduler can edit Settings
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
+    const canEditEmergencyAuthority = ['Super Admin', 'Admin'].includes(currentUserPermission);
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
     const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
     const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
@@ -1771,7 +1772,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority}
                        qualificationOptions={qualificationOptions}
                        currentUserQualificationIds={currentUserQualificationIds}
-                       canEditEmergencyAuthority={canEditSettings}
+                       canEditEmergencyAuthority={canEditEmergencyAuthority}
                    />
                    )}
                </div>

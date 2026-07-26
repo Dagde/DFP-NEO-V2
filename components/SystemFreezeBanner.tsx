@@ -1,5 +1,7 @@
 import React from 'react';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 
 interface SystemFreezeBannerProps {
     canUnfreeze?: boolean;
@@ -20,6 +22,30 @@ const SystemFreezeBanner: React.FC<SystemFreezeBannerProps> = ({ canUnfreeze = f
         });
     };
 
+    const handleUnfreeze = async () => {
+        const password = await showDarkPrompt({
+            title: 'Emergency Freeze Password Required',
+            message: 'Enter your password to deactivate the emergency freeze.',
+            inputLabel: 'Password',
+            inputType: 'password',
+            inputPlaceholder: 'Enter password',
+            confirmText: 'Confirm',
+            cancelText: 'Cancel',
+            variant: 'warning',
+        });
+        if (!password) return;
+        try {
+            const isValid = await verifyCurrentUserPassword(password);
+            if (!isValid) {
+                await showDarkAlert('The password was not accepted.', 'Emergency Freeze Password Required', 'warning');
+                return;
+            }
+            unfreezeSystem();
+        } catch (error) {
+            await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+        }
+    };
+
     return (
         <div className="bg-red-600 text-white px-4 py-2 flex items-center justify-center gap-4 animate-pulse">
             <div className="flex items-center gap-2">
@@ -34,7 +60,7 @@ const SystemFreezeBanner: React.FC<SystemFreezeBannerProps> = ({ canUnfreeze = f
             </div>
             {canUnfreeze ? (
                 <button
-                    onClick={unfreezeSystem}
+                    onClick={handleUnfreeze}
                     className="ml-4 px-3 py-1 bg-white text-red-600 rounded text-sm font-semibold hover:bg-red-100 transition-colors"
                 >
                     Unfreeze
