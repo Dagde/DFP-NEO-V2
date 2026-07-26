@@ -237,6 +237,40 @@ export const normaliseAssignedQualificationIds = (
   return result;
 };
 
+const LEGACY_QUALIFICATION_FIELD_BY_ID: Record<string, string> = {
+  'admin-staff': 'isAdminStaff',
+  cfi: 'isCFI',
+  co: 'isCommandingOfficer',
+  contractor: 'isContractor',
+  dfc: 'isDeputyFlightCommander',
+  executive: 'isExecutive',
+  'flying-supervisor': 'isFlyingSupervisor',
+  ire: 'isIRE',
+  ofi: 'isOFI',
+  qfi: 'isQFI',
+  'testing-officer': 'isTestingOfficer',
+};
+
+export const getPersonAssignedQualificationIds = (
+  person: any,
+  catalogue?: StaffQualificationCatalogue,
+  preserveUnknown = true,
+): string[] => {
+  const normalisedCatalogue = normaliseStaffQualificationCatalogue(catalogue);
+  const assigned = normaliseAssignedQualificationIds(
+    person?.preferences?.qualifications || person?.qualifications || [],
+    normalisedCatalogue,
+    preserveUnknown,
+  );
+  normalisedCatalogue.qualifications.forEach(qualification => {
+    const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID[qualification.id];
+    if (legacyField && person?.[legacyField] === true && !assigned.includes(qualification.id)) {
+      assigned.push(qualification.id);
+    }
+  });
+  return assigned;
+};
+
 export const getQualificationsForOperationalModel = (
   catalogue: StaffQualificationCatalogue | undefined,
   operationalModel?: unknown,

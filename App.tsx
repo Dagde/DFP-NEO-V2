@@ -84,6 +84,7 @@ import {
     type ContinuationEventInput,
 } from './utils/continuationEvents';
 import {
+    getPersonAssignedQualificationIds,
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
     normaliseQualificationToken,
@@ -23221,11 +23222,7 @@ const App: React.FC = () => {
             ].map(normaliseName).filter(Boolean);
             return personKeys.some(key => userNameKeys.includes(key));
         }) || currentUser;
-        return normaliseAssignedQualificationIds(
-            (matchingPerson as any)?.preferences?.qualifications || [],
-            activeStaffQualificationCatalogue,
-            false,
-        );
+        return getPersonAssignedQualificationIds(matchingPerson, activeStaffQualificationCatalogue, false);
     }, [activeStaffQualificationCatalogue, allInstructorsData, allTraineesData, authUser, currentUser, currentUserName, sessionUser]);
     const normaliseDashboardNotificationName = (value?: string | null) => String(value || '')
         .trim()

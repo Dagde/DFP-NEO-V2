@@ -2742,6 +2742,34 @@ const normaliseAssignedQualificationIds = (source, catalogue, preserveUnknown = 
   });
   return result;
 };
+const LEGACY_QUALIFICATION_FIELD_BY_ID$1 = {
+  "admin-staff": "isAdminStaff",
+  cfi: "isCFI",
+  co: "isCommandingOfficer",
+  contractor: "isContractor",
+  dfc: "isDeputyFlightCommander",
+  executive: "isExecutive",
+  "flying-supervisor": "isFlyingSupervisor",
+  ire: "isIRE",
+  ofi: "isOFI",
+  qfi: "isQFI",
+  "testing-officer": "isTestingOfficer"
+};
+const getPersonAssignedQualificationIds = (person, catalogue, preserveUnknown = true) => {
+  const normalisedCatalogue = normaliseStaffQualificationCatalogue(catalogue);
+  const assigned = normaliseAssignedQualificationIds(
+    person?.preferences?.qualifications || person?.qualifications || [],
+    normalisedCatalogue,
+    preserveUnknown
+  );
+  normalisedCatalogue.qualifications.forEach((qualification) => {
+    const legacyField = LEGACY_QUALIFICATION_FIELD_BY_ID$1[qualification.id];
+    if (legacyField && person?.[legacyField] === true && !assigned.includes(qualification.id)) {
+      assigned.push(qualification.id);
+    }
+  });
+  return assigned;
+};
 const getQualificationsForOperationalModel = (catalogue, operationalModel) => {
   const model = normaliseOperationalModel(operationalModel);
   return normaliseStaffQualificationCatalogue(catalogue).qualifications.filter((qualification) => qualification.status !== "INACTIVE").filter((qualification) => {
@@ -104903,11 +104931,7 @@ const App = () => {
       ].map(normaliseName2).filter(Boolean);
       return personKeys.some((key) => userNameKeys.includes(key));
     }) || currentUser2;
-    return normaliseAssignedQualificationIds(
-      matchingPerson?.preferences?.qualifications || [],
-      activeStaffQualificationCatalogue,
-      false
-    );
+    return getPersonAssignedQualificationIds(matchingPerson, activeStaffQualificationCatalogue, false);
   }, [activeStaffQualificationCatalogue, allInstructorsData, allTraineesData, authUser, currentUser2, currentUserName, sessionUser]);
   const normaliseDashboardNotificationName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
   const dashboardNotificationUserName = reactExports.useMemo(() => {
