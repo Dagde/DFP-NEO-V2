@@ -79206,6 +79206,7 @@ const CoursesManagementView = ({
   ] });
 };
 const normaliseCourseFilterValue = (value) => String(value || "").trim().toLowerCase();
+const ALL_COURSES_FILTER_VALUE = "__all_courses__";
 const TrainingRecordsExportView = ({
   traineesData,
   instructorsData,
@@ -79306,10 +79307,21 @@ const TrainingRecordsExportView = ({
     );
   }, [allCourseNames, courseSearch]);
   const filteredTrainees = reactExports.useMemo(() => {
-    return allTrainees.filter(
-      (t) => `${t.rank} ${t.name} ${t.course}`.toLowerCase().includes(traineeSearch.toLowerCase())
+    const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+    return allTrainees.filter((t) => {
+      const matchesCourse = selectedCourses.length === 0 || selectedCourseSet.has(normaliseCourseFilterValue(t.course));
+      const matchesSearch = `${t.rank} ${t.name} ${t.course}`.toLowerCase().includes(traineeSearch.toLowerCase());
+      return matchesCourse && matchesSearch;
+    });
+  }, [allTrainees, traineeSearch, selectedCourses]);
+  reactExports.useEffect(() => {
+    if (selectedCourses.length === 0) return;
+    const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+    const allowedTraineeNames = new Set(
+      allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course))).map((t) => t.name)
     );
-  }, [allTrainees, traineeSearch]);
+    setSelectedTrainees((previous) => previous.filter((name) => allowedTraineeNames.has(name)));
+  }, [allTrainees, selectedCourses]);
   const filteredStaff = reactExports.useMemo(() => {
     return allInstructors.filter(
       (i) => `${i.rank} ${i.name}`.toLowerCase().includes(staffSearch.toLowerCase())
@@ -80412,22 +80424,29 @@ const TrainingRecordsExportView = ({
                 className: "w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
                 multiple: true,
-                value: selectedCourses,
+                value: selectedCourses.length > 0 ? selectedCourses : [ALL_COURSES_FILTER_VALUE],
                 onChange: (e) => {
                   const options = Array.from(e.target.selectedOptions, (option) => option.value);
+                  if (options.includes(ALL_COURSES_FILTER_VALUE)) {
+                    setSelectedCourses([]);
+                    return;
+                  }
                   setSelectedCourses(options);
                 },
                 className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white",
                 size: 5,
-                children: filteredCourses.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: courseName, children: [
-                  courseName,
-                  " ",
-                  archivedCourses[courseName] ? "(Archived)" : ""
-                ] }, courseName))
+                children: [
+                  (!courseSearch.trim() || "all courses".includes(courseSearch.trim().toLowerCase())) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: ALL_COURSES_FILTER_VALUE, children: "All courses" }),
+                  filteredCourses.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: courseName, children: [
+                    courseName,
+                    " ",
+                    archivedCourses[courseName] ? "(Archived)" : ""
+                  ] }, courseName))
+                ]
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-1", children: "Hold Ctrl/Cmd to select multiple" })

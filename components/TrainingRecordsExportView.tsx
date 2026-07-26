@@ -50,6 +50,7 @@ const escapeHtml = (value: string): string =>
 
 const normaliseCourseFilterValue = (value?: string): string =>
     String(value || '').trim().toLowerCase();
+const ALL_COURSES_FILTER_VALUE = '__all_courses__';
 
 interface ExportTemplate {
     name: string;
@@ -190,10 +191,24 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     }, [allCourseNames, courseSearch]);
     
     const filteredTrainees = useMemo(() => {
-        return allTrainees.filter(t => 
-            `${t.rank} ${t.name} ${t.course}`.toLowerCase().includes(traineeSearch.toLowerCase())
+        const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+        return allTrainees.filter(t => {
+            const matchesCourse = selectedCourses.length === 0 || selectedCourseSet.has(normaliseCourseFilterValue(t.course));
+            const matchesSearch = `${t.rank} ${t.name} ${t.course}`.toLowerCase().includes(traineeSearch.toLowerCase());
+            return matchesCourse && matchesSearch;
+        });
+    }, [allTrainees, traineeSearch, selectedCourses]);
+
+    useEffect(() => {
+        if (selectedCourses.length === 0) return;
+        const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
+        const allowedTraineeNames = new Set(
+            allTrainees
+                .filter(t => selectedCourseSet.has(normaliseCourseFilterValue(t.course)))
+                .map(t => t.name),
         );
-    }, [allTrainees, traineeSearch]);
+        setSelectedTrainees(previous => previous.filter(name => allowedTraineeNames.has(name)));
+    }, [allTrainees, selectedCourses]);
     
     const filteredStaff = useMemo(() => {
         return allInstructors.filter(i => 
@@ -1545,14 +1560,21 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                 />
                                 <select
                                     multiple
-                                    value={selectedCourses}
+                                    value={selectedCourses.length > 0 ? selectedCourses : [ALL_COURSES_FILTER_VALUE]}
                                     onChange={(e) => {
                                         const options = Array.from(e.target.selectedOptions, option => option.value);
+                                        if (options.includes(ALL_COURSES_FILTER_VALUE)) {
+                                            setSelectedCourses([]);
+                                            return;
+                                        }
                                         setSelectedCourses(options);
                                     }}
                                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                                     size={5}
                                 >
+                                    {(!courseSearch.trim() || 'all courses'.includes(courseSearch.trim().toLowerCase())) && (
+                                        <option value={ALL_COURSES_FILTER_VALUE}>All courses</option>
+                                    )}
                                     {filteredCourses.map(courseName => (
                                         <option key={courseName} value={courseName}>
                                             {courseName} {archivedCourses[courseName] ? '(Archived)' : ''}
