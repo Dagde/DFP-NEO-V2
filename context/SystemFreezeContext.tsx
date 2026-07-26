@@ -66,6 +66,14 @@ const parseStoredFreezeState = (raw: string | null): SystemFreezeState => {
     return defaultFreezeState;
 };
 
+const saveFreezeState = (nextState: SystemFreezeState) => {
+    if (nextState.isFrozen) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+    } else {
+        localStorage.removeItem(STORAGE_KEY);
+    }
+};
+
 export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [freezeState, setFreezeState] = useState<SystemFreezeState>(() => {
         return parseStoredFreezeState(localStorage.getItem(STORAGE_KEY));
@@ -73,11 +81,7 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Persist state to localStorage
     useEffect(() => {
-        if (freezeState.isFrozen) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(freezeState));
-        } else {
-            localStorage.removeItem(STORAGE_KEY);
-        }
+        saveFreezeState(freezeState);
     }, [freezeState]);
 
     useEffect(() => {
@@ -98,20 +102,22 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }, []);
 
     const freezeSystem = useCallback((reason: string, allowedActions: AllowedActions, frozenBy?: string) => {
-        setFreezeState({
+        const nextState: SystemFreezeState = {
             isFrozen: true,
             freezeReason: reason,
             frozenAt: new Date().toISOString(),
             frozenBy: frozenBy || 'Unknown',
             allowedActions
-        });
+        };
+        saveFreezeState(nextState);
+        setFreezeState(nextState);
         // Notify all useSystemFreeze hooks in the same tab
         setTimeout(() => window.dispatchEvent(new CustomEvent('systemFreezeChanged')), 50);
     }, []);
 
     const unfreezeSystem = useCallback(() => {
+        saveFreezeState(defaultFreezeState);
         setFreezeState(defaultFreezeState);
-        localStorage.removeItem(STORAGE_KEY);
         // Notify all useSystemFreeze hooks in the same tab
         setTimeout(() => window.dispatchEvent(new CustomEvent('systemFreezeChanged')), 50);
     }, []);
