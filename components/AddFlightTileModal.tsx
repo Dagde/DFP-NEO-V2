@@ -270,17 +270,26 @@ const StableDropdown: React.FC<StableDropdownProps> = ({
   const [open, setOpen] = usePersistentDropdownOpen(instanceKey);
   const triggerRef = useRef<HTMLDivElement>(null);
   const portalId = useMemo(() => `stable-dropdown-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`, [instanceKey]);
-  const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0, left: 0 });
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
 
   const updatePosition = useCallback(() => {
-    if (!triggerRef.current) return;
+    if (!triggerRef.current) {
+      setPos(null);
+      return;
+    }
     const rect = triggerRef.current.getBoundingClientRect();
+    if (!Number.isFinite(rect.left) || !Number.isFinite(rect.bottom) || (rect.width === 0 && rect.height === 0)) {
+      setPos(null);
+      return;
+    }
     const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
     const right = Math.max(8, window.innerWidth - rect.right);
+    const preferredTop = rect.bottom + 4;
+    const top = Math.max(8, Math.min(preferredTop, window.innerHeight - maxHeight - 8));
     setPos(align === 'right'
-      ? { top: rect.bottom + 4, right }
-      : { top: rect.bottom + 4, left });
-  }, [align, width]);
+      ? { top, right }
+      : { top, left });
+  }, [align, maxHeight, width]);
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
@@ -295,8 +304,26 @@ const StableDropdown: React.FC<StableDropdownProps> = ({
   }, [portalId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPos(null);
+      return;
+    }
     updatePosition();
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleLayoutChange = () => updatePosition();
+    window.addEventListener('resize', handleLayoutChange);
+    window.addEventListener('scroll', handleLayoutChange, true);
+    window.visualViewport?.addEventListener('resize', handleLayoutChange);
+    window.visualViewport?.addEventListener('scroll', handleLayoutChange);
+    return () => {
+      window.removeEventListener('resize', handleLayoutChange);
+      window.removeEventListener('scroll', handleLayoutChange, true);
+      window.visualViewport?.removeEventListener('resize', handleLayoutChange);
+      window.visualViewport?.removeEventListener('scroll', handleLayoutChange);
+    };
   }, [open, updatePosition]);
 
   const openDropdown = () => {
@@ -305,7 +332,7 @@ const StableDropdown: React.FC<StableDropdownProps> = ({
     setOpen(o => !o);
   };
 
-  const panel = open && !disabled ? ReactDOM.createPortal(
+  const panel = open && !disabled && pos ? ReactDOM.createPortal(
     <div
       id={portalId}
       onPointerDown={e => e.stopPropagation()}
@@ -554,7 +581,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   const unitsColumnRef = useRef<HTMLDivElement>(null);
   const layer2ColumnRef = useRef<HTMLDivElement>(null);
   const namesColumnRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
   const rememberScroll = useCallback((column: keyof PersonDropdownMemory['scroll'], scrollTop: number) => {
     const existing = getPersonDropdownMemory(dropdownKey);
@@ -600,17 +627,24 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
 
   const updateDropdownPosition = useCallback(() => {
     if (!ref.current) {
+      setDropdownPos(null);
       closeDropdown();
       return;
     }
     const rect = ref.current.getBoundingClientRect();
     if (!Number.isFinite(rect.left) || !Number.isFinite(rect.bottom) || (rect.width === 0 && rect.height === 0)) {
+      setDropdownPos(null);
       closeDropdown();
       return;
     }
     const DROPDOWN_WIDTH = 520;
+    const DROPDOWN_HEIGHT = 300;
     const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
-    setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
+    const preferredTop = rect.bottom + 4;
+    setDropdownPos({
+      top: Math.max(8, Math.min(preferredTop, window.innerHeight - DROPDOWN_HEIGHT - 8)),
+      left: Math.max(8, left),
+    });
   }, [closeDropdown]);
 
   useEffect(() => () => {
@@ -631,8 +665,26 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   }, [closeDropdown, dropdownId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setDropdownPos(null);
+      return;
+    }
     updateDropdownPosition();
+  }, [open, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleLayoutChange = () => updateDropdownPosition();
+    window.addEventListener('resize', handleLayoutChange);
+    window.addEventListener('scroll', handleLayoutChange, true);
+    window.visualViewport?.addEventListener('resize', handleLayoutChange);
+    window.visualViewport?.addEventListener('scroll', handleLayoutChange);
+    return () => {
+      window.removeEventListener('resize', handleLayoutChange);
+      window.removeEventListener('scroll', handleLayoutChange, true);
+      window.visualViewport?.removeEventListener('resize', handleLayoutChange);
+      window.visualViewport?.removeEventListener('scroll', handleLayoutChange);
+    };
   }, [open, updateDropdownPosition]);
 
   useEffect(() => {
@@ -656,7 +708,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   };
 
   // Portal dropdown rendered at document.body level
-  const dropdownPanel = open ? ReactDOM.createPortal(
+  const dropdownPanel = open && dropdownPos ? ReactDOM.createPortal(
     <div
       id={dropdownId}
       onClick={e => e.stopPropagation()}
@@ -836,16 +888,28 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const portalId = 'event-dropdown-portal';
   const ref = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
   const selectCourse = useCallback((course: string | null) => {
     setSelectedCourse(current => current === course ? current : course);
   }, []);
 
   const updateDropdownPosition = useCallback(() => {
-    if (!ref.current) return;
+    if (!ref.current) {
+      setDropdownPos(null);
+      return;
+    }
     const rect = ref.current.getBoundingClientRect();
-    setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    if (!Number.isFinite(rect.right) || !Number.isFinite(rect.bottom) || (rect.width === 0 && rect.height === 0)) {
+      setDropdownPos(null);
+      return;
+    }
+    const DROPDOWN_HEIGHT = 320;
+    const preferredTop = rect.bottom + 4;
+    setDropdownPos({
+      top: Math.max(8, Math.min(preferredTop, window.innerHeight - DROPDOWN_HEIGHT - 8)),
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
   }, []);
 
   useEffect(() => {
@@ -861,8 +925,26 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   }, [portalId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setDropdownPos(null);
+      return;
+    }
     updateDropdownPosition();
+  }, [open, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleLayoutChange = () => updateDropdownPosition();
+    window.addEventListener('resize', handleLayoutChange);
+    window.addEventListener('scroll', handleLayoutChange, true);
+    window.visualViewport?.addEventListener('resize', handleLayoutChange);
+    window.visualViewport?.addEventListener('scroll', handleLayoutChange);
+    return () => {
+      window.removeEventListener('resize', handleLayoutChange);
+      window.removeEventListener('scroll', handleLayoutChange, true);
+      window.visualViewport?.removeEventListener('resize', handleLayoutChange);
+      window.visualViewport?.removeEventListener('scroll', handleLayoutChange);
+    };
   }, [open, updateDropdownPosition]);
 
   useEffect(() => {
@@ -881,7 +963,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
     });
   };
 
-  const dropdownPanel = open && !disabled ? ReactDOM.createPortal(
+  const dropdownPanel = open && !disabled && dropdownPos ? ReactDOM.createPortal(
     <div
       id={portalId}
       onClick={e => e.stopPropagation()}
