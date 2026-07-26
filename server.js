@@ -263,7 +263,9 @@ app.use('/api', (req, res, next) => {
   const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
   if (!isMutation) return next();
   const pathName = `${req.baseUrl || ''}${req.path || ''}`;
+  const shouldBroadcast = pathName !== '/api/settings';
   res.on('finish', () => {
+    if (!shouldBroadcast) return;
     if (res.statusCode < 200 || res.statusCode >= 400) return;
     broadcastLiveChange({
       sourceClientId: String(req.headers['x-neo-client-id'] || '').trim(),

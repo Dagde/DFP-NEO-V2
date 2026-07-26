@@ -103633,18 +103633,6 @@ const App = () => {
   }, [freezeState]);
   React.useEffect(() => initialiseLiveChangeBus(), []);
   React.useEffect(() => {
-    const handleLiveChange = (event) => {
-      const detail = event?.detail || {};
-      if (String(detail.path || "") === "/api/emergency-freeze") return;
-      const activeElement = document.activeElement;
-      const isEditing = activeElement && (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.tagName === "SELECT" || activeElement.isContentEditable);
-      if (isEditing) return;
-      window.location.reload();
-    };
-    window.addEventListener(LIVE_CHANGE_EVENT, handleLiveChange);
-    return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveChange);
-  }, []);
-  React.useEffect(() => {
     const appTitle = localStorage.getItem("dfp_app_title");
     document.title = appTitle || "Flight School Scheduler - v2024-12-08-2";
   }, []);
