@@ -79229,7 +79229,8 @@ const TrainingRecordsExportView = ({
   );
   const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || "Training Report";
   const exportAssessmentTitle = `${exportReportName} Training Assessment`;
-  activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || "Report Instructor";
+  const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || "Report Instructor";
+  const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -79671,7 +79672,7 @@ const TrainingRecordsExportView = ({
           pdf.addPage();
         }
         renderPT051ToPDF(pdf, event);
-        console.log("✅ PT051 added to PDF");
+        console.log(`✅ ${exportReportName} added to PDF`);
         isFirstPage = false;
       }
       setExportStatus("Finalizing PDF...");
@@ -79751,6 +79752,7 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "normal");
     const col1X = margin;
     const col2X = pageWidth / 2 + 5;
+    const assessorValueOffset = Math.min(45, Math.max(20, exportAssessorLabel.length * 2.1));
     pdf.setFont("helvetica", "bold");
     pdf.text("Trainee:", col1X, y);
     pdf.setFont("helvetica", "normal");
@@ -79761,9 +79763,9 @@ const TrainingRecordsExportView = ({
     pdf.text(trainee?.course || "N/A", col2X + 20, y);
     y += 5;
     pdf.setFont("helvetica", "bold");
-    pdf.text("Instructor:", col1X, y);
+    pdf.text(`${exportAssessorLabel}:`, col1X, y);
     pdf.setFont("helvetica", "normal");
-    pdf.text(`${instructor?.rank || ""} ${instructor?.name || event.instructor || "N/A"}`, col1X + 20, y);
+    pdf.text(`${instructor?.rank || ""} ${instructor?.name || event.instructor || "N/A"}`, col1X + assessorValueOffset, y);
     pdf.setFont("helvetica", "bold");
     pdf.text("Date:", col2X, y);
     pdf.setFont("helvetica", "normal");
@@ -79837,7 +79839,7 @@ const TrainingRecordsExportView = ({
     pdf.rect(margin, boxY, weatherProfileWidth - 2, boxHeight, "S");
     pdf.setFont("helvetica", "bold");
     pdf.setTextColor(0, 0, 0);
-    pdf.text("Weather:", margin + 2, boxY + 4);
+    pdf.text(`${exportCommentFieldLabels.weather || "Weather"}:`, margin + 2, boxY + 4);
     pdf.setFont("helvetica", "normal");
     const weatherText = pdf.splitTextToSize(commentSections.Weather || "N/A", weatherProfileWidth - 6);
     pdf.text(weatherText, margin + 2, boxY + 8);
@@ -79846,7 +79848,7 @@ const TrainingRecordsExportView = ({
     pdf.setDrawColor(0);
     pdf.rect(margin + weatherProfileWidth, boxY, weatherProfileWidth - 2, boxHeight, "S");
     pdf.setFont("helvetica", "bold");
-    pdf.text("Profile:", margin + weatherProfileWidth + 2, boxY + 4);
+    pdf.text(`${exportCommentFieldLabels.profile || "Profile"}:`, margin + weatherProfileWidth + 2, boxY + 4);
     pdf.setFont("helvetica", "normal");
     const profileText = pdf.splitTextToSize(commentSections.Profile || "N/A", weatherProfileWidth - 6);
     pdf.text(profileText, margin + weatherProfileWidth + 2, boxY + 8);
@@ -79856,7 +79858,7 @@ const TrainingRecordsExportView = ({
     pdf.setDrawColor(0);
     pdf.rect(margin + weatherProfileWidth * 2, boxY, nestWidth, boxHeight, "S");
     pdf.setFont("helvetica", "bold");
-    pdf.text("NEST:", margin + weatherProfileWidth * 2 + 2, boxY + 4);
+    pdf.text(`${exportCommentFieldLabels.nest || "NEST"}:`, margin + weatherProfileWidth * 2 + 2, boxY + 4);
     pdf.setFont("helvetica", "normal");
     pdf.text(commentSections.NEST || "N/A", margin + weatherProfileWidth * 2 + 2, boxY + 8);
     y += boxHeight + 4;
@@ -80043,7 +80045,11 @@ const TrainingRecordsExportView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-5xl mx-auto space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white mb-2", children: "Export Training Records" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Export PT051 training records for printing or official record keeping. Select your options below and preview before exporting." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
+          "Export ",
+          exportReportName,
+          " training records for printing or official record keeping. Select your options below and preview before exporting."
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white mb-4", children: "What records do you want to export?" }),
@@ -80274,7 +80280,11 @@ const TrainingRecordsExportView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-300 mb-3", children: "Status (PT051 Outcome)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-sm font-medium text-gray-300 mb-3", children: [
+              "Status (",
+              exportReportName,
+              " Outcome)"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -80690,7 +80700,11 @@ const TrainingRecordsExportView = ({
         ) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-base", children: completionStatus })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 mb-4", children: "Select trainees to mark as completed. This will update their PT051 assessments with DCO completion." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
+          "Select trainees to mark as completed. This will update their ",
+          exportReportName,
+          " assessments with DCO completion."
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm font-medium text-gray-300", children: [

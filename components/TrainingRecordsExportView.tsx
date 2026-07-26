@@ -89,6 +89,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || 'Training Report';
     const exportAssessmentTitle = `${exportReportName} Training Assessment`;
     const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || 'Report Instructor';
+    const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
 
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -231,7 +232,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             console.log('🔍 FILTER DEBUG - After event type filter:', filtered.length);
         }
 
-        // Status filter - based on PT051 outcomes
+        // Status filter - based on saved training report outcomes
         console.log('🔍 FILTER DEBUG - statusFilter:', statusFilter);
         console.log('🔍 FILTER DEBUG - Before status filter:', filtered.length);
         if (statusFilter === 'dco') {
@@ -620,7 +621,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const exportToPDF = async (filename: string) => {
         console.log('📄 exportToPDF called with filename:', filename);
         
-        // Generate PT051 forms for each event
+        // Generate configured training report forms for each event
         const eventsToExport = filteredData.events;
         console.log('📄 Events to export:', eventsToExport.length);
         
@@ -647,10 +648,10 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     pdf.addPage();
                 }
                 
-                // Render PT051 form using native PDF text
+                // Render the training report form using native PDF text
                 renderPT051ToPDF(pdf, event);
                 
-                console.log('✅ PT051 added to PDF');
+                console.log(`✅ ${exportReportName} added to PDF`);
                 isFirstPage = false;
             }
             
@@ -666,7 +667,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         }
     };
     
-    // Helper function to parse PT051 comments into sections
+    // Helper function to parse saved report comments into sections
     const parseComments = (raw: string | undefined) => {
         const defaults = { QFI: '', Weather: '', Profile: '', Overall: '', NEST: '' };
         if (!raw) return defaults;
@@ -724,7 +725,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // Parse comments into sections
         const commentSections = parseComments(eventScore?.comments);
         
-        // PT051 structure with all elements
+        // Training report structure with all elements
         const pt051Structure = [
             { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
             { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
@@ -756,6 +757,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         
         const col1X = margin;
         const col2X = pageWidth / 2 + 5;
+        const assessorValueOffset = Math.min(45, Math.max(20, exportAssessorLabel.length * 2.1));
         
         pdf.setFont('helvetica', 'bold');
         pdf.text('Trainee:', col1X, y);
@@ -769,9 +771,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         y += 5;
         
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Instructor:', col1X, y);
+        pdf.text(`${exportAssessorLabel}:`, col1X, y);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}`, col1X + 20, y);
+        pdf.text(`${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}`, col1X + assessorValueOffset, y);
         
         pdf.setFont('helvetica', 'bold');
         pdf.text('Date:', col2X, y);
@@ -853,7 +855,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.text(eventScore?.outcome === 'DCO' ? 'Yes' : 'No', col2X + 50, y);
         y += 12;
         
-        // Add Weather, Profile, NEST, Overall comment boxes with new layout
+        // Add configured comment boxes with compact layout
         pdf.setFontSize(8);
         const boxHeight = 12;
         const boxY = y;
@@ -868,7 +870,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.rect(margin, boxY, weatherProfileWidth - 2, boxHeight, 'S');
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(0, 0, 0);
-        pdf.text('Weather:', margin + 2, boxY + 4);
+        pdf.text(`${exportCommentFieldLabels.weather || 'Weather'}:`, margin + 2, boxY + 4);
         pdf.setFont('helvetica', 'normal');
         const weatherText = pdf.splitTextToSize(commentSections.Weather || 'N/A', weatherProfileWidth - 6);
         pdf.text(weatherText, margin + 2, boxY + 8);
@@ -879,19 +881,19 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.setDrawColor(0);
         pdf.rect(margin + weatherProfileWidth, boxY, weatherProfileWidth - 2, boxHeight, 'S');
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Profile:', margin + weatherProfileWidth + 2, boxY + 4);
+        pdf.text(`${exportCommentFieldLabels.profile || 'Profile'}:`, margin + weatherProfileWidth + 2, boxY + 4);
         pdf.setFont('helvetica', 'normal');
         const profileText = pdf.splitTextToSize(commentSections.Profile || 'N/A', weatherProfileWidth - 6);
         pdf.text(profileText, margin + weatherProfileWidth + 2, boxY + 8);
         
-        // NEST box (small, right)
+        // Configured right-hand comment box
         const nestWidth = contentWidth * 0.2;
         pdf.setFillColor(243, 244, 246);
         pdf.rect(margin + weatherProfileWidth * 2, boxY, nestWidth, boxHeight, 'F');
         pdf.setDrawColor(0);
         pdf.rect(margin + weatherProfileWidth * 2, boxY, nestWidth, boxHeight, 'S');
         pdf.setFont('helvetica', 'bold');
-        pdf.text('NEST:', margin + weatherProfileWidth * 2 + 2, boxY + 4);
+        pdf.text(`${exportCommentFieldLabels.nest || 'NEST'}:`, margin + weatherProfileWidth * 2 + 2, boxY + 4);
         pdf.setFont('helvetica', 'normal');
         pdf.text(commentSections.NEST || 'N/A', margin + weatherProfileWidth * 2 + 2, boxY + 8);
         
@@ -983,7 +985,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const traineeScores = scores.get(event.student || event.pilot || '');
         const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
         
-        // PT051 structure with all elements
+        // Training report structure with all elements
         const pt051Structure = [
             { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
             { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
@@ -1012,7 +1014,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; border: 1px solid black; padding: 6px; background: #f9fafb;">
                     <div><strong>Trainee:</strong> ${trainee?.rank || ''} ${trainee?.name || event.student || event.pilot || 'N/A'}</div>
                     <div><strong>Course:</strong> ${trainee?.course || 'N/A'}</div>
-                    <div><strong>Instructor:</strong> ${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</div>
+                    <div><strong>${escapeHtml(exportAssessorLabel)}:</strong> ${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</div>
                     <div><strong>Date:</strong> ${formatDate(event.date) || 'N/A'}</div>
                     <div><strong>Flight:</strong> ${event.flightNumber || 'N/A'}</div>
                     <div><strong>Duration:</strong> ${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</div>
@@ -1218,7 +1220,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                     <h1 className="text-2xl font-bold text-white mb-2">Export Training Records</h1>
                     <p className="text-gray-400">
-                        Export PT051 training records for printing or official record keeping.
+                        Export {exportReportName} training records for printing or official record keeping.
                         Select your options below and preview before exporting.
                     </p>
                 </div>
@@ -1431,7 +1433,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
                             {/* Status */}
                             <div>
-                                <h3 className="text-sm font-medium text-gray-300 mb-3">Status (PT051 Outcome)</h3>
+                                <h3 className="text-sm font-medium text-gray-300 mb-3">Status ({exportReportName} Outcome)</h3>
                                 <div className="space-y-2">
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
@@ -1874,7 +1876,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                         ) : (
                             <div>
                                 <p className="text-gray-300 mb-4">
-                                    Select trainees to mark as completed. This will update their PT051 assessments with DCO completion.
+                                    Select trainees to mark as completed. This will update their {exportReportName} assessments with DCO completion.
                                 </p>
                                 
                                 <div className="mb-4">
