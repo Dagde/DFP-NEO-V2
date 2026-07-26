@@ -2763,17 +2763,11 @@ const normaliseEmergencyFreezeAuthoritySettings = (source, catalogue) => {
   };
 };
 const hasEmergencyFreezeAuthority = ({
-  action,
   settings,
-  userQualificationIds,
-  userPermission
+  userQualificationIds
 }) => {
   const requiredIds = normaliseStringList(settings?.activateQualificationIds);
-  const permission = String(userPermission || "").trim();
-  const breakGlassPermissions = ["Super Admin", "Admin"];
-  const legacyPermissions = [...breakGlassPermissions, "Scheduler"];
-  if (requiredIds.length === 0) return legacyPermissions.includes(permission);
-  if (breakGlassPermissions.includes(permission)) return true;
+  if (requiredIds.length === 0) return false;
   const assigned = new Set(normaliseStringList(userQualificationIds));
   return requiredIds.some((id) => assigned.has(id));
 };
@@ -61259,16 +61253,12 @@ const EmergencyPage = ({
   const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
   const displayedAuthoritySettings = isEditingAuthority ? authorityDraft : authoritySettings;
   const canActivateFreeze = hasEmergencyFreezeAuthority({
-    action: "activate",
     settings: authoritySettings,
-    userQualificationIds: currentUserQualificationIds,
-    userPermission: currentUserRole
+    userQualificationIds: currentUserQualificationIds
   });
   const canDeactivateFreeze = hasEmergencyFreezeAuthority({
-    action: "deactivate",
     settings: authoritySettings,
-    userQualificationIds: currentUserQualificationIds,
-    userPermission: currentUserRole
+    userQualificationIds: currentUserQualificationIds
   });
   reactExports.useEffect(() => {
     if (!isEditingAuthority) {
@@ -106740,10 +106730,8 @@ const App = () => {
   const combinedPermissions = [...authUserPermissions, ...currentUser2?.permissions || []];
   const currentUserPermission = getHighestPermission(combinedPermissions);
   const canDeactivateEmergencyFreeze = reactExports.useMemo(() => hasEmergencyFreezeAuthority({
-    action: "deactivate",
     settings: emergencyFreezeAuthority,
-    userQualificationIds: currentEmergencyQualificationIds,
-    userPermission: currentUserPermission
+    userQualificationIds: currentEmergencyQualificationIds
   }), [currentEmergencyQualificationIds, currentUserPermission, emergencyFreezeAuthority]);
   const [scores, setScores] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());

@@ -48,10 +48,8 @@ export const normaliseEmergencyFreezeAuthoritySettings = (
 };
 
 export const hasEmergencyFreezeAuthority = ({
-  action,
   settings,
   userQualificationIds,
-  userPermission,
 }: {
   action: 'activate' | 'deactivate';
   settings?: Partial<EmergencyFreezeAuthoritySettings> | null;
@@ -59,11 +57,7 @@ export const hasEmergencyFreezeAuthority = ({
   userPermission?: string;
 }): boolean => {
   const requiredIds = normaliseStringList(settings?.activateQualificationIds);
-  const permission = String(userPermission || '').trim();
-  const breakGlassPermissions = ['Super Admin', 'Admin'];
-  const legacyPermissions = [...breakGlassPermissions, 'Scheduler'];
-  if (requiredIds.length === 0) return legacyPermissions.includes(permission);
-  if (breakGlassPermissions.includes(permission)) return true;
+  if (requiredIds.length === 0) return false;
   const assigned = new Set(normaliseStringList(userQualificationIds));
   return requiredIds.some(id => assigned.has(id));
 };
