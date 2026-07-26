@@ -2267,6 +2267,29 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       }));
   };
 
+  // The preview is useful for seeing the resulting tile, but its small overlay
+  // controls are not a dependable primary input method across browsers. These
+  // options drive the fixed native controls below the preview instead.
+  const standardPersonOptions = useMemo(() => {
+    const staff = instructorsData
+      .filter(person => !person.isAdminStaff)
+      .filter(person => !shouldRestrictContinuationPicToPilots || isPilotStaff(person))
+      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+      .map(person => ({
+        value: person.name,
+        label: [person.rank, person.name, person.unit].filter(Boolean).join(' - '),
+        group: 'Staff',
+      }));
+    const trainees = traineesData
+      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee'))
+      .map(person => ({
+        value: person.fullName || person.name,
+        label: [person.rank, person.fullName || person.name, person.course, person.unit].filter(Boolean).join(' - '),
+        group: person.course || 'Trainees',
+      }));
+    return [...staff, ...trainees];
+  }, [instructorsData, isPilotStaff, personnelDisplaySettings, shouldRestrictContinuationPicToPilots, traineesData]);
+
   const normaliseFormationPersonName = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const getFormationAssignedNames = (exceptName?: string | null): Set<string> => {
     const allowedCurrent = normaliseFormationPersonName(exceptName);
@@ -2413,6 +2436,28 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const getCourseDisplayLabel = useCallback((course: string) => (
     course === CONTINUATION_COURSE_KEY ? sctShortLabel : course
   ), [sctShortLabel]);
+
+  const standardEventGroups = useMemo(() => {
+    if (eventCategory === 'twr_di') return [];
+    if (eventCategory === 'sct') {
+      return [{
+        label: sctShortLabel,
+        options: getContinuationEventNames(sctEvents).map(value => ({ value, label: getContinuationDisplayLabel(value) })),
+      }];
+    }
+    return courseOptions
+      .filter(course => course !== CONTINUATION_COURSE_KEY)
+      .map(course => ({
+        label: getCourseDisplayLabel(course),
+        options: getEventsForCourse(course)
+          .map(item => {
+            const value = item.code || item.id || '';
+            return { value, label: item.eventDescription ? `${value} - ${item.eventDescription}` : value };
+          })
+          .filter(option => Boolean(option.value)),
+      }))
+      .filter(group => group.options.length > 0);
+  }, [courseOptions, eventCategory, getContinuationDisplayLabel, getCourseDisplayLabel, sctEvents, sctShortLabel, syllabusByCourse]);
 
   // ── Next LMP event for the selected trainee ───────────────────────────────
   const nextLMPEvent = useMemo(() => {
@@ -3490,8 +3535,116 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                {`Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right.${isSingleSeatAircraft ? ' This aircraft type is configured as single-seat, so new flights are Solo.' : ' Click SOLO badge to switch to Dual.'}`}
+                The tile updates as you enter the flight details below. The tile fields can also be used to make quick adjustments.
               </p>
+              <div className="mt-3 rounded-md border border-sky-900/70 bg-slate-950/45 p-3">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-sky-300">Flight Details</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Start Time</label>
+                    <select
+                      value={String(startTime)}
+                      onChange={event => { setStartTime(Number(event.target.value)); setGuidedStep('trainee'); }}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      {timeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">PIC</label>
+                    <select
+                      value={picName}
+                      onChange={event => handlePicNameChange(event.target.value)}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      <option value="">Select PIC</option>
+                      {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
+                        <optgroup key={group} label={group}>
+                          {standardPersonOptions.filter(person => person.group === group).map(person => (
+                            <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  {flightType === 'Dual' && eventCategory !== 'twr_di' && (
+                    <div>
+                      <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
+                      <select
+                        value={studentName}
+                        onChange={event => { setStudentName(event.target.value); setGuidedStep('instructor'); }}
+                        className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                      >
+                        <option value="">Select second person</option>
+                        {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
+                          <optgroup key={group} label={group}>
+                            {standardPersonOptions.filter(person => person.group === group && person.value !== picName).map(person => (
+                              <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Event</label>
+                    <select
+                      value={flightNumber}
+                      disabled={eventCategory === 'twr_di'}
+                      onChange={event => handleFlightNumberChange(event.target.value)}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <option value="">Select event</option>
+                      {standardEventGroups.map(group => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Duration</label>
+                    <select
+                      value={String(duration)}
+                      onChange={event => setDuration(Number(event.target.value))}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      {durationOptions.map(option => <option key={option.value} value={option.value}>{option.label} hours</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Area</label>
+                    <select
+                      value={area}
+                      onChange={event => { setArea(event.target.value); setGuidedStep('aircraft'); }}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      <option value="">Select area</option>
+                      {areaOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Aircraft</label>
+                    <select
+                      value={aircraftNumber}
+                      onChange={event => { setAircraftNumber(event.target.value); setGuidedStep('done'); }}
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
+                    >
+                      {aircraftOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Callsign</label>
+                    <input
+                      type="text"
+                      value={callsign}
+                      onChange={event => setCallsign(event.target.value)}
+                      placeholder="Callsign"
+                      className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-sky-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
               {isManualFormation && (
                 <div className="mt-3 rounded-lg border border-gray-600 bg-gray-800/70 p-4">
                   <div className="grid grid-cols-2 gap-4">
