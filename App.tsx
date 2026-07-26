@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { initDB } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
+import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
 import {
     buildPlatformDataScopeQuery,
     getPlatformDataScopeForLocation,
@@ -21424,6 +21425,26 @@ const App: React.FC = () => {
     React.useEffect(() => {
         freezeStateRef.current = freezeState;
     }, [freezeState]);
+
+    React.useEffect(() => initialiseLiveChangeBus(), []);
+
+    React.useEffect(() => {
+        const handleLiveChange = (event: Event) => {
+            const detail = (event as CustomEvent)?.detail || {};
+            if (String(detail.path || '') === '/api/emergency-freeze') return;
+            const activeElement = document.activeElement as HTMLElement | null;
+            const isEditing = activeElement && (
+                activeElement.tagName === 'INPUT'
+                || activeElement.tagName === 'TEXTAREA'
+                || activeElement.tagName === 'SELECT'
+                || activeElement.isContentEditable
+            );
+            if (isEditing) return;
+            window.location.reload();
+        };
+        window.addEventListener(LIVE_CHANGE_EVENT, handleLiveChange);
+        return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveChange);
+    }, []);
 
     React.useEffect(() => {
         const appTitle = localStorage.getItem('dfp_app_title');

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getAppApiBase } from '../utils/externalDataControls';
+import { LIVE_CHANGE_EVENT } from '../utils/liveChangeBus';
 
 export interface AllowedActions {
     postFlightTimes: boolean;
@@ -139,9 +140,11 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
             setFreezeState(sharedState);
         };
         void syncSharedFreezeState();
+        window.addEventListener(LIVE_CHANGE_EVENT, syncSharedFreezeState);
         const intervalId = window.setInterval(syncSharedFreezeState, 5000);
         return () => {
             isMounted = false;
+            window.removeEventListener(LIVE_CHANGE_EVENT, syncSharedFreezeState);
             window.clearInterval(intervalId);
         };
     }, []);

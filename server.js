@@ -201,12 +201,76 @@ app.use((req, res, next) => {
   }
   res.header('Vary', 'Origin');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, Cookie, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, Cookie, X-Requested-With, X-NEO-Client-Id');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
+  next();
+});
+
+const liveChangeClients = new Map();
+
+function sendLiveChange(client, payload) {
+  try {
+    client.res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  } catch {
+    liveChangeClients.delete(client.id);
+  }
+}
+
+function broadcastLiveChange(change) {
+  const payload = {
+    ...change,
+    id: `change-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    changedAt: new Date().toISOString(),
+  };
+  liveChangeClients.forEach((client) => {
+    if (client.clientId && payload.sourceClientId && client.clientId === payload.sourceClientId) return;
+    sendLiveChange(client, payload);
+  });
+}
+
+app.get('/api/live-changes', (req, res) => {
+  const id = `client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const clientId = String(req.query.clientId || '').trim();
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.write('\n');
+  const client = { id, clientId, res };
+  liveChangeClients.set(id, client);
+  const keepAlive = setInterval(() => {
+    try {
+      res.write(': keep-alive\n\n');
+    } catch {
+      clearInterval(keepAlive);
+      liveChangeClients.delete(id);
+    }
+  }, 25000);
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    liveChangeClients.delete(id);
+  });
+});
+
+app.use('/api', (req, res, next) => {
+  const method = String(req.method || '').toUpperCase();
+  const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+  if (!isMutation) return next();
+  const pathName = `${req.baseUrl || ''}${req.path || ''}`;
+  res.on('finish', () => {
+    if (res.statusCode < 200 || res.statusCode >= 400) return;
+    broadcastLiveChange({
+      sourceClientId: String(req.headers['x-neo-client-id'] || '').trim(),
+      method,
+      path: pathName,
+    });
+  });
   next();
 });
 

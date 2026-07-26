@@ -278,6 +278,57 @@ const getAppApiBase = () => {
   if (currentOrigin === PRODUCTION_API_ORIGIN || currentOrigin.includes("railway.app")) return "/api";
   return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
 };
+const LIVE_CHANGE_EVENT = "neo-live-change";
+const CLIENT_ID_KEY = "neo_live_change_client_id";
+const FETCH_PATCH_FLAG = "__neoLiveChangeFetchPatched";
+const getClientId = () => {
+  try {
+    const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+    if (existing) return existing;
+    const next = `neo-client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(CLIENT_ID_KEY, next);
+    return next;
+  } catch {
+    return `neo-client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+};
+const isApiRequest = (input) => {
+  const value = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  return value.includes("/api/");
+};
+const patchFetchClientId = (clientId) => {
+  const win = window;
+  if (win[FETCH_PATCH_FLAG]) return;
+  const originalFetch = window.fetch.bind(window);
+  win[FETCH_PATCH_FLAG] = true;
+  window.fetch = (input, init) => {
+    const method = String(init?.method || (input instanceof Request ? input.method : "GET") || "GET").toUpperCase();
+    const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+    if (!isMutation || !isApiRequest(input)) {
+      return originalFetch(input, init);
+    }
+    const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : void 0));
+    headers.set("X-NEO-Client-Id", clientId);
+    return originalFetch(input, { ...init, headers });
+  };
+};
+const initialiseLiveChangeBus = () => {
+  if (typeof window === "undefined" || typeof EventSource === "undefined") return () => {
+  };
+  const clientId = getClientId();
+  patchFetchClientId(clientId);
+  const source = new EventSource(`${getAppApiBase()}/live-changes?clientId=${encodeURIComponent(clientId)}`);
+  source.onmessage = (event) => {
+    try {
+      const detail = JSON.parse(event.data);
+      window.dispatchEvent(new CustomEvent(LIVE_CHANGE_EVENT, { detail }));
+    } catch {
+    }
+  };
+  source.onerror = () => {
+  };
+  return () => source.close();
+};
 const defaultFreezeState = {
   isFrozen: false,
   freezeReason: "",
@@ -384,9 +435,11 @@ const SystemFreezeProvider = ({ children }) => {
       setFreezeState(sharedState);
     };
     void syncSharedFreezeState();
+    window.addEventListener(LIVE_CHANGE_EVENT, syncSharedFreezeState);
     const intervalId = window.setInterval(syncSharedFreezeState, 5e3);
     return () => {
       isMounted = false;
+      window.removeEventListener(LIVE_CHANGE_EVENT, syncSharedFreezeState);
       window.clearInterval(intervalId);
     };
   }, []);
@@ -103578,6 +103631,19 @@ const App = () => {
   React.useEffect(() => {
     freezeStateRef.current = freezeState;
   }, [freezeState]);
+  React.useEffect(() => initialiseLiveChangeBus(), []);
+  React.useEffect(() => {
+    const handleLiveChange = (event) => {
+      const detail = event?.detail || {};
+      if (String(detail.path || "") === "/api/emergency-freeze") return;
+      const activeElement = document.activeElement;
+      const isEditing = activeElement && (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.tagName === "SELECT" || activeElement.isContentEditable);
+      if (isEditing) return;
+      window.location.reload();
+    };
+    window.addEventListener(LIVE_CHANGE_EVENT, handleLiveChange);
+    return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveChange);
+  }, []);
   React.useEffect(() => {
     const appTitle = localStorage.getItem("dfp_app_title");
     document.title = appTitle || "Flight School Scheduler - v2024-12-08-2";
