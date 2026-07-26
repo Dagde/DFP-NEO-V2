@@ -31113,6 +31113,7 @@ const StableDropdown = ({
   const triggerRef = reactExports.useRef(null);
   const portalId = reactExports.useMemo(() => `stable-dropdown-${instanceKey.replace(/[^a-zA-Z0-9_-]/g, "-")}`, [instanceKey]);
   const [pos, setPos] = reactExports.useState(null);
+  const [hovered, setHovered] = reactExports.useState(false);
   const updatePosition = reactExports.useCallback(() => {
     if (!triggerRef.current) {
       setPos(null);
@@ -31263,7 +31264,21 @@ const StableDropdown = ({
       onClick: (e) => {
         e.stopPropagation();
       },
-      style: { display: "inline-flex", cursor: disabled ? "default" : "pointer" },
+      onMouseEnter: () => setHovered(true),
+      onMouseLeave: () => setHovered(false),
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 24,
+        minWidth: 24,
+        padding: "2px 6px",
+        borderRadius: 4,
+        cursor: disabled ? "default" : "pointer",
+        pointerEvents: "auto",
+        backgroundColor: open ? "rgba(34,211,238,0.18)" : hovered ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.02)",
+        boxShadow: open ? "0 0 0 1px rgba(34,211,238,0.45)" : "none"
+      },
       children: [
         children,
         panel
@@ -31395,6 +31410,7 @@ const PersonDropdown = ({
   const layer2ColumnRef = reactExports.useRef(null);
   const namesColumnRef = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState(null);
+  const [triggerHovered, setTriggerHovered] = reactExports.useState(false);
   const rememberScroll = reactExports.useCallback((column, scrollTop) => {
     const existing = getPersonDropdownMemory(dropdownKey);
     personDropdownColumnState.set(dropdownKey, {
@@ -31649,6 +31665,8 @@ const PersonDropdown = ({
           handleOpen();
         },
         onClick: (e) => e.stopPropagation(),
+        onMouseEnter: () => setTriggerHovered(true),
+        onMouseLeave: () => setTriggerHovered(false),
         style: {
           fontSize,
           fontWeight: bold ? 700 : 400,
@@ -31659,12 +31677,16 @@ const PersonDropdown = ({
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
-          minWidth: 120,
-          padding: "2px 4px",
-          borderRadius: 3
+          minWidth: bold ? 300 : 220,
+          minHeight: bold ? 34 : 30,
+          padding: "3px 8px",
+          borderRadius: 5,
+          display: "inline-flex",
+          alignItems: "center",
+          pointerEvents: "auto",
+          backgroundColor: open ? "rgba(34,211,238,0.18)" : triggerHovered ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.02)",
+          boxShadow: open ? "0 0 0 1px rgba(34,211,238,0.45)" : "none"
         },
-        onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)",
-        onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
         children: displayValue || value || placeholder
       }
     ),
@@ -31690,6 +31712,7 @@ const EventDropdown = ({
   const portalId = "event-dropdown-portal";
   const ref = reactExports.useRef(null);
   const [dropdownPos, setDropdownPos] = reactExports.useState(null);
+  const [triggerHovered, setTriggerHovered] = reactExports.useState(false);
   const selectCourse = reactExports.useCallback((course) => {
     setSelectedCourse((current) => current === course ? current : course);
   }, []);
@@ -31875,6 +31898,8 @@ const EventDropdown = ({
           handleOpen();
         },
         onClick: (e) => e.stopPropagation(),
+        onMouseEnter: () => setTriggerHovered(true),
+        onMouseLeave: () => setTriggerHovered(false),
         style: {
           fontSize,
           fontStyle: "italic",
@@ -31883,15 +31908,16 @@ const EventDropdown = ({
           cursor: disabled ? "default" : "pointer",
           userSelect: "none",
           whiteSpace: "nowrap",
-          minWidth: 80,
-          padding: "2px 4px",
-          borderRadius: 3
-        },
-        onMouseEnter: (e) => {
-          if (!disabled) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
-        },
-        onMouseLeave: (e) => {
-          e.currentTarget.style.backgroundColor = "transparent";
+          minWidth: 105,
+          minHeight: 31,
+          padding: "3px 8px",
+          borderRadius: 5,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          pointerEvents: "auto",
+          backgroundColor: open ? "rgba(34,211,238,0.18)" : triggerHovered ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.02)",
+          boxShadow: open ? "0 0 0 1px rgba(34,211,238,0.45)" : "none"
         },
         children: getEventDisplayLabel(value) || "EVENT"
       }
