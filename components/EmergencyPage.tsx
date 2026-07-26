@@ -93,22 +93,27 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     };
 
     const handleAuthorityChange = (
-        action: keyof EmergencyFreezeAuthoritySettings,
         qualificationId: string,
         checked: boolean,
     ) => {
-        const current = authorityDraft[action] || [];
+        const current = authorityDraft.activateQualificationIds || [];
         const next = checked
             ? Array.from(new Set([...current, qualificationId]))
             : current.filter(id => id !== qualificationId);
         setAuthorityDraft(normaliseEmergencyFreezeAuthoritySettings({
             ...authorityDraft,
-            [action]: next,
+            activateQualificationIds: next,
+            deactivateQualificationIds: next,
         }));
     };
 
-    const handleEditAuthority = () => {
+    const handleEditAuthority = async () => {
         if (!canEditEmergencyAuthority) return;
+        const unlocked = await requestPassword(
+            'Enter your password to edit emergency freeze authority.',
+            'Emergency Authority Password Required',
+        );
+        if (!unlocked) return;
         setAuthorityDraft(authoritySettings);
         setIsEditingAuthority(true);
     };
@@ -120,12 +125,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
 
     const handleSaveAuthority = async () => {
         if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
-        const unlocked = await requestPassword(
-            'Enter your password to save emergency freeze authority changes.',
-            'Emergency Authority Password Required',
-        );
-        if (!unlocked) return;
-        onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(authorityDraft));
+        onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
+            activateQualificationIds: authorityDraft.activateQualificationIds,
+            deactivateQualificationIds: authorityDraft.activateQualificationIds,
+        }));
         setIsEditingAuthority(false);
         if (onShowSuccess) {
             onShowSuccess('Emergency freeze authority saved');
@@ -313,50 +316,26 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                 </div>
                 {qualificationOptions.length > 0 ? (
                     isEditingAuthority ? (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div>
-                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate</h4>
-                                <div className="space-y-2">
-                                    {qualificationOptions.map(qualification => (
-                                        <label key={`activate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
-                                            <input
-                                                type="checkbox"
-                                                checked={displayedAuthoritySettings.activateQualificationIds.includes(qualification.id)}
-                                                onChange={event => handleAuthorityChange('activateQualificationIds', qualification.id, event.target.checked)}
-                                                className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                                            />
-                                            <span>{qualification.code || qualification.name}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Deactivate</h4>
-                                <div className="space-y-2">
-                                    {qualificationOptions.map(qualification => (
-                                        <label key={`deactivate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
-                                            <input
-                                                type="checkbox"
-                                                checked={displayedAuthoritySettings.deactivateQualificationIds.includes(qualification.id)}
-                                                onChange={event => handleAuthorityChange('deactivateQualificationIds', qualification.id, event.target.checked)}
-                                                className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-                                            />
-                                            <span>{qualification.code || qualification.name}</span>
-                                        </label>
-                                    ))}
-                                </div>
+                        <div>
+                            <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate and Deactivate</h4>
+                            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                {qualificationOptions.map(qualification => (
+                                    <label key={`emergency-authority-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
+                                        <input
+                                            type="checkbox"
+                                            checked={displayedAuthoritySettings.activateQualificationIds.includes(qualification.id)}
+                                            onChange={event => handleAuthorityChange(qualification.id, event.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                        />
+                                        <span>{qualification.code || qualification.name}</span>
+                                    </label>
+                                ))}
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div>
-                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate</h4>
-                                {renderSelectedQualifications(authoritySettings.activateQualificationIds)}
-                            </div>
-                            <div>
-                                <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Deactivate</h4>
-                                {renderSelectedQualifications(authoritySettings.deactivateQualificationIds)}
-                            </div>
+                        <div>
+                            <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate and Deactivate</h4>
+                            {renderSelectedQualifications(authoritySettings.activateQualificationIds)}
                         </div>
                     )
                 ) : (

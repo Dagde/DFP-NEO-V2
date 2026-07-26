@@ -29,20 +29,21 @@ export const normaliseEmergencyFreezeAuthoritySettings = (
 ): EmergencyFreezeAuthoritySettings => {
   const activateQualificationIds = normaliseStringList(source?.activateQualificationIds);
   const deactivateQualificationIds = normaliseStringList(source?.deactivateQualificationIds);
+  const sharedQualificationIds = activateQualificationIds.length > 0 ? activateQualificationIds : deactivateQualificationIds;
   if (!catalogue) {
-    return { activateQualificationIds, deactivateQualificationIds };
+    return {
+      activateQualificationIds: sharedQualificationIds,
+      deactivateQualificationIds: sharedQualificationIds,
+    };
   }
+  const normalisedSharedQualificationIds = normaliseAssignedQualificationIds(
+    sharedQualificationIds,
+    catalogue,
+    false,
+  );
   return {
-    activateQualificationIds: normaliseAssignedQualificationIds(
-      activateQualificationIds,
-      catalogue,
-      false,
-    ),
-    deactivateQualificationIds: normaliseAssignedQualificationIds(
-      deactivateQualificationIds,
-      catalogue,
-      false,
-    ),
+    activateQualificationIds: normalisedSharedQualificationIds,
+    deactivateQualificationIds: normalisedSharedQualificationIds,
   };
 };
 
@@ -57,9 +58,7 @@ export const hasEmergencyFreezeAuthority = ({
   userQualificationIds?: string[];
   userPermission?: string;
 }): boolean => {
-  const requiredIds = action === 'activate'
-    ? normaliseStringList(settings?.activateQualificationIds)
-    : normaliseStringList(settings?.deactivateQualificationIds);
+  const requiredIds = normaliseStringList(settings?.activateQualificationIds);
   const permission = String(userPermission || '').trim();
   const breakGlassPermissions = ['Super Admin', 'Admin'];
   const legacyPermissions = [...breakGlassPermissions, 'Scheduler'];

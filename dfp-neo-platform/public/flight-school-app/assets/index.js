@@ -2745,20 +2745,21 @@ const normaliseStringList = (source) => {
 const normaliseEmergencyFreezeAuthoritySettings = (source, catalogue) => {
   const activateQualificationIds = normaliseStringList(source?.activateQualificationIds);
   const deactivateQualificationIds = normaliseStringList(source?.deactivateQualificationIds);
+  const sharedQualificationIds = activateQualificationIds.length > 0 ? activateQualificationIds : deactivateQualificationIds;
   if (!catalogue) {
-    return { activateQualificationIds, deactivateQualificationIds };
+    return {
+      activateQualificationIds: sharedQualificationIds,
+      deactivateQualificationIds: sharedQualificationIds
+    };
   }
+  const normalisedSharedQualificationIds = normaliseAssignedQualificationIds(
+    sharedQualificationIds,
+    catalogue,
+    false
+  );
   return {
-    activateQualificationIds: normaliseAssignedQualificationIds(
-      activateQualificationIds,
-      catalogue,
-      false
-    ),
-    deactivateQualificationIds: normaliseAssignedQualificationIds(
-      deactivateQualificationIds,
-      catalogue,
-      false
-    )
+    activateQualificationIds: normalisedSharedQualificationIds,
+    deactivateQualificationIds: normalisedSharedQualificationIds
   };
 };
 const hasEmergencyFreezeAuthority = ({
@@ -2767,7 +2768,7 @@ const hasEmergencyFreezeAuthority = ({
   userQualificationIds,
   userPermission
 }) => {
-  const requiredIds = action === "activate" ? normaliseStringList(settings?.activateQualificationIds) : normaliseStringList(settings?.deactivateQualificationIds);
+  const requiredIds = normaliseStringList(settings?.activateQualificationIds);
   const permission = String(userPermission || "").trim();
   const breakGlassPermissions = ["Super Admin", "Admin"];
   const legacyPermissions = [...breakGlassPermissions, "Scheduler"];
@@ -61298,16 +61299,22 @@ const EmergencyPage = ({
       return false;
     }
   };
-  const handleAuthorityChange = (action, qualificationId, checked) => {
-    const current = authorityDraft[action] || [];
+  const handleAuthorityChange = (qualificationId, checked) => {
+    const current = authorityDraft.activateQualificationIds || [];
     const next = checked ? Array.from(/* @__PURE__ */ new Set([...current, qualificationId])) : current.filter((id) => id !== qualificationId);
     setAuthorityDraft(normaliseEmergencyFreezeAuthoritySettings({
       ...authorityDraft,
-      [action]: next
+      activateQualificationIds: next,
+      deactivateQualificationIds: next
     }));
   };
-  const handleEditAuthority = () => {
+  const handleEditAuthority = async () => {
     if (!canEditEmergencyAuthority) return;
+    const unlocked = await requestPassword(
+      "Enter your password to edit emergency freeze authority.",
+      "Emergency Authority Password Required"
+    );
+    if (!unlocked) return;
     setAuthorityDraft(authoritySettings);
     setIsEditingAuthority(true);
   };
@@ -61317,12 +61324,10 @@ const EmergencyPage = ({
   };
   const handleSaveAuthority = async () => {
     if (!canEditEmergencyAuthority || !onUpdateEmergencyFreezeAuthority) return;
-    const unlocked = await requestPassword(
-      "Enter your password to save emergency freeze authority changes.",
-      "Emergency Authority Password Required"
-    );
-    if (!unlocked) return;
-    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(authorityDraft));
+    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
+      activateQualificationIds: authorityDraft.activateQualificationIds,
+      deactivateQualificationIds: authorityDraft.activateQualificationIds
+    }));
     setIsEditingAuthority(false);
     if (onShowSuccess) {
       onShowSuccess("Emergency freeze authority saved");
@@ -61449,46 +61454,23 @@ const EmergencyPage = ({
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" }) })
       ] }),
-      qualificationOptions.length > 0 ? isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: displayedAuthoritySettings.activateQualificationIds.includes(qualification.id),
-                onChange: (event) => handleAuthorityChange("activateQualificationIds", qualification.id, event.target.checked),
-                className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
-          ] }, `activate-${qualification.id}`)) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Deactivate" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: displayedAuthoritySettings.deactivateQualificationIds.includes(qualification.id),
-                onChange: (event) => handleAuthorityChange("deactivateQualificationIds", qualification.id, event.target.checked),
-                className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
-          ] }, `deactivate-${qualification.id}`)) })
-        ] })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate" }),
-          renderSelectedQualifications(authoritySettings.activateQualificationIds)
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Deactivate" }),
-          renderSelectedQualifications(authoritySettings.deactivateQualificationIds)
-        ] })
+      qualificationOptions.length > 0 ? isEditingAuthority ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 md:grid-cols-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: displayedAuthoritySettings.activateQualificationIds.includes(qualification.id),
+              onChange: (event) => handleAuthorityChange(qualification.id, event.target.checked),
+              className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+        ] }, `emergency-authority-${qualification.id}`)) })
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate and Deactivate" }),
+        renderSelectedQualifications(authoritySettings.activateQualificationIds)
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No active qualifications are configured for this unit model." })
     ] }),
     !freezeState.isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800/50 rounded-xl border border-gray-700 p-6", children: [
