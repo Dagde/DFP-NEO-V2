@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
 import { useSystemFreeze, AllowedActions } from '../context/SystemFreezeContext';
+import {
+    hasEmergencyFreezeAuthority,
+    normaliseEmergencyFreezeAuthoritySettings,
+    type EmergencyFreezeAuthoritySettings,
+} from '../utils/emergencyFreezeAuthority';
+import type { StaffQualificationDefinition } from '../utils/staffQualifications';
 
 interface EmergencyPageProps {
     currentUserRole?: string;
     onShowSuccess?: (message: string) => void;
     trainingReportDisplayName?: string;
+    emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
+    onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    qualificationOptions?: StaffQualificationDefinition[];
+    currentUserQualificationIds?: string[];
+    canEditEmergencyAuthority?: boolean;
 }
 
 const defaultAllowedActions: AllowedActions = {
@@ -17,13 +28,47 @@ const defaultAllowedActions: AllowedActions = {
 const EmergencyPage: React.FC<EmergencyPageProps> = ({
     currentUserRole,
     onShowSuccess,
-    trainingReportDisplayName
+    trainingReportDisplayName,
+    emergencyFreezeAuthority,
+    onUpdateEmergencyFreezeAuthority,
+    qualificationOptions = [],
+    currentUserQualificationIds = [],
+    canEditEmergencyAuthority = false
 }) => {
     const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze();
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [pendingAllowedActions, setPendingAllowedActions] = useState<AllowedActions>(defaultAllowedActions);
     const reportDisplayName = String(trainingReportDisplayName || '').trim() || 'Training Report';
+    const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+    const canActivateFreeze = hasEmergencyFreezeAuthority({
+        action: 'activate',
+        settings: authoritySettings,
+        userQualificationIds: currentUserQualificationIds,
+        userPermission: currentUserRole,
+    });
+    const canDeactivateFreeze = hasEmergencyFreezeAuthority({
+        action: 'deactivate',
+        settings: authoritySettings,
+        userQualificationIds: currentUserQualificationIds,
+        userPermission: currentUserRole,
+    });
+
+    const handleAuthorityChange = (
+        action: keyof EmergencyFreezeAuthoritySettings,
+        qualificationId: string,
+        checked: boolean,
+    ) => {
+        if (!onUpdateEmergencyFreezeAuthority) return;
+        const current = authoritySettings[action] || [];
+        const next = checked
+            ? Array.from(new Set([...current, qualificationId]))
+            : current.filter(id => id !== qualificationId);
+        onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
+            ...authoritySettings,
+            [action]: next,
+        }));
+    };
 
     const handleAllowedActionChange = (action: keyof AllowedActions) => {
         setPendingAllowedActions(prev => ({
@@ -44,6 +89,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     };
 
     const handleFreezeClick = () => {
+        if (!canActivateFreeze) {
+            alert('You are not authorised to activate an emergency freeze.');
+            return;
+        }
         setShowConfirmDialog(true);
     };
 
@@ -60,6 +109,10 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
     };
 
     const handleUnfreeze = async () => {
+        if (!canDeactivateFreeze) {
+            alert('You are not authorised to deactivate an emergency freeze.');
+            return;
+        }
         setIsProcessing(true);
         unfreezeSystem();
         setIsProcessing(false);
@@ -151,18 +204,70 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                     <div className="flex justify-center mb-6">
                         <button
                             onClick={handleFreezeClick}
+                            disabled={!canActivateFreeze}
                             className="relative group"
                         >
                             {/* 3D effect layers */}
                             <div className="absolute inset-0 bg-red-800 rounded-xl transform translate-y-1 group-active:translate-y-0 transition-transform"></div>
                             <div className="absolute inset-0 bg-red-700 rounded-xl transform translate-y-0.5 group-active:translate-y-0 transition-transform"></div>
-                            <div className="relative px-8 py-4 bg-gradient-to-b from-red-500 to-red-600 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-900/50 flex items-center gap-3 group-active:transform group-active:translate-y-1 transition-transform">
+                            <div className={`relative px-8 py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-900/50 flex items-center gap-3 group-active:transform group-active:translate-y-1 transition-transform ${canActivateFreeze ? 'bg-gradient-to-b from-red-500 to-red-600' : 'bg-gray-600 cursor-not-allowed opacity-70'}`}>
                                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                                 </svg>
                                 FREEZE SYSTEM
                             </div>
                         </button>
+                    </div>
+                    <div className="mb-6 rounded-xl border border-gray-700 bg-gray-900/60 p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">Emergency Freeze Authority</h3>
+                                <p className="text-xs text-gray-400">Qualifications authorised to activate and deactivate freeze.</p>
+                            </div>
+                            {!canEditEmergencyAuthority && (
+                                <span className="rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200">Read-only</span>
+                            )}
+                        </div>
+                        {qualificationOptions.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Activate</h4>
+                                    <div className="space-y-2">
+                                        {qualificationOptions.map(qualification => (
+                                            <label key={`activate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={authoritySettings.activateQualificationIds.includes(qualification.id)}
+                                                    disabled={!canEditEmergencyAuthority}
+                                                    onChange={event => handleAuthorityChange('activateQualificationIds', qualification.id, event.target.checked)}
+                                                    className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                                />
+                                                <span>{qualification.code || qualification.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400">Can Deactivate</h4>
+                                    <div className="space-y-2">
+                                        {qualificationOptions.map(qualification => (
+                                            <label key={`deactivate-${qualification.id}`} className="flex items-center gap-2 text-sm text-gray-200">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={authoritySettings.deactivateQualificationIds.includes(qualification.id)}
+                                                    disabled={!canEditEmergencyAuthority}
+                                                    onChange={event => handleAuthorityChange('deactivateQualificationIds', qualification.id, event.target.checked)}
+                                                    className="h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                                                />
+                                                <span>{qualification.code || qualification.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">No active qualifications are configured for this unit model.</p>
+                        )}
                     </div>
 
                     {/* Allowed Actions Selection */}
@@ -271,7 +376,7 @@ const EmergencyPage: React.FC<EmergencyPageProps> = ({
                     {/* Unfreeze Button */}
                     <button
                         onClick={handleUnfreeze}
-                        disabled={isProcessing}
+                        disabled={isProcessing || !canDeactivateFreeze}
                         className="w-full py-3 px-4 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (

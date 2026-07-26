@@ -15,6 +15,11 @@ import {
 import { DEFAULT_TILE_STATUS_SETTINGS, normaliseTileStatusSettings, type TileStatusSettings } from './tileStatusSettings';
 import { normaliseFixedCrewTileColourModeByUnit, type FixedCrewTileColourMode } from './fixedCrewTileColours';
 import { DEFAULT_DISPATCH_STAGGER_SETTINGS, normaliseDispatchStaggerSettings, type DispatchStaggerSettings } from './dispatchStagger';
+import {
+  DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
+  normaliseEmergencyFreezeAuthoritySettings,
+  type EmergencyFreezeAuthoritySettings,
+} from './emergencyFreezeAuthority';
 import type { FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
@@ -70,6 +75,7 @@ export interface AppSettingsData {
   timezoneOffset: number;
   showDepartureDensityOverlay: boolean;
   tileStatusSettings: TileStatusSettings;
+  emergencyFreezeAuthority: EmergencyFreezeAuthoritySettings;
 
   // SCT Events
   sctEvents: any[];
@@ -347,6 +353,9 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     timezoneOffset: state.timezoneOffset ?? 0,
     showDepartureDensityOverlay: state.showDepartureDensityOverlay ?? false,
     tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
+    emergencyFreezeAuthority: normaliseEmergencyFreezeAuthoritySettings(
+      state.emergencyFreezeAuthority || DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
+    ),
     sctEvents: state.sctEvents || [],
     formationCallsigns: state.formationCallsigns || [],
     courseColors: state.courseColors || {},

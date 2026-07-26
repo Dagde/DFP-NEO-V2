@@ -33,6 +33,8 @@ import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTermin
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { normaliseContinuationEventSettings } from '../utils/continuationEvents';
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
+import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
+import type { StaffQualificationDefinition } from '../utils/staffQualifications';
 
 
 declare var XLSX: any;
@@ -86,6 +88,10 @@ interface SettingsViewProps {
     sctTerminology?: SctTerminology;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     trainingReportDisplayName?: string;
+    emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
+    onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    qualificationOptions?: StaffQualificationDefinition[];
+    currentUserQualificationIds?: string[];
     aircraftConfigurationDefinitions?: AircraftConfigurationDefinition[];
     activeUnitCode?: string;
     activeUnitCodes?: string[];
@@ -576,6 +582,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
     personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
     trainingReportDisplayName = 'Training Report',
+    emergencyFreezeAuthority,
+    onUpdateEmergencyFreezeAuthority,
+    qualificationOptions = [],
+    currentUserQualificationIds = [],
     aircraftConfigurationDefinitions = [],
     activeUnitCode = '',
     activeUnitCodes = [],
@@ -1757,6 +1767,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        currentUserRole={currentUserPermission}
                        onShowSuccess={onShowSuccess}
                        trainingReportDisplayName={trainingReportDisplayName}
+                       emergencyFreezeAuthority={emergencyFreezeAuthority}
+                       onUpdateEmergencyFreezeAuthority={onUpdateEmergencyFreezeAuthority}
+                       qualificationOptions={qualificationOptions}
+                       currentUserQualificationIds={currentUserQualificationIds}
+                       canEditEmergencyAuthority={canEditSettings}
                    />
                    )}
                </div>

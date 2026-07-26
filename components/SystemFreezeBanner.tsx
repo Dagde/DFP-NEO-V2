@@ -1,7 +1,11 @@
 import React from 'react';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 
-const SystemFreezeBanner: React.FC = () => {
+interface SystemFreezeBannerProps {
+    canUnfreeze?: boolean;
+}
+
+const SystemFreezeBanner: React.FC<SystemFreezeBannerProps> = ({ canUnfreeze = false }) => {
     const { freezeState, unfreezeSystem } = useSystemFreeze();
 
     if (!freezeState.isFrozen) return null;
@@ -28,12 +32,14 @@ const SystemFreezeBanner: React.FC = () => {
                     <span className="text-red-200 text-sm">since {formatDateTime(freezeState.frozenAt)}</span>
                 )}
             </div>
-            <button
-                onClick={unfreezeSystem}
-                className="ml-4 px-3 py-1 bg-white text-red-600 rounded text-sm font-semibold hover:bg-red-100 transition-colors"
-            >
-                Unfreeze
-            </button>
+            {canUnfreeze ? (
+                <button
+                    onClick={unfreezeSystem}
+                    className="ml-4 px-3 py-1 bg-white text-red-600 rounded text-sm font-semibold hover:bg-red-100 transition-colors"
+                >
+                    Unfreeze
+                </button>
+            ) : null}
         </div>
     );
 };

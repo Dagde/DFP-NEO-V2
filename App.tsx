@@ -90,6 +90,12 @@ import {
     normaliseStaffQualificationCatalogue,
     type StaffQualificationCatalogue,
 } from './utils/staffQualifications';
+import {
+    DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
+    hasEmergencyFreezeAuthority,
+    normaliseEmergencyFreezeAuthoritySettings,
+    type EmergencyFreezeAuthoritySettings,
+} from './utils/emergencyFreezeAuthority';
 import { getInsertEventTypes } from './utils/insertEventTypes';
 import { getAppApiBase } from './utils/externalDataControls';
 import {
@@ -21549,6 +21555,9 @@ const App: React.FC = () => {
 
     const [tileStatusSettings, setTileStatusSettings] = useState<TileStatusSettings>(() => readTileStatusSettingsFromLocalStorage());
     const [fixedCrewTileColourModeByUnit, setFixedCrewTileColourModeByUnit] = useState<Record<string, FixedCrewTileColourMode>>({});
+    const [emergencyFreezeAuthority, setEmergencyFreezeAuthority] = useState<EmergencyFreezeAuthoritySettings>(
+        DEFAULT_EMERGENCY_FREEZE_AUTHORITY,
+    );
 
     useEffect(() => {
         writeTileStatusSettingsToLocalStorage(tileStatusSettings);
@@ -23189,6 +23198,35 @@ const App: React.FC = () => {
     useEffect(() => {
         setDashboardTestUserName('');
     }, [authUser?.userId, sessionUser?.userId]);
+    const emergencyQualificationOptions = useMemo(
+        () => getQualificationsForOperationalModel(activeStaffQualificationCatalogue, activeOperationalModel),
+        [activeOperationalModel, activeStaffQualificationCatalogue],
+    );
+    const currentEmergencyQualificationIds = useMemo(() => {
+        const normaliseName = (value: unknown) => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const userNameKeys = [
+            currentUserName,
+            authUser?.displayName,
+            authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+            authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+            sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
+            sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
+        ].map(normaliseName).filter(Boolean);
+        const matchingPerson = [...allInstructorsData, ...allTraineesData].find((person: any) => {
+            const personKeys = [
+                person?.name,
+                person?.displayName,
+                person?.firstName && person?.lastName ? `${person.lastName}, ${person.firstName}` : '',
+                person?.firstName && person?.lastName ? `${person.firstName} ${person.lastName}` : '',
+            ].map(normaliseName).filter(Boolean);
+            return personKeys.some(key => userNameKeys.includes(key));
+        }) || currentUser;
+        return normaliseAssignedQualificationIds(
+            (matchingPerson as any)?.preferences?.qualifications || [],
+            activeStaffQualificationCatalogue,
+            false,
+        );
+    }, [activeStaffQualificationCatalogue, allInstructorsData, allTraineesData, authUser, currentUser, currentUserName, sessionUser]);
     const normaliseDashboardNotificationName = (value?: string | null) => String(value || '')
         .trim()
         .toLowerCase()
@@ -25342,6 +25380,12 @@ const App: React.FC = () => {
     const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
     const combinedPermissions = [...authUserPermissions, ...(currentUser?.permissions || [])];
     const currentUserPermission = getHighestPermission(combinedPermissions);
+    const canDeactivateEmergencyFreeze = useMemo(() => hasEmergencyFreezeAuthority({
+        action: 'deactivate',
+        settings: emergencyFreezeAuthority,
+        userQualificationIds: currentEmergencyQualificationIds,
+        userPermission: currentUserPermission,
+    }), [currentEmergencyQualificationIds, currentUserPermission, emergencyFreezeAuthority]);
     const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
     const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
     const [pt051PerformanceLoading, setPt051PerformanceLoading] = useState(true);
@@ -27238,6 +27282,9 @@ const App: React.FC = () => {
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
                 if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
                 if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
+                if ((saved as any).emergencyFreezeAuthority) {
+                    setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings((saved as any).emergencyFreezeAuthority, activeStaffQualificationCatalogue));
+                }
                 if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
                 if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
@@ -27402,6 +27449,7 @@ const App: React.FC = () => {
             timezoneOffset,
             showDepartureDensityOverlay,
             tileStatusSettings,
+            emergencyFreezeAuthority,
             sctEvents,
             formationCallsigns,
             courseColors,
@@ -27431,7 +27479,7 @@ const App: React.FC = () => {
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
         flyingWindowExclusions, flyingWindowExclusionsByUnit, activeFlyingWindowExclusionUnitKey,
         availableAircraftCount, neoAvailableAircraftCount, neoAircraftConfigCapacities, neoAircraftCapacityByUnit, activeNeoAircraftCapacityUnitKey, availableFtdCount, availableCptCount,
-        timezoneOffset, showDepartureDensityOverlay, tileStatusSettings,
+        timezoneOffset, showDepartureDensityOverlay, tileStatusSettings, emergencyFreezeAuthority,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements, unitCurrencyDefinitions,
@@ -43104,6 +43152,10 @@ appliedUpdates.forEach(update => {
                        resourceDisplayNames={resourceDisplayNames}
                        personnelDisplaySettings={personnelDisplaySettings}
                        trainingReportDisplayName={trainingReportTemplate.displayName}
+                       emergencyFreezeAuthority={emergencyFreezeAuthority}
+                       onUpdateEmergencyFreezeAuthority={(settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue))}
+                       qualificationOptions={emergencyQualificationOptions}
+                       currentUserQualificationIds={currentEmergencyQualificationIds}
                        instructorLabel={instructorLabel}
                        canUsePlatformPermission={canUsePlatformPermission}
                        activeUnitCode={activeTrainingReportUnitCode}
@@ -44145,7 +44197,7 @@ appliedUpdates.forEach(update => {
                 Setup Wizard Test Mode - Local Browser Data Only - {setupTestProfile}
             </div>
         )}
-        <SystemFreezeBanner />
+        <SystemFreezeBanner canUnfreeze={canDeactivateEmergencyFreeze} />
         <DataLoadingMonitor
             isStaffLoaded={isStaffLoaded}
             isTraineeLoaded={isTraineeLoaded}

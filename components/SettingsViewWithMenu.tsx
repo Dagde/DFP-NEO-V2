@@ -22,6 +22,8 @@ import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigura
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
+import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
+import type { StaffQualificationDefinition } from '../utils/staffQualifications';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -113,6 +115,10 @@ interface SettingsViewWithMenuProps {
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     trainingReportDisplayName?: string;
+    emergencyFreezeAuthority?: EmergencyFreezeAuthoritySettings;
+    onUpdateEmergencyFreezeAuthority?: (settings: EmergencyFreezeAuthoritySettings) => void;
+    qualificationOptions?: StaffQualificationDefinition[];
+    currentUserQualificationIds?: string[];
     instructorLabel?: string;
     canUsePlatformPermission?: (permissionId: string) => boolean;
     activeUnitCode?: string;

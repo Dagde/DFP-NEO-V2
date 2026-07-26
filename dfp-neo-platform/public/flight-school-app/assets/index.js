@@ -1709,217 +1709,6 @@ const getEffectiveDispatchStaggerMinutes = (settings, eventType) => {
   if (type === "flight") return normalised.flightNoMinimum ? 0 : normalised.flightMinutes;
   return 0;
 };
-const SETTINGS_VERSION = "1.0";
-const ORG_ID = "default";
-let saveDebounceTimer = null;
-let pendingSettings = null;
-let isSaving = false;
-const getApiBase$3 = () => getAppApiBase();
-const loadSettingsFromDB = async () => {
-  if (isSetupTestMode()) {
-    return readSetupTestSettings();
-  }
-  try {
-    const apiBase = getApiBase$3();
-    const url = `${apiBase}/settings?orgId=${ORG_ID}`;
-    console.log("[Settings] 🔍 Loading settings from DB — URL:", url);
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" }
-    });
-    console.log("[Settings] 📥 GET /api/settings response status:", res.status);
-    if (!res.ok) {
-      console.warn("[Settings] ❌ Failed to load settings from DB:", res.status);
-      return null;
-    }
-    const json = await res.json();
-    console.log("[Settings] 📦 Raw JSON from DB:", JSON.stringify(json).substring(0, 500));
-    if (!json.settings) {
-      console.log("[Settings] ⚠️ No settings found in DB (json.settings is null/undefined), using defaults");
-      return null;
-    }
-    console.log("[Settings] ✅ Loaded settings from DB — version:", json.settings.version, "| organisationSettings:", JSON.stringify(json.settings.organisationSettings));
-    return json.settings;
-  } catch (error) {
-    console.error("[Settings] 💥 Error loading settings from DB:", error);
-    return null;
-  }
-};
-const saveSettingsNow = async (settings, userId) => {
-  if (isSetupTestMode()) {
-    writeSetupTestSettings({
-      ...settings,
-      savedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      version: SETTINGS_VERSION
-    });
-    return true;
-  }
-  if (isSaving) {
-    console.log("[Settings] ⏳ Already saving — queuing this save");
-    pendingSettings = settings;
-    return false;
-  }
-  isSaving = true;
-  try {
-    const apiBase = getApiBase$3();
-    const url = `${apiBase}/settings`;
-    const payload = {
-      orgId: ORG_ID,
-      settings: {
-        ...settings,
-        savedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        version: SETTINGS_VERSION
-      },
-      updatedBy: userId || null
-    };
-    console.log("[Settings] 📤 POST /api/settings — URL:", url);
-    console.log("[Settings] 📤 Saving organisationSettings:", JSON.stringify(payload.settings.organisationSettings));
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    console.log("[Settings] 📥 POST /api/settings response status:", res.status);
-    if (!res.ok) {
-      let errBody = "";
-      try {
-        errBody = await res.text();
-      } catch {
-      }
-      console.error("[Settings] ❌ Failed to save settings:", res.status, errBody);
-      try {
-        const errJson = JSON.parse(errBody);
-        console.error("[Settings] ❌ Server error details:", errJson.details || errJson.error);
-      } catch {
-      }
-      return false;
-    }
-    const result = await res.json();
-    console.log("[Settings] ✅ Settings saved to DB — response:", JSON.stringify(result));
-    return true;
-  } catch (error) {
-    console.error("[Settings] 💥 Error saving settings:", error);
-    return false;
-  } finally {
-    isSaving = false;
-    if (pendingSettings) {
-      const pending = pendingSettings;
-      pendingSettings = null;
-      saveSettingsNow(pending, userId);
-    }
-  }
-};
-const saveSettingsToDB = (settings, userId) => {
-  if (saveDebounceTimer) {
-    clearTimeout(saveDebounceTimer);
-  }
-  saveDebounceTimer = setTimeout(() => {
-    saveSettingsNow(settings, userId);
-    saveDebounceTimer = null;
-  }, 300);
-};
-const buildSettingsSnapshot = (state) => {
-  return {
-    locations: state.locations || [],
-    locationAbbreviations: state.locationAbbreviations || {},
-    serviceDefinitions: state.serviceDefinitions || [
-      { longName: "Air Force", shortName: "RAAF" },
-      { longName: "Navy", shortName: "RAN" },
-      { longName: "Army", shortName: "ARA" }
-    ],
-    units: state.units || [],
-    unitLocations: state.unitLocations || {},
-    locationOpAreas: state.locationOpAreas || {},
-    eventLimits: state.eventLimits || {
-      exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
-      instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
-      trainee: { maxFlightFtd: 1, maxTotal: 2 },
-      simIp: { maxFtd: 2, maxTotal: 2 }
-    },
-    preferredDutyPeriod: state.preferredDutyPeriod ?? 8,
-    maxCrewDutyPeriod: state.maxCrewDutyPeriod ?? 10,
-    maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
-    dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
-    flightTurnaround: state.flightTurnaround ?? 1.2,
-    ftdTurnaround: state.ftdTurnaround ?? 0.5,
-    cptTurnaround: state.cptTurnaround ?? 0.5,
-    flyingStartTime: state.flyingStartTime ?? 8,
-    flyingEndTime: state.flyingEndTime ?? 17,
-    ftdStartTime: state.ftdStartTime ?? 8,
-    ftdEndTime: state.ftdEndTime ?? 17,
-    allowNightFlying: state.allowNightFlying ?? true,
-    commenceNightFlying: state.commenceNightFlying ?? 18.5,
-    ceaseNightFlying: state.ceaseNightFlying ?? 23.5,
-    flyingWindowExclusions: Array.isArray(state.flyingWindowExclusions) ? state.flyingWindowExclusions : [],
-    flyingWindowExclusionsByUnit: state.flyingWindowExclusionsByUnit || {},
-    availableAircraftCount: state.availableAircraftCount ?? 15,
-    availableFtdCount: state.availableFtdCount ?? 5,
-    availableCptCount: state.availableCptCount ?? 4,
-    timezoneOffset: state.timezoneOffset ?? 0,
-    showDepartureDensityOverlay: state.showDepartureDensityOverlay ?? false,
-    tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
-    sctEvents: state.sctEvents || [],
-    formationCallsigns: state.formationCallsigns || [],
-    courseColors: state.courseColors || {},
-    coursePriorities: state.coursePriorities || [],
-    coursePercentages: state.coursePercentages || {},
-    fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
-    fixedCrewTileColourModeByUnit: normaliseFixedCrewTileColourModeByUnit(state.fixedCrewTileColourModeByUnit),
-    neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
-    neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
-    neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},
-    phraseBank: state.phraseBank || {},
-    cancellationCodes: state.cancellationCodes || [],
-    masterCurrencies: state.masterCurrencies || [],
-    currencyRequirements: state.currencyRequirements || [],
-    unitCurrencyDefinitions: state.unitCurrencyDefinitions || {},
-    syllabusDetails: state.syllabusDetails || [],
-    organisationSettings: state.organisationSettings || {
-      staffSharingEnabled: false,
-      staffSharingUnits: [],
-      activeStaffSharingGroupId: "staff-sharing-1",
-      staffSharingGroups: [],
-      fleetSharingEnabled: false,
-      allocationMode: "combined",
-      selectedUnits: [],
-      desiredAllocations: {},
-      remainderUnitIndex: -1,
-      activeResourceSharingGroupId: "resource-sharing-1",
-      resourceSharingGroups: []
-    },
-    savedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    version: SETTINGS_VERSION
-  };
-};
-const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId) => {
-  if (isSetupTestMode()) {
-    writeSetupTestCurrencies(masterCurrencies, currencyRequirements);
-    return true;
-  }
-  try {
-    const apiBase = getApiBase$3();
-    const url = `${apiBase}/currencies`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        orgId: ORG_ID,
-        masterCurrencies,
-        currencyRequirements,
-        updatedBy: userId || null
-      })
-    });
-    if (!res.ok) {
-      console.error("[Currencies] Failed to save:", res.status);
-      return false;
-    }
-    console.log("[Currencies] ✅ Saved directly to /api/currencies");
-    return true;
-  } catch (error) {
-    console.error("[Currencies] Error saving:", error);
-    return false;
-  }
-};
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const OFFICIAL_SUNRISE_ZENITH = 90.833;
@@ -2322,7 +2111,7 @@ const normalisePlatformConfig = (source) => {
     schedulingRuleSets: Array.isArray(raw.schedulingRuleSets) ? raw.schedulingRuleSets : []
   };
 };
-const getApiBase$2 = () => getAppApiBase();
+const getApiBase$3 = () => getAppApiBase();
 const normaliseLocationIdentifier = (value) => String(value || "").trim().toLowerCase();
 const normaliseUnitIdentifier = (value) => String(value || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
 const defaultLocationProfiles = Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {});
@@ -2374,7 +2163,7 @@ const loadPlatformConfigFromDB = async () => {
     return readSetupTestPlatformConfig();
   }
   try {
-    const res = await fetch(`${getApiBase$2()}/platform-config`, {
+    const res = await fetch(`${getApiBase$3()}/platform-config`, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -2751,6 +2540,455 @@ const getResourcePoolCount = (pool, key, fallback) => {
     if (Number.isFinite(value) && value >= 0) return value;
   }
   return fallback;
+};
+const ALL_OPERATIONAL_MODEL_CODES$1 = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
+const DEFAULT_STAFF_QUALIFICATIONS = {
+  qualifications: [
+    {
+      id: "admin-staff",
+      name: "Admin Staff",
+      code: "Admin Staff",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "cfi",
+      name: "CFI",
+      code: "CFI",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "co",
+      name: "CO",
+      code: "CO",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "contractor",
+      name: "Contractor",
+      code: "Contractor",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "dfc",
+      name: "DFC",
+      code: "DFC",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "executive",
+      name: "Executive",
+      code: "Executive",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "flying-supervisor",
+      name: "Flying Supervisor",
+      code: "Flying Supervisor",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "ire",
+      name: "IRE",
+      code: "IRE",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "ofi",
+      name: "OFI",
+      code: "OFI",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "pic",
+      name: "PIC",
+      code: "PIC",
+      operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"],
+      roleRestrictions: ["Pilot"],
+      status: "ACTIVE"
+    },
+    {
+      id: "qfi",
+      name: "QFI",
+      code: "QFI",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "testing-officer",
+      name: "Testing Officer",
+      code: "Testing Officer",
+      operationalModels: ALL_OPERATIONAL_MODEL_CODES$1,
+      roleRestrictions: [],
+      status: "ACTIVE"
+    },
+    {
+      id: "crew-commander",
+      name: "Crew Commander",
+      code: "Crew Commander",
+      operationalModels: ["fixed_crew", "pooled_crew"],
+      roleRestrictions: ["Pilot"],
+      status: "ACTIVE"
+    },
+    {
+      id: "operational-captain",
+      name: "Operational Captain",
+      code: "Operational Captain",
+      operationalModels: ["fixed_crew", "pooled_crew"],
+      roleRestrictions: ["Pilot"],
+      status: "ACTIVE"
+    }
+  ]
+};
+const makeQualificationId = (source, index) => {
+  const token = String(source || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return token || `qualification-${index + 1}`;
+};
+const normaliseStringList$1 = (source) => {
+  if (Array.isArray(source)) {
+    return source.map((value) => String(value || "").trim()).filter(Boolean);
+  }
+  return String(source || "").split(/\r?\n|;|,/).map((value) => value.trim()).filter(Boolean);
+};
+const normaliseOperationalModels = (source) => {
+  const values = normaliseStringList$1(source);
+  if (values.length === 0) return [DEFAULT_OPERATIONAL_MODEL];
+  return Array.from(new Set(values.map((value) => normaliseOperationalModel(value))));
+};
+const normaliseQualification = (entry, index) => {
+  const name = String(entry?.name || entry?.label || entry?.code || "").trim();
+  const code = String(entry?.code || entry?.abbreviation || name).trim();
+  if (!name && !code) return null;
+  const id = String(entry?.id || makeQualificationId(code || name, index)).trim() || makeQualificationId(name || code, index);
+  const isLegacyPicLabel = id === "pic" && normaliseQualificationToken(code) === "pic" && normaliseQualificationToken(name) === "pilotincommand";
+  const displayName = isLegacyPicLabel ? "PIC" : name || code;
+  return {
+    id,
+    name: displayName,
+    code: code || displayName,
+    operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
+    roleRestrictions: normaliseStringList$1(entry?.roleRestrictions || entry?.roles),
+    status: String(entry?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
+  };
+};
+const normaliseStaffQualificationCatalogue = (source) => {
+  const deletedDefaultIds = normaliseStringList$1(source?.deletedDefaultIds);
+  const configured = Array.isArray(source?.qualifications) ? source.qualifications : [];
+  const defaultQualifications = DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
+  const configuredDefinitions = configured.map(normaliseQualification).filter((entry) => Boolean(entry));
+  const byKey = /* @__PURE__ */ new Map();
+  [...defaultQualifications, ...configuredDefinitions].forEach((entry, index) => {
+    const normalised = normaliseQualification(entry, index);
+    if (!normalised) return;
+    const key = normaliseQualificationToken(normalised.id || normalised.code || normalised.name);
+    byKey.set(key, normalised);
+  });
+  return { qualifications: Array.from(byKey.values()), deletedDefaultIds };
+};
+const normaliseQualificationToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+const qualificationMatches = (assignedValue, definition) => {
+  const token = normaliseQualificationToken(assignedValue);
+  if (!token) return false;
+  return [
+    definition.id,
+    definition.code,
+    definition.name
+  ].some((value) => normaliseQualificationToken(value) === token);
+};
+const normaliseAssignedQualificationIds = (source, catalogue, preserveUnknown = true) => {
+  const values = normaliseStringList$1(source);
+  const definitions = normaliseStaffQualificationCatalogue(catalogue).qualifications;
+  const result = [];
+  values.forEach((value) => {
+    const match = definitions.find((definition) => qualificationMatches(value, definition));
+    if (!match && !preserveUnknown) return;
+    const id = match?.id || String(value || "").trim();
+    if (id && !result.includes(id)) result.push(id);
+  });
+  return result;
+};
+const getQualificationsForOperationalModel = (catalogue, operationalModel) => {
+  const model = normaliseOperationalModel(operationalModel);
+  return normaliseStaffQualificationCatalogue(catalogue).qualifications.filter((qualification) => qualification.status !== "INACTIVE").filter((qualification) => {
+    const models = qualification.operationalModels?.length ? qualification.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
+    return models.includes(model);
+  });
+};
+const DEFAULT_EMERGENCY_FREEZE_AUTHORITY = {
+  activateQualificationIds: [],
+  deactivateQualificationIds: []
+};
+const normaliseStringList = (source) => {
+  if (Array.isArray(source)) {
+    return Array.from(new Set(source.map((value) => String(value || "").trim()).filter(Boolean)));
+  }
+  return String(source || "").split(/\r?\n|,|;/).map((value) => value.trim()).filter((value, index, values) => value && values.indexOf(value) === index);
+};
+const normaliseEmergencyFreezeAuthoritySettings = (source, catalogue) => {
+  const activateQualificationIds = normaliseStringList(source?.activateQualificationIds);
+  const deactivateQualificationIds = normaliseStringList(source?.deactivateQualificationIds);
+  if (!catalogue) {
+    return { activateQualificationIds, deactivateQualificationIds };
+  }
+  return {
+    activateQualificationIds: normaliseAssignedQualificationIds(
+      activateQualificationIds,
+      catalogue,
+      false
+    ),
+    deactivateQualificationIds: normaliseAssignedQualificationIds(
+      deactivateQualificationIds,
+      catalogue,
+      false
+    )
+  };
+};
+const hasEmergencyFreezeAuthority = ({
+  action,
+  settings,
+  userQualificationIds,
+  userPermission
+}) => {
+  const requiredIds = action === "activate" ? normaliseStringList(settings?.activateQualificationIds) : normaliseStringList(settings?.deactivateQualificationIds);
+  const permission = String(userPermission || "").trim();
+  const breakGlassPermissions = ["Super Admin", "Admin"];
+  const legacyPermissions = [...breakGlassPermissions, "Scheduler"];
+  if (requiredIds.length === 0) return legacyPermissions.includes(permission);
+  if (breakGlassPermissions.includes(permission)) return true;
+  const assigned = new Set(normaliseStringList(userQualificationIds));
+  return requiredIds.some((id) => assigned.has(id));
+};
+const SETTINGS_VERSION = "1.0";
+const ORG_ID = "default";
+let saveDebounceTimer = null;
+let pendingSettings = null;
+let isSaving = false;
+const getApiBase$2 = () => getAppApiBase();
+const loadSettingsFromDB = async () => {
+  if (isSetupTestMode()) {
+    return readSetupTestSettings();
+  }
+  try {
+    const apiBase = getApiBase$2();
+    const url = `${apiBase}/settings?orgId=${ORG_ID}`;
+    console.log("[Settings] 🔍 Loading settings from DB — URL:", url);
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+    console.log("[Settings] 📥 GET /api/settings response status:", res.status);
+    if (!res.ok) {
+      console.warn("[Settings] ❌ Failed to load settings from DB:", res.status);
+      return null;
+    }
+    const json = await res.json();
+    console.log("[Settings] 📦 Raw JSON from DB:", JSON.stringify(json).substring(0, 500));
+    if (!json.settings) {
+      console.log("[Settings] ⚠️ No settings found in DB (json.settings is null/undefined), using defaults");
+      return null;
+    }
+    console.log("[Settings] ✅ Loaded settings from DB — version:", json.settings.version, "| organisationSettings:", JSON.stringify(json.settings.organisationSettings));
+    return json.settings;
+  } catch (error) {
+    console.error("[Settings] 💥 Error loading settings from DB:", error);
+    return null;
+  }
+};
+const saveSettingsNow = async (settings, userId) => {
+  if (isSetupTestMode()) {
+    writeSetupTestSettings({
+      ...settings,
+      savedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      version: SETTINGS_VERSION
+    });
+    return true;
+  }
+  if (isSaving) {
+    console.log("[Settings] ⏳ Already saving — queuing this save");
+    pendingSettings = settings;
+    return false;
+  }
+  isSaving = true;
+  try {
+    const apiBase = getApiBase$2();
+    const url = `${apiBase}/settings`;
+    const payload = {
+      orgId: ORG_ID,
+      settings: {
+        ...settings,
+        savedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        version: SETTINGS_VERSION
+      },
+      updatedBy: userId || null
+    };
+    console.log("[Settings] 📤 POST /api/settings — URL:", url);
+    console.log("[Settings] 📤 Saving organisationSettings:", JSON.stringify(payload.settings.organisationSettings));
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    console.log("[Settings] 📥 POST /api/settings response status:", res.status);
+    if (!res.ok) {
+      let errBody = "";
+      try {
+        errBody = await res.text();
+      } catch {
+      }
+      console.error("[Settings] ❌ Failed to save settings:", res.status, errBody);
+      try {
+        const errJson = JSON.parse(errBody);
+        console.error("[Settings] ❌ Server error details:", errJson.details || errJson.error);
+      } catch {
+      }
+      return false;
+    }
+    const result = await res.json();
+    console.log("[Settings] ✅ Settings saved to DB — response:", JSON.stringify(result));
+    return true;
+  } catch (error) {
+    console.error("[Settings] 💥 Error saving settings:", error);
+    return false;
+  } finally {
+    isSaving = false;
+    if (pendingSettings) {
+      const pending = pendingSettings;
+      pendingSettings = null;
+      saveSettingsNow(pending, userId);
+    }
+  }
+};
+const saveSettingsToDB = (settings, userId) => {
+  if (saveDebounceTimer) {
+    clearTimeout(saveDebounceTimer);
+  }
+  saveDebounceTimer = setTimeout(() => {
+    saveSettingsNow(settings, userId);
+    saveDebounceTimer = null;
+  }, 300);
+};
+const buildSettingsSnapshot = (state) => {
+  return {
+    locations: state.locations || [],
+    locationAbbreviations: state.locationAbbreviations || {},
+    serviceDefinitions: state.serviceDefinitions || [
+      { longName: "Air Force", shortName: "RAAF" },
+      { longName: "Navy", shortName: "RAN" },
+      { longName: "Army", shortName: "ARA" }
+    ],
+    units: state.units || [],
+    unitLocations: state.unitLocations || {},
+    locationOpAreas: state.locationOpAreas || {},
+    eventLimits: state.eventLimits || {
+      exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
+      instructor: { maxFlightFtd: 2, maxFlights: 1, maxSimulators: 2, maxFlightSim: 2, maxDutySup: 2, maxTotal: 3 },
+      trainee: { maxFlightFtd: 1, maxTotal: 2 },
+      simIp: { maxFtd: 2, maxTotal: 2 }
+    },
+    preferredDutyPeriod: state.preferredDutyPeriod ?? 8,
+    maxCrewDutyPeriod: state.maxCrewDutyPeriod ?? 10,
+    maxDispatchPerHour: state.maxDispatchPerHour ?? 8,
+    dispatchStaggerSettings: normaliseDispatchStaggerSettings(state.dispatchStaggerSettings || DEFAULT_DISPATCH_STAGGER_SETTINGS),
+    flightTurnaround: state.flightTurnaround ?? 1.2,
+    ftdTurnaround: state.ftdTurnaround ?? 0.5,
+    cptTurnaround: state.cptTurnaround ?? 0.5,
+    flyingStartTime: state.flyingStartTime ?? 8,
+    flyingEndTime: state.flyingEndTime ?? 17,
+    ftdStartTime: state.ftdStartTime ?? 8,
+    ftdEndTime: state.ftdEndTime ?? 17,
+    allowNightFlying: state.allowNightFlying ?? true,
+    commenceNightFlying: state.commenceNightFlying ?? 18.5,
+    ceaseNightFlying: state.ceaseNightFlying ?? 23.5,
+    flyingWindowExclusions: Array.isArray(state.flyingWindowExclusions) ? state.flyingWindowExclusions : [],
+    flyingWindowExclusionsByUnit: state.flyingWindowExclusionsByUnit || {},
+    availableAircraftCount: state.availableAircraftCount ?? 15,
+    availableFtdCount: state.availableFtdCount ?? 5,
+    availableCptCount: state.availableCptCount ?? 4,
+    timezoneOffset: state.timezoneOffset ?? 0,
+    showDepartureDensityOverlay: state.showDepartureDensityOverlay ?? false,
+    tileStatusSettings: normaliseTileStatusSettings(state.tileStatusSettings || DEFAULT_TILE_STATUS_SETTINGS),
+    emergencyFreezeAuthority: normaliseEmergencyFreezeAuthoritySettings(
+      state.emergencyFreezeAuthority || DEFAULT_EMERGENCY_FREEZE_AUTHORITY
+    ),
+    sctEvents: state.sctEvents || [],
+    formationCallsigns: state.formationCallsigns || [],
+    courseColors: state.courseColors || {},
+    coursePriorities: state.coursePriorities || [],
+    coursePercentages: state.coursePercentages || {},
+    fixedCrewTrainingPriorities: Array.isArray(state.fixedCrewTrainingPriorities) ? state.fixedCrewTrainingPriorities : [],
+    fixedCrewTileColourModeByUnit: normaliseFixedCrewTileColourModeByUnit(state.fixedCrewTileColourModeByUnit),
+    neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
+    neoAircraftConfigCapacities: state.neoAircraftConfigCapacities || {},
+    neoAircraftCapacityByUnit: state.neoAircraftCapacityByUnit || {},
+    phraseBank: state.phraseBank || {},
+    cancellationCodes: state.cancellationCodes || [],
+    masterCurrencies: state.masterCurrencies || [],
+    currencyRequirements: state.currencyRequirements || [],
+    unitCurrencyDefinitions: state.unitCurrencyDefinitions || {},
+    syllabusDetails: state.syllabusDetails || [],
+    organisationSettings: state.organisationSettings || {
+      staffSharingEnabled: false,
+      staffSharingUnits: [],
+      activeStaffSharingGroupId: "staff-sharing-1",
+      staffSharingGroups: [],
+      fleetSharingEnabled: false,
+      allocationMode: "combined",
+      selectedUnits: [],
+      desiredAllocations: {},
+      remainderUnitIndex: -1,
+      activeResourceSharingGroupId: "resource-sharing-1",
+      resourceSharingGroups: []
+    },
+    savedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    version: SETTINGS_VERSION
+  };
+};
+const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId) => {
+  if (isSetupTestMode()) {
+    writeSetupTestCurrencies(masterCurrencies, currencyRequirements);
+    return true;
+  }
+  try {
+    const apiBase = getApiBase$2();
+    const url = `${apiBase}/currencies`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orgId: ORG_ID,
+        masterCurrencies,
+        currencyRequirements,
+        updatedBy: userId || null
+      })
+    });
+    if (!res.ok) {
+      console.error("[Currencies] Failed to save:", res.status);
+      return false;
+    }
+    console.log("[Currencies] ✅ Saved directly to /api/currencies");
+    return true;
+  } catch (error) {
+    console.error("[Currencies] Error saving:", error);
+    return false;
+  }
 };
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [
@@ -3170,12 +3408,12 @@ const DEFAULT_CREW_POSITION_TERMINOLOGY = {
     { id: "trainee", genericName: "Trainee", label: "Trainee", operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"] }
   ]
 };
-const ALL_OPERATIONAL_MODEL_CODES$1 = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
+const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
 const makeCrewPositionId = (genericName, index) => {
   const slug = String(genericName || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || `crew-position-${index + 1}`;
 };
-const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES$1) => {
+const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES) => {
   const rawValues = Array.isArray(source) ? source : [];
   const models = rawValues.map((value) => normaliseOperationalModel(value)).filter((model, index, list) => list.indexOf(model) === index);
   return models.length > 0 ? models : [...fallback];
@@ -3195,7 +3433,7 @@ const normaliseEntry = (entry, index) => {
   const label = rawLabel.trim() ? rawLabel : genericName;
   const operationalModels = normaliseOperationalModelList(
     entry.operationalModels || entry.models || entry.modelCodes,
-    fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES$1
+    fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES
   );
   return {
     id: String(entry.id || makeCrewPositionId(genericName, index)).trim() || makeCrewPositionId(genericName, index),
@@ -3251,7 +3489,7 @@ const getCrewPositionOptions = (terminology, extraValues = [], operationalModel)
 const isCrewPositionAvailableForOperationalModel = (entry, operationalModel) => {
   if (!operationalModel) return true;
   const model = normaliseOperationalModel(operationalModel || DEFAULT_OPERATIONAL_MODEL);
-  const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES$1);
+  const models = normaliseOperationalModelList(entry.operationalModels, ALL_OPERATIONAL_MODEL_CODES);
   return models.includes(model);
 };
 const normaliseCrewPositionToken = (value) => String(value || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
@@ -4616,197 +4854,6 @@ const continuationEventToCurrencyProfile = (event) => ({
   status: event.status || "ACTIVE"
 });
 const getContinuationEventCurrencyProfiles = (events) => normaliseContinuationEventSettings(events).filter((event) => event.status !== "INACTIVE").map(continuationEventToCurrencyProfile);
-const ALL_OPERATIONAL_MODEL_CODES = OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
-const DEFAULT_STAFF_QUALIFICATIONS = {
-  qualifications: [
-    {
-      id: "admin-staff",
-      name: "Admin Staff",
-      code: "Admin Staff",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "cfi",
-      name: "CFI",
-      code: "CFI",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "co",
-      name: "CO",
-      code: "CO",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "contractor",
-      name: "Contractor",
-      code: "Contractor",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "dfc",
-      name: "DFC",
-      code: "DFC",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "executive",
-      name: "Executive",
-      code: "Executive",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "flying-supervisor",
-      name: "Flying Supervisor",
-      code: "Flying Supervisor",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "ire",
-      name: "IRE",
-      code: "IRE",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "ofi",
-      name: "OFI",
-      code: "OFI",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "pic",
-      name: "PIC",
-      code: "PIC",
-      operationalModels: ["flight_school", "air_combat", "fixed_crew", "pooled_crew"],
-      roleRestrictions: ["Pilot"],
-      status: "ACTIVE"
-    },
-    {
-      id: "qfi",
-      name: "QFI",
-      code: "QFI",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "testing-officer",
-      name: "Testing Officer",
-      code: "Testing Officer",
-      operationalModels: ALL_OPERATIONAL_MODEL_CODES,
-      roleRestrictions: [],
-      status: "ACTIVE"
-    },
-    {
-      id: "crew-commander",
-      name: "Crew Commander",
-      code: "Crew Commander",
-      operationalModels: ["fixed_crew", "pooled_crew"],
-      roleRestrictions: ["Pilot"],
-      status: "ACTIVE"
-    },
-    {
-      id: "operational-captain",
-      name: "Operational Captain",
-      code: "Operational Captain",
-      operationalModels: ["fixed_crew", "pooled_crew"],
-      roleRestrictions: ["Pilot"],
-      status: "ACTIVE"
-    }
-  ]
-};
-const makeQualificationId = (source, index) => {
-  const token = String(source || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return token || `qualification-${index + 1}`;
-};
-const normaliseStringList = (source) => {
-  if (Array.isArray(source)) {
-    return source.map((value) => String(value || "").trim()).filter(Boolean);
-  }
-  return String(source || "").split(/\r?\n|;|,/).map((value) => value.trim()).filter(Boolean);
-};
-const normaliseOperationalModels = (source) => {
-  const values = normaliseStringList(source);
-  if (values.length === 0) return [DEFAULT_OPERATIONAL_MODEL];
-  return Array.from(new Set(values.map((value) => normaliseOperationalModel(value))));
-};
-const normaliseQualification = (entry, index) => {
-  const name = String(entry?.name || entry?.label || entry?.code || "").trim();
-  const code = String(entry?.code || entry?.abbreviation || name).trim();
-  if (!name && !code) return null;
-  const id = String(entry?.id || makeQualificationId(code || name, index)).trim() || makeQualificationId(name || code, index);
-  const isLegacyPicLabel = id === "pic" && normaliseQualificationToken(code) === "pic" && normaliseQualificationToken(name) === "pilotincommand";
-  const displayName = isLegacyPicLabel ? "PIC" : name || code;
-  return {
-    id,
-    name: displayName,
-    code: code || displayName,
-    operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
-    roleRestrictions: normaliseStringList(entry?.roleRestrictions || entry?.roles),
-    status: String(entry?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
-  };
-};
-const normaliseStaffQualificationCatalogue = (source) => {
-  const deletedDefaultIds = normaliseStringList(source?.deletedDefaultIds);
-  const configured = Array.isArray(source?.qualifications) ? source.qualifications : [];
-  const defaultQualifications = DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
-  const configuredDefinitions = configured.map(normaliseQualification).filter((entry) => Boolean(entry));
-  const byKey = /* @__PURE__ */ new Map();
-  [...defaultQualifications, ...configuredDefinitions].forEach((entry, index) => {
-    const normalised = normaliseQualification(entry, index);
-    if (!normalised) return;
-    const key = normaliseQualificationToken(normalised.id || normalised.code || normalised.name);
-    byKey.set(key, normalised);
-  });
-  return { qualifications: Array.from(byKey.values()), deletedDefaultIds };
-};
-const normaliseQualificationToken = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
-const qualificationMatches = (assignedValue, definition) => {
-  const token = normaliseQualificationToken(assignedValue);
-  if (!token) return false;
-  return [
-    definition.id,
-    definition.code,
-    definition.name
-  ].some((value) => normaliseQualificationToken(value) === token);
-};
-const normaliseAssignedQualificationIds = (source, catalogue, preserveUnknown = true) => {
-  const values = normaliseStringList(source);
-  const definitions = normaliseStaffQualificationCatalogue(catalogue).qualifications;
-  const result = [];
-  values.forEach((value) => {
-    const match = definitions.find((definition) => qualificationMatches(value, definition));
-    if (!match && !preserveUnknown) return;
-    const id = match?.id || String(value || "").trim();
-    if (id && !result.includes(id)) result.push(id);
-  });
-  return result;
-};
-const getQualificationsForOperationalModel = (catalogue, operationalModel) => {
-  const model = normaliseOperationalModel(operationalModel);
-  return normaliseStaffQualificationCatalogue(catalogue).qualifications.filter((qualification) => qualification.status !== "INACTIVE").filter((qualification) => {
-    const models = qualification.operationalModels?.length ? qualification.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((option) => option.value);
-    return models.includes(model);
-  });
-};
 const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
 const DEFAULT_INSERT_EVENT_TYPES = [
   { label: "GF", syllabusType: "Ground School", dayNight: "Day", duration: 1, flightOrSimHours: 0, totalEventHours: 1, preFlightTime: 0.25, postFlightTime: 0, resourceCount: 0 },
@@ -6990,7 +7037,7 @@ const DropdownField = ({ label, value, onChange, children }) => /* @__PURE__ */ 
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children })
 ] });
-const SystemFreezeBanner = () => {
+const SystemFreezeBanner = ({ canUnfreeze = false }) => {
   const { freezeState, unfreezeSystem } = useSystemFreeze$1();
   if (!freezeState.isFrozen) return null;
   const formatDateTime = (isoString) => {
@@ -7015,14 +7062,14 @@ const SystemFreezeBanner = () => {
         formatDateTime(freezeState.frozenAt)
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
+    canUnfreeze ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         onClick: unfreezeSystem,
         className: "ml-4 px-3 py-1 bg-white text-red-600 rounded text-sm font-semibold hover:bg-red-100 transition-colors",
         children: "Unfreeze"
       }
-    )
+    ) : null
   ] });
 };
 const DataLoadingMonitor = ({
@@ -61171,13 +61218,40 @@ const defaultAllowedActions = {
 const EmergencyPage = ({
   currentUserRole,
   onShowSuccess,
-  trainingReportDisplayName
+  trainingReportDisplayName,
+  emergencyFreezeAuthority,
+  onUpdateEmergencyFreezeAuthority,
+  qualificationOptions = [],
+  currentUserQualificationIds = [],
+  canEditEmergencyAuthority = false
 }) => {
   const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
   const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
   const [isProcessing, setIsProcessing] = reactExports.useState(false);
   const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
   const reportDisplayName = String(trainingReportDisplayName || "").trim() || "Training Report";
+  const authoritySettings = normaliseEmergencyFreezeAuthoritySettings(emergencyFreezeAuthority);
+  const canActivateFreeze = hasEmergencyFreezeAuthority({
+    action: "activate",
+    settings: authoritySettings,
+    userQualificationIds: currentUserQualificationIds,
+    userPermission: currentUserRole
+  });
+  const canDeactivateFreeze = hasEmergencyFreezeAuthority({
+    action: "deactivate",
+    settings: authoritySettings,
+    userQualificationIds: currentUserQualificationIds,
+    userPermission: currentUserRole
+  });
+  const handleAuthorityChange = (action, qualificationId, checked) => {
+    if (!onUpdateEmergencyFreezeAuthority) return;
+    const current = authoritySettings[action] || [];
+    const next = checked ? Array.from(/* @__PURE__ */ new Set([...current, qualificationId])) : current.filter((id) => id !== qualificationId);
+    onUpdateEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings({
+      ...authoritySettings,
+      [action]: next
+    }));
+  };
   const handleAllowedActionChange = (action) => {
     setPendingAllowedActions((prev) => ({
       ...prev,
@@ -61191,6 +61265,10 @@ const EmergencyPage = ({
     return !pendingAllowedActions.postFlightTimes && !pendingAllowedActions.pt051Entries && !pendingAllowedActions.flightAuthorisation && !pendingAllowedActions.aircraftAvailability;
   };
   const handleFreezeClick = () => {
+    if (!canActivateFreeze) {
+      alert("You are not authorised to activate an emergency freeze.");
+      return;
+    }
     setShowConfirmDialog(true);
   };
   const handleFreezeConfirm = async () => {
@@ -61203,6 +61281,10 @@ const EmergencyPage = ({
     }
   };
   const handleUnfreeze = async () => {
+    if (!canDeactivateFreeze) {
+      alert("You are not authorised to deactivate an emergency freeze.");
+      return;
+    }
     setIsProcessing(true);
     unfreezeSystem();
     setIsProcessing(false);
@@ -61254,17 +61336,61 @@ const EmergencyPage = ({
         "button",
         {
           onClick: handleFreezeClick,
+          disabled: !canActivateFreeze,
           className: "relative group",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-800 rounded-xl transform translate-y-1 group-active:translate-y-0 transition-transform" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 bg-red-700 rounded-xl transform translate-y-0.5 group-active:translate-y-0 transition-transform" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative px-8 py-4 bg-gradient-to-b from-red-500 to-red-600 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-900/50 flex items-center gap-3 group-active:transform group-active:translate-y-1 transition-transform", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `relative px-8 py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-900/50 flex items-center gap-3 group-active:transform group-active:translate-y-1 transition-transform ${canActivateFreeze ? "bg-gradient-to-b from-red-500 to-red-600" : "bg-gray-600 cursor-not-allowed opacity-70"}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-6 h-6", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" }) }),
               "FREEZE SYSTEM"
             ] })
           ]
         }
       ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 rounded-xl border border-gray-700 bg-gray-900/60 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Emergency Freeze Authority" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Qualifications authorised to activate and deactivate freeze." })
+          ] }),
+          !canEditEmergencyAuthority && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-2 py-1 text-xs font-semibold text-yellow-200", children: "Read-only" })
+        ] }),
+        qualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Activate" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: authoritySettings.activateQualificationIds.includes(qualification.id),
+                  disabled: !canEditEmergencyAuthority,
+                  onChange: (event) => handleAuthorityChange("activateQualificationIds", qualification.id, event.target.checked),
+                  className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+            ] }, `activate-${qualification.id}`)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-xs font-semibold uppercase tracking-widest text-gray-400", children: "Can Deactivate" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: qualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: authoritySettings.deactivateQualificationIds.includes(qualification.id),
+                  disabled: !canEditEmergencyAuthority,
+                  onChange: (event) => handleAuthorityChange("deactivateQualificationIds", qualification.id, event.target.checked),
+                  className: "h-4 w-4 rounded border-gray-500 bg-gray-800 text-sky-500 focus:ring-sky-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: qualification.code || qualification.name })
+            ] }, `deactivate-${qualification.id}`)) })
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No active qualifications are configured for this unit model." })
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 pt-4 mt-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-medium text-gray-300 mb-3", children: "Select operations to allow during freeze:" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
@@ -61371,7 +61497,7 @@ const EmergencyPage = ({
         "button",
         {
           onClick: handleUnfreeze,
-          disabled: isProcessing,
+          disabled: isProcessing || !canDeactivateFreeze,
           className: "w-full py-3 px-4 bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2",
           children: isProcessing ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Processing..." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" }) }),
@@ -61853,6 +61979,10 @@ const SettingsView = ({
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
+  emergencyFreezeAuthority,
+  onUpdateEmergencyFreezeAuthority,
+  qualificationOptions = [],
+  currentUserQualificationIds = [],
   aircraftConfigurationDefinitions = [],
   activeUnitCode = "",
   activeUnitCodes = [],
@@ -62879,7 +63009,12 @@ const SettingsView = ({
         {
           currentUserRole: currentUserPermission,
           onShowSuccess,
-          trainingReportDisplayName
+          trainingReportDisplayName,
+          emergencyFreezeAuthority,
+          onUpdateEmergencyFreezeAuthority,
+          qualificationOptions,
+          currentUserQualificationIds,
+          canEditEmergencyAuthority: canEditSettings
         }
       )
     ] }),
@@ -103312,6 +103447,9 @@ const App = () => {
   }, [showDepartureDensityOverlay]);
   const [tileStatusSettings, setTileStatusSettings] = reactExports.useState(() => readTileStatusSettingsFromLocalStorage());
   const [fixedCrewTileColourModeByUnit, setFixedCrewTileColourModeByUnit] = reactExports.useState({});
+  const [emergencyFreezeAuthority, setEmergencyFreezeAuthority] = reactExports.useState(
+    DEFAULT_EMERGENCY_FREEZE_AUTHORITY
+  );
   reactExports.useEffect(() => {
     writeTileStatusSettingsToLocalStorage(tileStatusSettings);
   }, [tileStatusSettings]);
@@ -104630,6 +104768,35 @@ const App = () => {
   reactExports.useEffect(() => {
     setDashboardTestUserName("");
   }, [authUser?.userId, sessionUser?.userId]);
+  const emergencyQualificationOptions = reactExports.useMemo(
+    () => getQualificationsForOperationalModel(activeStaffQualificationCatalogue, activeOperationalModel),
+    [activeOperationalModel, activeStaffQualificationCatalogue]
+  );
+  const currentEmergencyQualificationIds = reactExports.useMemo(() => {
+    const normaliseName2 = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const userNameKeys = [
+      currentUserName,
+      authUser?.displayName,
+      authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+      authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+      sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
+      sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : ""
+    ].map(normaliseName2).filter(Boolean);
+    const matchingPerson = [...allInstructorsData, ...allTraineesData].find((person) => {
+      const personKeys = [
+        person?.name,
+        person?.displayName,
+        person?.firstName && person?.lastName ? `${person.lastName}, ${person.firstName}` : "",
+        person?.firstName && person?.lastName ? `${person.firstName} ${person.lastName}` : ""
+      ].map(normaliseName2).filter(Boolean);
+      return personKeys.some((key) => userNameKeys.includes(key));
+    }) || currentUser2;
+    return normaliseAssignedQualificationIds(
+      matchingPerson?.preferences?.qualifications || [],
+      activeStaffQualificationCatalogue,
+      false
+    );
+  }, [activeStaffQualificationCatalogue, allInstructorsData, allTraineesData, authUser, currentUser2, currentUserName, sessionUser]);
   const normaliseDashboardNotificationName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
   const dashboardNotificationUserName = reactExports.useMemo(() => {
     const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
@@ -106467,6 +106634,12 @@ const App = () => {
   const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
   const combinedPermissions = [...authUserPermissions, ...currentUser2?.permissions || []];
   const currentUserPermission = getHighestPermission(combinedPermissions);
+  const canDeactivateEmergencyFreeze = reactExports.useMemo(() => hasEmergencyFreezeAuthority({
+    action: "deactivate",
+    settings: emergencyFreezeAuthority,
+    userQualificationIds: currentEmergencyQualificationIds,
+    userPermission: currentUserPermission
+  }), [currentEmergencyQualificationIds, currentUserPermission, emergencyFreezeAuthority]);
   const [scores, setScores] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051PerformanceLoading, setPt051PerformanceLoading] = reactExports.useState(true);
@@ -108046,6 +108219,9 @@ ${"=".repeat(60)}`);
         if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
         if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
         if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
+        if (saved.emergencyFreezeAuthority) {
+          setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(saved.emergencyFreezeAuthority, activeStaffQualificationCatalogue));
+        }
         if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
         if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
         if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
@@ -108199,6 +108375,7 @@ ${"=".repeat(60)}`);
       timezoneOffset,
       showDepartureDensityOverlay,
       tileStatusSettings,
+      emergencyFreezeAuthority,
       sctEvents,
       formationCallsigns,
       courseColors,
@@ -108253,6 +108430,7 @@ ${"=".repeat(60)}`);
     timezoneOffset,
     showDepartureDensityOverlay,
     tileStatusSettings,
+    emergencyFreezeAuthority,
     sctEvents,
     formationCallsigns,
     courseColors,
@@ -121100,6 +121278,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             resourceDisplayNames,
             personnelDisplaySettings,
             trainingReportDisplayName: trainingReportTemplate.displayName,
+            emergencyFreezeAuthority,
+            onUpdateEmergencyFreezeAuthority: (settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue)),
+            qualificationOptions: emergencyQualificationOptions,
+            currentUserQualificationIds: currentEmergencyQualificationIds,
             instructorLabel,
             canUsePlatformPermission,
             activeUnitCode: activeTrainingReportUnitCode,
@@ -121980,7 +122162,7 @@ Do you want to replace the existing entry?`,
       "Setup Wizard Test Mode - Local Browser Data Only - ",
       setupTestProfile
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(SystemFreezeBanner, {}),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(SystemFreezeBanner, { canUnfreeze: canDeactivateEmergencyFreeze }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       DataLoadingMonitor,
       {
