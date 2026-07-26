@@ -832,7 +832,15 @@ app.post('/api/settings', async (req, res) => {
     if (!settings) {
       return res.status(400).json({ error: 'Missing settings data' });
     }
-    const settingsJson = JSON.stringify(settings);
+    const existingRows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+    const existingFreezeState = existingRows?.[0]?.data?.emergencyFreezeState || null;
+    const settingsJson = JSON.stringify({
+      ...settings,
+      ...(existingFreezeState && !settings.emergencyFreezeState ? { emergencyFreezeState: existingFreezeState } : {}),
+    });
     const now = new Date().toISOString();
     await db.$executeRawUnsafe(`
       INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
@@ -847,6 +855,58 @@ app.post('/api/settings', async (req, res) => {
   } catch (error) {
     console.error('[Settings] POST error:', error);
     res.status(500).json({ error: 'Failed to save settings', details: error.message });
+  }
+});
+
+// GET /api/emergency-freeze - Load shared emergency freeze state across browsers
+app.get('/api/emergency-freeze', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const orgId = req.query.orgId || 'default';
+    const rows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+    const freezeState = rows?.[0]?.data?.emergencyFreezeState || null;
+    res.json({ freezeState });
+  } catch (error) {
+    console.error('[EmergencyFreeze] GET error:', error);
+    res.status(500).json({ error: 'Failed to load emergency freeze state', details: error.message });
+  }
+});
+
+// PUT /api/emergency-freeze - Save only shared emergency freeze state
+app.put('/api/emergency-freeze', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { orgId = 'default', freezeState } = req.body || {};
+    if (!freezeState || typeof freezeState.isFrozen !== 'boolean') {
+      return res.status(400).json({ error: 'Missing emergency freeze state' });
+    }
+    const existingRows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+    const existingSettings = existingRows?.[0]?.data && typeof existingRows[0].data === 'object'
+      ? existingRows[0].data
+      : {};
+    const nextSettings = {
+      ...existingSettings,
+      emergencyFreezeState: freezeState,
+    };
+    const now = new Date().toISOString();
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
+      VALUES (gen_random_uuid()::text, $1, $2::jsonb, $3, $4::timestamp, $4::timestamp)
+      ON CONFLICT ("orgId") DO UPDATE SET
+        "data" = $2::jsonb,
+        "updatedBy" = $3,
+        "updatedAt" = $4::timestamp
+    `, orgId, JSON.stringify(nextSettings), req.body?.updatedBy || null, now);
+    res.json({ success: true, freezeState });
+  } catch (error) {
+    console.error('[EmergencyFreeze] PUT error:', error);
+    res.status(500).json({ error: 'Failed to save emergency freeze state', details: error.message });
   }
 });
 

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getAppApiBase } from '../utils/externalDataControls';
 
 export interface AllowedActions {
     postFlightTimes: boolean;
@@ -45,6 +46,7 @@ const SystemFreezeContext = createContext<SystemFreezeContextValue>({
 });
 
 const STORAGE_KEY = 'systemFreezeState';
+const ORG_ID = 'default';
 
 const parseStoredFreezeState = (raw: string | null): SystemFreezeState => {
     if (!raw) return defaultFreezeState;
@@ -71,6 +73,33 @@ const saveFreezeState = (nextState: SystemFreezeState) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
     } else {
         localStorage.removeItem(STORAGE_KEY);
+    }
+};
+
+const loadSharedFreezeState = async (): Promise<SystemFreezeState | null> => {
+    try {
+        const response = await fetch(`${getAppApiBase()}/emergency-freeze?orgId=${encodeURIComponent(ORG_ID)}`);
+        if (!response.ok) return null;
+        const json = await response.json();
+        return parseStoredFreezeState(JSON.stringify(json.freezeState || defaultFreezeState));
+    } catch (error) {
+        console.warn('Failed to load shared emergency freeze state:', error);
+        return null;
+    }
+};
+
+const saveSharedFreezeState = async (nextState: SystemFreezeState): Promise<void> => {
+    try {
+        await fetch(`${getAppApiBase()}/emergency-freeze`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                orgId: ORG_ID,
+                freezeState: nextState,
+            }),
+        });
+    } catch (error) {
+        console.warn('Failed to save shared emergency freeze state:', error);
     }
 };
 
@@ -101,6 +130,22 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
         };
     }, []);
 
+    useEffect(() => {
+        let isMounted = true;
+        const syncSharedFreezeState = async () => {
+            const sharedState = await loadSharedFreezeState();
+            if (!isMounted || !sharedState) return;
+            saveFreezeState(sharedState);
+            setFreezeState(sharedState);
+        };
+        void syncSharedFreezeState();
+        const intervalId = window.setInterval(syncSharedFreezeState, 5000);
+        return () => {
+            isMounted = false;
+            window.clearInterval(intervalId);
+        };
+    }, []);
+
     const freezeSystem = useCallback((reason: string, allowedActions: AllowedActions, frozenBy?: string) => {
         const nextState: SystemFreezeState = {
             isFrozen: true,
@@ -110,6 +155,7 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
             allowedActions
         };
         saveFreezeState(nextState);
+        void saveSharedFreezeState(nextState);
         setFreezeState(nextState);
         // Notify all useSystemFreeze hooks in the same tab
         setTimeout(() => window.dispatchEvent(new CustomEvent('systemFreezeChanged')), 50);
@@ -117,6 +163,7 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const unfreezeSystem = useCallback(() => {
         saveFreezeState(defaultFreezeState);
+        void saveSharedFreezeState(defaultFreezeState);
         setFreezeState(defaultFreezeState);
         // Notify all useSystemFreeze hooks in the same tab
         setTimeout(() => window.dispatchEvent(new CustomEvent('systemFreezeChanged')), 50);
