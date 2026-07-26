@@ -21571,7 +21571,7 @@ const PT051_STRUCTURE$1 = [
 ];
 PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$3 = "__scoringMatrixElementGroups";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
 const formatTrainingReportDisplayDate = (dateString) => {
   if (!dateString) return "";
@@ -21647,7 +21647,7 @@ const getDefaultElementGroup = (element) => PT051_STRUCTURE$1.find(
 )?.category || "Additional Elements";
 const buildAssessmentStructure = (elements, phraseBank) => {
   const selectedElements = normaliseAssessedElements$1(elements);
-  const configuredGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] || {};
+  const configuredGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$3] || {};
   const categoryOrder = PT051_STRUCTURE$1.map((category) => category.category);
   const grouped = /* @__PURE__ */ new Map();
   selectedElements.forEach((element) => {
@@ -59598,7 +59598,7 @@ const INITIAL_ELEMENTS_LIST = [
   "Knowledge"
 ];
 const SCORING_MATRIX_ELEMENT_LIST_KEY$1 = "__scoringMatrixElements";
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 = "__scoringMatrixElementGroups";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
 const DEFAULT_SCORING_MATRIX_SECTIONS$1 = [
   "Core Dimensions",
   "Procedural Framework",
@@ -59723,7 +59723,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
-  const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] || {};
+  const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] || {};
   const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[selectedElement] || "Additional Elements";
   const sectionOptions = Array.from(/* @__PURE__ */ new Set([
     ...DEFAULT_SCORING_MATRIX_SECTIONS$1,
@@ -59733,7 +59733,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   const handleElementGroupChange = (element, group) => {
     onUpdatePhraseBank({
       ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [element]: group
       }
@@ -59796,7 +59796,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: nextElements,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [newElementName]: "Additional Elements"
       },
@@ -59817,7 +59817,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
       delete nextGroups[el];
     });
     newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$1] = newFlightElements;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] = nextGroups;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (elementsToDelete.has(selectedElement)) {
       setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
@@ -61256,7 +61256,7 @@ const INITIAL_ELEMENTS_LIST_INLINE = [
   "Knowledge"
 ];
 const SCORING_MATRIX_ELEMENT_LIST_KEY = "__scoringMatrixElements";
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY = "__scoringMatrixElementGroups";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 = "__scoringMatrixElementGroups";
 const DEFAULT_SCORING_MATRIX_SECTIONS = [
   "Core Dimensions",
   "Procedural Framework",
@@ -61324,7 +61324,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
-  const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
+  const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] || {};
   const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || "Additional Elements";
   const sectionOptions = Array.from(/* @__PURE__ */ new Set([
     ...DEFAULT_SCORING_MATRIX_SECTIONS,
@@ -61334,7 +61334,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
   const handleElementGroupChange = (element, group) => {
     onUpdatePhraseBank({
       ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
         ...configuredElementGroups,
         [element]: group
       }
@@ -61369,7 +61369,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
         ...configuredElementGroups,
         [name]: "Additional Elements"
       },
@@ -61396,7 +61396,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       delete nextGroups[el];
     });
     newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY] = nextGroups;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
     setSelectedToDelete(/* @__PURE__ */ new Set());
@@ -79060,8 +79060,9 @@ const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const DEFAULT_EXPORT_ASSESSED_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY = "__scoringMatrixElementGroups";
 const getDefaultAssessmentCategory = (element) => DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.find((category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase()))?.category || "Additional Elements";
-const buildExportAssessmentStructure = (elements) => {
+const buildExportAssessmentStructure = (elements, phraseBank) => {
   const seen = /* @__PURE__ */ new Set();
   const selectedElements = (Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS).map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
     const key = element.toLowerCase();
@@ -79070,9 +79071,11 @@ const buildExportAssessmentStructure = (elements) => {
     return true;
   });
   const categories = DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.map((category) => category.category);
+  const configuredGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
   const grouped = /* @__PURE__ */ new Map();
   selectedElements.forEach((element) => {
-    const category = getDefaultAssessmentCategory(element);
+    const configuredGroup = String(configuredGroups[element] || "").trim();
+    const category = configuredGroup || getDefaultAssessmentCategory(element);
     if (!categories.includes(category)) categories.push(category);
     grouped.set(category, [...grouped.get(category) || [], element]);
   });
@@ -79095,6 +79098,7 @@ const TrainingRecordsExportView = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = "Report Instructor",
   trainingReportTemplate = null,
+  phraseBank,
   hasTraineesEnabled = true
 }) => {
   const activeTrainingReportTemplate = reactExports.useMemo(
@@ -79710,7 +79714,7 @@ const TrainingRecordsExportView = ({
     pdf.text(formatDate22(event.date), col2X + 20, y);
     y += 5;
     const syllabusDetail = findSyllabusDetailForEventNumber(event.flightNumber);
-    const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements);
+    const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements, phraseBank);
     const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || "";
     const eventNumberRowHeight = Math.max(
       drawLabelValue("Event Number", event.flightNumber || "N/A", col1X, col1X + 34, y, 55),
@@ -80760,6 +80764,7 @@ const TrainingRecordsView = ({
   resourceDisplayNames,
   instructorLabel = "Report Instructor",
   trainingReportTemplate = null,
+  phraseBank,
   hasTraineesEnabled = true
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("courses");
@@ -80831,6 +80836,7 @@ const TrainingRecordsView = ({
           resourceDisplayNames,
           instructorLabel,
           trainingReportTemplate,
+          phraseBank,
           hasTraineesEnabled
         }
       )
@@ -120314,6 +120320,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             resourceDisplayNames,
             instructorLabel,
             trainingReportTemplate,
+            phraseBank: activeTrainingReportPhraseBank,
             hasTraineesEnabled: activeUnitHasTrainees
           }
         );

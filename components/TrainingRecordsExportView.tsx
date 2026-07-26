@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
+import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, SyllabusItemDetail, PhraseBank } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -26,6 +26,7 @@ interface TrainingRecordsExportViewProps {
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+    phraseBank?: PhraseBank;
     hasTraineesEnabled?: boolean;
 }
 
@@ -77,6 +78,7 @@ const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
     { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] },
 ];
 const DEFAULT_EXPORT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 
 const getDefaultAssessmentCategory = (element: string): string => (
     DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.find(category => (
@@ -84,7 +86,7 @@ const getDefaultAssessmentCategory = (element: string): string => (
     ))?.category || 'Additional Elements'
 );
 
-const buildExportAssessmentStructure = (elements?: string[]) => {
+const buildExportAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
     const seen = new Set<string>();
     const selectedElements = (Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS)
         .map(element => String(element || '').trim())
@@ -96,10 +98,12 @@ const buildExportAssessmentStructure = (elements?: string[]) => {
             return true;
         });
     const categories = DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.map(category => category.category);
+    const configuredGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
     const grouped = new Map<string, string[]>();
 
     selectedElements.forEach(element => {
-        const category = getDefaultAssessmentCategory(element);
+        const configuredGroup = String(configuredGroups[element] || '').trim();
+        const category = configuredGroup || getDefaultAssessmentCategory(element);
         if (!categories.includes(category)) categories.push(category);
         grouped.set(category, [...(grouped.get(category) || []), element]);
     });
@@ -145,6 +149,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     instructorLabel = 'Report Instructor',
     trainingReportTemplate = null,
+    phraseBank,
     hasTraineesEnabled = true
 }) => {
     const activeTrainingReportTemplate = useMemo(
@@ -941,7 +946,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         y += 5;
         
         const syllabusDetail = findSyllabusDetailForEventNumber(event.flightNumber);
-        const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements);
+        const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements, phraseBank);
         const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || '';
 
         const eventNumberRowHeight = Math.max(
@@ -1101,7 +1106,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
         const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ''] || 'N/A';
         const syllabusDetail = findSyllabusDetailForEventNumber(event.flightNumber);
-        const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements);
+        const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements, phraseBank);
         
         const gradeColors: {[key: string]: string} = {
             '0': '#dc2626', '1': '#ea580c', '2': '#f59e0b', 

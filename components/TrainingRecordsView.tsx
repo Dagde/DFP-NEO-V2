@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
-import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment } from '../types';
+import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment, PhraseBank } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PlatformConfig } from '../utils/platformConfigService';
@@ -37,6 +37,7 @@ interface TrainingRecordsViewProps {
     resourceDisplayNames?: ResourceDisplayNames;
     instructorLabel?: string;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+    phraseBank?: PhraseBank;
     hasTraineesEnabled?: boolean;
 }
 
@@ -71,6 +72,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     resourceDisplayNames,
     instructorLabel = 'Report Instructor',
     trainingReportTemplate = null,
+    phraseBank,
     hasTraineesEnabled = true,
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
@@ -151,6 +153,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         resourceDisplayNames={resourceDisplayNames}
                         instructorLabel={instructorLabel}
                         trainingReportTemplate={trainingReportTemplate}
+                        phraseBank={phraseBank}
                         hasTraineesEnabled={hasTraineesEnabled}
                     />
                 )}

@@ -42461,6 +42461,7 @@ appliedUpdates.forEach(update => {
                     resourceDisplayNames={resourceDisplayNames}
                     instructorLabel={instructorLabel}
                     trainingReportTemplate={trainingReportTemplate}
+                    phraseBank={activeTrainingReportPhraseBank}
                     hasTraineesEnabled={activeUnitHasTrainees}
                 />;
             case 'ArchivedCourses':
