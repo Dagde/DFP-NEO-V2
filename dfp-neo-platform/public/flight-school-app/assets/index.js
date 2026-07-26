@@ -79213,6 +79213,7 @@ const eventPersonMatchesSelection = (eventName, selectedName) => {
   const normalisedSelectedName = normalisePersonFilterValue(selectedName);
   return Boolean(normalisedEventName && normalisedSelectedName && normalisedEventName === normalisedSelectedName);
 };
+const getEventPersonName = (event) => event.student || event.pilot || "";
 const TrainingRecordsExportView = ({
   traineesData,
   instructorsData,
@@ -79297,6 +79298,36 @@ const TrainingRecordsExportView = ({
     console.log("📊 Export View - Published schedule dates:", Object.keys(publishedSchedules));
     return events2;
   }, [publishedSchedules]);
+  const allReportEvents = reactExports.useMemo(() => {
+    const seen = /* @__PURE__ */ new Set();
+    return Array.from(pt051Assessments.values()).filter((assessment) => assessment && assessment.traineeFullName && assessment.flightNumber && assessment.date).map((assessment) => {
+      const matchingScheduleEvent = allEvents.find((event) => event.id && event.id === assessment.eventId || event.flightNumber === assessment.flightNumber && event.date === assessment.date && eventPersonMatchesSelection(getEventPersonName(event), assessment.traineeFullName));
+      return {
+        ...matchingScheduleEvent || {},
+        id: assessment.eventId || assessment.id,
+        date: assessment.date,
+        type: matchingScheduleEvent?.type || "flight",
+        instructor: assessment.instructorName || matchingScheduleEvent?.instructor || "",
+        student: assessment.traineeFullName,
+        pilot: matchingScheduleEvent?.pilot || assessment.traineeFullName,
+        flightNumber: assessment.flightNumber,
+        duration: assessment.duration ?? matchingScheduleEvent?.duration ?? 0,
+        startTime: assessment.startTime ?? matchingScheduleEvent?.startTime ?? 0,
+        resourceId: matchingScheduleEvent?.resourceId || "",
+        color: matchingScheduleEvent?.color || "#0ea5e9",
+        flightType: matchingScheduleEvent?.flightType || "Dual",
+        locationType: matchingScheduleEvent?.locationType || "Local",
+        origin: matchingScheduleEvent?.origin || "",
+        destination: matchingScheduleEvent?.destination || ""
+      };
+    }).filter((event) => {
+      const key = `${event.id}|||${event.date}|||${event.flightNumber}|||${normalisePersonFilterValue(getEventPersonName(event))}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) || Number(a.startTime || 0) - Number(b.startTime || 0) || String(getEventPersonName(a)).localeCompare(String(getEventPersonName(b))) || String(a.flightNumber || "").localeCompare(String(b.flightNumber || "")));
+  }, [allEvents, pt051Assessments]);
+  const exportSourceEvents = allReportEvents.length > 0 ? allReportEvents : allEvents;
   const allTrainees = reactExports.useMemo(() => {
     const combined = [...traineesData, ...archivedTraineesData];
     console.log("📊 Export View - All trainees:", combined.length);
@@ -79336,7 +79367,7 @@ const TrainingRecordsExportView = ({
     );
   }, [allInstructors, staffSearch]);
   const filteredEvents = reactExports.useMemo(() => {
-    let filtered = [...allEvents];
+    let filtered = [...exportSourceEvents];
     console.log("🔍 FILTER DEBUG - Starting with events:", filtered.length);
     console.log("🔍 FILTER DEBUG - timePeriod:", timePeriod);
     console.log("🔍 FILTER DEBUG - singleDate:", singleDate);
@@ -79364,7 +79395,7 @@ const TrainingRecordsExportView = ({
     console.log("🔍 FILTER DEBUG - Before status filter:", filtered.length);
     if (statusFilter === "dco") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
+        const trainee = getEventPersonName(e);
         if (!trainee) return false;
         const traineeScores = scores.get(trainee);
         if (!traineeScores) return false;
@@ -79373,7 +79404,7 @@ const TrainingRecordsExportView = ({
       });
     } else if (statusFilter === "dnco") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
+        const trainee = getEventPersonName(e);
         if (!trainee) return false;
         const traineeScores = scores.get(trainee);
         if (!traineeScores) return false;
@@ -79382,7 +79413,7 @@ const TrainingRecordsExportView = ({
       });
     } else if (statusFilter === "pass") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
+        const trainee = getEventPersonName(e);
         if (!trainee) return false;
         const traineeScores = scores.get(trainee);
         if (!traineeScores) return false;
@@ -79391,7 +79422,7 @@ const TrainingRecordsExportView = ({
       });
     } else if (statusFilter === "fail") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
+        const trainee = getEventPersonName(e);
         if (!trainee) return false;
         const traineeScores = scores.get(trainee);
         if (!traineeScores) return false;
@@ -79412,7 +79443,7 @@ const TrainingRecordsExportView = ({
       console.log("📊 Trainee filter - Selected trainees:", selectedTrainees);
       console.log("📊 Trainee filter - Events before filter:", filtered.length);
       filtered = filtered.filter((e) => {
-        const studentName = e.student || e.pilot;
+        const studentName = getEventPersonName(e);
         if (!studentName) return false;
         const matches = selectedTrainees.some((selectedTrainee) => eventPersonMatchesSelection(studentName, selectedTrainee));
         return matches;
@@ -79434,7 +79465,7 @@ const TrainingRecordsExportView = ({
       console.log("📊 Course filter - Events before filter:", filtered.length);
       console.log("📊 Course filter - Sample event student names (first 5):", filtered.slice(0, 5).map((e) => e.student || e.pilot));
       filtered = filtered.filter((e) => {
-        const studentName = e.student || e.pilot;
+        const studentName = getEventPersonName(e);
         if (!studentName) return false;
         const matches = traineeNames.some((traineeName) => {
           if (studentName === traineeName) return true;
@@ -79450,7 +79481,7 @@ const TrainingRecordsExportView = ({
     }
     return filtered;
   }, [
-    allEvents,
+    exportSourceEvents,
     timePeriod,
     singleDate,
     startDate,

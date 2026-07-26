@@ -62,6 +62,8 @@ const eventPersonMatchesSelection = (eventName: string | undefined, selectedName
     const normalisedSelectedName = normalisePersonFilterValue(selectedName);
     return Boolean(normalisedEventName && normalisedSelectedName && normalisedEventName === normalisedSelectedName);
 };
+const getEventPersonName = (event: ScheduleEvent): string =>
+    event.student || event.pilot || '';
 
 interface ExportTemplate {
     name: string;
@@ -183,6 +185,54 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         console.log('📊 Export View - Published schedule dates:', Object.keys(publishedSchedules));
         return events;
     }, [publishedSchedules]);
+
+    const allReportEvents = useMemo(() => {
+        const seen = new Set<string>();
+        return Array.from(pt051Assessments.values())
+            .filter(assessment => assessment && assessment.traineeFullName && assessment.flightNumber && assessment.date)
+            .map((assessment): ScheduleEvent => {
+                const matchingScheduleEvent = allEvents.find(event => (
+                    (event.id && event.id === assessment.eventId) ||
+                    (
+                        event.flightNumber === assessment.flightNumber &&
+                        event.date === assessment.date &&
+                        eventPersonMatchesSelection(getEventPersonName(event), assessment.traineeFullName)
+                    )
+                ));
+                return {
+                    ...(matchingScheduleEvent || {}),
+                    id: assessment.eventId || assessment.id,
+                    date: assessment.date,
+                    type: matchingScheduleEvent?.type || 'flight',
+                    instructor: assessment.instructorName || matchingScheduleEvent?.instructor || '',
+                    student: assessment.traineeFullName,
+                    pilot: matchingScheduleEvent?.pilot || assessment.traineeFullName,
+                    flightNumber: assessment.flightNumber,
+                    duration: assessment.duration ?? matchingScheduleEvent?.duration ?? 0,
+                    startTime: assessment.startTime ?? matchingScheduleEvent?.startTime ?? 0,
+                    resourceId: matchingScheduleEvent?.resourceId || '',
+                    color: matchingScheduleEvent?.color || '#0ea5e9',
+                    flightType: matchingScheduleEvent?.flightType || 'Dual',
+                    locationType: matchingScheduleEvent?.locationType || 'Local',
+                    origin: matchingScheduleEvent?.origin || '',
+                    destination: matchingScheduleEvent?.destination || '',
+                } as ScheduleEvent;
+            })
+            .filter(event => {
+                const key = `${event.id}|||${event.date}|||${event.flightNumber}|||${normalisePersonFilterValue(getEventPersonName(event))}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .sort((a, b) => (
+                String(a.date || '').localeCompare(String(b.date || '')) ||
+                Number(a.startTime || 0) - Number(b.startTime || 0) ||
+                String(getEventPersonName(a)).localeCompare(String(getEventPersonName(b))) ||
+                String(a.flightNumber || '').localeCompare(String(b.flightNumber || ''))
+            ));
+    }, [allEvents, pt051Assessments]);
+
+    const exportSourceEvents = allReportEvents.length > 0 ? allReportEvents : allEvents;
     
     // Combine active and archived data
     const allTrainees = useMemo(() => {
@@ -233,7 +283,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Filter events based on current settings
     const filteredEvents = useMemo(() => {
-        let filtered = [...allEvents];
+        let filtered = [...exportSourceEvents];
         console.log('🔍 FILTER DEBUG - Starting with events:', filtered.length);
         console.log('🔍 FILTER DEBUG - timePeriod:', timePeriod);
         console.log('🔍 FILTER DEBUG - singleDate:', singleDate);
@@ -270,7 +320,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         console.log('🔍 FILTER DEBUG - Before status filter:', filtered.length);
         if (statusFilter === 'dco') {
             filtered = filtered.filter(e => {
-                const trainee = e.student || e.pilot;
+                const trainee = getEventPersonName(e);
                 if (!trainee) return false;
                 const traineeScores = scores.get(trainee);
                 if (!traineeScores) return false;
@@ -279,7 +329,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             });
         } else if (statusFilter === 'dnco') {
             filtered = filtered.filter(e => {
-                const trainee = e.student || e.pilot;
+                const trainee = getEventPersonName(e);
                 if (!trainee) return false;
                 const traineeScores = scores.get(trainee);
                 if (!traineeScores) return false;
@@ -288,7 +338,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             });
         } else if (statusFilter === 'pass') {
             filtered = filtered.filter(e => {
-                const trainee = e.student || e.pilot;
+                const trainee = getEventPersonName(e);
                 if (!trainee) return false;
                 const traineeScores = scores.get(trainee);
                 if (!traineeScores) return false;
@@ -297,7 +347,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             });
         } else if (statusFilter === 'fail') {
             filtered = filtered.filter(e => {
-                const trainee = e.student || e.pilot;
+                const trainee = getEventPersonName(e);
                 if (!trainee) return false;
                 const traineeScores = scores.get(trainee);
                 if (!traineeScores) return false;
@@ -323,7 +373,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             console.log('📊 Trainee filter - Events before filter:', filtered.length);
             
             filtered = filtered.filter(e => {
-                const studentName = e.student || e.pilot;
+                const studentName = getEventPersonName(e);
                 if (!studentName) return false;
                 
                 const matches = selectedTrainees.some(selectedTrainee => eventPersonMatchesSelection(studentName, selectedTrainee));
@@ -352,7 +402,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             
             // Match trainee names with or without course suffix (e.g., "Edwards, Charlotte" or "Edwards, Charlotte – ADF301")
             filtered = filtered.filter(e => {
-                const studentName = e.student || e.pilot;
+                const studentName = getEventPersonName(e);
                 if (!studentName) return false;
                 
                 // Check if the student name (with or without course suffix) matches any trainee
@@ -374,7 +424,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         }
 
         return filtered;
-    }, [allEvents, timePeriod, singleDate, startDate, endDate, selectedEventTypes, 
+    }, [exportSourceEvents, timePeriod, singleDate, startDate, endDate, selectedEventTypes,
         statusFilter, remedialFilter, selectedTrainees, selectedStaff, useSpecificTraineeFilter, useSpecificStaffFilter, selectedCourses, allTrainees, scores]);
 
     // Get trainees scheduled for selected courses and date range (for mass completion)
