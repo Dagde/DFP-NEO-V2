@@ -2,15 +2,15 @@ import { getAppApiBase } from './externalDataControls';
 
 export const LIVE_CHANGE_EVENT = 'neo-live-change';
 
-const CLIENT_ID_KEY = 'neo_live_change_client_id';
+const CLIENT_ID_KEY = 'neo_live_change_tab_client_id';
 const FETCH_PATCH_FLAG = '__neoLiveChangeFetchPatched';
 
 const getClientId = (): string => {
   try {
-    const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+    const existing = window.sessionStorage.getItem(CLIENT_ID_KEY);
     if (existing) return existing;
     const next = `neo-client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    window.localStorage.setItem(CLIENT_ID_KEY, next);
+    window.sessionStorage.setItem(CLIENT_ID_KEY, next);
     return next;
   } catch {
     return `neo-client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;

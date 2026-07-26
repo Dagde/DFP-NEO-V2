@@ -279,14 +279,14 @@ const getAppApiBase = () => {
   return isExternalDataAllowed("productionApiFallbackEnabled") ? `${PRODUCTION_API_ORIGIN}/api` : "/api";
 };
 const LIVE_CHANGE_EVENT = "neo-live-change";
-const CLIENT_ID_KEY = "neo_live_change_client_id";
+const CLIENT_ID_KEY = "neo_live_change_tab_client_id";
 const FETCH_PATCH_FLAG = "__neoLiveChangeFetchPatched";
 const getClientId = () => {
   try {
-    const existing = window.localStorage.getItem(CLIENT_ID_KEY);
+    const existing = window.sessionStorage.getItem(CLIENT_ID_KEY);
     if (existing) return existing;
     const next = `neo-client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    window.localStorage.setItem(CLIENT_ID_KEY, next);
+    window.sessionStorage.setItem(CLIENT_ID_KEY, next);
     return next;
   } catch {
     return `neo-client-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -31256,11 +31256,14 @@ const StableDropdown = ({
     "div",
     {
       ref: triggerRef,
-      onPointerDown: (e) => e.stopPropagation(),
+      onPointerDown: (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openDropdown();
+      },
       onMouseDown: (e) => e.stopPropagation(),
       onClick: (e) => {
         e.stopPropagation();
-        openDropdown();
       },
       style: { display: "inline-flex", cursor: disabled ? "default" : "pointer" },
       children: [
@@ -31645,7 +31648,12 @@ const PersonDropdown = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
-        onClick: handleOpen,
+        onPointerDown: (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleOpen();
+        },
+        onClick: (e) => e.stopPropagation(),
         style: {
           fontSize,
           fontWeight: bold ? 700 : 400,
@@ -31866,7 +31874,12 @@ const EventDropdown = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
-        onClick: handleOpen,
+        onPointerDown: (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleOpen();
+        },
+        onClick: (e) => e.stopPropagation(),
         style: {
           fontSize,
           fontStyle: "italic",

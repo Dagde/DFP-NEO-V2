@@ -428,11 +428,14 @@ const StableDropdown: React.FC<StableDropdownProps> = ({
   return (
     <div
       ref={triggerRef}
-      onPointerDown={e => e.stopPropagation()}
+      onPointerDown={e => {
+        e.preventDefault();
+        e.stopPropagation();
+        openDropdown();
+      }}
       onMouseDown={e => e.stopPropagation()}
       onClick={e => {
         e.stopPropagation();
-        openDropdown();
       }}
       style={{ display: 'inline-flex', cursor: disabled ? 'default' : 'pointer' }}
     >
@@ -844,7 +847,12 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div
-        onClick={handleOpen}
+        onPointerDown={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleOpen();
+        }}
+        onClick={e => e.stopPropagation()}
         style={{
           fontSize,
           fontWeight: bold ? 700 : 400,
@@ -1079,7 +1087,12 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div
-        onClick={handleOpen}
+        onPointerDown={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleOpen();
+        }}
+        onClick={e => e.stopPropagation()}
         style={{
           fontSize,
           fontStyle: 'italic',
