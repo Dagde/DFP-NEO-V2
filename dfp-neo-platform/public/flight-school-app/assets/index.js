@@ -109026,13 +109026,6 @@ ${"=".repeat(60)}`);
     }
   }, [date]);
   reactExports.useEffect(() => {
-    const currentDateStr = getLocalDateString2();
-    if (date !== currentDateStr) {
-      console.log("📅 Updating current date from", date, "to", currentDateStr, "due to timezone change");
-      setDate(currentDateStr);
-    }
-  }, [timezoneOffset]);
-  reactExports.useEffect(() => {
     try {
       localStorage.setItem("dfp_build_date", buildDfpDate);
     } catch (e) {
