@@ -79414,6 +79414,23 @@ const TrainingRecordsExportView = ({
     }
     return traineeScores?.find((score) => (score.syllabusId || score.event) === event.flightNumber && score.date === event.date);
   };
+  const getTrainingReportExportValues = (event) => {
+    const assessment = findAssessmentForEvent(event);
+    const eventScore = findScoreForEvent(event);
+    const legacyOutcomeCode = String(eventScore?.outcome || "").trim().toUpperCase();
+    const completionCode = String(
+      assessment?.dcoResult || eventScore?.dcoResult || (exportCompletionResultLabels[legacyOutcomeCode] ? legacyOutcomeCode : "")
+    ).trim().toUpperCase();
+    const missionStatus = completionCode ? exportCompletionResultLabels[completionCode] || completionCode : "N/A";
+    const assessmentGrade = assessment?.overallGrade;
+    const overallGrade = assessmentGrade !== null && assessmentGrade !== void 0 && String(assessmentGrade).trim() ? String(assessmentGrade) : eventScore?.outcome || "Not Assessed";
+    const comments = assessment?.overallComments || assessment?.trainingReportNotes || eventScore?.comments || "";
+    return {
+      missionStatus,
+      overallGrade,
+      comments
+    };
+  };
   const getEventStatusBucket = (event) => {
     const assessment = findAssessmentForEvent(event);
     const eventScore = findScoreForEvent(event);
@@ -79845,10 +79862,9 @@ const TrainingRecordsExportView = ({
       const year = date.getFullYear().toString().slice(-2);
       return `${day} ${month} ${year}`;
     };
-    const traineeScores = scores.get(event.student || event.pilot || "");
-    const eventScore = traineeScores?.find((s) => s.syllabusId === event.flightNumber && s.date === event.date);
-    const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ""] || "N/A";
-    const commentSections = parseComments2(eventScore?.comments);
+    const reportExportValues = getTrainingReportExportValues(event);
+    const { missionStatus, overallGrade, comments } = reportExportValues;
+    const commentSections = parseComments2(comments);
     let y = 15;
     const margin = 15;
     const pageWidth = 210;
@@ -79910,7 +79926,7 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "bold");
     pdf.text(`${exportOverallFieldLabels.overallGrade || "Overall Grade"}:`, col1X, y);
     pdf.setFont("helvetica", "normal");
-    pdf.text(eventScore?.outcome || "Not Assessed", col1X + 30, y);
+    pdf.text(overallGrade, col1X + 30, y);
     pdf.setFont("helvetica", "bold");
     pdf.text(`${exportOverallFieldLabels.result || "Mission Status"}:`, col2X, y);
     pdf.setFont("helvetica", "normal");

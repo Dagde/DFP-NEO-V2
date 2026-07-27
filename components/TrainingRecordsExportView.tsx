@@ -395,6 +395,31 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         ));
     };
 
+    const getTrainingReportExportValues = (event: ScheduleEvent) => {
+        const assessment = findAssessmentForEvent(event);
+        const eventScore = findScoreForEvent(event);
+        const legacyOutcomeCode = String(eventScore?.outcome || '').trim().toUpperCase();
+        const completionCode = String(
+            assessment?.dcoResult ||
+            eventScore?.dcoResult ||
+            (exportCompletionResultLabels[legacyOutcomeCode] ? legacyOutcomeCode : '')
+        ).trim().toUpperCase();
+        const missionStatus = completionCode
+            ? (exportCompletionResultLabels[completionCode] || completionCode)
+            : 'N/A';
+        const assessmentGrade = assessment?.overallGrade;
+        const overallGrade = assessmentGrade !== null && assessmentGrade !== undefined && String(assessmentGrade).trim()
+            ? String(assessmentGrade)
+            : (eventScore?.outcome || 'Not Assessed');
+        const comments = assessment?.overallComments || assessment?.trainingReportNotes || eventScore?.comments || '';
+
+        return {
+            missionStatus,
+            overallGrade,
+            comments,
+        };
+    };
+
     const getEventStatusBucket = (event: ScheduleEvent): StatusFilter | '' => {
         const assessment = findAssessmentForEvent(event);
         const eventScore = findScoreForEvent(event);
@@ -948,13 +973,11 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             return `${day} ${month} ${year}`;
         };
         
-        // Get scores for this event
-        const traineeScores = scores.get(event.student || event.pilot || '');
-        const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
-        const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ''] || 'N/A';
+        const reportExportValues = getTrainingReportExportValues(event);
+        const { missionStatus, overallGrade, comments } = reportExportValues;
         
         // Parse comments into sections
-        const commentSections = parseComments(eventScore?.comments);
+        const commentSections = parseComments(comments);
         
         let y = 15;
         const margin = 15;
@@ -1036,7 +1059,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.setFont('helvetica', 'bold');
         pdf.text(`${exportOverallFieldLabels.overallGrade || 'Overall Grade'}:`, col1X, y);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(eventScore?.outcome || 'Not Assessed', col1X + 30, y);
+        pdf.text(overallGrade, col1X + 30, y);
         
         pdf.setFont('helvetica', 'bold');
         pdf.text(`${exportOverallFieldLabels.result || 'Mission Status'}:`, col2X, y);
@@ -1170,10 +1193,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);
         const instructor = allInstructors.find(i => i.name === event.instructor);
         
-        // Get scores for this event
-        const traineeScores = scores.get(event.student || event.pilot || '');
-        const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
-        const missionStatus = exportCompletionResultLabels[eventScore?.outcome || ''] || 'N/A';
+        const { missionStatus, overallGrade, comments } = getTrainingReportExportValues(event);
         const syllabusDetail = findSyllabusDetailForEventNumber(event.flightNumber);
         const assessmentStructure = buildExportAssessmentStructure(syllabusDetail?.assessedElements, phraseBank);
         
@@ -1202,8 +1222,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 <!-- Overall Assessment -->
                 <div style="border: 1px solid black; padding: 6px; margin-bottom: 8px; background: #f3f4f6;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <div><strong>${escapeHtml(exportOverallFieldLabels.overallGrade || 'Overall Grade')}:</strong> ${eventScore?.outcome || 'Not Assessed'}</div>
-                        <div><strong>${escapeHtml(exportOverallFieldLabels.result || 'Mission Status')}:</strong> ${missionStatus}</div>
+                        <div><strong>${escapeHtml(exportOverallFieldLabels.overallGrade || 'Overall Grade')}:</strong> ${escapeHtml(overallGrade)}</div>
+                        <div><strong>${escapeHtml(exportOverallFieldLabels.result || 'Mission Status')}:</strong> ${escapeHtml(missionStatus)}</div>
                     </div>
                 </div>
                 
@@ -1238,7 +1258,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 <div style="border: 1px solid black; padding: 6px;">
                     <div style="margin-bottom: 4px;"><strong>${escapeHtml(exportAssessorLabel)} Comments:</strong></div>
                     <div style="border: 1px solid #d1d5db; padding: 4px; min-height: 30px; background: #f9fafb; font-size: 8px;">
-                        ${eventScore?.comments || 'No comments provided'}
+                        ${escapeHtml(comments || 'No comments provided')}
                     </div>
                 </div>
             </div>
