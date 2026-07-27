@@ -79289,6 +79289,7 @@ const TrainingRecordsExportView = ({
     label: result.label || result.code
   }));
   const activeStatusCompletionOptions = statusCompletionOptions.length > 0 ? statusCompletionOptions : [{ value: "dco", label: "Complete" }];
+  const exportCompletedStatusLabel = exportCompletionResultLabels.DCO || "Complete";
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -80831,9 +80832,13 @@ const TrainingRecordsExportView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-base", children: completionStatus })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
-          "Select trainees to mark as completed. This will update their ",
+          "Select trainees to mark as ",
+          exportCompletedStatusLabel.toLowerCase(),
+          ". This will update their ",
           exportReportName,
-          " assessments with DCO completion."
+          " assessments with ",
+          exportCompletedStatusLabel,
+          "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [

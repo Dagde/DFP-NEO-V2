@@ -216,6 +216,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const activeStatusCompletionOptions = statusCompletionOptions.length > 0
         ? statusCompletionOptions
         : [{ value: 'dco' as StatusFilter, label: 'Complete' }];
+    const exportCompletedStatusLabel = exportCompletionResultLabels.DCO || 'Complete';
 
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -1360,7 +1361,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                            studentName.startsWith(traineeName + ' -');
                 });
 
-                // Create or update PT051 assessment for each event
+                // Create or update the saved training report assessment for each event.
                 for (const event of traineeEvents) {
                     const assessmentId = `${trainee.name}_${event.id}_PT051`;
                     let assessment = pt051Assessments.get(assessmentId);
@@ -2100,7 +2101,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                         ) : (
                             <div>
                                 <p className="text-gray-300 mb-4">
-                                    Select trainees to mark as completed. This will update their {exportReportName} assessments with DCO completion.
+                                    Select trainees to mark as {exportCompletedStatusLabel.toLowerCase()}. This will update their {exportReportName} assessments with {exportCompletedStatusLabel}.
                                 </p>
                                 
                                 <div className="mb-4">
