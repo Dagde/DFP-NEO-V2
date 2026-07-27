@@ -62778,6 +62778,7 @@ const UserListSection = ({
   const [filteredUsers, setFilteredUsers] = reactExports.useState([]);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
   const [loading, setLoading] = reactExports.useState(true);
+  const [loadError, setLoadError] = reactExports.useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(false);
   const [selectedUser, setSelectedUser] = reactExports.useState(null);
   const [deletePassword, setDeletePassword] = reactExports.useState("");
@@ -62795,6 +62796,7 @@ const UserListSection = ({
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setLoadError("");
       const response = await fetch("/api/users", {
         credentials: "include"
       });
@@ -62809,13 +62811,9 @@ const UserListSection = ({
       setFilteredUsers(sortedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
-      const mockUsers = [
-        { id: "1", name: "Dawe, Daniel", email: "dawe@example.com", role: "INSTRUCTOR", pmkeysId: "8207939", createdAt: "2026-01-10", rank: "SQLDR", service: "RAAF", unit: "1FTS", userType: "STAFF" },
-        { id: "2", name: "Dawe, John", email: "john.dawe@example.com", role: "INSTRUCTOR", pmkeysId: "4300401", createdAt: "2026-01-10", rank: "SQLDR", service: "RAAF", unit: "1FTS", userType: "STAFF" },
-        { id: "3", name: "Evans, Robert", email: "robert.evans@example.com", role: "INSTRUCTOR", pmkeysId: "4300403", createdAt: "2026-01-11", rank: "FLT-LT", service: "RAAF", unit: "1FTS", userType: "STAFF" }
-      ];
-      setUsers(mockUsers);
-      setFilteredUsers(mockUsers);
+      setLoadError("The user list could not be loaded.");
+      setUsers([]);
+      setFilteredUsers([]);
     } finally {
       setLoading(false);
     }
@@ -62953,7 +62951,7 @@ const UserListSection = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Actions" })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700", children: filteredUsers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "px-6 py-12 text-center text-gray-400", children: "No users found" }) }) : filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-750 transition-colors", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700", children: filteredUsers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "px-6 py-12 text-center text-gray-400", children: loadError || "No users found" }) }) : filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-750 transition-colors", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-white", children: user.name }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.rank && user.service ? `${user.rank} - ${user.service}` : user.rank || user.service || "-" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.unit || "-" }) }),

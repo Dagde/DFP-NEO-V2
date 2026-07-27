@@ -34,6 +34,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [deletePassword, setDeletePassword] = useState('');
@@ -55,6 +56,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
     const fetchUsers = async () => {
         try {
             setLoading(true);
+            setLoadError('');
             const response = await fetch('/api/users', {
                 credentials: 'include'
             });
@@ -72,14 +74,9 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
             setFilteredUsers(sortedUsers);
         } catch (error) {
             console.error('Error fetching users:', error);
-            // For development/demo, show mock data
-            const mockUsers: User[] = [
-                { id: '1', name: 'Dawe, Daniel', email: 'dawe@example.com', role: 'INSTRUCTOR', pmkeysId: '8207939', createdAt: '2026-01-10', rank: 'SQLDR', service: 'RAAF', unit: '1FTS', userType: 'STAFF' },
-                { id: '2', name: 'Dawe, John', email: 'john.dawe@example.com', role: 'INSTRUCTOR', pmkeysId: '4300401', createdAt: '2026-01-10', rank: 'SQLDR', service: 'RAAF', unit: '1FTS', userType: 'STAFF' },
-                { id: '3', name: 'Evans, Robert', email: 'robert.evans@example.com', role: 'INSTRUCTOR', pmkeysId: '4300403', createdAt: '2026-01-11', rank: 'FLT-LT', service: 'RAAF', unit: '1FTS', userType: 'STAFF' },
-            ];
-            setUsers(mockUsers);
-            setFilteredUsers(mockUsers);
+            setLoadError('The user list could not be loaded.');
+            setUsers([]);
+            setFilteredUsers([]);
         } finally {
             setLoading(false);
         }
@@ -261,7 +258,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                         {filteredUsers.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
-                                    No users found
+                                    {loadError || 'No users found'}
                                 </td>
                             </tr>
                         ) : (
