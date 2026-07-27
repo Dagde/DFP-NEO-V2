@@ -77704,6 +77704,9 @@ const CourseProgressView = ({
       name: "Dux",
       course: "",
       lmpType: "",
+      eventTypes: null,
+      scoreMethod: "latest",
+      includeRemedial: false,
       includeAllScoredEvents: true,
       minimumScoredEvents: 1,
       criteria: [
@@ -77884,7 +77887,9 @@ const CourseProgressView = ({
         optionMap.set(value, {
           value,
           label: value,
-          order: eventOrder.get(value) ?? eventOrder.get(item.id) ?? Number.MAX_SAFE_INTEGER
+          order: eventOrder.get(value) ?? eventOrder.get(item.id) ?? Number.MAX_SAFE_INTEGER,
+          eventType: getCourseScoreEventType(value),
+          isRemedial: Boolean(item.isRemedial || isRemedialEventCode$1(value))
         });
       });
     });
@@ -77894,11 +77899,13 @@ const CourseProgressView = ({
       optionMap.set(flightNumber, {
         value: flightNumber,
         label: flightNumber,
-        order: eventOrder.get(flightNumber) ?? Number.MAX_SAFE_INTEGER
+        order: eventOrder.get(flightNumber) ?? Number.MAX_SAFE_INTEGER,
+        eventType: getCourseScoreEventType(flightNumber),
+        isRemedial: isRemedialEventCode$1(flightNumber)
       });
     });
     return Array.from(optionMap.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
-  }, [activeAward, activeTrainees, traineeLMPs, pt051Assessments, eventOrder]);
+  }, [activeAward, activeTrainees, traineeLMPs, pt051Assessments, eventOrder, eventDetailByCode]);
   const pt051ScoreRecords = reactExports.useMemo(() => {
     return Array.from(pt051Assessments.values()).filter((assessment) => typeof assessment.overallGrade === "number").map((assessment) => ({
       traineeName: assessment.traineeFullName,
@@ -77961,19 +77968,59 @@ const CourseProgressView = ({
     const traineeName = trainee.fullName || trainee.name;
     return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === eventCode2).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
   };
+  const awardEventTypeOptions = reactExports.useMemo(() => {
+    const typeCounts = /* @__PURE__ */ new Map();
+    awardEventOptions.forEach((option) => {
+      typeCounts.set(option.eventType, (typeCounts.get(option.eventType) || 0) + 1);
+    });
+    const order = [
+      "flight",
+      "simulator",
+      "proceduralTrainer",
+      "tutorial",
+      "massBrief",
+      "groundSchoolAssessment",
+      "groundSchool",
+      "academics",
+      "other"
+    ];
+    return order.filter((key) => typeCounts.has(key)).map((key) => ({ key, label: courseScoreEventTypeLabels[key], count: typeCounts.get(key) || 0 }));
+  }, [awardEventOptions, courseScoreEventTypeLabels]);
+  const selectedAwardEventTypes = reactExports.useMemo(() => activeAward?.eventTypes === null || activeAward?.eventTypes === void 0 ? awardEventTypeOptions.map((option) => option.key) : activeAward.eventTypes, [activeAward, awardEventTypeOptions]);
+  const filteredAwardEventOptions = reactExports.useMemo(() => {
+    const selectedTypes = new Set(selectedAwardEventTypes);
+    return awardEventOptions.filter((option) => selectedTypes.has(option.eventType) && (Boolean(activeAward?.includeRemedial) || !option.isRemedial));
+  }, [activeAward, awardEventOptions, selectedAwardEventTypes]);
+  const activeAwardScoreMethod = activeAward?.scoreMethod || "latest";
+  const activeAwardScoreMethodLabel = activeAwardScoreMethod === "best" ? "Best attempt" : activeAwardScoreMethod === "average" ? "Average attempts" : "Latest attempt";
+  const getAwardScoreForEvent = (records) => {
+    if (records.length === 0) return null;
+    if (activeAwardScoreMethod === "best") {
+      return records.reduce((best, record) => Math.max(best, record.score), records[0].score);
+    }
+    if (activeAwardScoreMethod === "average") {
+      return records.reduce((total, record) => total + record.score, 0) / records.length;
+    }
+    return records.slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0].score;
+  };
   const awardRankings = reactExports.useMemo(() => {
     if (!activeAward) return [];
     const selectedTrainees = activeTrainees.filter((trainee) => activeAward.course === "all" || trainee.course === activeAward.course);
-    const selectedAwardEvents = new Set(awardEventOptions.map((option) => option.value.toUpperCase()));
+    const selectedAwardEvents = new Set(filteredAwardEventOptions.map((option) => option.value.toUpperCase()));
     const criteriaWeights = new Map(
       activeAward.criteria.filter((criterion) => criterion.enabled && criterion.event.trim() && Number.isFinite(criterion.weight) && criterion.weight > 0).map((criterion) => [criterion.event.trim().toUpperCase(), criterion.weight])
     );
     return selectedTrainees.map((trainee) => {
       const traineeName = trainee.fullName || trainee.name;
       const scoredRecords = pt051ScoreRecords.filter((record) => record.traineeName === traineeName);
-      const includedScores = activeAward.includeAllScoredEvents ? scoredRecords.filter((record) => selectedAwardEvents.has(record.event.toUpperCase())) : scoredRecords.filter((record) => criteriaWeights.has(record.event.toUpperCase()));
-      const totals = includedScores.reduce((acc, record) => {
-        const weight = criteriaWeights.get(record.event.toUpperCase()) ?? 1;
+      const selectedEvents = activeAward.includeAllScoredEvents ? selectedAwardEvents : new Set(Array.from(criteriaWeights.keys()).filter((eventCode2) => selectedAwardEvents.has(eventCode2)));
+      const includedEventScores = Array.from(selectedEvents).map((eventCode2) => {
+        const eventRecords = scoredRecords.filter((record) => record.event.toUpperCase() === eventCode2);
+        const score = getAwardScoreForEvent(eventRecords);
+        return score === null ? null : { event: eventCode2, score };
+      }).filter((entry) => Boolean(entry));
+      const totals = includedEventScores.reduce((acc, record) => {
+        const weight = criteriaWeights.get(record.event) ?? 1;
         return {
           weightedScore: acc.weightedScore + record.score * weight,
           weight: acc.weight + weight,
@@ -77982,12 +78029,12 @@ const CourseProgressView = ({
       }, { weightedScore: 0, weight: 0, weightedEvents: 0 });
       return {
         trainee,
-        scoredCount: includedScores.length,
+        scoredCount: includedEventScores.length,
         weightedEvents: totals.weightedEvents,
         rankingScore: totals.weight > 0 ? totals.weightedScore / totals.weight : 0
       };
     }).filter((row) => row.scoredCount >= activeAward.minimumScoredEvents).sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-  }, [activeTrainees, activeAward, pt051ScoreRecords, awardEventOptions]);
+  }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod]);
   const updateActiveAward = (updates) => {
     setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, ...updates } : award));
   };
@@ -78006,16 +78053,16 @@ const CourseProgressView = ({
     return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode2)?.enabled;
   };
   const selectedAwardEventRows = reactExports.useMemo(() => {
-    const selectedRows = activeAward.includeAllScoredEvents ? awardEventOptions : awardEventOptions.filter((option) => !!getCriterionForEvent(option.value)?.enabled);
+    const selectedRows = activeAward.includeAllScoredEvents ? filteredAwardEventOptions : filteredAwardEventOptions.filter((option) => !!getCriterionForEvent(option.value)?.enabled);
     return selectedRows.map((option) => ({
       ...option,
       weight: getCriterionForEvent(option.value)?.weight ?? 1
     }));
-  }, [activeAward, awardEventOptions]);
+  }, [activeAward, filteredAwardEventOptions]);
   const toggleAwardEvent = (eventCode2, selected) => {
     setAwards((prev) => prev.map((award) => {
       if (award.id !== activeAward.id) return award;
-      const currentCriteria = award.includeAllScoredEvents ? awardEventOptions.filter((option) => option.value.toUpperCase() !== eventCode2.toUpperCase()).map((option) => {
+      const currentCriteria = award.includeAllScoredEvents ? filteredAwardEventOptions.filter((option) => option.value.toUpperCase() !== eventCode2.toUpperCase()).map((option) => {
         const existingCriterion = award.criteria.find((criterion) => criterion.event.toUpperCase() === option.value.toUpperCase());
         return existingCriterion ? { ...existingCriterion, event: option.value, enabled: true } : { id: `criterion-${option.value}`, event: option.value, weight: 1, enabled: true };
       }) : award.criteria.filter((criterion) => criterion.event.toUpperCase() !== eventCode2.toUpperCase());
@@ -78057,6 +78104,18 @@ const CourseProgressView = ({
     setAwards((prev) => prev.map(
       (award) => award.id === activeAward.id ? { ...award, includeAllScoredEvents: selected, criteria: selected ? award.criteria : award.criteria.map((criterion) => ({ ...criterion, enabled: false })) } : award
     ));
+  };
+  const toggleAwardEventType = (key, selected) => {
+    setAwards((prev) => prev.map((award) => {
+      if (award.id !== activeAward.id) return award;
+      const current = award.eventTypes === null || award.eventTypes === void 0 ? awardEventTypeOptions.map((option) => option.key) : award.eventTypes;
+      const next = selected ? Array.from(/* @__PURE__ */ new Set([...current, key])) : current.filter((optionKey) => optionKey !== key);
+      return {
+        ...award,
+        eventTypes: next.length === awardEventTypeOptions.length ? null : next,
+        includeAllScoredEvents: true
+      };
+    }));
   };
   const setAllCourseScoreEventTypes = (selected) => {
     setCourseScoreEventTypeSelection(selected ? null : []);
@@ -78105,6 +78164,9 @@ const CourseProgressView = ({
       name: "New Award",
       course: defaultCourse,
       lmpType: defaultLmpType,
+      eventTypes: null,
+      scoreMethod: "latest",
+      includeRemedial: false,
       includeAllScoredEvents: true,
       minimumScoredEvents: 1,
       criteria: []
@@ -78114,9 +78176,11 @@ const CourseProgressView = ({
   };
   const removeAward = () => {
     if (awards.length <= 1) return;
+    if (!window.confirm(`Delete ${activeAward.name || "this award"}?`)) return;
     const nextAwards = awards.filter((award) => award.id !== activeAward.id);
     setAwards(nextAwards);
     setActiveAwardId(nextAwards[0].id);
+    setIsEditingAward(false);
   };
   const getDisplayName = (name) => {
     const activeCoursePattern = activeCourses.map((course) => course.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -78396,7 +78460,7 @@ const CourseProgressView = ({
                         )
                       ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 justify-start sm:justify-end self-end", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1 justify-start sm:justify-end self-end", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
                         {
@@ -78418,6 +78482,16 @@ const CourseProgressView = ({
                             "Award"
                           ] })
                         }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: removeAward,
+                          disabled: awards.length <= 1,
+                          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-40 disabled:cursor-not-allowed",
+                          children: "Delete"
+                        }
                       )
                     ] })
                   ] }),
@@ -78433,6 +78507,10 @@ const CourseProgressView = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
                       "Events: ",
                       selectedAwardEventRows.length
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                      "Score method: ",
+                      activeAwardScoreMethodLabel
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
                       "Minimum scores: ",
@@ -78468,6 +78546,22 @@ const CourseProgressView = ({
                         )
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                        "Score Method",
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          "select",
+                          {
+                            value: activeAwardScoreMethod,
+                            onChange: (event) => updateActiveAward({ scoreMethod: event.target.value }),
+                            className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                            children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "latest", children: "Latest attempt" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "best", children: "Best attempt" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "average", children: "Average all attempts" })
+                            ]
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
                         "Minimum scored events",
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
@@ -78479,23 +78573,54 @@ const CourseProgressView = ({
                             className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                           }
                         )
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 p-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center justify-between gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-200", children: "Award Filters" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Choose the event families that count toward this award." })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-semibold text-gray-300", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "checkbox",
+                              checked: Boolean(activeAward.includeRemedial),
+                              onChange: (event) => updateActiveAward({ includeRemedial: event.target.checked, includeAllScoredEvents: true }),
+                              className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                            }
+                          ),
+                          "Include remedial/repeat events"
+                        ] })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "button",
-                        {
-                          type: "button",
-                          onClick: removeAward,
-                          disabled: awards.length <= 1,
-                          className: "w-full px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
-                          children: "Remove Award"
-                        }
-                      ) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-2", children: [
+                        awardEventTypeOptions.map((option) => {
+                          const checked = selectedAwardEventTypes.includes(option.key);
+                          return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center justify-between gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${checked ? "border-sky-400/45 bg-sky-500/15 text-sky-50" : "border-gray-700 bg-gray-950/60 text-gray-400"}`, children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-500", children: option.count }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                                "input",
+                                {
+                                  type: "checkbox",
+                                  checked,
+                                  onChange: (event) => toggleAwardEventType(option.key, event.target.checked),
+                                  className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                                }
+                              )
+                            ] })
+                          ] }, option.key);
+                        }),
+                        awardEventTypeOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-700 bg-gray-950/60 px-3 py-2 text-xs text-gray-400 sm:col-span-2", children: "No event types are available for this course and LMP selection." })
+                      ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-200", children: "Scoring Events" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Events cascade from the selected LMP. Tick the events used for this award and adjust weights where required." })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Tick the events used for this award. A weight above 1 makes the event count more strongly in the average." })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-semibold text-gray-300", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -78511,7 +78636,7 @@ const CourseProgressView = ({
                         ] })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto rounded-md border border-gray-700 divide-y divide-gray-700", children: [
-                        awardEventOptions.map((option) => {
+                        filteredAwardEventOptions.map((option) => {
                           const criterion = getCriterionForEvent(option.value);
                           const selected = isAwardEventSelected(option.value);
                           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_90px] gap-2 items-center px-3 py-2 bg-gray-900/35", children: [
@@ -78524,7 +78649,10 @@ const CourseProgressView = ({
                                 className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                               }
                             ),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-gray-100 truncate", children: option.label }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-gray-100 truncate", children: option.label }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] uppercase tracking-wide text-gray-500", children: courseScoreEventTypeLabels[option.eventType] })
+                            ] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx(
                               "input",
                               {
@@ -78540,15 +78668,17 @@ const CourseProgressView = ({
                             )
                           ] }, option.value);
                         }),
-                        awardEventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-6 text-center text-sm text-gray-400", children: "No LMP events available for this course and LMP selection." })
+                        filteredAwardEventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-6 text-center text-sm text-gray-400", children: "No events match this award setup." })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500", children: [
                         getAwardDisplayName(activeAward),
                         " ranking includes ",
-                        activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length,
+                        selectedAwardEventRows.length,
                         " selected event",
-                        (activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length) === 1 ? "" : "s",
-                        "."
+                        selectedAwardEventRows.length === 1 ? "" : "s",
+                        " using ",
+                        activeAwardScoreMethodLabel.toLowerCase(),
+                        " scoring."
                       ] })
                     ] })
                   ] }),
