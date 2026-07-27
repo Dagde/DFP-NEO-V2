@@ -106615,13 +106615,26 @@ const App = () => {
         if (!res.ok) return;
         const parseStartedAt = performance.now();
         const data = await res.json();
-        const dates = [...new Set((data.dates || []).map((d) => d.date))];
+        const snapshotRows = Array.isArray(data.dates) ? data.dates : [];
+        const dates = [...new Set(snapshotRows.map((d) => d.date))];
+        const nextSnapshotKeysByDate = {};
+        snapshotRows.forEach((row) => {
+          const baseDate = String(row?.date || "").trim();
+          const snapshotKey = String(row?.snapshotKey || "").trim();
+          if (!baseDate || !snapshotKey) return;
+          nextSnapshotKeysByDate[baseDate] = [
+            ...nextSnapshotKeysByDate[baseDate] || [],
+            snapshotKey
+          ].filter((key, index, keys) => key && keys.indexOf(key) === index);
+        });
+        snapshotKeysByDateRef.current = nextSnapshotKeysByDate;
         pushDfpDataDiag("snapshot-dates:json", {
           durationMs: Math.round(performance.now() - startedAt),
           parseDurationMs: Math.round(performance.now() - parseStartedAt),
           count: dates.length,
           dates: dates.slice(0, 80),
-          rawRows: (data.dates || []).slice(0, 30)
+          rawRows: snapshotRows.slice(0, 30),
+          exactKeyDateCount: Object.keys(nextSnapshotKeysByDate).length
         });
         console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
         setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, ...dates])].sort((a, b) => b.localeCompare(a)));
@@ -106708,17 +106721,20 @@ const App = () => {
   }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
-    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true } = options;
+    const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "" } = options;
     const snapshotSchool = schoolOverride ?? school;
     const snapshotUnit = unitOverride ?? activeUnitCode;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
     const snapshotLocationAliases = getDailySnapshotLocationAliases(snapshotSchool);
+    const snapshotLocationAliasKeys = snapshotLocationAliases.map(normaliseDailySnapshotPart);
+    const snapshotUnitKey = normaliseDailySnapshotPart(snapshotUnit);
     const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
     pushDfpDataDiag("snapshot:load-start", {
       targetDate,
       snapshotSchool,
       snapshotUnit,
       snapshotKey,
+      exactSnapshotKey,
       snapshotLocationAliases,
       cacheKey,
       force,
@@ -106789,7 +106805,18 @@ const App = () => {
           });
         }
         try {
+          const knownContextSnapshotKeys = (snapshotKeysByDateRef.current[targetDate] || []).filter((candidateKey) => {
+            const parsedCandidate = parseDailySnapshotKey(candidateKey);
+            if (parsedCandidate.date !== targetDate) return false;
+            const candidateSchool = normaliseDailySnapshotPart(parsedCandidate.school);
+            const candidateUnit = normaliseDailySnapshotPart(parsedCandidate.unit);
+            const schoolMatches = !candidateSchool || snapshotLocationAliasKeys.includes(candidateSchool);
+            const unitMatches = !candidateUnit || candidateUnit === snapshotUnitKey;
+            return schoolMatches && unitMatches;
+          });
           const candidateKeys = [
+            exactSnapshotKey,
+            ...knownContextSnapshotKeys,
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, snapshotUnit)),
             ...snapshotLocationAliases.map((locationAlias) => getDailySnapshotKey(targetDate, locationAlias, "")),
             targetDate
@@ -107269,6 +107296,7 @@ const App = () => {
     [publishedSchedules]
   );
   const [snapshotDates, setSnapshotDates] = reactExports.useState([]);
+  const snapshotKeysByDateRef = React.useRef({});
   reactExports.useEffect(() => {
     pushDfpDataDiag("snapshot-dates:state", {
       count: snapshotDates.length,
@@ -107292,13 +107320,24 @@ const App = () => {
     }, 700);
     return () => window.clearTimeout(noticeTimer);
   }, [date, dfpSnapshotLoadState.date, dfpSnapshotLoadState.status, isAuthenticated]);
+  function normaliseDailySnapshotPart(value) {
+    return String(value || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
+  }
   function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
-    const safeUnit = String(targetUnit || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
-    const safeSchool = String(targetSchool || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
+    const safeUnit = normaliseDailySnapshotPart(targetUnit);
+    const safeSchool = normaliseDailySnapshotPart(targetSchool);
     return safeUnit ? `${targetDate}__${safeSchool}__${safeUnit}` : `${targetDate}__${safeSchool}`;
   }
   function getDailySnapshotDate(snapshotDate) {
     return String(snapshotDate || "").replace(/__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?$/i, "");
+  }
+  function parseDailySnapshotKey(snapshotKey) {
+    const match = String(snapshotKey || "").trim().match(/^(\d{4}-\d{2}-\d{2})(?:__([A-Za-z0-9_-]+)(?:__([A-Za-z0-9_-]+))?)?$/);
+    return {
+      date: match?.[1] || "",
+      school: match?.[2] || "",
+      unit: match?.[3] || ""
+    };
   }
   function getSnapshotEventsSignature(events2 = []) {
     return events2.map((e) => [
@@ -117018,6 +117057,13 @@ ${conflictLines.join("\n")}${moreText}`,
       loadedSnapshotDates.current.add(snapshotKey);
       loadingSnapshotDates.current.delete(snapshotKey);
       setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, buildDfpDate])].sort((a, b) => b.localeCompare(a)));
+      snapshotKeysByDateRef.current = {
+        ...snapshotKeysByDateRef.current,
+        [buildDfpDate]: [
+          ...snapshotKeysByDateRef.current[buildDfpDate] || [],
+          snapshotKey
+        ].filter((key, index, keys) => key && keys.indexOf(key) === index)
+      };
       cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
       try {
         const saveResponse = await fetch(`${apiBase}/daily-snapshot/save`, {
@@ -118153,13 +118199,30 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       const change = event?.detail || {};
       if (String(change.path || "") !== "/api/daily-snapshot/save") return;
       const snapshotDate = String(change.detail?.date || "").trim();
-      const targetDate = snapshotDate.split("__")[0];
+      const parsedSnapshotKey = parseDailySnapshotKey(snapshotDate);
+      const targetDate = parsedSnapshotKey.date || getDailySnapshotDate(snapshotDate);
       if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return;
-      void loadSnapshotForDate(targetDate, { force: true, replace: true, useCache: false });
+      if (targetDate !== date) return;
+      const savedLocation = String(change.detail?.locationCode || parsedSnapshotKey.school || "").trim();
+      const savedUnit = String(change.detail?.unitCode || parsedSnapshotKey.unit || "").trim();
+      const currentLocationKeys = getDailySnapshotLocationAliases(school).map(normaliseDailySnapshotPart);
+      const savedLocationKey = normaliseDailySnapshotPart(savedLocation);
+      const currentUnitKey = normaliseDailySnapshotPart(activeUnitCode);
+      const savedUnitKey = normaliseDailySnapshotPart(savedUnit);
+      if (savedLocationKey && !currentLocationKeys.includes(savedLocationKey)) return;
+      if (savedUnitKey && savedUnitKey !== currentUnitKey) return;
+      void loadSnapshotForDate(targetDate, {
+        force: true,
+        replace: true,
+        useCache: false,
+        schoolOverride: savedLocation || school,
+        unitOverride: savedUnit || activeUnitCode,
+        exactSnapshotKey: snapshotDate
+      });
     };
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
-  }, [isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, selectedEvent]);
+  }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
   reactExports.useEffect(() => {
     const handleLivePeopleChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
