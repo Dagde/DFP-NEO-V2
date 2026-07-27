@@ -25154,7 +25154,10 @@ const App: React.FC = () => {
                             message: `Retrieving DFP data (${candidateIndex + 1}/${candidateKeys.length})`,
                             progress
                         });
-                        const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}`;
+                        const contextQuery = candidateKey === targetDate
+                            ? `?school=${encodeURIComponent(snapshotSchool)}&unit=${encodeURIComponent(snapshotUnit)}`
+                            : '';
+                        const candidateUrl = `${apiBase}/daily-snapshot/${encodeURIComponent(candidateKey)}${contextQuery}`;
                         const candidateStartedAt = performance.now();
                         const candidateRes = await fetch(candidateUrl);
                         pushDfpDataDiag('snapshot:fetch-response', {

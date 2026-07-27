@@ -11804,18 +11804,48 @@ app.get('/api/daily-snapshot/:date', async (req, res) => {
   try {
     const db = await getPrisma();
     const { date } = req.params;
+    const contextSchool = String(req.query.school || '').trim().replace(/[^A-Za-z0-9_-]/g, '-');
+    const contextUnit = String(req.query.unit || '').trim().replace(/[^A-Za-z0-9_-]/g, '-');
     // Validate date format. Context-aware snapshots use YYYY-MM-DD__LOCATION__UNIT.
     if (!/^\d{4}-\d{2}-\d{2}(?:__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?)?$/i.test(date)) {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD, YYYY-MM-DD__LOCATION, or YYYY-MM-DD__LOCATION__UNIT' });
     }
-    const rows = await db.$queryRawUnsafe(
-      `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
-      date
-    );
+    const lookupKeys = [
+      contextSchool && contextUnit && /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}__${contextSchool}__${contextUnit}` : '',
+      contextSchool && /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}__${contextSchool}` : '',
+      date,
+    ].filter((key, index, keys) => key && keys.indexOf(key) === index);
+    const rows = lookupKeys.length === 3
+      ? await db.$queryRawUnsafe(
+          `SELECT * FROM "DailySnapshot"
+           WHERE date = $1::text OR date = $2::text OR date = $3::text
+           ORDER BY CASE
+             WHEN date = $1::text THEN 0
+             WHEN date = $2::text THEN 1
+             ELSE 2
+           END
+           LIMIT 1`,
+          lookupKeys[0],
+          lookupKeys[1],
+          lookupKeys[2]
+        )
+      : lookupKeys.length === 2
+        ? await db.$queryRawUnsafe(
+            `SELECT * FROM "DailySnapshot"
+             WHERE date = $1::text OR date = $2::text
+             ORDER BY CASE WHEN date = $1::text THEN 0 ELSE 1 END
+             LIMIT 1`,
+            lookupKeys[0],
+            lookupKeys[1]
+          )
+        : await db.$queryRawUnsafe(
+            `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+            lookupKeys[0]
+          );
     if (!rows || rows.length === 0) {
       return res.status(404).json({ error: `No snapshot found for date ${date}` });
     }
-    console.log(`✅ GET /api/daily-snapshot/${date} - Loaded snapshot`);
+    console.log(`✅ GET /api/daily-snapshot/${date} - Loaded snapshot ${rows[0].date}`);
     res.json({ snapshot: rows[0] });
   } catch (error) {
     console.error('❌ GET /api/daily-snapshot/:date error:', error);
