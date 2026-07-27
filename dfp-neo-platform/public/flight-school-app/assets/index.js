@@ -77761,6 +77761,8 @@ const CourseProgressView = ({
   const [showRiskSettings, setShowRiskSettings] = reactExports.useState(false);
   const [showCourseScoreSettings, setShowCourseScoreSettings] = reactExports.useState(false);
   const [courseScoreEventTypeSelection, setCourseScoreEventTypeSelection] = reactExports.useState(null);
+  const [awardImportMessage, setAwardImportMessage] = reactExports.useState(null);
+  const awardImportInputRef = reactExports.useRef(null);
   const [riskThresholds, setRiskThresholds] = reactExports.useState({
     onTrackMax: 3.5,
     watchMax: 4,
@@ -78242,6 +78244,41 @@ const CourseProgressView = ({
     setIsEditingAward(false);
     setShowDeleteAwardConfirm(false);
   };
+  const exportAwardSettings = () => {
+    const payload = {
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      awards
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `course-award-settings-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+  const importAwardSettings = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const sourceAwards = Array.isArray(parsed) ? parsed : parsed?.awards;
+      const importedAwards = Array.isArray(sourceAwards) ? sourceAwards.map((award, index) => normaliseCourseAward(award, index)).filter((award) => Boolean(award)) : [];
+      if (importedAwards.length === 0) {
+        setAwardImportMessage("No valid award settings were found in that file.");
+        return;
+      }
+      setAwards(importedAwards);
+      setActiveAwardId(importedAwards[0].id);
+      setIsEditingAward(false);
+    } catch {
+      setAwardImportMessage("That award settings file could not be read.");
+    }
+  };
   const getDisplayName = (name) => {
     const activeCoursePattern = activeCourses.map((course) => course.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
     if (!activeCoursePattern) return name;
@@ -78554,6 +78591,44 @@ const CourseProgressView = ({
                         }
                       )
                     ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-1 border-t border-gray-700/70 pt-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        ref: awardImportInputRef,
+                        type: "file",
+                        accept: "application/json,.json",
+                        onChange: importAwardSettings,
+                        className: "hidden"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: exportAwardSettings,
+                        className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                        children: [
+                          "Export",
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                          "Setup"
+                        ]
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => awardImportInputRef.current?.click(),
+                        className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                        children: [
+                          "Import",
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                          "Setup"
+                        ]
+                      }
+                    )
                   ] }),
                   !isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 text-xs text-gray-300", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
@@ -78959,6 +79034,19 @@ const CourseProgressView = ({
           }
         )
       ] })
+    ] }) }),
+    awardImportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[90] flex items-center justify-center animate-fade-in", onClick: () => setAwardImportMessage(null), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50 overflow-hidden", onClick: (event) => event.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-sky-950/35", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-300", children: "Import Award Setup" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: awardImportMessage }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setAwardImportMessage(null),
+          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+          children: "Close"
+        }
+      ) })
     ] }) })
   ] }) });
 };

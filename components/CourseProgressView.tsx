@@ -1,6 +1,6 @@
 
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Trainee, Score, SyllabusItemDetail, Course, Pt051Assessment } from '../types';
 import AuditButton from './AuditButton';
 import CourseDataWindow from './CourseDataWindow';
@@ -165,6 +165,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [showRiskSettings, setShowRiskSettings] = useState(false);
     const [showCourseScoreSettings, setShowCourseScoreSettings] = useState(false);
     const [courseScoreEventTypeSelection, setCourseScoreEventTypeSelection] = useState<CourseScoreEventTypeKey[] | null>(null);
+    const [awardImportMessage, setAwardImportMessage] = useState<string | null>(null);
+    const awardImportInputRef = useRef<HTMLInputElement | null>(null);
     const [riskThresholds, setRiskThresholds] = useState<CourseRiskThresholds>({
         onTrackMax: 3.5,
         watchMax: 4.0,
@@ -829,6 +831,48 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         setShowDeleteAwardConfirm(false);
     };
 
+    const exportAwardSettings = () => {
+        const payload = {
+            exportedAt: new Date().toISOString(),
+            awards,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `course-award-settings-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    };
+
+    const importAwardSettings = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+            const sourceAwards = Array.isArray(parsed) ? parsed : parsed?.awards;
+            const importedAwards = Array.isArray(sourceAwards)
+                ? sourceAwards
+                    .map((award, index) => normaliseCourseAward(award, index))
+                    .filter((award): award is CourseAward => Boolean(award))
+                : [];
+            if (importedAwards.length === 0) {
+                setAwardImportMessage('No valid award settings were found in that file.');
+                return;
+            }
+            setAwards(importedAwards);
+            setActiveAwardId(importedAwards[0].id);
+            setIsEditingAward(false);
+        } catch {
+            setAwardImportMessage('That award settings file could not be read.');
+        }
+    };
+
     const getDisplayName = (name: string) => {
         const activeCoursePattern = activeCourses
             .map(course => course.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
@@ -1134,6 +1178,29 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     Delete
                                                 </button>
                                             </div>
+                                        </div>
+                                        <div className="flex flex-wrap justify-end gap-1 border-t border-gray-700/70 pt-3">
+                                            <input
+                                                ref={awardImportInputRef}
+                                                type="file"
+                                                accept="application/json,.json"
+                                                onChange={importAwardSettings}
+                                                className="hidden"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={exportAwardSettings}
+                                                className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                            >
+                                                Export<br />Setup
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => awardImportInputRef.current?.click()}
+                                                className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                            >
+                                                Import<br />Setup
+                                            </button>
                                         </div>
 
                                         {!isEditingAward && (
@@ -1488,6 +1555,27 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         className="w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md bg-red-600 text-white hover:bg-red-500 border border-red-400/60 shadow"
                                     >
                                         Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {awardImportMessage && (
+                        <div className="fixed inset-0 bg-black/75 z-[90] flex items-center justify-center animate-fade-in" onClick={() => setAwardImportMessage(null)}>
+                            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50 overflow-hidden" onClick={event => event.stopPropagation()}>
+                                <div className="p-4 border-b border-gray-700 bg-sky-950/35">
+                                    <h2 className="text-xl font-bold text-sky-300">Import Award Setup</h2>
+                                </div>
+                                <div className="p-5">
+                                    <p className="text-sm text-gray-300">{awardImportMessage}</p>
+                                </div>
+                                <div className="px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAwardImportMessage(null)}
+                                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                    >
+                                        Close
                                     </button>
                                 </div>
                             </div>
