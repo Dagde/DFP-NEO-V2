@@ -21,6 +21,7 @@ interface CourseProgressViewProps {
     courses: Course[];
     onUpdateGradDate: (courseName: string, newGradDate: string) => void;
     onUpdateStartDate: (courseName: string, newStartDate: string) => void;
+    trainingReportName?: string;
 }
 
 type AwardCriterion = {
@@ -48,7 +49,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     traineeLMPs,
     courses,
     onUpdateGradDate,
-    onUpdateStartDate
+    onUpdateStartDate,
+    trainingReportName = 'Training Report'
 }) => {
     const [showFullGraph, setShowFullGraph] = useState(false);
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
@@ -600,7 +602,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                 </head>
                 <body>
                     <h1>${escapedCourseName} Course Scores</h1>
-                    <p>PT-051 overall grades</p>
+                    <p>${escapeHtmlValue(trainingReportName)} overall grades</p>
                     <table>
                         <thead><tr><th class="name">Trainee</th>${headerCells}</tr></thead>
                         <tbody>${bodyRows || '<tr><td>No scores available.</td></tr>'}</tbody>
@@ -677,7 +679,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                         <section className="space-y-4">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Course Scores & Rankings</h2>
-                                <p className="text-sm text-gray-400">PT-051 overall grades and editable award ranking criteria for active course trainees.</p>
+                                <p className="text-sm text-gray-400">{trainingReportName} overall grades and editable award ranking criteria for active course trainees.</p>
                             </div>
 
                             <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6">
@@ -692,7 +694,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                     >
                                         <div>
                                             <h3 className="text-lg font-semibold text-white">Course Scores</h3>
-                                            <p className="text-xs text-white/75">Only events with saved PT-051 overall grades are shown.</p>
+                                            <p className="text-xs text-white/75">Only events with saved {trainingReportName} overall grades are shown.</p>
                                         </div>
                                         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
                                             <label className="text-sm text-gray-300 min-w-60">

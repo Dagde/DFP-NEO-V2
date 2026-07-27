@@ -77681,7 +77681,8 @@ const CourseProgressView = ({
   traineeLMPs,
   courses,
   onUpdateGradDate,
-  onUpdateStartDate
+  onUpdateStartDate,
+  trainingReportName = "Training Report"
 }) => {
   const [showFullGraph, setShowFullGraph] = reactExports.useState(false);
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
@@ -78090,7 +78091,7 @@ const CourseProgressView = ({
                 </head>
                 <body>
                     <h1>${escapedCourseName} Course Scores</h1>
-                    <p>PT-051 overall grades</p>
+                    <p>${escapeHtmlValue(trainingReportName)} overall grades</p>
                     <table>
                         <thead><tr><th class="name">Trainee</th>${headerCells}</tr></thead>
                         <tbody>${bodyRows || "<tr><td>No scores available.</td></tr>"}</tbody>
@@ -78166,7 +78167,10 @@ const CourseProgressView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "Course Scores & Rankings" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "PT-051 overall grades and editable award ranking criteria for active course trainees." })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+            trainingReportName,
+            " overall grades and editable award ranking criteria for active course trainees."
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -78184,7 +78188,11 @@ const CourseProgressView = ({
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Only events with saved PT-051 overall grades are shown." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-white/75", children: [
+                          "Only events with saved ",
+                          trainingReportName,
+                          " overall grades are shown."
+                        ] })
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-end gap-2", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300 min-w-60", children: [
@@ -120485,7 +120493,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             pt051Assessments,
             traineeLMPs,
             onUpdateGradDate: handleUpdateGradDate,
-            onUpdateStartDate: handleUpdateStartDate
+            onUpdateStartDate: handleUpdateStartDate,
+            trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName
           }
         );
       case "TrainingRecords":
