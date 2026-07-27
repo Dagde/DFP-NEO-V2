@@ -77673,6 +77673,73 @@ const CourseGraph = ({ data }) => {
 };
 const REMEDIAL_EVENT_CODE_REGEX$1 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode$1 = (value) => !!value && REMEDIAL_EVENT_CODE_REGEX$1.test(value);
+const COURSE_AWARD_SETTINGS_STORAGE_KEY = "dfpNeo.courseProgress.awards.v1";
+const COURSE_SCORE_EVENT_TYPE_KEYS = [
+  "flight",
+  "simulator",
+  "proceduralTrainer",
+  "tutorial",
+  "massBrief",
+  "groundSchoolAssessment",
+  "groundSchool",
+  "academics",
+  "other"
+];
+const createDefaultCourseAwards = () => [
+  {
+    id: "dux",
+    name: "Dux",
+    course: "",
+    lmpType: "",
+    eventTypes: null,
+    scoreMethod: "latest",
+    includeRemedial: false,
+    includeAllScoredEvents: true,
+    minimumScoredEvents: 1,
+    criteria: [
+      { id: "BGF21", event: "BGF21", weight: 2, enabled: true },
+      { id: "BIF3", event: "BIF3", weight: 2, enabled: true },
+      { id: "BNAV4", event: "BNAV4", weight: 2, enabled: true }
+    ]
+  }
+];
+const normaliseCourseAward = (award, index) => {
+  const id = String(award.id || `award-${index}`).trim();
+  const name = String(award.name || "").trim();
+  if (!id || !name) return null;
+  const scoreMethod = ["latest", "best", "average"].includes(String(award.scoreMethod)) ? award.scoreMethod : "latest";
+  const eventTypes = Array.isArray(award.eventTypes) ? award.eventTypes.filter((key) => COURSE_SCORE_EVENT_TYPE_KEYS.includes(key)) : null;
+  const criteria = Array.isArray(award.criteria) ? award.criteria.map((criterion, criterionIndex) => ({
+    id: String(criterion.id || `criterion-${index}-${criterionIndex}`),
+    event: String(criterion.event || "").trim(),
+    weight: Number.isFinite(Number(criterion.weight)) && Number(criterion.weight) > 0 ? Number(criterion.weight) : 1,
+    enabled: criterion.enabled !== false
+  })).filter((criterion) => criterion.event) : [];
+  return {
+    id,
+    name,
+    course: String(award.course || ""),
+    lmpType: String(award.lmpType || ""),
+    eventTypes: eventTypes && eventTypes.length > 0 ? eventTypes : null,
+    scoreMethod,
+    includeRemedial: Boolean(award.includeRemedial),
+    includeAllScoredEvents: award.includeAllScoredEvents !== false,
+    minimumScoredEvents: Number.isFinite(Number(award.minimumScoredEvents)) && Number(award.minimumScoredEvents) > 0 ? Math.max(1, Math.floor(Number(award.minimumScoredEvents))) : 1,
+    criteria
+  };
+};
+const loadStoredCourseAwards = () => {
+  if (typeof window === "undefined") return createDefaultCourseAwards();
+  try {
+    const raw = window.localStorage.getItem(COURSE_AWARD_SETTINGS_STORAGE_KEY);
+    if (!raw) return createDefaultCourseAwards();
+    const parsed = JSON.parse(raw);
+    const awards = Array.isArray(parsed) ? parsed.map((award, index) => normaliseCourseAward(award, index)).filter((award) => Boolean(award)) : [];
+    return awards.length > 0 ? awards : createDefaultCourseAwards();
+  } catch {
+    return createDefaultCourseAwards();
+  }
+};
 const CourseProgressView = ({
   traineesData,
   courseColors,
@@ -77699,24 +77766,7 @@ const CourseProgressView = ({
     watchMax: 4,
     atRiskMax: 4.5
   });
-  const [awards, setAwards] = reactExports.useState([
-    {
-      id: "dux",
-      name: "Dux",
-      course: "",
-      lmpType: "",
-      eventTypes: null,
-      scoreMethod: "latest",
-      includeRemedial: false,
-      includeAllScoredEvents: true,
-      minimumScoredEvents: 1,
-      criteria: [
-        { id: "BGF21", event: "BGF21", weight: 2, enabled: true },
-        { id: "BIF3", event: "BIF3", weight: 2, enabled: true },
-        { id: "BNAV4", event: "BNAV4", weight: 2, enabled: true }
-      ]
-    }
-  ]);
+  const [awards, setAwards] = reactExports.useState(loadStoredCourseAwards);
   reactExports.useEffect(() => {
     logAudit({
       action: "View",
@@ -77725,6 +77775,12 @@ const CourseProgressView = ({
       page: "Course Progress"
     });
   }, []);
+  reactExports.useEffect(() => {
+    try {
+      window.localStorage.setItem(COURSE_AWARD_SETTINGS_STORAGE_KEY, JSON.stringify(awards));
+    } catch {
+    }
+  }, [awards]);
   const activeCourses = reactExports.useMemo(() => {
     const representedCourseNames = new Set(
       traineesData.filter((trainee) => !trainee.isPaused).map((trainee) => String(trainee.course || "").trim()).filter(Boolean)
