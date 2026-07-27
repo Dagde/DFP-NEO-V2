@@ -3705,6 +3705,29 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     await save(nextConfig, 'training-report-template');
   };
 
+  const renderTrainingReportTemplateAction = () => {
+    if (!canEdit) return null;
+    return trainingReportTemplateUnlocked ? (
+      <button
+        type="button"
+        disabled={saving || applyingChanges}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={saveTrainingReportTemplateSettings}
+        className={platformActionButtonClass}
+      >
+        Save
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => setTrainingReportTemplateUnlocked(true)}
+        className={platformActionButtonClass}
+      >
+        Edit
+      </button>
+    );
+  };
+
   const updateInsertEventTypes = (nextEventTypes: InsertEventTypeConfig[]) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -8540,27 +8563,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Training Reports"
           subtitle="Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
-          action={canEdit ? (
-            trainingReportTemplateUnlocked ? (
-              <button
-                type="button"
-                disabled={saving || applyingChanges}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={saveTrainingReportTemplateSettings}
-                className={platformActionButtonClass}
-              >
-                Save
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setTrainingReportTemplateUnlocked(true)}
-                className={platformActionButtonClass}
-              >
-                Edit
-              </button>
-            )
-          ) : null}
+          action={renderTrainingReportTemplateAction()}
         />
         <div className="space-y-5 p-4">
           {!canEdit ? (
@@ -8573,10 +8576,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           ) : null}
           <div id="platform-unit-training-report-template" className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
-            <h4 className="text-sm font-bold text-sky-100">Unit Training Report Template</h4>
-            <p className="mt-1 text-sm text-sky-100/70">
-              These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold text-sky-100">Unit Training Report Template</h4>
+                <p className="mt-1 text-sm text-sky-100/70">
+                  These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix.
+                </p>
+              </div>
+              {renderTrainingReportTemplateAction()}
+            </div>
           </div>
 
           <div className="rounded-lg border border-cyan-500/30 bg-gray-950/50 p-4">
@@ -8693,7 +8701,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
             <div className="mb-3 flex items-center justify-between">
               <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Modules & Field Labels</h4>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Rename only</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Rename only</span>
+                {renderTrainingReportTemplateAction()}
+              </div>
             </div>
             <div className="space-y-4">
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
@@ -8829,7 +8840,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
-            <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-200">Results & Grades</h4>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Results & Grades</h4>
+              {renderTrainingReportTemplateAction()}
+            </div>
             <div className="grid gap-3 lg:grid-cols-3">
               {trainingReportTemplate.completionResults.map((option) => {
                 const optionEnabled = option.enabled !== false;

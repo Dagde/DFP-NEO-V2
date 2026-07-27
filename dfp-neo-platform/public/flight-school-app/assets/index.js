@@ -68079,6 +68079,28 @@ This permanently removes the organisation record from platform configuration and
     });
     await save(nextConfig, "training-report-template");
   };
+  const renderTrainingReportTemplateAction = () => {
+    if (!canEdit) return null;
+    return trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        disabled: saving || applyingChanges,
+        onMouseDown: (event) => event.preventDefault(),
+        onClick: saveTrainingReportTemplateSettings,
+        className: platformActionButtonClass,
+        children: "Save"
+      }
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: () => setTrainingReportTemplateUnlocked(true),
+        className: platformActionButtonClass,
+        children: "Edit"
+      }
+    );
+  };
   const updateInsertEventTypes = (nextEventTypes) => {
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
@@ -72396,33 +72418,18 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         {
           title: "Training Reports",
           subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models.",
-          action: canEdit ? trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              disabled: saving || applyingChanges,
-              onMouseDown: (event) => event.preventDefault(),
-              onClick: saveTrainingReportTemplateSettings,
-              className: platformActionButtonClass,
-              children: "Save"
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              type: "button",
-              onClick: () => setTrainingReportTemplateUnlocked(true),
-              className: platformActionButtonClass,
-              children: "Edit"
-            }
-          ) : null
+          action: renderTrainingReportTemplateAction()
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-4", children: [
         !canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Training Report settings are read-only. Super Admin or Admin permission is required to edit the template." }) : !trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules." }) : null,
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-unit-training-report-template", className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Unit Training Report Template" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix." })
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-unit-training-report-template", className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Unit Training Report Template" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix." })
+          ] }),
+          renderTrainingReportTemplateAction()
+        ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-gray-950/50 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[220px] flex-1", children: [
@@ -72559,7 +72566,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Modules & Field Labels" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: "Rename only" })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: "Rename only" }),
+              renderTrainingReportTemplateAction()
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
@@ -72678,7 +72688,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-3 text-sm font-bold uppercase tracking-wide text-gray-200", children: "Results & Grades" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Results & Grades" }),
+            renderTrainingReportTemplateAction()
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
             trainingReportTemplate.completionResults.map((option) => {
               const optionEnabled = option.enabled !== false;
