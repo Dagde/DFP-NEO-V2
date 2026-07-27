@@ -34,7 +34,7 @@ type RecordType = 'all' | 'trainees' | 'staff' | 'events';
 type TimePeriod = 'all-time' | 'single-date' | 'date-range';
 type OutputFormat = 'pdf' | 'excel' | 'csv';
 type EventType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
-type StatusFilter = 'all' | 'dco' | 'dnco' | 'pass' | 'fail';
+type StatusFilter = 'all' | 'dco' | 'dpco' | 'dnco' | 'pass' | 'fail';
 type RemedialFilter = 'all' | 'yes' | 'no';
 
 const escapeHtml = (value: string): string =>
@@ -207,6 +207,15 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         if (result.enabled !== false) acc[result.code] = result.label || result.code;
         return acc;
     }, {});
+    const statusCompletionOptions = activeTrainingReportTemplate.completionResults
+        .filter(result => result.enabled !== false)
+        .map(result => ({
+            value: result.code.toLowerCase() as StatusFilter,
+            label: result.label || result.code,
+        }));
+    const activeStatusCompletionOptions = statusCompletionOptions.length > 0
+        ? statusCompletionOptions
+        : [{ value: 'dco' as StatusFilter, label: 'Complete' }];
 
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -393,6 +402,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const overallResult = String(assessment?.overallResult || eventScore?.overallResult || eventScore?.outcome || '').trim().toUpperCase();
 
         if (completionResult === 'DCO') return 'dco';
+        if (completionResult === 'DPCO') return 'dpco';
         if (completionResult === 'DNCO') return 'dnco';
         if (overallResult === 'P' || overallResult === 'PASS') return 'pass';
         if (overallResult === 'F' || overallResult === 'FAIL') return 'fail';
@@ -1616,24 +1626,17 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                         />
                                         <span className="text-gray-200">All</span>
                                     </label>
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            checked={statusFilter === 'dco'}
-                                            onChange={() => setStatusFilter('dco')}
-                                            className="w-4 h-4 text-sky-500"
-                                        />
-                                        <span className="text-gray-200">DCO (Duty Carried Out)</span>
-                                    </label>
-                                    <label className="flex items-center space-x-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            checked={statusFilter === 'dnco'}
-                                            onChange={() => setStatusFilter('dnco')}
-                                            className="w-4 h-4 text-sky-500"
-                                        />
-                                        <span className="text-gray-200">DNCO (Duty Not Carried Out)</span>
-                                    </label>
+                                    {activeStatusCompletionOptions.map(option => (
+                                        <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                checked={statusFilter === option.value}
+                                                onChange={() => setStatusFilter(option.value)}
+                                                className="w-4 h-4 text-sky-500"
+                                            />
+                                            <span className="text-gray-200">{option.label}</span>
+                                        </label>
+                                    ))}
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="radio"
@@ -1641,7 +1644,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                             onChange={() => setStatusFilter('pass')}
                                             className="w-4 h-4 text-sky-500"
                                         />
-                                        <span className="text-gray-200">Pass</span>
+                                        <span className="text-gray-200">{activeTrainingReportTemplate.overallResults.passLabel || 'Satisfactory'}</span>
                                     </label>
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
@@ -1650,7 +1653,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                             onChange={() => setStatusFilter('fail')}
                                             className="w-4 h-4 text-sky-500"
                                         />
-                                        <span className="text-gray-200">Fail</span>
+                                        <span className="text-gray-200">{activeTrainingReportTemplate.overallResults.failLabel || 'Unsatisfactory'}</span>
                                     </label>
                                 </div>
                             </div>

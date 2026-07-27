@@ -79204,6 +79204,11 @@ const TrainingRecordsExportView = ({
     if (result.enabled !== false) acc[result.code] = result.label || result.code;
     return acc;
   }, {});
+  const statusCompletionOptions = activeTrainingReportTemplate.completionResults.filter((result) => result.enabled !== false).map((result) => ({
+    value: result.code.toLowerCase(),
+    label: result.label || result.code
+  }));
+  const activeStatusCompletionOptions = statusCompletionOptions.length > 0 ? statusCompletionOptions : [{ value: "dco", label: "Complete" }];
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -79335,6 +79340,7 @@ const TrainingRecordsExportView = ({
     const completionResult = String(assessment?.dcoResult || eventScore?.dcoResult || eventScore?.outcome || "").trim().toUpperCase();
     const overallResult = String(assessment?.overallResult || eventScore?.overallResult || eventScore?.outcome || "").trim().toUpperCase();
     if (completionResult === "DCO") return "dco";
+    if (completionResult === "DPCO") return "dpco";
     if (completionResult === "DNCO") return "dnco";
     if (overallResult === "P" || overallResult === "PASS") return "pass";
     if (overallResult === "F" || overallResult === "FAIL") return "fail";
@@ -80303,30 +80309,18 @@ const TrainingRecordsExportView = ({
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: "All" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
+              activeStatusCompletionOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
                     type: "radio",
-                    checked: statusFilter === "dco",
-                    onChange: () => setStatusFilter("dco"),
+                    checked: statusFilter === option.value,
+                    onChange: () => setStatusFilter(option.value),
                     className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: "DCO (Duty Carried Out)" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "radio",
-                    checked: statusFilter === "dnco",
-                    onChange: () => setStatusFilter("dnco"),
-                    className: "w-4 h-4 text-sky-500"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: "DNCO (Duty Not Carried Out)" })
-              ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: option.label })
+              ] }, option.value)),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -80337,7 +80331,7 @@ const TrainingRecordsExportView = ({
                     className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: "Pass" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: activeTrainingReportTemplate.overallResults.passLabel || "Satisfactory" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -80349,7 +80343,7 @@ const TrainingRecordsExportView = ({
                     className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: "Fail" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: activeTrainingReportTemplate.overallResults.failLabel || "Unsatisfactory" })
               ] })
             ] })
           ] }),
