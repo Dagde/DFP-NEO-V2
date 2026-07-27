@@ -77690,6 +77690,7 @@ const CourseProgressView = ({
   const [scoreCourse, setScoreCourse] = reactExports.useState("");
   const [activeAwardId, setActiveAwardId] = reactExports.useState("dux");
   const [isEditingAward, setIsEditingAward] = reactExports.useState(false);
+  const [showDeleteAwardConfirm, setShowDeleteAwardConfirm] = reactExports.useState(false);
   const [showRiskSettings, setShowRiskSettings] = reactExports.useState(false);
   const [showCourseScoreSettings, setShowCourseScoreSettings] = reactExports.useState(false);
   const [courseScoreEventTypeSelection, setCourseScoreEventTypeSelection] = reactExports.useState(null);
@@ -78176,11 +78177,14 @@ const CourseProgressView = ({
   };
   const removeAward = () => {
     if (awards.length <= 1) return;
-    if (!window.confirm(`Delete ${activeAward.name || "this award"}?`)) return;
+    setShowDeleteAwardConfirm(true);
+  };
+  const confirmRemoveAward = () => {
     const nextAwards = awards.filter((award) => award.id !== activeAward.id);
     setAwards(nextAwards);
     setActiveAwardId(nextAwards[0].id);
     setIsEditingAward(false);
+    setShowDeleteAwardConfirm(false);
   };
   const getDisplayName = (name) => {
     const activeCoursePattern = activeCourses.map((course) => course.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -78863,6 +78867,39 @@ const CourseProgressView = ({
             onClick: () => setShowCourseScoreSettings(false),
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
             children: "Done"
+          }
+        )
+      ] })
+    ] }) }),
+    showDeleteAwardConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[90] flex items-center justify-center animate-fade-in", onClick: () => setShowDeleteAwardConfirm(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-red-500/50 overflow-hidden", onClick: (event) => event.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-red-950/35", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-300", children: "Delete Award" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", children: "This removes the award setup from Course Rankings." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/50 px-3 py-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-500", children: "Award" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-semibold text-white", children: getAwardDisplayName(activeAward) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: "Delete this award configuration? Ranking results can still be rebuilt later by creating a new award and choosing the scoring events again." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setShowDeleteAwardConfirm(false),
+            className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: confirmRemoveAward,
+            className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md bg-red-600 text-white hover:bg-red-500 border border-red-400/60 shadow",
+            children: "Delete"
           }
         )
       ] })
