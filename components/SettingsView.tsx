@@ -194,24 +194,49 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
     });
 
     const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
+    const [elementGroupDrafts, setElementGroupDrafts] = useState<Record<string, string>>({});
 
     const currentDimension = activeTab === 'Elements' ? selectedElement : activeTab;
     const configuredElementGroups = ((phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {}) as Record<string, string>;
-    const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || 'Additional Elements';
+    const savedElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || 'Additional Elements';
+    const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
     const sectionOptions = Array.from(new Set([
         ...DEFAULT_SCORING_MATRIX_SECTIONS,
         ...Object.values(configuredElementGroups).map(value => String(value || '').trim()).filter(Boolean),
-        currentElementGroup,
+        savedElementGroup,
+        String(currentElementGroup || '').trim(),
     ]));
 
     const handleElementGroupChange = (element: string, group: string) => {
+        const nextGroup = String(group || '').trim();
         onUpdatePhraseBank({
             ...phraseBank,
             [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
                 ...configuredElementGroups,
-                [element]: group,
+                [element]: nextGroup || (DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || 'Additional Elements'),
             },
         } as PhraseBank);
+    };
+
+    const beginElementGroupDraft = (element: string) => {
+        setElementGroupDrafts(previous => ({
+            ...previous,
+            [element]: previous[element] ?? (configuredElementGroups[element] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || 'Additional Elements'),
+        }));
+    };
+
+    const updateElementGroupDraft = (element: string, group: string) => {
+        setElementGroupDrafts(previous => ({ ...previous, [element]: group }));
+    };
+
+    const commitElementGroupDraft = (element: string) => {
+        if (!(element in elementGroupDrafts)) return;
+        handleElementGroupChange(element, elementGroupDrafts[element]);
+        setElementGroupDrafts(previous => {
+            if (!(element in previous)) return previous;
+            const { [element]: _committedDraft, ...remainingDrafts } = previous;
+            return remainingDrafts;
+        });
     };
 
     const handlePhraseChange = (grade: number, index: number, value: string) => {
@@ -365,14 +390,23 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                                 <input
                                     type="text"
                                     value={currentElementGroup}
-                                    onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
-                                    onKeyDown={(event) => event.stopPropagation()}
+                                    onFocus={() => beginElementGroupDraft(selectedElement)}
+                                    onChange={(event) => updateElementGroupDraft(selectedElement, event.target.value)}
+                                    onBlur={() => commitElementGroupDraft(selectedElement)}
+                                    onKeyDownCapture={stopEditableKeyPropagation}
+                                    onKeyDown={stopEditableKeyPropagation}
                                     readOnly={readOnly}
                                     className="w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
                                 />
                                 <select
                                     value={sectionOptions.includes(currentElementGroup) ? currentElementGroup : ''}
-                                    onChange={(event) => handleElementGroupChange(selectedElement, event.target.value)}
+                                    onChange={(event) => {
+                                        setElementGroupDrafts(previous => {
+                                            const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
+                                            return remainingDrafts;
+                                        });
+                                        handleElementGroupChange(selectedElement, event.target.value);
+                                    }}
                                     disabled={readOnly}
                                     className="w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400"
                                 >

@@ -59722,21 +59722,43 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     return getConfiguredScoringMatrixElements$1(phraseBank);
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
+  const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
   const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] || {};
-  const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[selectedElement] || "Additional Elements";
+  const savedElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[selectedElement] || "Additional Elements";
+  const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
   const sectionOptions = Array.from(/* @__PURE__ */ new Set([
     ...DEFAULT_SCORING_MATRIX_SECTIONS$1,
     ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
-    currentElementGroup
+    savedElementGroup,
+    String(currentElementGroup || "").trim()
   ]));
   const handleElementGroupChange = (element, group) => {
+    const nextGroup = String(group || "").trim();
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
-        [element]: group
+        [element]: nextGroup || (DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[element] || "Additional Elements")
       }
+    });
+  };
+  const beginElementGroupDraft = (element) => {
+    setElementGroupDrafts((previous) => ({
+      ...previous,
+      [element]: previous[element] ?? (configuredElementGroups[element] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[element] || "Additional Elements")
+    }));
+  };
+  const updateElementGroupDraft = (element, group) => {
+    setElementGroupDrafts((previous) => ({ ...previous, [element]: group }));
+  };
+  const commitElementGroupDraft = (element) => {
+    if (!(element in elementGroupDrafts)) return;
+    handleElementGroupChange(element, elementGroupDrafts[element]);
+    setElementGroupDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
     });
   };
   const toggleEditMode = (grade) => {
@@ -59922,8 +59944,11 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
               {
                 type: "text",
                 value: currentElementGroup,
-                onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
-                onKeyDown: (event) => event.stopPropagation(),
+                onFocus: () => beginElementGroupDraft(selectedElement),
+                onChange: (event) => updateElementGroupDraft(selectedElement, event.target.value),
+                onBlur: () => commitElementGroupDraft(selectedElement),
+                onKeyDownCapture: stopEditableKeyPropagation,
+                onKeyDown: stopEditableKeyPropagation,
                 className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
               }
             ),
@@ -59931,7 +59956,13 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
               "select",
               {
                 value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
-                onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
+                onChange: (event) => {
+                  setElementGroupDrafts((previous) => {
+                    const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
+                    return remainingDrafts;
+                  });
+                  handleElementGroupChange(selectedElement, event.target.value);
+                },
                 className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
                 children: [
                   !sectionOptions.includes(currentElementGroup) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Custom section" }),
@@ -61323,21 +61354,43 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     return getConfiguredScoringMatrixElements(phraseBank);
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
+  const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
   const configuredElementGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] || {};
-  const currentElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || "Additional Elements";
+  const savedElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || "Additional Elements";
+  const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
   const sectionOptions = Array.from(/* @__PURE__ */ new Set([
     ...DEFAULT_SCORING_MATRIX_SECTIONS,
     ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
-    currentElementGroup
+    savedElementGroup,
+    String(currentElementGroup || "").trim()
   ]));
   const handleElementGroupChange = (element, group) => {
+    const nextGroup = String(group || "").trim();
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
         ...configuredElementGroups,
-        [element]: group
+        [element]: nextGroup || (DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements")
       }
+    });
+  };
+  const beginElementGroupDraft = (element) => {
+    setElementGroupDrafts((previous) => ({
+      ...previous,
+      [element]: previous[element] ?? (configuredElementGroups[element] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements")
+    }));
+  };
+  const updateElementGroupDraft = (element, group) => {
+    setElementGroupDrafts((previous) => ({ ...previous, [element]: group }));
+  };
+  const commitElementGroupDraft = (element) => {
+    if (!(element in elementGroupDrafts)) return;
+    handleElementGroupChange(element, elementGroupDrafts[element]);
+    setElementGroupDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
     });
   };
   const handlePhraseChange = (grade, index, value) => {
@@ -61486,8 +61539,11 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
             {
               type: "text",
               value: currentElementGroup,
-              onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
-              onKeyDown: (event) => event.stopPropagation(),
+              onFocus: () => beginElementGroupDraft(selectedElement),
+              onChange: (event) => updateElementGroupDraft(selectedElement, event.target.value),
+              onBlur: () => commitElementGroupDraft(selectedElement),
+              onKeyDownCapture: stopEditableKeyPropagation,
+              onKeyDown: stopEditableKeyPropagation,
               readOnly,
               className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 read-only:text-gray-400"
             }
@@ -61496,7 +61552,13 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
             "select",
             {
               value: sectionOptions.includes(currentElementGroup) ? currentElementGroup : "",
-              onChange: (event) => handleElementGroupChange(selectedElement, event.target.value),
+              onChange: (event) => {
+                setElementGroupDrafts((previous) => {
+                  const { [selectedElement]: _discardedDraft, ...remainingDrafts } = previous;
+                  return remainingDrafts;
+                });
+                handleElementGroupChange(selectedElement, event.target.value);
+              },
               disabled: readOnly,
               className: "w-full min-w-0 bg-gray-900 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 disabled:text-gray-400",
               children: [
