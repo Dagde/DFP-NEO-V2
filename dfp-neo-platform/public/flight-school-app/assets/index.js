@@ -116811,7 +116811,7 @@ ${conflictLines.join("\n")}${moreText}`,
       cancelledCount
     );
   };
-  const handleConfirmPublish = () => {
+  const handleConfirmPublish = async () => {
     setShowPublishConfirm(false);
     const seenPublishIds = /* @__PURE__ */ new Set();
     const dedupedBuildEvents = nextDayBuildEvents.filter((e) => {
@@ -117019,23 +117019,40 @@ ${conflictLines.join("\n")}${moreText}`,
       loadingSnapshotDates.current.delete(snapshotKey);
       setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, buildDfpDate])].sort((a, b) => b.localeCompare(a)));
       cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-      fetch(`${apiBase}/daily-snapshot/save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(snapshotPayload)
-      }).then((res) => res.json()).then((result) => {
-        if (result.success) {
-          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
-          loadedSnapshotDates.current.add(snapshotKey);
-          cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-        } else {
-          console.warn(`⚠️ [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
+      try {
+        const saveResponse = await fetch(`${apiBase}/daily-snapshot/save`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(snapshotPayload)
+        });
+        const result = await saveResponse.json().catch(() => ({}));
+        if (!saveResponse.ok || !result.success) {
+          throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
         }
-      }).catch((err) => {
+        console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
+        loadedSnapshotDates.current.add(snapshotKey);
+        cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
+      } catch (err) {
         console.warn(`⚠️ [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
-      });
+        await showDarkAlert2(
+          `The DFP was built, but it was not saved to the published DFP database.
+
+${err instanceof Error ? err.message : String(err)}
+
+Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
+          "Publish Save Failed",
+          "error"
+        );
+        return;
+      }
     } else if (hasSeedData) {
       console.log(`⚠️ [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
+      await showDarkAlert2(
+        "This DFP contains seed/demo events, so it was not saved as a real published DFP.",
+        "Publish Save Blocked",
+        "error"
+      );
+      return;
     }
     setDate(buildDfpDate);
     setNextDayBuildEvents([]);

@@ -37384,7 +37384,7 @@ const App: React.FC = () => {
             'Active:', activeCount, 'Cancelled (OPS_PAUSE):', cancelledCount);
     };
 
-    const handleConfirmPublish = () => {
+    const handleConfirmPublish = async () => {
         // Close the confirmation flyout immediately
         setShowPublishConfirm(false);
 
@@ -37650,27 +37650,37 @@ const App: React.FC = () => {
                     .sort((a, b) => b.localeCompare(a))
             ));
             cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-            fetch(`${apiBase}/daily-snapshot/save`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(snapshotPayload),
-            })
-            .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
-                    // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
-                    loadedSnapshotDates.current.add(snapshotKey);
-                    cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
-                } else {
-                    console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
+            try {
+                const saveResponse = await fetch(`${apiBase}/daily-snapshot/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(snapshotPayload),
+                });
+                const result = await saveResponse.json().catch(() => ({}));
+                if (!saveResponse.ok || !result.success) {
+                    throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
                 }
-            })
-            .catch(err => {
+                console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
+                // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
+                loadedSnapshotDates.current.add(snapshotKey);
+                cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
+            } catch (err) {
                 console.warn(`\u26A0\uFE0F [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
-            });
+                await showDarkAlert(
+                    `The DFP was built, but it was not saved to the published DFP database.\n\n${err instanceof Error ? err.message : String(err)}\n\nDo not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
+                    'Publish Save Failed',
+                    'error'
+                );
+                return;
+            }
         } else if (hasSeedData) {
             console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
+            await showDarkAlert(
+                'This DFP contains seed/demo events, so it was not saved as a real published DFP.',
+                'Publish Save Blocked',
+                'error'
+            );
+            return;
         }
         // ─────────────────────────────────────────────────────────────────────
 
