@@ -77682,7 +77682,8 @@ const CourseProgressView = ({
   courses,
   onUpdateGradDate,
   onUpdateStartDate,
-  trainingReportName = "Training Report"
+  trainingReportName = "Training Report",
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [showFullGraph, setShowFullGraph] = reactExports.useState(false);
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
@@ -77690,6 +77691,8 @@ const CourseProgressView = ({
   const [activeAwardId, setActiveAwardId] = reactExports.useState("dux");
   const [isEditingAward, setIsEditingAward] = reactExports.useState(false);
   const [showRiskSettings, setShowRiskSettings] = reactExports.useState(false);
+  const [showCourseScoreSettings, setShowCourseScoreSettings] = reactExports.useState(false);
+  const [courseScoreEventTypeSelection, setCourseScoreEventTypeSelection] = reactExports.useState(null);
   const [riskThresholds, setRiskThresholds] = reactExports.useState({
     onTrackMax: 3.5,
     watchMax: 4,
@@ -77825,6 +77828,48 @@ const CourseProgressView = ({
     if (id && !isUuidLike(id)) return id;
     return "";
   };
+  const eventDetailByCode = reactExports.useMemo(() => {
+    const details = /* @__PURE__ */ new Map();
+    traineeLMPs.forEach((lmp) => {
+      lmp.forEach((item) => {
+        [getValidEventCode(item), item.code, item.id].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).forEach((key) => {
+          if (!isUuidLike(key) && !details.has(key)) details.set(key, item);
+        });
+      });
+    });
+    return details;
+  }, [traineeLMPs]);
+  const courseScoreEventTypeLabels = reactExports.useMemo(() => ({
+    flight: "Flight",
+    simulator: resourceDisplayNames.ftd || "FTD",
+    proceduralTrainer: resourceDisplayNames.cpt || "CPT",
+    tutorial: "Tutorial",
+    massBrief: "Mass Brief",
+    groundSchoolAssessment: "Ground School Assessment",
+    groundSchool: "Ground School",
+    academics: "Academics",
+    other: "Other"
+  }), [resourceDisplayNames]);
+  const getCourseScoreEventType = (eventCode2) => {
+    const code = String(eventCode2 || "").trim().toUpperCase();
+    const item = eventDetailByCode.get(code);
+    const methodText = [
+      ...item?.methodOfDelivery || [],
+      ...item?.methodOfAssessment || [],
+      item?.type,
+      item?.module,
+      item?.eventDescription
+    ].join(" ").toUpperCase();
+    if (/\bMB\d*\b|MASS\s*BRIEF/.test(code) || /MASS\s*BRIEF/.test(methodText)) return "massBrief";
+    if (/\bTUT\d*\b|TUTORIAL/.test(code) || /TUTORIAL/.test(methodText)) return "tutorial";
+    if (/\bCPT\b|PROCEDURAL/.test(code) || /\bCPT\b|PROCEDURAL/.test(methodText)) return "proceduralTrainer";
+    if (item?.type === "Flight") return "flight";
+    if (item?.type === "FTD") return "simulator";
+    if (item?.type === "Academics") return "academics";
+    if (item?.type === "Ground School" && (item.assessmentRequired || methodText.includes("ASSESS"))) return "groundSchoolAssessment";
+    if (item?.type === "Ground School") return "groundSchool";
+    return "other";
+  };
   const awardEventOptions = reactExports.useMemo(() => {
     if (!activeAward) return [];
     const eligibleTrainees = activeTrainees.filter((trainee) => activeAward.course === "all" || trainee.course === activeAward.course);
@@ -77865,7 +77910,7 @@ const CourseProgressView = ({
   const scoreCourseTrainees = reactExports.useMemo(() => {
     return activeTrainees.filter((trainee) => trainee.course === scoreCourse);
   }, [activeTrainees, scoreCourse]);
-  const scoredEvents = reactExports.useMemo(() => {
+  const allScoredEvents = reactExports.useMemo(() => {
     const eventSet = /* @__PURE__ */ new Set();
     const traineeNames = new Set(scoreCourseTrainees.map((trainee) => trainee.fullName || trainee.name));
     pt051ScoreRecords.forEach((record) => {
@@ -77878,6 +77923,40 @@ const CourseProgressView = ({
       return a.localeCompare(b);
     });
   }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
+  const courseScoreEventTypeOptions = reactExports.useMemo(() => {
+    const typeCounts = /* @__PURE__ */ new Map();
+    allScoredEvents.forEach((eventCode2) => {
+      const key = getCourseScoreEventType(eventCode2);
+      typeCounts.set(key, (typeCounts.get(key) || 0) + 1);
+    });
+    const order = [
+      "flight",
+      "simulator",
+      "proceduralTrainer",
+      "tutorial",
+      "massBrief",
+      "groundSchoolAssessment",
+      "groundSchool",
+      "academics",
+      "other"
+    ];
+    return order.filter((key) => typeCounts.has(key)).map((key) => ({
+      key,
+      label: courseScoreEventTypeLabels[key],
+      count: typeCounts.get(key) || 0
+    }));
+  }, [allScoredEvents, courseScoreEventTypeLabels, eventDetailByCode]);
+  const selectedCourseScoreEventTypes = reactExports.useMemo(() => courseScoreEventTypeSelection === null ? courseScoreEventTypeOptions.map((option) => option.key) : courseScoreEventTypeSelection, [courseScoreEventTypeOptions, courseScoreEventTypeSelection]);
+  const scoredEvents = reactExports.useMemo(() => {
+    const selectedTypes = new Set(selectedCourseScoreEventTypes);
+    return allScoredEvents.filter((eventCode2) => selectedTypes.has(getCourseScoreEventType(eventCode2)));
+  }, [allScoredEvents, selectedCourseScoreEventTypes, eventDetailByCode]);
+  const selectedCourseScoreEventTypeSummary = reactExports.useMemo(() => {
+    if (courseScoreEventTypeOptions.length === 0) return "No scored event types";
+    if (selectedCourseScoreEventTypes.length === courseScoreEventTypeOptions.length) return "All event types";
+    if (selectedCourseScoreEventTypes.length === 0) return "No event types";
+    return courseScoreEventTypeOptions.filter((option) => selectedCourseScoreEventTypes.includes(option.key)).map((option) => option.label).join(", ");
+  }, [courseScoreEventTypeOptions, selectedCourseScoreEventTypes]);
   const getLatestScoreForEvent = (trainee, eventCode2) => {
     const traineeName = trainee.fullName || trainee.name;
     return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === eventCode2).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
@@ -77978,6 +78057,16 @@ const CourseProgressView = ({
     setAwards((prev) => prev.map(
       (award) => award.id === activeAward.id ? { ...award, includeAllScoredEvents: selected, criteria: selected ? award.criteria : award.criteria.map((criterion) => ({ ...criterion, enabled: false })) } : award
     ));
+  };
+  const setAllCourseScoreEventTypes = (selected) => {
+    setCourseScoreEventTypeSelection(selected ? null : []);
+  };
+  const toggleCourseScoreEventType = (key, selected) => {
+    setCourseScoreEventTypeSelection((prev) => {
+      const current = prev === null ? courseScoreEventTypeOptions.map((option) => option.key) : prev;
+      const next = selected ? Array.from(/* @__PURE__ */ new Set([...current, key])) : current.filter((optionKey) => optionKey !== key);
+      return next.length === courseScoreEventTypeOptions.length ? null : next;
+    });
   };
   const getCourseColor = (courseName) => {
     return activeCourses.find((course) => course.name === courseName)?.color || courseColors[courseName] || "";
@@ -78224,11 +78313,24 @@ const CourseProgressView = ({
                             className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
                             children: "Export CSV"
                           }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => setShowCourseScoreSettings(true),
+                            className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
+                            children: "Settings"
+                          }
                         )
                       ] })
                     ]
                   }
                 ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 bg-gray-900/35 px-4 py-2 text-[11px] text-gray-400", children: [
+                  "Included event types: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: selectedCourseScoreEventTypeSummary })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "sticky left-0 z-10 bg-gray-900/95 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-300 min-w-56", children: "Trainee" }),
@@ -78556,6 +78658,84 @@ const CourseProgressView = ({
           children: "Done"
         }
       ) })
+    ] }) }),
+    showCourseScoreSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowCourseScoreSettings(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (event) => event.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Course Score Event Types" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
+          "Choose which scored event types are included for ",
+          scoreCourse || "this course",
+          "."
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4", children: [
+        courseScoreEventTypeOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: courseScoreEventTypeOptions.map((option) => {
+          const checked = selectedCourseScoreEventTypes.includes(option.key);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "label",
+            {
+              className: `flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm transition ${checked ? "border-sky-400/50 bg-sky-500/15 text-sky-50" : "border-gray-700 bg-gray-900/45 text-gray-300"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: option.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400", children: [
+                    option.count,
+                    " event",
+                    option.count === 1 ? "" : "s"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      checked,
+                      onChange: (event) => toggleCourseScoreEventType(option.key, event.target.checked),
+                      className: "h-4 w-4 rounded border-gray-500 bg-gray-900 accent-sky-500"
+                    }
+                  )
+                ] })
+              ]
+            },
+            option.key
+          );
+        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/45 px-3 py-6 text-center text-sm text-gray-400", children: "No saved scored events are available for this course." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/40 px-3 py-2 text-xs text-gray-300", children: [
+          "Current selection: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-100", children: selectedCourseScoreEventTypeSummary })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex flex-wrap justify-end gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setAllCourseScoreEventTypes(true),
+            className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+            children: [
+              "Select",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "All"
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setAllCourseScoreEventTypes(false),
+            className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+            children: "Clear"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setShowCourseScoreSettings(false),
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+            children: "Done"
+          }
+        )
+      ] })
     ] }) })
   ] }) });
 };
@@ -120494,7 +120674,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             traineeLMPs,
             onUpdateGradDate: handleUpdateGradDate,
             onUpdateStartDate: handleUpdateStartDate,
-            trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName
+            trainingReportName: trainingReportTemplate.displayName || trainingReportTemplate.genericName,
+            resourceDisplayNames
           }
         );
       case "TrainingRecords":

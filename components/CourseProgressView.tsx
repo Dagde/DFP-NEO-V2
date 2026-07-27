@@ -7,6 +7,7 @@ import CourseDataWindow from './CourseDataWindow';
 import FullPageProgressGraph from './FullPageProgressGraph';
 import { logAudit } from '../utils/auditLogger';
 import { CourseRiskThresholds } from '../utils/courseProgressMetrics';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode = (value?: string): boolean =>
@@ -22,7 +23,19 @@ interface CourseProgressViewProps {
     onUpdateGradDate: (courseName: string, newGradDate: string) => void;
     onUpdateStartDate: (courseName: string, newStartDate: string) => void;
     trainingReportName?: string;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
+
+type CourseScoreEventTypeKey =
+    | 'flight'
+    | 'simulator'
+    | 'proceduralTrainer'
+    | 'tutorial'
+    | 'massBrief'
+    | 'groundSchoolAssessment'
+    | 'groundSchool'
+    | 'academics'
+    | 'other';
 
 type AwardCriterion = {
     id: string;
@@ -50,7 +63,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     courses,
     onUpdateGradDate,
     onUpdateStartDate,
-    trainingReportName = 'Training Report'
+    trainingReportName = 'Training Report',
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
     const [showFullGraph, setShowFullGraph] = useState(false);
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
@@ -58,6 +72,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [activeAwardId, setActiveAwardId] = useState('dux');
     const [isEditingAward, setIsEditingAward] = useState(false);
     const [showRiskSettings, setShowRiskSettings] = useState(false);
+    const [showCourseScoreSettings, setShowCourseScoreSettings] = useState(false);
+    const [courseScoreEventTypeSelection, setCourseScoreEventTypeSelection] = useState<CourseScoreEventTypeKey[] | null>(null);
     const [riskThresholds, setRiskThresholds] = useState<CourseRiskThresholds>({
         onTrackMax: 3.5,
         watchMax: 4.0,
@@ -241,6 +257,55 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return '';
     };
 
+    const eventDetailByCode = useMemo(() => {
+        const details = new Map<string, SyllabusItemDetail>();
+        traineeLMPs.forEach(lmp => {
+            lmp.forEach(item => {
+                [getValidEventCode(item), item.code, item.id]
+                    .map(value => String(value || '').trim().toUpperCase())
+                    .filter(Boolean)
+                    .forEach(key => {
+                        if (!isUuidLike(key) && !details.has(key)) details.set(key, item);
+                    });
+            });
+        });
+        return details;
+    }, [traineeLMPs]);
+
+    const courseScoreEventTypeLabels = useMemo<Record<CourseScoreEventTypeKey, string>>(() => ({
+        flight: 'Flight',
+        simulator: resourceDisplayNames.ftd || 'FTD',
+        proceduralTrainer: resourceDisplayNames.cpt || 'CPT',
+        tutorial: 'Tutorial',
+        massBrief: 'Mass Brief',
+        groundSchoolAssessment: 'Ground School Assessment',
+        groundSchool: 'Ground School',
+        academics: 'Academics',
+        other: 'Other',
+    }), [resourceDisplayNames]);
+
+    const getCourseScoreEventType = (eventCode: string): CourseScoreEventTypeKey => {
+        const code = String(eventCode || '').trim().toUpperCase();
+        const item = eventDetailByCode.get(code);
+        const methodText = [
+            ...(item?.methodOfDelivery || []),
+            ...(item?.methodOfAssessment || []),
+            item?.type,
+            item?.module,
+            item?.eventDescription,
+        ].join(' ').toUpperCase();
+
+        if (/\bMB\d*\b|MASS\s*BRIEF/.test(code) || /MASS\s*BRIEF/.test(methodText)) return 'massBrief';
+        if (/\bTUT\d*\b|TUTORIAL/.test(code) || /TUTORIAL/.test(methodText)) return 'tutorial';
+        if (/\bCPT\b|PROCEDURAL/.test(code) || /\bCPT\b|PROCEDURAL/.test(methodText)) return 'proceduralTrainer';
+        if (item?.type === 'Flight') return 'flight';
+        if (item?.type === 'FTD') return 'simulator';
+        if (item?.type === 'Academics') return 'academics';
+        if (item?.type === 'Ground School' && (item.assessmentRequired || methodText.includes('ASSESS'))) return 'groundSchoolAssessment';
+        if (item?.type === 'Ground School') return 'groundSchool';
+        return 'other';
+    };
+
     const awardEventOptions = useMemo(() => {
         if (!activeAward) return [];
 
@@ -290,7 +355,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return activeTrainees.filter(trainee => trainee.course === scoreCourse);
     }, [activeTrainees, scoreCourse]);
 
-    const scoredEvents = useMemo(() => {
+    const allScoredEvents = useMemo(() => {
         const eventSet = new Set<string>();
         const traineeNames = new Set(scoreCourseTrainees.map(trainee => trainee.fullName || trainee.name));
 
@@ -305,6 +370,55 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             return a.localeCompare(b);
         });
     }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
+
+    const courseScoreEventTypeOptions = useMemo(() => {
+        const typeCounts = new Map<CourseScoreEventTypeKey, number>();
+        allScoredEvents.forEach(eventCode => {
+            const key = getCourseScoreEventType(eventCode);
+            typeCounts.set(key, (typeCounts.get(key) || 0) + 1);
+        });
+
+        const order: CourseScoreEventTypeKey[] = [
+            'flight',
+            'simulator',
+            'proceduralTrainer',
+            'tutorial',
+            'massBrief',
+            'groundSchoolAssessment',
+            'groundSchool',
+            'academics',
+            'other',
+        ];
+
+        return order
+            .filter(key => typeCounts.has(key))
+            .map(key => ({
+                key,
+                label: courseScoreEventTypeLabels[key],
+                count: typeCounts.get(key) || 0,
+            }));
+    }, [allScoredEvents, courseScoreEventTypeLabels, eventDetailByCode]);
+
+    const selectedCourseScoreEventTypes = useMemo(() => (
+        courseScoreEventTypeSelection === null
+            ? courseScoreEventTypeOptions.map(option => option.key)
+            : courseScoreEventTypeSelection
+    ), [courseScoreEventTypeOptions, courseScoreEventTypeSelection]);
+
+    const scoredEvents = useMemo(() => {
+        const selectedTypes = new Set(selectedCourseScoreEventTypes);
+        return allScoredEvents.filter(eventCode => selectedTypes.has(getCourseScoreEventType(eventCode)));
+    }, [allScoredEvents, selectedCourseScoreEventTypes, eventDetailByCode]);
+
+    const selectedCourseScoreEventTypeSummary = useMemo(() => {
+        if (courseScoreEventTypeOptions.length === 0) return 'No scored event types';
+        if (selectedCourseScoreEventTypes.length === courseScoreEventTypeOptions.length) return 'All event types';
+        if (selectedCourseScoreEventTypes.length === 0) return 'No event types';
+        return courseScoreEventTypeOptions
+            .filter(option => selectedCourseScoreEventTypes.includes(option.key))
+            .map(option => option.label)
+            .join(', ');
+    }, [courseScoreEventTypeOptions, selectedCourseScoreEventTypes]);
 
     const getLatestScoreForEvent = (trainee: Trainee, eventCode: string): { score: number; date: string } | undefined => {
         const traineeName = trainee.fullName || trainee.name;
@@ -463,6 +577,20 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             ? { ...award, includeAllScoredEvents: selected, criteria: selected ? award.criteria : award.criteria.map(criterion => ({ ...criterion, enabled: false })) }
             : award
         ));
+    };
+
+    const setAllCourseScoreEventTypes = (selected: boolean) => {
+        setCourseScoreEventTypeSelection(selected ? null : []);
+    };
+
+    const toggleCourseScoreEventType = (key: CourseScoreEventTypeKey, selected: boolean) => {
+        setCourseScoreEventTypeSelection(prev => {
+            const current = prev === null ? courseScoreEventTypeOptions.map(option => option.key) : prev;
+            const next = selected
+                ? Array.from(new Set([...current, key]))
+                : current.filter(optionKey => optionKey !== key);
+            return next.length === courseScoreEventTypeOptions.length ? null : next;
+        });
     };
 
     const getCourseColor = (courseName: string) => {
@@ -721,7 +849,17 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                             >
                                                 Export CSV
                                             </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCourseScoreSettings(true)}
+                                                className="px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70"
+                                            >
+                                                Settings
+                                            </button>
                                         </div>
+                                    </div>
+                                    <div className="border-b border-gray-700 bg-gray-900/35 px-4 py-2 text-[11px] text-gray-400">
+                                        Included event types: <span className="font-semibold text-gray-200">{selectedCourseScoreEventTypeSummary}</span>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full text-sm">
@@ -1009,6 +1147,76 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => setShowRiskSettings(false)}
+                                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {showCourseScoreSettings && (
+                        <div className="fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in" onClick={() => setShowCourseScoreSettings(false)}>
+                            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50" onClick={event => event.stopPropagation()}>
+                                <div className="p-4 border-b border-gray-700 bg-sky-900/20">
+                                    <h2 className="text-xl font-bold text-sky-400">Course Score Event Types</h2>
+                                    <p className="text-xs text-gray-400 mt-1">Choose which scored event types are included for {scoreCourse || 'this course'}.</p>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    {courseScoreEventTypeOptions.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {courseScoreEventTypeOptions.map(option => {
+                                                const checked = selectedCourseScoreEventTypes.includes(option.key);
+                                                return (
+                                                    <label
+                                                        key={option.key}
+                                                        className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm transition ${
+                                                            checked
+                                                                ? 'border-sky-400/50 bg-sky-500/15 text-sky-50'
+                                                                : 'border-gray-700 bg-gray-900/45 text-gray-300'
+                                                        }`}
+                                                    >
+                                                        <span className="font-semibold">{option.label}</span>
+                                                        <span className="flex items-center gap-3">
+                                                            <span className="text-xs text-gray-400">{option.count} event{option.count === 1 ? '' : 's'}</span>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={event => toggleCourseScoreEventType(option.key, event.target.checked)}
+                                                                className="h-4 w-4 rounded border-gray-500 bg-gray-900 accent-sky-500"
+                                                            />
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-md border border-gray-700 bg-gray-900/45 px-3 py-6 text-center text-sm text-gray-400">
+                                            No saved scored events are available for this course.
+                                        </div>
+                                    )}
+                                    <div className="rounded-md border border-gray-700 bg-gray-900/40 px-3 py-2 text-xs text-gray-300">
+                                        Current selection: <span className="font-semibold text-gray-100">{selectedCourseScoreEventTypeSummary}</span>
+                                    </div>
+                                </div>
+                                <div className="px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex flex-wrap justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAllCourseScoreEventTypes(true)}
+                                        className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                    >
+                                        Select<br />All
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAllCourseScoreEventTypes(false)}
+                                        className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCourseScoreSettings(false)}
                                         className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                     >
                                         Done

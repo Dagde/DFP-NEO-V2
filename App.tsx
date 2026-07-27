@@ -42431,6 +42431,7 @@ appliedUpdates.forEach(update => {
                             onUpdateGradDate={handleUpdateGradDate}
                             onUpdateStartDate={handleUpdateStartDate}
                             trainingReportName={trainingReportTemplate.displayName || trainingReportTemplate.genericName}
+                            resourceDisplayNames={resourceDisplayNames}
                         />;
             case 'TrainingRecords':
                 return <TrainingRecordsView
