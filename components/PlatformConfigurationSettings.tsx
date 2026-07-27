@@ -1805,6 +1805,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
   const [unitCallsignDrafts, setUnitCallsignDrafts] = useState<Record<string, string>>({});
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
+  const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
@@ -3372,6 +3373,118 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     };
   };
 
+  const applyTrainingReportTextDraftsToTemplate = (
+    sourceTemplate: TrainingReportTemplate,
+    drafts: Record<string, string>,
+  ): TrainingReportTemplate => {
+    let nextTemplate = normaliseTrainingReportTemplate(sourceTemplate);
+    Object.entries(drafts).forEach(([draftKey, rawValue]) => {
+      const value = String(rawValue ?? '').slice(0, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
+      const [scope, first, second] = draftKey.split(':');
+
+      if (scope === 'module' && first && second === 'title' && first in nextTemplate.modules) {
+        nextTemplate = normaliseTrainingReportTemplate({
+          ...nextTemplate,
+          modules: {
+            ...nextTemplate.modules,
+            [first]: {
+              ...nextTemplate.modules[first as keyof TrainingReportTemplate['modules']],
+              title: value,
+            },
+          },
+        });
+        return;
+      }
+
+      if (scope === 'field' && first && second && first in nextTemplate.modules) {
+        const moduleKey = first as 'overview' | 'overallAssessment' | 'comments';
+        if (!('fields' in nextTemplate.modules[moduleKey])) return;
+        nextTemplate = normaliseTrainingReportTemplate({
+          ...nextTemplate,
+          modules: {
+            ...nextTemplate.modules,
+            [moduleKey]: {
+              ...nextTemplate.modules[moduleKey],
+              fields: {
+                ...nextTemplate.modules[moduleKey].fields,
+                [second]: value,
+              },
+            },
+          },
+        });
+        return;
+      }
+
+      if (scope === 'completion' && first) {
+        nextTemplate = normaliseTrainingReportTemplate({
+          ...nextTemplate,
+          completionResults: nextTemplate.completionResults.map((option) => (
+            option.code === first ? { ...option, label: value } : option
+          )),
+        });
+        return;
+      }
+
+      if (scope === 'overall' && first && first in nextTemplate.overallResults) {
+        nextTemplate = normaliseTrainingReportTemplate({
+          ...nextTemplate,
+          overallResults: {
+            ...nextTemplate.overallResults,
+            [first]: value,
+          },
+        });
+        return;
+      }
+
+      if (scope === 'grade' && first) {
+        const gradeValue = Number(first);
+        if (!Number.isFinite(gradeValue)) return;
+        nextTemplate = normaliseTrainingReportTemplate({
+          ...nextTemplate,
+          grades: {
+            ...nextTemplate.grades,
+            options: nextTemplate.grades.options.map((option) => (
+              option.value === gradeValue
+                ? { ...option, label: value, enabled: value.trim().length > 0 }
+                : option
+            )),
+          },
+        });
+      }
+    });
+    return nextTemplate;
+  };
+
+  const applyTrainingReportTextDraftsToConfig = (
+    sourceConfig: PlatformConfig,
+    drafts: Record<string, string>,
+  ): PlatformConfig => {
+    if (activeTrainingReportUnitIndex < 0 || Object.keys(drafts).length === 0) return sourceConfig;
+    const targetUnit = sourceConfig.units[activeTrainingReportUnitIndex];
+    if (!targetUnit) return sourceConfig;
+    const orgSettings = sourceConfig.organisations[0]?.settings || {};
+    const currentTemplate = normaliseTrainingReportTemplate(
+      targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
+      targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null,
+    );
+    const nextTemplate = applyTrainingReportTextDraftsToTemplate(currentTemplate, drafts);
+
+    return {
+      ...sourceConfig,
+      units: sourceConfig.units.map((unit, index) => index === activeTrainingReportUnitIndex
+        ? {
+            ...unit,
+            settings: {
+              ...(unit.settings || {}),
+              trainingReportTemplate: nextTemplate,
+              trainingReportTerminology: normaliseTrainingReportTerminology({ name: nextTemplate.displayName }),
+              trainingReportPhraseBank,
+            },
+          }
+        : unit),
+    };
+  };
+
   const updateTrainingReportNameDraft = (
     key: 'genericName' | 'displayName',
     value: string,
@@ -3400,10 +3513,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
+  const beginTrainingReportTextDraft = (draftKey: string, value: string) => {
+    setTrainingReportTextDrafts((previous) => ({
+      ...previous,
+      [draftKey]: previous[draftKey] ?? value,
+    }));
+  };
+
+  const updateTrainingReportTextDraft = (draftKey: string, value: string, maxLength = TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH) => {
+    setTrainingReportTextDrafts((previous) => ({
+      ...previous,
+      [draftKey]: value.slice(0, maxLength),
+    }));
+  };
+
+  const commitTrainingReportTextDraft = (draftKey: string) => {
+    if (!(draftKey in trainingReportTextDrafts)) return;
+    setConfig((previous) => applyTrainingReportTextDraftsToConfig(previous, { [draftKey]: trainingReportTextDrafts[draftKey] ?? '' }));
+    setTrainingReportTextDrafts((previous) => {
+      if (!(draftKey in previous)) return previous;
+      const { [draftKey]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+  };
+
+  const getTrainingReportTextDraftProps = (
+    draftKey: string,
+    value: string,
+    maxLength = TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
+  ) => ({
+    value: trainingReportTextDrafts[draftKey] ?? value,
+    onChange: (nextValue: string) => updateTrainingReportTextDraft(draftKey, nextValue, maxLength),
+    onFocus: () => beginTrainingReportTextDraft(draftKey, value),
+    onBlur: () => commitTrainingReportTextDraft(draftKey),
+  });
+
   const saveTrainingReportTemplateSettings = async () => {
-    const configToSave = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
+    const configWithNameDrafts = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
+    const configToSave = applyTrainingReportTextDraftsToConfig(configWithNameDrafts, trainingReportTextDrafts);
     setConfig(configToSave);
     setTrainingReportNameDrafts({});
+    setTrainingReportTextDrafts({});
     const saved = await save(configToSave, 'platform-training-report-template', {
       reloadPage: false,
       successMessage: 'Training Report settings saved.',
@@ -8549,10 +8699,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
                 <Field
                   label="Overview Module"
-                  value={trainingReportTemplate.modules.overview.title}
+                  {...getTrainingReportTextDraftProps('module:overview:title', trainingReportTemplate.modules.overview.title)}
                   disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                  onChange={(value) => updateTrainingReportModule('overview', { title: value })}
                   info="Renames the module that displays the event identity, date, timing, resource and assessor context."
                 />
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -8560,10 +8709,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <Field
                       key={key}
                       label={humaniseFieldKey(key)}
-                      value={value}
+                      {...getTrainingReportTextDraftProps(`field:overview:${key}`, value)}
                       disabled={!canEditTrainingReportTemplate}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                      onChange={(nextValue) => updateTrainingReportModuleFields('overview', key, nextValue)}
                       info={TRAINING_REPORT_OVERVIEW_FIELD_INFO[key] || 'Renames this overview field in the training report.'}
                     />
                   ))}
@@ -8586,10 +8734,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
                 <Field
                   label="Overall Module"
-                  value={trainingReportTemplate.modules.overallAssessment.title}
+                  {...getTrainingReportTextDraftProps('module:overallAssessment:title', trainingReportTemplate.modules.overallAssessment.title)}
                   disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                  onChange={(value) => updateTrainingReportModule('overallAssessment', { title: value })}
                   info="Renames the module that captures completion result, whole-event grade, pass/fail outcome and ground school assessment."
                 />
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -8597,10 +8744,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <Field
                       key={key}
                       label={humaniseFieldKey(key)}
-                      value={value}
+                      {...getTrainingReportTextDraftProps(`field:overallAssessment:${key}`, value)}
                       disabled={!canEditTrainingReportTemplate}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                      onChange={(nextValue) => updateTrainingReportModuleFields('overallAssessment', key, nextValue)}
                       info={TRAINING_REPORT_OVERALL_FIELD_INFO[key] || 'Renames this overall assessment field in the training report.'}
                     />
                   ))}
@@ -8618,10 +8764,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
                 <Field
                   label="Comments Module"
-                  value={trainingReportTemplate.modules.comments.title}
+                  {...getTrainingReportTextDraftProps('module:comments:title', trainingReportTemplate.modules.comments.title)}
                   disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                  onChange={(value) => updateTrainingReportModule('comments', { title: value })}
                   info="Renames the narrative module used for assessor notes, weather/context, profile notes and the overall narrative."
                 />
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -8629,10 +8774,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <Field
                       key={key}
                       label={humaniseFieldKey(key)}
-                      value={value}
+                      {...getTrainingReportTextDraftProps(`field:comments:${key}`, value)}
                       disabled={!canEditTrainingReportTemplate}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                      onChange={(nextValue) => updateTrainingReportModuleFields('comments', key, nextValue)}
                       info={TRAINING_REPORT_COMMENT_FIELD_INFO[key] || 'Renames this narrative field in the training report.'}
                     />
                   ))}
@@ -8658,10 +8802,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded border border-gray-700 bg-gray-900/60 p-3">
                 <Field
                   label="Assessment Matrix Module"
-                  value={trainingReportTemplate.modules.assessmentMatrix.title}
+                  {...getTrainingReportTextDraftProps('module:assessmentMatrix:title', trainingReportTemplate.modules.assessmentMatrix.title)}
                   disabled={!canEditTrainingReportTemplate}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                  onChange={(value) => updateTrainingReportModule('assessmentMatrix', { title: value })}
                   info="Assessment categories and descriptors remain controlled by the Scoring Matrix."
                 />
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.assessmentMatrix.title}>
@@ -8710,10 +8853,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         DPCO: 'Mission Partially Completed Text',
                         DNCO: 'Mission Not Completed Text',
                       }[option.code]}
-                      value={optionEnabled ? option.label : ''}
+                      {...getTrainingReportTextDraftProps(`completion:${option.code}:label`, optionEnabled ? option.label : '')}
                       disabled={!canEditTrainingReportTemplate || !optionEnabled}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                      onChange={(value) => updateTrainingReportCompletionResult(option.code, { label: value })}
                       info={{
                         DCO: 'Text displayed when the mission or training event was completed. The wording can change, but the outcome remains the completed-mission result.',
                         DPCO: 'Text displayed when the mission was partially completed. Use this when an event occurred but did not fully satisfy the planned mission or training requirement.',
@@ -8725,22 +8867,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               })}
               <Field
                 label="Satisfactory Label"
-                value={trainingReportTemplate.overallResults.passLabel}
+                {...getTrainingReportTextDraftProps('overall:passLabel', trainingReportTemplate.overallResults.passLabel)}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                onChange={(value) => updateTrainingReportTemplate((template) => ({
-                  overallResults: { ...template.overallResults, passLabel: value },
-                }))}
                 info="Text displayed when the assessment outcome is satisfactory. Organisations may use wording such as Satisfactory, Competent, Achieved or Pass."
               />
               <Field
                 label="Unsatisfactory Label"
-                value={trainingReportTemplate.overallResults.failLabel}
+                {...getTrainingReportTextDraftProps('overall:failLabel', trainingReportTemplate.overallResults.failLabel)}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                onChange={(value) => updateTrainingReportTemplate((template) => ({
-                  overallResults: { ...template.overallResults, failLabel: value },
-                }))}
                 info="Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               />
               <div className="flex flex-col lg:row-span-2">
@@ -8782,12 +8918,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <Field
                 label="Repeated Low-performance"
                 labelNoWrap
-                value={trainingReportTemplate.overallResults.doubleRepeatLabel}
+                {...getTrainingReportTextDraftProps('overall:doubleRepeatLabel', trainingReportTemplate.overallResults.doubleRepeatLabel)}
                 disabled={!canEditTrainingReportTemplate}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                onChange={(value) => updateTrainingReportTemplate((template) => ({
-                  overallResults: { ...template.overallResults, doubleRepeatLabel: value },
-                }))}
                 info="Text shown when a configured repeat rule forces the event into a repeat or fail state."
               />
             </div>
@@ -8820,13 +8953,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <td className="px-2 py-2">
                         <input
                           className={fieldClass}
-                          value={option.label}
+                          value={trainingReportTextDrafts[`grade:${option.value}:label`] ?? option.label}
                           disabled={!canEditTrainingReportTemplate}
                           maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
-                          onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateTrainingReportGrade(option.value, { label: value }), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
-                          onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateTrainingReportGrade(option.value, { label: value }), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
+                          onFocus={() => beginTrainingReportTextDraft(`grade:${option.value}:label`, option.label)}
+                          onBlur={() => commitTrainingReportTextDraft(`grade:${option.value}:label`)}
+                          onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateTrainingReportTextDraft(`grade:${option.value}:label`, value), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
+                          onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateTrainingReportTextDraft(`grade:${option.value}:label`, value), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
                           onKeyDown={stopEditableKeyPropagation}
-                          onChange={(event) => updateTrainingReportGrade(option.value, { label: event.target.value })}
+                          onChange={(event) => updateTrainingReportTextDraft(`grade:${option.value}:label`, event.target.value)}
                         />
                       </td>
                       <td className="px-2 py-2 text-center">
