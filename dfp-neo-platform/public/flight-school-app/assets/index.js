@@ -120177,6 +120177,41 @@ ${error instanceof Error ? error.message : String(error)}`,
       closeDfpContextMenu();
     }
   }, [closeDfpContextMenu, dfpContextMenu]);
+  const handleDeleteTraineeFromRoster = reactExports.useCallback(async (trainee) => {
+    const dbId = String(trainee.id || "").trim();
+    const traineeName = trainee.fullName || trainee.name || "trainee";
+    try {
+      if (dbId && trainee._dataSource === "database") {
+        const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+          method: "DELETE",
+          credentials: "include"
+        });
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          throw new Error(errorText || `Delete failed (${response.status})`);
+        }
+      } else {
+        console.warn(`[Trainee Delete] ${traineeName} has no database id; removing from local roster only.`);
+      }
+      setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee.idNumber && String(t.id || "") !== dbId && t.fullName !== trainee.fullName));
+      setTraineeLMPs((prev) => {
+        const newLMPs = new Map(prev);
+        newLMPs.delete(trainee.fullName);
+        newLMPs.delete(trainee.name);
+        return newLMPs;
+      });
+      logAudit({
+        page: "Trainee Roster",
+        action: "delete",
+        description: "Deleted trainee from roster",
+        changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+      });
+      setSuccessMessage(`${traineeName} deleted.`);
+    } catch (error) {
+      console.error("[Trainee Delete] Failed:", error);
+      setErrorMessage(`Could not delete ${traineeName}. ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [scopedApiPath]);
   const renderActiveView = () => {
     switch (activeView) {
       case "Program Schedule":
@@ -120515,18 +120550,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
-              setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee.idNumber));
-              setTraineeLMPs((prev) => {
-                const newLMPs = new Map(prev);
-                newLMPs.delete(trainee.fullName);
-                return newLMPs;
-              });
-              logAudit({
-                page: "Trainee Roster",
-                action: "delete",
-                description: `Deleted trainee from roster`,
-                changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
-              });
+              void handleDeleteTraineeFromRoster(trainee);
             },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
               console.log(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
@@ -120675,18 +120699,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
-              setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee.idNumber));
-              setTraineeLMPs((prev) => {
-                const newLMPs = new Map(prev);
-                newLMPs.delete(trainee.fullName);
-                return newLMPs;
-              });
-              logAudit({
-                page: "Trainee Roster",
-                action: "delete",
-                description: `Deleted trainee from roster`,
-                changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
-              });
+              void handleDeleteTraineeFromRoster(trainee);
             },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
               setTraineesData((prev) => prev.map(
