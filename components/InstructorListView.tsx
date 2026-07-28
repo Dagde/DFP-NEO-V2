@@ -35,6 +35,29 @@ const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
 const isActiveStaffRecord = (instructor: Instructor): boolean =>
     (instructor as any)?.isActive !== false;
+const installStaffArchiveDiagDownloader = () => {
+    (window as any).downloadStaffArchiveDiag = () => {
+        try {
+            const key = 'neo_staff_archive_diag';
+            const data = (window as any).neoStaffArchiveDiag || JSON.parse(localStorage.getItem(key) || '[]');
+            const entries = Array.isArray(data) ? data : [];
+            const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+            link.href = url;
+            link.download = `staff-archive-diag-${stamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+            return { success: true, entries: entries.length, file: link.download };
+        } catch (error) {
+            console.error('[STAFF-ARCHIVE-DIAG] Download failed:', error);
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
+        }
+    };
+};
 const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = {}) => {
     const entry = {
         ts: new Date().toISOString(),
@@ -48,10 +71,12 @@ const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = 
         const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
         localStorage.setItem(key, JSON.stringify(next));
         (window as any).neoStaffArchiveDiag = next;
+        installStaffArchiveDiagDownloader();
     } catch {
         console.log('[STAFF-ARCHIVE-DIAG]', entry);
     }
 };
+installStaffArchiveDiagDownloader();
 const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
     instructor.isQFI === true ||

@@ -53021,6 +53021,29 @@ const generateRandomIdNumber$1 = () => {
 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isActiveStaffRecord = (instructor) => instructor?.isActive !== false;
+const installStaffArchiveDiagDownloader$1 = () => {
+  window.downloadStaffArchiveDiag = () => {
+    try {
+      const key = "neo_staff_archive_diag";
+      const data = window.neoStaffArchiveDiag || JSON.parse(localStorage.getItem(key) || "[]");
+      const entries = Array.isArray(data) ? data : [];
+      const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+      link.href = url;
+      link.download = `staff-archive-diag-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1e3);
+      return { success: true, entries: entries.length, file: link.download };
+    } catch (error) {
+      console.error("[STAFF-ARCHIVE-DIAG] Download failed:", error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+};
 const pushStaffArchiveDiag$1 = (stage, details = {}) => {
   const entry = {
     ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -53034,10 +53057,12 @@ const pushStaffArchiveDiag$1 = (stage, details = {}) => {
     const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
     localStorage.setItem(key, JSON.stringify(next));
     window.neoStaffArchiveDiag = next;
+    installStaffArchiveDiagDownloader$1();
   } catch {
     console.log("[STAFF-ARCHIVE-DIAG]", entry);
   }
 };
+installStaffArchiveDiagDownloader$1();
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const isSupportStaffRole = (instructor) => {
@@ -90610,6 +90635,29 @@ const normalisePersonnelRecord = (person) => {
   };
 };
 const isRecordActive = (record) => record?.isActive !== false;
+const installStaffArchiveDiagDownloader = () => {
+  window.downloadStaffArchiveDiag = () => {
+    try {
+      const key = "neo_staff_archive_diag";
+      const data = window.neoStaffArchiveDiag || JSON.parse(localStorage.getItem(key) || "[]");
+      const entries = Array.isArray(data) ? data : [];
+      const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+      link.href = url;
+      link.download = `staff-archive-diag-${stamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1e3);
+      return { success: true, entries: entries.length, file: link.download };
+    } catch (error) {
+      console.error("[STAFF-ARCHIVE-DIAG] Download failed:", error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+};
 const pushStaffArchiveDiag = (stage, details = {}) => {
   const entry = {
     ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -90623,10 +90671,12 @@ const pushStaffArchiveDiag = (stage, details = {}) => {
     const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
     localStorage.setItem(key, JSON.stringify(next));
     window.neoStaffArchiveDiag = next;
+    installStaffArchiveDiagDownloader();
   } catch {
     console.log("[STAFF-ARCHIVE-DIAG]", entry);
   }
 };
+installStaffArchiveDiagDownloader();
 const normalisePersonnelUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase().replace(/[\s-]+/g, "");
 const normaliseLocationMatchToken = (value) => String(value || "").trim().toUpperCase();
 const getConfiguredLocationTokens = (location) => {
