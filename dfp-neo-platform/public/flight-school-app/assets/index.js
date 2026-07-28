@@ -26054,7 +26054,10 @@ const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
     }
     setIsSubmitting(true);
     try {
-      await onConfirm(password, updateType);
+      const result = await onConfirm(password, updateType);
+      if (typeof result === "string" && result.trim()) {
+        setError(result);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -26402,12 +26405,10 @@ const TraineeBulkUploadFlyout = ({
     try {
       const isValidPassword = await verifyCurrentUserPassword(password);
       if (!isValidPassword) {
-        setStatus("The password was not accepted.");
-        return;
+        return "The password was not accepted.";
       }
     } catch (error) {
-      setStatus("The app could not verify your password.");
-      return;
+      return "The app could not verify your password.";
     }
     if (!file) return;
     try {
@@ -26418,7 +26419,7 @@ const TraineeBulkUploadFlyout = ({
       setShowConfirm(false);
       setShowCourseSelection(true);
     } catch (error) {
-      setStatus(`Error reading file: ${error.message}`);
+      return `Error reading file: ${error.message}`;
     }
   };
   const initialiseLmpForNewTrainees = (newTrainees) => {

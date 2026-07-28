@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface UpdateConfirmationFlyoutProps {
   fileName: string;
-  onConfirm: (password: string, updateType: 'bulk' | 'minor') => Promise<void> | void;
+  onConfirm: (password: string, updateType: 'bulk' | 'minor') => Promise<string | void> | string | void;
   onClose: () => void;
 }
 
@@ -20,7 +20,10 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({ fil
         }
         setIsSubmitting(true);
         try {
-            await onConfirm(password, updateType);
+            const result = await onConfirm(password, updateType);
+            if (typeof result === 'string' && result.trim()) {
+                setError(result);
+            }
         } finally {
             setIsSubmitting(false);
         }

@@ -184,16 +184,14 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         return Array.from(courses);
     };
 
-    const handleConfirm = async (password: string, selectedUpdateType: 'bulk' | 'minor') => {
+    const handleConfirm = async (password: string, selectedUpdateType: 'bulk' | 'minor'): Promise<string | void> => {
         try {
             const isValidPassword = await verifyCurrentUserPassword(password);
             if (!isValidPassword) {
-                setStatus('The password was not accepted.');
-                return;
+                return 'The password was not accepted.';
             }
         } catch (error) {
-            setStatus('The app could not verify your password.');
-            return;
+            return 'The app could not verify your password.';
         }
         if (!file) return;
         try {
@@ -204,7 +202,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             setShowConfirm(false);
             setShowCourseSelection(true);
         } catch (error) {
-            setStatus(`Error reading file: ${(error as Error).message}`);
+            return `Error reading file: ${(error as Error).message}`;
         }
     };
 
