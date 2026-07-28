@@ -62772,7 +62772,9 @@ const UserListSection = ({
   showSection,
   onNavigateToProfile,
   currentUserPermission,
-  onShowSuccess
+  onShowSuccess,
+  instructorsData = [],
+  traineesData = []
 }) => {
   const [users, setUsers] = reactExports.useState([]);
   const [filteredUsers, setFilteredUsers] = reactExports.useState([]);
@@ -62785,7 +62787,7 @@ const UserListSection = ({
   const [deleteError, setDeleteError] = reactExports.useState("");
   reactExports.useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [instructorsData, traineesData]);
   reactExports.useEffect(() => {
     const term = searchTerm.toLowerCase();
     const filtered = users.filter(
@@ -62794,6 +62796,7 @@ const UserListSection = ({
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
   const fetchUsers = async () => {
+    const configuredUsers = buildConfiguredUsers();
     try {
       setLoading(true);
       setLoadError("");
@@ -62804,19 +62807,56 @@ const UserListSection = ({
         throw new Error("Failed to fetch users");
       }
       const data = await response.json();
-      const sortedUsers = data.sort(
+      const apiUsers = Array.isArray(data) ? data : [];
+      const sortedUsers = apiUsers.sort(
         (a, b) => a.name.localeCompare(b.name)
       );
-      setUsers(sortedUsers);
-      setFilteredUsers(sortedUsers);
+      const usersToShow = sortedUsers.length > 0 ? sortedUsers : configuredUsers.sort((a, b) => a.name.localeCompare(b.name));
+      setUsers(usersToShow);
+      setFilteredUsers(usersToShow);
     } catch (error) {
       console.error("Error fetching users:", error);
-      setLoadError("The user list could not be loaded.");
-      setUsers([]);
-      setFilteredUsers([]);
+      const sortedConfiguredUsers = configuredUsers.sort((a, b) => a.name.localeCompare(b.name));
+      setLoadError(sortedConfiguredUsers.length > 0 ? "" : "The user list could not be loaded.");
+      setUsers(sortedConfiguredUsers);
+      setFilteredUsers(sortedConfiguredUsers);
     } finally {
       setLoading(false);
     }
+  };
+  const buildConfiguredUsers = () => {
+    const staffUsers = (instructorsData || []).map((person, index) => ({
+      id: person.id || `staff-${person.idNumber || index}`,
+      name: person.name || "",
+      email: person.email || "",
+      role: person.role || "Staff",
+      pmkeysId: person.idNumber ? String(person.idNumber) : "",
+      createdAt: "",
+      rank: person.rank,
+      service: person.service,
+      unit: person.unit,
+      userType: "STAFF",
+      personnelId: person.id
+    }));
+    const traineeUsers = (traineesData || []).map((person, index) => ({
+      id: `trainee-${person.idNumber || index}`,
+      name: person.fullName || person.name || "",
+      email: person.email || "",
+      role: person.role || "Trainee",
+      pmkeysId: person.idNumber ? String(person.idNumber) : "",
+      createdAt: "",
+      rank: person.rank,
+      service: person.service,
+      unit: person.unit,
+      userType: "TRAINEE"
+    }));
+    const seen = /* @__PURE__ */ new Set();
+    return [...staffUsers, ...traineeUsers].filter((user) => user.name.trim()).filter((user) => {
+      const key = `${user.userType}:${user.pmkeysId || user.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   };
   const verifyEditPassword = async (userName) => {
     const password = await showDarkPrompt({
@@ -75267,7 +75307,9 @@ const SettingsViewWithMenu = (props) => {
           {
             currentUserPermission: props.currentUserPermission,
             onShowSuccess: props.onShowSuccess,
-            onNavigateToProfile: props.onNavigateToProfile
+            onNavigateToProfile: props.onNavigateToProfile,
+            instructorsData: props.instructorsData,
+            traineesData: props.traineesData
           }
         ),
         activeSection === "staff-database" && /* @__PURE__ */ jsxRuntimeExports.jsx(

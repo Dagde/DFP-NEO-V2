@@ -1218,6 +1218,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
                             onNavigateToProfile={props.onNavigateToProfile}
+                            instructorsData={props.instructorsData}
+                            traineesData={props.traineesData}
                         />
                     )}
                     {activeSection === 'staff-database' && (

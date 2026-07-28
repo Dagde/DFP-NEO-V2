@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PencilIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
+import type { Instructor, Trainee } from '../types';
 
 interface User {
     id: string;
@@ -22,13 +23,17 @@ interface UserListSectionProps {
     onNavigateToProfile?: (user: User) => void;
     currentUserPermission?: any;
     onShowSuccess?: (message: string) => void;
+    instructorsData?: Instructor[];
+    traineesData?: Trainee[];
 }
 
 export const UserListSection: React.FC<UserListSectionProps> = ({ 
     showSection, 
     onNavigateToProfile,
     currentUserPermission,
-    onShowSuccess 
+    onShowSuccess,
+    instructorsData = [],
+    traineesData = [],
 }) => {
     const [users, setUsers] = useState<User[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -42,7 +47,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [instructorsData, traineesData]);
 
     useEffect(() => {
         const term = searchTerm.toLowerCase();
@@ -54,6 +59,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
     }, [searchTerm, users]);
 
     const fetchUsers = async () => {
+        const configuredUsers = buildConfiguredUsers();
         try {
             setLoading(true);
             setLoadError('');
@@ -67,19 +73,59 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
             
             const data = await response.json();
             // Sort users alphabetically by name
-            const sortedUsers = data.sort((a: User, b: User) => 
+            const apiUsers = Array.isArray(data) ? data : [];
+            const sortedUsers = apiUsers.sort((a: User, b: User) =>
                 a.name.localeCompare(b.name)
             );
-            setUsers(sortedUsers);
-            setFilteredUsers(sortedUsers);
+            const usersToShow = sortedUsers.length > 0 ? sortedUsers : configuredUsers.sort((a: User, b: User) => a.name.localeCompare(b.name));
+            setUsers(usersToShow);
+            setFilteredUsers(usersToShow);
         } catch (error) {
             console.error('Error fetching users:', error);
-            setLoadError('The user list could not be loaded.');
-            setUsers([]);
-            setFilteredUsers([]);
+            const sortedConfiguredUsers = configuredUsers.sort((a: User, b: User) => a.name.localeCompare(b.name));
+            setLoadError(sortedConfiguredUsers.length > 0 ? '' : 'The user list could not be loaded.');
+            setUsers(sortedConfiguredUsers);
+            setFilteredUsers(sortedConfiguredUsers);
         } finally {
             setLoading(false);
         }
+    };
+
+    const buildConfiguredUsers = (): User[] => {
+        const staffUsers: User[] = (instructorsData || []).map((person, index) => ({
+            id: person.id || `staff-${person.idNumber || index}`,
+            name: person.name || '',
+            email: person.email || '',
+            role: person.role || 'Staff',
+            pmkeysId: person.idNumber ? String(person.idNumber) : '',
+            createdAt: '',
+            rank: person.rank,
+            service: person.service,
+            unit: person.unit,
+            userType: 'STAFF',
+            personnelId: person.id,
+        }));
+        const traineeUsers: User[] = (traineesData || []).map((person, index) => ({
+            id: `trainee-${person.idNumber || index}`,
+            name: person.fullName || person.name || '',
+            email: person.email || '',
+            role: person.role || 'Trainee',
+            pmkeysId: person.idNumber ? String(person.idNumber) : '',
+            createdAt: '',
+            rank: person.rank,
+            service: person.service,
+            unit: person.unit,
+            userType: 'TRAINEE',
+        }));
+        const seen = new Set<string>();
+        return [...staffUsers, ...traineeUsers]
+            .filter(user => user.name.trim())
+            .filter(user => {
+                const key = `${user.userType}:${user.pmkeysId || user.name}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
     };
 
     const verifyEditPassword = async (userName: string) => {
