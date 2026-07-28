@@ -53002,7 +53002,7 @@ const ArchivedInstructorsFlyout = ({
                           if (!canRestore) return;
                           setInstructorToRestore(instructor);
                         },
-                        className: "p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors",
+                        className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
                         "aria-label": `Restore ${instructor.name}`,
                         children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
                       }
@@ -53606,7 +53606,7 @@ const InstructorListView = ({
             "button",
             {
               onClick: toggleArchiveMode,
-              className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? "text-green-500" : "text-black"}`,
+              className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? "text-green-500" : "text-black"} ${canManageArchive ? "" : "cursor-not-allowed"}`,
               children: isArchiveMode ? "Done" : "Archive"
             }
           ),
