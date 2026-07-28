@@ -4928,23 +4928,6 @@ const normalisePersonnelRecord = (person: any): any => {
 
 const isRecordActive = (record: any): boolean => record?.isActive !== false;
 
-const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = {}) => {
-    const entry = {
-        ts: new Date().toISOString(),
-        stage,
-        ...details,
-    };
-    try {
-        const key = 'neo_staff_archive_diag';
-        const existing = JSON.parse(localStorage.getItem(key) || '[]');
-        const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
-        localStorage.setItem(key, JSON.stringify(next));
-        (window as any).neoStaffArchiveDiag = next;
-    } catch {
-        // Keep diagnostics non-blocking.
-    }
-};
-
 const normalisePersonnelUnitCode = (value: unknown): string => (
     String(value || '').split('/')[0].trim().toUpperCase().replace(/[\s-]+/g, '')
 );
@@ -38697,16 +38680,8 @@ appliedUpdates.forEach(update => {
             }
             return false;
         };
-        pushStaffArchiveDiag('app:archive:start', {
-            identifier,
-            allCount: allInstructorsDataRef.current.length,
-            activeMatches: allInstructorsDataRef.current
-                .filter(matchesArchiveIdentifier)
-                .map((i: any) => ({ id: i.id, name: i.name, idNumber: i.idNumber, isActive: i.isActive, source: i._dataSource })),
-        });
         const instructorToArchive = allInstructorsDataRef.current.find(matchesArchiveIdentifier);
         if (!instructorToArchive) {
-            pushStaffArchiveDiag('app:archive:not-found', { identifier });
             return;
         }
         const dbId = String((instructorToArchive as any).id || '').trim();
@@ -38720,14 +38695,6 @@ appliedUpdates.forEach(update => {
             return false;
         };
         const archivedInstructor = { ...instructorToArchive, isActive: false };
-        pushStaffArchiveDiag('app:archive:resolved', {
-            identifier,
-            dbId,
-            targetIdNumber,
-            name: instructorToArchive.name,
-            isActive: (instructorToArchive as any).isActive,
-            source: (instructorToArchive as any)._dataSource,
-        });
 
         try {
             if (dbId && (instructorToArchive as any)._dataSource === 'database') {
@@ -38737,43 +38704,17 @@ appliedUpdates.forEach(update => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ isActive: false }),
                 });
-                pushStaffArchiveDiag('app:archive:patch-response', {
-                    identifier,
-                    dbId,
-                    status: response.status,
-                    ok: response.ok,
-                });
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(errorData.error || errorData.details || `Archive failed (${response.status})`);
                 }
             }
             setInstructorsData(prev => {
-                const before = prev.length;
-                const matchingBefore = prev
-                    .filter(matchesTargetInstructor)
-                    .map((i: any) => ({ id: i.id, name: i.name, idNumber: i.idNumber, isActive: i.isActive, source: i._dataSource }));
-                const next = prev.filter(i => !matchesTargetInstructor(i));
-                pushStaffArchiveDiag('app:archive:set-active-state', {
-                    identifier,
-                    dbId,
-                    before,
-                    after: next.length,
-                    removed: before - next.length,
-                    matchingBefore,
-                });
-                return next;
+                return prev.filter(i => !matchesTargetInstructor(i));
             });
             setArchivedInstructorsData(prev => {
                 const withoutDuplicate = prev.filter(i => !matchesTargetInstructor(i));
-                const next = [...withoutDuplicate, archivedInstructor];
-                pushStaffArchiveDiag('app:archive:set-archived-state', {
-                    identifier,
-                    dbId,
-                    before: prev.length,
-                    after: next.length,
-                });
-                return next;
+                return [...withoutDuplicate, archivedInstructor];
             });
             logAudit({
                 page: 'Staff',
@@ -38781,15 +38722,8 @@ appliedUpdates.forEach(update => {
                 description: 'Archived staff member',
                 changes: `Archived: ${instructorToArchive.rank || ''} ${instructorToArchive.name}`.trim(),
             });
-            pushStaffArchiveDiag('app:archive:done', { identifier, dbId, name: instructorToArchive.name });
         } catch (error) {
             console.error('[Staff Archive] Failed:', error);
-            pushStaffArchiveDiag('app:archive:error', {
-                identifier,
-                dbId,
-                name: instructorToArchive.name,
-                error: error instanceof Error ? error.message : String(error),
-            });
             setErrorMessage(`Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}`);
         }
     }, [scopedApiPath]);
