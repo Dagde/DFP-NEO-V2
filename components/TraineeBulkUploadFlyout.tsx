@@ -4,6 +4,7 @@ import UpdateConfirmationFlyout from './UpdateConfirmationFlyout';
 import CourseSelectionFlyout from './CourseSelectionFlyout';
 import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import { logAudit } from '../utils/auditLogger';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 declare var XLSX: any;
 
@@ -183,9 +184,15 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         return Array.from(courses);
     };
 
-    const handleConfirm = async (pin: string, selectedUpdateType: 'bulk' | 'minor') => {
-        if (pin !== '1111') {
-            setStatus('Incorrect PIN.');
+    const handleConfirm = async (password: string, selectedUpdateType: 'bulk' | 'minor') => {
+        try {
+            const isValidPassword = await verifyCurrentUserPassword(password);
+            if (!isValidPassword) {
+                setStatus('The password was not accepted.');
+                return;
+            }
+        } catch (error) {
+            setStatus('The app could not verify your password.');
             return;
         }
         if (!file) return;

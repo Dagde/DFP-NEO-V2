@@ -26042,40 +26042,45 @@ const CourseEditFlyout = ({
   ] });
 };
 const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
-  const [pin, setPin] = reactExports.useState("");
+  const [password, setPassword] = reactExports.useState("");
   const [updateType, setUpdateType] = reactExports.useState("minor");
   const [error, setError] = reactExports.useState("");
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (pin.length < 4) {
-      setError("PIN must be 4 digits.");
+    if (!password.trim()) {
+      setError("Enter your password.");
       return;
     }
-    onConfirm(pin, updateType);
+    setIsSubmitting(true);
+    try {
+      await onConfirm(password, updateType);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Confirm Update" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400", children: [
-        "Enter your PIN to apply updates from ",
+        "Enter your password to apply updates from ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-gray-200", children: fileName }),
         "."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "pin-input", className: "block text-sm font-medium text-gray-400", children: "PIN" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "password-input", className: "block text-sm font-medium text-gray-400", children: "Password" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
-            id: "pin-input",
+            id: "password-input",
             type: "password",
-            value: pin,
+            value: password,
             onChange: (e) => {
-              setPin(e.target.value.replace(/\D/g, ""));
+              setPassword(e.target.value);
               setError("");
             },
-            maxLength: 4,
             autoFocus: true,
-            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white text-center text-2xl tracking-[.5em] focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
           }
         ),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm text-center mt-1", children: error })
@@ -26122,7 +26127,7 @@ const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Confirm Update" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", disabled: isSubmitting, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed", children: isSubmitting ? "Checking..." : "Confirm Update" })
     ] })
   ] }) });
 };
@@ -26393,9 +26398,15 @@ const TraineeBulkUploadFlyout = ({
     });
     return Array.from(courses);
   };
-  const handleConfirm = async (pin, selectedUpdateType) => {
-    if (pin !== "1111") {
-      setStatus("Incorrect PIN.");
+  const handleConfirm = async (password, selectedUpdateType) => {
+    try {
+      const isValidPassword = await verifyCurrentUserPassword(password);
+      if (!isValidPassword) {
+        setStatus("The password was not accepted.");
+        return;
+      }
+    } catch (error) {
+      setStatus("The app could not verify your password.");
       return;
     }
     if (!file) return;

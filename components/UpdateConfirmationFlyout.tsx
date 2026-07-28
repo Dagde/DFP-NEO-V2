@@ -2,23 +2,28 @@ import React, { useState } from 'react';
 
 interface UpdateConfirmationFlyoutProps {
   fileName: string;
-  onConfirm: (pin: string, updateType: 'bulk' | 'minor') => void;
+  onConfirm: (password: string, updateType: 'bulk' | 'minor') => Promise<void> | void;
   onClose: () => void;
 }
 
 const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({ fileName, onConfirm, onClose }) => {
-    const [pin, setPin] = useState('');
+    const [password, setPassword] = useState('');
     const [updateType, setUpdateType] = useState<'bulk' | 'minor'>('minor');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (pin.length < 4) {
-            setError('PIN must be 4 digits.');
+        if (!password.trim()) {
+            setError('Enter your password.');
             return;
         }
-        // The parent component will handle pin validation
-        onConfirm(pin, updateType);
+        setIsSubmitting(true);
+        try {
+            await onConfirm(password, updateType);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -29,22 +34,21 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({ fil
                 </div>
                 <div className="p-6 space-y-6">
                     <p className="text-gray-400">
-                        Enter your PIN to apply updates from <strong className="text-gray-200">{fileName}</strong>.
+                        Enter your password to apply updates from <strong className="text-gray-200">{fileName}</strong>.
                     </p>
 
                     <div>
-                        <label htmlFor="pin-input" className="block text-sm font-medium text-gray-400">PIN</label>
+                        <label htmlFor="password-input" className="block text-sm font-medium text-gray-400">Password</label>
                         <input
-                            id="pin-input"
+                            id="password-input"
                             type="password"
-                            value={pin}
+                            value={password}
                             onChange={e => {
-                                setPin(e.target.value.replace(/\D/g, ''));
+                                setPassword(e.target.value);
                                 setError('');
                             }}
-                            maxLength={4}
                             autoFocus
-                            className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white text-center text-2xl tracking-[.5em] focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                            className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
                         />
                          {error && <p className="text-red-400 text-sm text-center mt-1">{error}</p>}
                     </div>
@@ -86,7 +90,9 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({ fil
                 </div>
                 <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
                     <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">Confirm Update</button>
+                    <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        {isSubmitting ? 'Checking...' : 'Confirm Update'}
+                    </button>
                 </div>
             </form>
         </div>
