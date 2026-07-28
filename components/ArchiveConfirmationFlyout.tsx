@@ -2,7 +2,7 @@ import React from 'react';
 
 interface ArchiveConfirmationFlyoutProps {
   instructorName: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onClose: () => void;
 }
 

@@ -53021,6 +53021,23 @@ const generateRandomIdNumber$1 = () => {
 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isActiveStaffRecord = (instructor) => instructor?.isActive !== false;
+const pushStaffArchiveDiag$1 = (stage, details = {}) => {
+  const entry = {
+    ts: (/* @__PURE__ */ new Date()).toISOString(),
+    stage,
+    ...details
+  };
+  try {
+    console.log("[STAFF-ARCHIVE-DIAG]", entry);
+    const key = "neo_staff_archive_diag";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+    localStorage.setItem(key, JSON.stringify(next));
+    window.neoStaffArchiveDiag = next;
+  } catch {
+    console.log("[STAFF-ARCHIVE-DIAG]", entry);
+  }
+};
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const isSupportStaffRole = (instructor) => {
@@ -53364,6 +53381,27 @@ const InstructorListView = ({
     () => Object.keys(otherStaffByUnit).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
     [otherStaffByUnit]
   );
+  reactExports.useEffect(() => {
+    const inactiveInProps = instructorsData.filter((instructor) => !isActiveStaffRecord(instructor)).map((instructor) => ({
+      id: instructor.id,
+      idNumber: instructor.idNumber,
+      name: instructor.name,
+      unit: instructor.unit,
+      role: instructor.role,
+      isActive: instructor.isActive
+    }));
+    pushStaffArchiveDiag$1("list:render-summary", {
+      propCount: instructorsData.length,
+      activePropCount: instructorsData.filter(isActiveStaffRecord).length,
+      archivedPropCount: archivedInstructorsData.length,
+      inactiveInProps,
+      qfis: qfis.length,
+      simIps: simIps.length,
+      ofis: ofis.length,
+      otherStaff: otherStaff.length,
+      isArchiveMode
+    });
+  }, [archivedInstructorsData, instructorsData, isArchiveMode, ofis, otherStaff, qfis, simIps]);
   const handleMouseEnter = (e, instructorName) => {
     if (selectedInstructor || isArchiveMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -53436,6 +53474,14 @@ const InstructorListView = ({
         onMouseLeave: handleMouseLeave,
         onClick: (e) => {
           if (isArchiveMode) {
+            pushStaffArchiveDiag$1("list:archive-row-click", {
+              id: instructor.id,
+              idNumber: instructor.idNumber,
+              name: instructor.name,
+              unit: instructor.unit,
+              role: instructor.role,
+              isActive: instructor.isActive
+            });
             setInstructorToArchive(instructor);
           } else {
             handleInstructorClick(e, instructor);
@@ -53670,8 +53716,21 @@ const InstructorListView = ({
       ArchiveConfirmationFlyout,
       {
         instructorName: instructorToArchive.name,
-        onConfirm: () => {
-          onArchiveInstructor(instructorToArchive.idNumber);
+        onConfirm: async () => {
+          pushStaffArchiveDiag$1("list:archive-confirm", {
+            id: instructorToArchive.id,
+            idNumber: instructorToArchive.idNumber,
+            name: instructorToArchive.name,
+            unit: instructorToArchive.unit,
+            role: instructorToArchive.role,
+            isActive: instructorToArchive.isActive
+          });
+          await onArchiveInstructor(instructorToArchive.idNumber);
+          pushStaffArchiveDiag$1("list:archive-confirm-returned", {
+            id: instructorToArchive.id,
+            idNumber: instructorToArchive.idNumber,
+            name: instructorToArchive.name
+          });
           setInstructorToArchive(null);
           setIsArchiveMode(false);
         },
@@ -90551,6 +90610,23 @@ const normalisePersonnelRecord = (person) => {
   };
 };
 const isRecordActive = (record) => record?.isActive !== false;
+const pushStaffArchiveDiag = (stage, details = {}) => {
+  const entry = {
+    ts: (/* @__PURE__ */ new Date()).toISOString(),
+    stage,
+    ...details
+  };
+  try {
+    console.log("[STAFF-ARCHIVE-DIAG]", entry);
+    const key = "neo_staff_archive_diag";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
+    localStorage.setItem(key, JSON.stringify(next));
+    window.neoStaffArchiveDiag = next;
+  } catch {
+    console.log("[STAFF-ARCHIVE-DIAG]", entry);
+  }
+};
 const normalisePersonnelUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase().replace(/[\s-]+/g, "");
 const normaliseLocationMatchToken = (value) => String(value || "").trim().toUpperCase();
 const getConfiguredLocationTokens = (location) => {
@@ -117996,10 +118072,25 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setShowSctRequest(true);
   }, []);
   const handleArchiveInstructor = reactExports.useCallback(async (id) => {
+    pushStaffArchiveDiag("app:archive:start", {
+      id,
+      allCount: allInstructorsDataRef.current.length,
+      activeMatches: allInstructorsDataRef.current.filter((i) => i.idNumber === id).map((i) => ({ id: i.id, name: i.name, idNumber: i.idNumber, isActive: i.isActive, source: i._dataSource }))
+    });
     const instructorToArchive = allInstructorsDataRef.current.find((i) => i.idNumber === id);
-    if (!instructorToArchive) return;
+    if (!instructorToArchive) {
+      pushStaffArchiveDiag("app:archive:not-found", { id });
+      return;
+    }
     const dbId = String(instructorToArchive.id || "").trim();
     const archivedInstructor = { ...instructorToArchive, isActive: false };
+    pushStaffArchiveDiag("app:archive:resolved", {
+      id,
+      dbId,
+      name: instructorToArchive.name,
+      isActive: instructorToArchive.isActive,
+      source: instructorToArchive._dataSource
+    });
     try {
       if (dbId && instructorToArchive._dataSource === "database") {
         const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
@@ -118008,15 +118099,41 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ isActive: false })
         });
+        pushStaffArchiveDiag("app:archive:patch-response", {
+          id,
+          dbId,
+          status: response.status,
+          ok: response.ok
+        });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || errorData.details || `Archive failed (${response.status})`);
         }
       }
-      setInstructorsData((prev) => prev.filter((i) => i.idNumber !== id && String(i.id || "") !== dbId));
+      setInstructorsData((prev) => {
+        const before = prev.length;
+        const matchingBefore = prev.filter((i) => i.idNumber === id || String(i.id || "") === dbId).map((i) => ({ id: i.id, name: i.name, idNumber: i.idNumber, isActive: i.isActive, source: i._dataSource }));
+        const next = prev.filter((i) => i.idNumber !== id && String(i.id || "") !== dbId);
+        pushStaffArchiveDiag("app:archive:set-active-state", {
+          id,
+          dbId,
+          before,
+          after: next.length,
+          removed: before - next.length,
+          matchingBefore
+        });
+        return next;
+      });
       setArchivedInstructorsData((prev) => {
         const withoutDuplicate = prev.filter((i) => i.idNumber !== id && String(i.id || "") !== dbId);
-        return [...withoutDuplicate, archivedInstructor];
+        const next = [...withoutDuplicate, archivedInstructor];
+        pushStaffArchiveDiag("app:archive:set-archived-state", {
+          id,
+          dbId,
+          before: prev.length,
+          after: next.length
+        });
+        return next;
       });
       logAudit({
         page: "Staff",
@@ -118024,8 +118141,15 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         description: "Archived staff member",
         changes: `Archived: ${instructorToArchive.rank || ""} ${instructorToArchive.name}`.trim()
       });
+      pushStaffArchiveDiag("app:archive:done", { id, dbId, name: instructorToArchive.name });
     } catch (error) {
       console.error("[Staff Archive] Failed:", error);
+      pushStaffArchiveDiag("app:archive:error", {
+        id,
+        dbId,
+        name: instructorToArchive.name,
+        error: error instanceof Error ? error.message : String(error)
+      });
       setErrorMessage(`Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);

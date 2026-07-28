@@ -35,6 +35,23 @@ const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
 const isActiveStaffRecord = (instructor: Instructor): boolean =>
     (instructor as any)?.isActive !== false;
+const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = {}) => {
+    const entry = {
+        ts: new Date().toISOString(),
+        stage,
+        ...details,
+    };
+    try {
+        console.log('[STAFF-ARCHIVE-DIAG]', entry);
+        const key = 'neo_staff_archive_diag';
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
+        localStorage.setItem(key, JSON.stringify(next));
+        (window as any).neoStaffArchiveDiag = next;
+    } catch {
+        console.log('[STAFF-ARCHIVE-DIAG]', entry);
+    }
+};
 const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
     instructor.isQFI === true ||
@@ -131,8 +148,8 @@ interface InstructorListViewProps {
   onUpdateInstructor: (data: Instructor) => void;
   onNavigateToCurrency: (person: Instructor) => void;
   onBulkUpdateInstructors: (instructors: Instructor[]) => void;
-  onArchiveInstructor: (id: number) => void;
-  onRestoreInstructor: (id: number) => void;
+  onArchiveInstructor: (id: number) => Promise<void> | void;
+  onRestoreInstructor: (id: number) => Promise<void> | void;
   locations: string[];
   units: string[];
   selectedPersonForProfile?: Instructor | null;
@@ -521,6 +538,30 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       Object.keys(otherStaffByUnit).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [otherStaffByUnit]);
 
+  useEffect(() => {
+      const inactiveInProps = instructorsData
+          .filter(instructor => !isActiveStaffRecord(instructor))
+          .map((instructor: any) => ({
+              id: instructor.id,
+              idNumber: instructor.idNumber,
+              name: instructor.name,
+              unit: instructor.unit,
+              role: instructor.role,
+              isActive: instructor.isActive,
+          }));
+      pushStaffArchiveDiag('list:render-summary', {
+          propCount: instructorsData.length,
+          activePropCount: instructorsData.filter(isActiveStaffRecord).length,
+          archivedPropCount: archivedInstructorsData.length,
+          inactiveInProps,
+          qfis: qfis.length,
+          simIps: simIps.length,
+          ofis: ofis.length,
+          otherStaff: otherStaff.length,
+          isArchiveMode,
+      });
+  }, [archivedInstructorsData, instructorsData, isArchiveMode, ofis, otherStaff, qfis, simIps]);
+
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -607,6 +648,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             onMouseLeave={handleMouseLeave}
             onClick={(e) => {
                 if (isArchiveMode) {
+                    pushStaffArchiveDiag('list:archive-row-click', {
+                        id: (instructor as any).id,
+                        idNumber: instructor.idNumber,
+                        name: instructor.name,
+                        unit: instructor.unit,
+                        role: instructor.role,
+                        isActive: (instructor as any).isActive,
+                    });
                     setInstructorToArchive(instructor);
                 } else {
                     handleInstructorClick(e, instructor);
@@ -900,8 +949,21 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       {instructorToArchive && (
         <ArchiveConfirmationFlyout
           instructorName={instructorToArchive.name}
-          onConfirm={() => {
-            onArchiveInstructor(instructorToArchive.idNumber);
+          onConfirm={async () => {
+            pushStaffArchiveDiag('list:archive-confirm', {
+                id: (instructorToArchive as any).id,
+                idNumber: instructorToArchive.idNumber,
+                name: instructorToArchive.name,
+                unit: instructorToArchive.unit,
+                role: instructorToArchive.role,
+                isActive: (instructorToArchive as any).isActive,
+            });
+            await onArchiveInstructor(instructorToArchive.idNumber);
+            pushStaffArchiveDiag('list:archive-confirm-returned', {
+                id: (instructorToArchive as any).id,
+                idNumber: instructorToArchive.idNumber,
+                name: instructorToArchive.name,
+            });
             setInstructorToArchive(null);
             setIsArchiveMode(false);
           }}
