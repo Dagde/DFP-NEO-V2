@@ -53044,6 +53044,15 @@ const installStaffArchiveDiagDownloader$1 = () => {
     }
   };
 };
+const downloadStaffArchiveDiagJson = () => {
+  const downloader = window.downloadStaffArchiveDiag;
+  if (typeof downloader === "function") {
+    downloader();
+  } else {
+    installStaffArchiveDiagDownloader$1();
+    window.downloadStaffArchiveDiag?.();
+  }
+};
 const pushStaffArchiveDiag$1 = (stage, details = {}) => {
   const entry = {
     ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -53051,7 +53060,6 @@ const pushStaffArchiveDiag$1 = (stage, details = {}) => {
     ...details
   };
   try {
-    console.log("[STAFF-ARCHIVE-DIAG]", entry);
     const key = "neo_staff_archive_diag";
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
     const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
@@ -53059,7 +53067,6 @@ const pushStaffArchiveDiag$1 = (stage, details = {}) => {
     window.neoStaffArchiveDiag = next;
     installStaffArchiveDiagDownloader$1();
   } catch {
-    console.log("[STAFF-ARCHIVE-DIAG]", entry);
   }
 };
 installStaffArchiveDiagDownloader$1();
@@ -53639,6 +53646,15 @@ const InstructorListView = ({
               onClick: handleShowAddChoice,
               className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500",
               children: "Add Staff"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: downloadStaffArchiveDiagJson,
+              className: "w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-500",
+              title: "Download staff archive diagnostic JSON",
+              children: "Trace JSON"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[8px]" }),
@@ -90665,7 +90681,6 @@ const pushStaffArchiveDiag = (stage, details = {}) => {
     ...details
   };
   try {
-    console.log("[STAFF-ARCHIVE-DIAG]", entry);
     const key = "neo_staff_archive_diag";
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
     const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
@@ -90673,7 +90688,6 @@ const pushStaffArchiveDiag = (stage, details = {}) => {
     window.neoStaffArchiveDiag = next;
     installStaffArchiveDiagDownloader();
   } catch {
-    console.log("[STAFF-ARCHIVE-DIAG]", entry);
   }
 };
 installStaffArchiveDiagDownloader();

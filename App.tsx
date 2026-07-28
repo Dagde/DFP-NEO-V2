@@ -4959,7 +4959,6 @@ const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = 
         ...details,
     };
     try {
-        console.log('[STAFF-ARCHIVE-DIAG]', entry);
         const key = 'neo_staff_archive_diag';
         const existing = JSON.parse(localStorage.getItem(key) || '[]');
         const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
@@ -4967,7 +4966,7 @@ const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = 
         (window as any).neoStaffArchiveDiag = next;
         installStaffArchiveDiagDownloader();
     } catch {
-        console.log('[STAFF-ARCHIVE-DIAG]', entry);
+        // Keep diagnostics non-blocking.
     }
 };
 installStaffArchiveDiagDownloader();
