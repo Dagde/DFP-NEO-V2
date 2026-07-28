@@ -2362,9 +2362,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .filter((item) => item && item.isActive !== false)
       .filter((item) => (item.lmpType || 'Master LMP') === 'Master LMP')
       .forEach((item) => {
-        const courseCodes = item.courses && item.courses.length > 0 ? item.courses : ['BPC+IPC'];
+        const courseCodes = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
         courseCodes.forEach((courseCode) => {
-          const key = String(courseCode || 'BPC+IPC').trim().toUpperCase();
+          const key = String(courseCode || '').trim().toUpperCase();
+          if (!key) return;
           counts.set(key, (counts.get(key) || 0) + 1);
         });
       });

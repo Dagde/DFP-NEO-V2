@@ -55578,7 +55578,7 @@ const SyllabusView = ({
     return savedTab === "packages" || savedTab === "master" ? savedTab : "master";
   });
   const [selectedCourseType, setSelectedCourseType] = reactExports.useState(
-    () => localStorage.getItem("neo_lmp_details_selected_package") || "BPC+IPC"
+    () => localStorage.getItem("neo_lmp_details_selected_package") || ""
   );
   const [editingCourseTitle, setEditingCourseTitle] = reactExports.useState("");
   const isTrainingPackagesTab = activeTab === "packages";
@@ -55782,7 +55782,7 @@ const SyllabusView = ({
       if (isSyllabusCourseShell(item)) return false;
       if (getItemLmpDetailsTab(item) !== activeTab) return false;
       if (!item.courses || item.courses.length === 0) {
-        return activeTab === "master" && selectedCourseType === "BPC+IPC";
+        return false;
       }
       return item.courses.includes(selectedCourseType);
     }).sort((left, right) => {
@@ -55998,7 +55998,7 @@ const SyllabusView = ({
   reactExports.useEffect(() => {
     if (!usesPackageTab && activeTab === "packages") {
       setActiveTab("master");
-      setSelectedCourseType("BPC+IPC");
+      setSelectedCourseType("");
       setSelectedItem(null);
       setHoveredItem(null);
       setIsEditing(false);
@@ -67286,9 +67286,10 @@ const PlatformConfigurationSettings = ({
   const masterLmpSyllabusCounts = reactExports.useMemo(() => {
     const counts = /* @__PURE__ */ new Map();
     syllabusDetails.filter((item) => item && item.isActive !== false).filter((item) => (item.lmpType || "Master LMP") === "Master LMP").forEach((item) => {
-      const courseCodes = item.courses && item.courses.length > 0 ? item.courses : ["BPC+IPC"];
+      const courseCodes = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
       courseCodes.forEach((courseCode) => {
-        const key = String(courseCode || "BPC+IPC").trim().toUpperCase();
+        const key = String(courseCode || "").trim().toUpperCase();
+        if (!key) return;
         counts.set(key, (counts.get(key) || 0) + 1);
       });
     });
@@ -104918,7 +104919,7 @@ const App = () => {
   const getSyllabusMasterLmpCodes = reactExports.useCallback((item) => {
     const courses2 = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
     if (courses2.length > 0) return courses2;
-    return item.type === "Academics" || item.lmpType === "Staff CAT" ? [] : ["BPC+IPC"];
+    return [];
   }, []);
   const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
     if (!platformConfigLoaded) return false;
@@ -104946,7 +104947,7 @@ const App = () => {
         return false;
       }
       const lmpCodes = getSyllabusMasterLmpCodes(item);
-      if (lmpCodes.length === 0) return true;
+      if (lmpCodes.length === 0) return false;
       if (activeModel !== "flight_school" && activeModel !== "air_combat") {
         return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
       }

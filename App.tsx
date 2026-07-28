@@ -22459,7 +22459,7 @@ const App: React.FC = () => {
     const getSyllabusMasterLmpCodes = useCallback((item: SyllabusItemDetail): string[] => {
         const courses = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
         if (courses.length > 0) return courses;
-        return item.type === 'Academics' || item.lmpType === 'Staff CAT' ? [] : ['BPC+IPC'];
+        return [];
     }, []);
 
     const hasMasterLmpUnitAccess = useCallback((
@@ -22498,7 +22498,7 @@ const App: React.FC = () => {
                 return false;
             }
             const lmpCodes = getSyllabusMasterLmpCodes(item);
-            if (lmpCodes.length === 0) return true;
+            if (lmpCodes.length === 0) return false;
             if (activeModel !== 'flight_school' && activeModel !== 'air_combat') {
                 return itemMatchesActiveUnitContext(item, { requireExplicitUnit: true });
             }

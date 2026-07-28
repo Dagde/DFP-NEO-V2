@@ -982,7 +982,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       return savedTab === 'packages' || savedTab === 'master' ? savedTab : 'master';
   });
   const [selectedCourseType, setSelectedCourseType] = useState<string>(() =>
-      localStorage.getItem('neo_lmp_details_selected_package') || 'BPC+IPC'
+      localStorage.getItem('neo_lmp_details_selected_package') || ''
   );
   const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
   const isTrainingPackagesTab = activeTab === 'packages';
@@ -1232,9 +1232,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           if (item.isActive === false) return false;
           if (isSyllabusCourseShell(item)) return false;
           if (getItemLmpDetailsTab(item) !== activeTab) return false;
-          // If no courses array defined, assume it belongs to BPC+IPC (legacy behavior)
           if (!item.courses || item.courses.length === 0) {
-              return activeTab === 'master' && selectedCourseType === 'BPC+IPC';
+              return false;
           }
           return item.courses.includes(selectedCourseType);
       }).sort((left, right) => {
@@ -1477,7 +1476,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   useEffect(() => {
     if (!usesPackageTab && activeTab === 'packages') {
         setActiveTab('master');
-        setSelectedCourseType('BPC+IPC');
+        setSelectedCourseType('');
         setSelectedItem(null);
         setHoveredItem(null);
         setIsEditing(false);
