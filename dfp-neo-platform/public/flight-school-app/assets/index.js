@@ -28088,6 +28088,18 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [alertSent, setAlertSent] = reactExports.useState(false);
   const [alertDescription, setAlertDescription] = reactExports.useState("");
   const [alertUserNote, setAlertUserNote] = reactExports.useState("");
+  const showReadOnlyLockMessage = (action) => {
+    void showDarkAlert(
+      `Past DFPs are locked. You cannot ${action} for this event.`,
+      "Past DFP Locked",
+      "warning"
+    );
+  };
+  const blockReadOnlyAction = (action) => {
+    if (!isReadOnly) return false;
+    showReadOnlyLockMessage(action);
+    return true;
+  };
   const [activeCrewConflictName, setActiveCrewConflictName] = reactExports.useState(null);
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
@@ -29925,9 +29937,22 @@ ${swapNote}` : swapNote
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Add Deployment" })
           ] }),
-          !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
             isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowDeleteChoice(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md", style: { backgroundColor: "#FF6666", color: "white" }, "aria-label": "Delete Event", children: "Delete" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  if (blockReadOnlyAction("delete events")) return;
+                  setShowDeleteChoice(true);
+                },
+                className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md ${isReadOnly ? "cursor-not-allowed" : ""}`,
+                style: { backgroundColor: "#FF6666", color: "white" },
+                "aria-label": "Delete Event",
+                title: isReadOnly ? "Past DFP locked" : void 0,
+                children: "Delete"
+              }
+            )
           ] })
         ] })
       ] }),
@@ -29989,15 +30014,16 @@ ${swapNote}` : swapNote
                 }
               )
             ] }),
-            !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
+                if (blockReadOnlyAction("edit events")) return;
                 if (isFixedCrewModel && onEditFixedCrewTile) {
                   onEditFixedCrewTile();
                   return;
                 }
                 setIsEditing(true);
-              }, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Edit" }) })
+              }, className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isReadOnly ? "cursor-not-allowed" : ""}`, title: isReadOnly ? "Past DFP locked" : void 0, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Edit" }) })
             ] })
           ] })
         ] }),
@@ -30630,28 +30656,47 @@ ${swapNote}` : swapNote
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[10px] font-semibold text-gray-400", children: "Conflict?" }),
               isConflict ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-bold text-red-500", children: "YES" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-bold text-green-500", children: "NO" })
             ] }),
-            !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: () => onNeoClick(event),
-                  className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
+                  onClick: () => {
+                    if (blockReadOnlyAction("use NEO actions")) return;
+                    onNeoClick(event);
+                  },
+                  className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? "cursor-not-allowed" : ""}`,
+                  title: isReadOnly ? "Past DFP locked" : void 0,
                   children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO" })
                 }
               )
             ] }),
-            !isReadOnly && event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAuthClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Auth" }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => {
+                    if (blockReadOnlyAction("authorise events")) return;
+                    handleAuthClick();
+                  },
+                  className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? "cursor-not-allowed" : ""}`,
+                  title: isReadOnly ? "Past DFP locked" : void 0,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Auth" })
+                }
+              )
             ] }),
-            !isReadOnly && (traineeObject && event.type === "ground" || (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB"))) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            (traineeObject && event.type === "ground" || (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB"))) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
-                  onClick: handleCompleteClick,
-                  className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
+                  onClick: () => {
+                    if (blockReadOnlyAction("complete events")) return;
+                    handleCompleteClick();
+                  },
+                  className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? "cursor-not-allowed" : ""}`,
+                  title: isReadOnly ? "Past DFP locked" : void 0,
                   children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Complete" })
                 }
               )

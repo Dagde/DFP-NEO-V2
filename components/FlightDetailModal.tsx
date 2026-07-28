@@ -751,6 +751,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [alertSent, setAlertSent] = useState(false);
     const [alertDescription, setAlertDescription] = useState('');
     const [alertUserNote, setAlertUserNote] = useState('');
+    const showReadOnlyLockMessage = (action: string) => {
+        void showDarkAlert(
+            `Past DFPs are locked. You cannot ${action} for this event.`,
+            'Past DFP Locked',
+            'warning',
+        );
+    };
+    const blockReadOnlyAction = (action: string): boolean => {
+        if (!isReadOnly) return false;
+        showReadOnlyLockMessage(action);
+        return true;
+    };
     const [activeCrewConflictName, setActiveCrewConflictName] = useState<string | null>(null);
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
@@ -3162,14 +3174,23 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-sm font-semibold text-white">Add Deployment</span>
                                 </label>
                             )}
-                            {!isReadOnly && <div className="relative">
+                            <div className="relative">
                                 {isFrozen && (
                                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                 )}
-                                <button onClick={() => setShowDeleteChoice(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
+                                <button
+                                    onClick={() => {
+                                        if (blockReadOnlyAction('delete events')) return;
+                                        setShowDeleteChoice(true);
+                                    }}
+                                    className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md ${isReadOnly ? 'cursor-not-allowed' : ''}`}
+                                    style={{backgroundColor: "#FF6666", color: "white"}}
+                                    aria-label="Delete Event"
+                                    title={isReadOnly ? 'Past DFP locked' : undefined}
+                                >
                                     Delete
                                 </button>
-                            </div>}
+                            </div>
                         </div>
                     </div>
 
@@ -3234,20 +3255,21 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
-                                    {!isReadOnly && <div className="relative w-[75px]">
+                                    <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                         )}
                                         <button onClick={() => {
+                                            if (blockReadOnlyAction('edit events')) return;
                                             if (isFixedCrewModel && onEditFixedCrewTile) {
                                                 onEditFixedCrewTile();
                                                 return;
                                             }
                                             setIsEditing(true);
-                                        }} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                        }} className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isReadOnly ? 'cursor-not-allowed' : ''}`} title={isReadOnly ? 'Past DFP locked' : undefined}>
                                             <span className="text-center leading-tight">Edit</span>
                                         </button>
-                                    </div>}
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -3939,37 +3961,52 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         )}
                                     </div>
                                     {/* NEO button - always frozen when system is frozen */}
-                                    {!isReadOnly && <div className="relative w-[75px]">
+                                    <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                         )}
                                         <button
-                                            onClick={() => onNeoClick(event)}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            onClick={() => {
+                                                if (blockReadOnlyAction('use NEO actions')) return;
+                                                onNeoClick(event);
+                                            }}
+                                            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? 'cursor-not-allowed' : ''}`}
+                                            title={isReadOnly ? 'Past DFP locked' : undefined}
                                         >
                                             <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                         </button>
-                                    </div>}
+                                    </div>
                                     {/* Auth button - frozen unless flightAuthorisation is allowed */}
-                                    {!isReadOnly && event.type === 'flight' && (
+                                    {event.type === 'flight' && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.flightAuthorisation && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                             )}
-                                            <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
+                                            <button
+                                                onClick={() => {
+                                                    if (blockReadOnlyAction('authorise events')) return;
+                                                    handleAuthClick();
+                                                }}
+                                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? 'cursor-not-allowed' : ''}`}
+                                                title={isReadOnly ? 'Past DFP locked' : undefined}
+                                            >
                                                 <span className="text-center leading-tight">Auth</span>
                                             </button>
                                         </div>
                                     )}
                                     {/* Complete button - always frozen when system is frozen */}
-                                    {!isReadOnly && ((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                    {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                             )}
                                             <button
-                                                onClick={handleCompleteClick}
-                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                                onClick={() => {
+                                                    if (blockReadOnlyAction('complete events')) return;
+                                                    handleCompleteClick();
+                                                }}
+                                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${isReadOnly ? 'cursor-not-allowed' : ''}`}
+                                                title={isReadOnly ? 'Past DFP locked' : undefined}
                                             >
                                                 <span className="text-center leading-tight">Complete</span>
                                             </button>
