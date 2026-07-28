@@ -39,38 +39,6 @@ const getStaffArchiveIdentifier = (instructor: Instructor): string | number | nu
     const dbId = String((instructor as any).id || '').trim();
     return dbId || instructor.idNumber || null;
 };
-const installStaffArchiveDiagDownloader = () => {
-    (window as any).downloadStaffArchiveDiag = () => {
-        try {
-            const key = 'neo_staff_archive_diag';
-            const data = (window as any).neoStaffArchiveDiag || JSON.parse(localStorage.getItem(key) || '[]');
-            const entries = Array.isArray(data) ? data : [];
-            const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-            link.href = url;
-            link.download = `staff-archive-diag-${stamp}.json`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-            return { success: true, entries: entries.length, file: link.download };
-        } catch (error) {
-            console.error('[STAFF-ARCHIVE-DIAG] Download failed:', error);
-            return { success: false, error: error instanceof Error ? error.message : String(error) };
-        }
-    };
-};
-const downloadStaffArchiveDiagJson = () => {
-    const downloader = (window as any).downloadStaffArchiveDiag;
-    if (typeof downloader === 'function') {
-        downloader();
-    } else {
-        installStaffArchiveDiagDownloader();
-        (window as any).downloadStaffArchiveDiag?.();
-    }
-};
 const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = {}) => {
     const entry = {
         ts: new Date().toISOString(),
@@ -83,12 +51,10 @@ const pushStaffArchiveDiag = (stage: string, details: Record<string, unknown> = 
         const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
         localStorage.setItem(key, JSON.stringify(next));
         (window as any).neoStaffArchiveDiag = next;
-        installStaffArchiveDiagDownloader();
     } catch {
         // Keep diagnostics non-blocking.
     }
 };
-installStaffArchiveDiagDownloader();
 const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
     instructor.isQFI === true ||
@@ -858,13 +824,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
                 >
                     Add Staff
-                </button>
-                <button
-                    onClick={downloadStaffArchiveDiagJson}
-                    className="w-[64px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-500"
-                    title="Download staff archive diagnostic JSON"
-                >
-                    Trace JSON
                 </button>
                 <div className="w-[8px]"></div>
                 <AuditButton pageName="Staff" />
