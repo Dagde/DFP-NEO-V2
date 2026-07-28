@@ -52964,10 +52964,23 @@ const ArchivedInstructorsFlyout = ({
   onRequestRestorePassword
 }) => {
   const [instructorToRestore, setInstructorToRestore] = reactExports.useState(null);
+  const [searchText, setSearchText] = reactExports.useState("");
   const getArchiveIdentifier = (instructor) => {
     const dbId = String(instructor.id || "").trim();
     return dbId || instructor.idNumber || null;
   };
+  const normalisedSearchText = searchText.trim().toLowerCase();
+  const filteredArchivedInstructors = normalisedSearchText ? archivedInstructors.filter((instructor) => {
+    const searchableText = [
+      instructor.name,
+      instructor.rank,
+      instructor.idNumber,
+      instructor.id,
+      instructor.personnelId,
+      instructor.personnelNumber
+    ].map((value) => String(value || "").toLowerCase()).join(" ");
+    return searchableText.includes(normalisedSearchText);
+  }) : archivedInstructors;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
@@ -52986,31 +52999,47 @@ const ArchivedInstructorsFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "archived-list-title", className: "text-xl font-bold text-white", children: "Archived Profiles" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close archived profiles list", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 flex-1 overflow-y-auto", "aria-labelledby": "archived-list-title", children: archivedInstructors.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: archivedInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "li",
-                {
-                  className: "p-3 bg-gray-700/50 rounded-md text-gray-300 flex items-center justify-between",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0 text-right", children: instructor.rank }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: instructor.name })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        onClick: () => {
-                          if (!canRestore) return;
-                          setInstructorToRestore(instructor);
-                        },
-                        className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
-                        "aria-label": `Restore ${instructor.name}`,
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
-                      }
-                    )
-                  ]
-                },
-                String(getArchiveIdentifier(instructor) || instructor.name)
-              )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: "No instructors have been archived." }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 flex-1 overflow-y-auto", "aria-labelledby": "archived-list-title", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "sr-only", htmlFor: "archived-profile-search", children: "Search archived profiles" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      id: "archived-profile-search",
+                      type: "text",
+                      value: searchText,
+                      onChange: (event) => setSearchText(event.target.value),
+                      placeholder: "Search by name or ID number...",
+                      className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100 placeholder-gray-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    }
+                  )
+                ] }),
+                filteredArchivedInstructors.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: filteredArchivedInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "li",
+                  {
+                    className: "p-3 bg-gray-700/50 rounded-md text-gray-300 flex items-center justify-between",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0 text-right", children: instructor.rank }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: instructor.name })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: () => {
+                            if (!canRestore) return;
+                            setInstructorToRestore(instructor);
+                          },
+                          className: `p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors ${canRestore ? "" : "cursor-not-allowed"}`,
+                          "aria-label": `Restore ${instructor.name}`,
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
+                        }
+                      )
+                    ]
+                  },
+                  String(getArchiveIdentifier(instructor) || instructor.name)
+                )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: archivedInstructors.length > 0 ? "No archived profiles match that search." : "No instructors have been archived." })
+              ] })
             ]
           }
         )

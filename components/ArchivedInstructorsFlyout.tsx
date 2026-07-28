@@ -18,10 +18,25 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
   onRequestRestorePassword,
 }) => {
   const [instructorToRestore, setInstructorToRestore] = useState<Instructor | null>(null);
+  const [searchText, setSearchText] = useState('');
   const getArchiveIdentifier = (instructor: Instructor): string | number | null => {
     const dbId = String((instructor as any).id || '').trim();
     return dbId || instructor.idNumber || null;
   };
+  const normalisedSearchText = searchText.trim().toLowerCase();
+  const filteredArchivedInstructors = normalisedSearchText
+    ? archivedInstructors.filter((instructor) => {
+        const searchableText = [
+          instructor.name,
+          instructor.rank,
+          instructor.idNumber,
+          (instructor as any).id,
+          (instructor as any).personnelId,
+          (instructor as any).personnelNumber,
+        ].map(value => String(value || '').toLowerCase()).join(' ');
+        return searchableText.includes(normalisedSearchText);
+      })
+    : archivedInstructors;
 
   return (
     <>
@@ -44,9 +59,20 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
             </button>
           </div>
           <div className="p-6 flex-1 overflow-y-auto" aria-labelledby="archived-list-title">
-            {archivedInstructors.length > 0 ? (
+            <div className="mb-4">
+              <label className="sr-only" htmlFor="archived-profile-search">Search archived profiles</label>
+              <input
+                id="archived-profile-search"
+                type="text"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Search by name or ID number..."
+                className="w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100 placeholder-gray-500 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              />
+            </div>
+            {filteredArchivedInstructors.length > 0 ? (
                 <ul className="space-y-2">
-                {archivedInstructors.map((instructor) => (
+                {filteredArchivedInstructors.map((instructor) => (
                     <li 
                     key={String(getArchiveIdentifier(instructor) || instructor.name)}
                     className="p-3 bg-gray-700/50 rounded-md text-gray-300 flex items-center justify-between"
@@ -71,7 +97,9 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
                 ))}
                 </ul>
             ) : (
-                <p className="text-gray-500 text-center italic py-8">No instructors have been archived.</p>
+                <p className="text-gray-500 text-center italic py-8">
+                  {archivedInstructors.length > 0 ? 'No archived profiles match that search.' : 'No instructors have been archived.'}
+                </p>
             )}
           </div>
         </div>
