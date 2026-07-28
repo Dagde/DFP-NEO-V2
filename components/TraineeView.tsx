@@ -57,6 +57,7 @@ interface TraineeViewProps {
   currencyRequirements?: any[];
   currentUserId?: string;
   currentUserName?: string;
+  currentUserRole?: string;
   pt051Assessments?: Map<string, any>;
   pt051PerformanceLoading?: boolean;
   userProfile?: any;
@@ -186,6 +187,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             currencyRequirements={props.currencyRequirements}
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
+            currentUserRole={props.currentUserRole}
             resourceDisplayNames={props.resourceDisplayNames}
             personnelDisplaySettings={props.personnelDisplaySettings}
             trainingReportTerminology={props.trainingReportTerminology}

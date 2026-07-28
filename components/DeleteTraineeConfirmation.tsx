@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Trainee } from '../types';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface DeleteTraineeConfirmationProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (trainee: Trainee) => void;
-    onArchive?: (trainee: Trainee) => void;
+    onConfirm: (trainee: Trainee) => Promise<void> | void;
+    onArchive?: (trainee: Trainee) => Promise<void> | void;
+    canManageTraineeRemoval?: boolean;
     traineesData: Trainee[];
     courseColors: { [key: string]: string };
 }
@@ -15,14 +17,16 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
     onClose,
     onConfirm,
     onArchive,
+    canManageTraineeRemoval = false,
     traineesData,
     courseColors
 }) => {
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
-    const [pin, setPin] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [action, setAction] = useState<'delete' | 'archive'>('delete');
+    const [isVerifying, setIsVerifying] = useState(false);
 
     if (!isOpen) return null;
 
@@ -40,7 +44,8 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
         setError('');
     };
 
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
+        if (!canManageTraineeRemoval) return;
         // Validation
         if (!selectedCourse) {
             setError('Please select a course');
@@ -52,20 +57,37 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
             return;
         }
 
-        if (pin !== '1111') {
-            setError('Incorrect PIN');
+        if (!password) {
+            setError('Please enter your password');
             return;
         }
 
-        if (action === 'archive' && onArchive) {
-            onArchive(selectedTrainee);
-        } else {
-            onConfirm(selectedTrainee);
+        setIsVerifying(true);
+        try {
+            const isValidPassword = await verifyCurrentUserPassword(password);
+            if (!isValidPassword) {
+                setError('The password was not accepted');
+                return;
+            }
+            if (action === 'archive' && !onArchive) {
+                setError('Archive is not available for this trainee list.');
+                return;
+            }
+            if (action === 'archive' && onArchive) {
+                await onArchive(selectedTrainee);
+            } else {
+                await onConfirm(selectedTrainee);
+            }
+        } catch (error) {
+            setError('The app could not verify your password');
+            return;
+        } finally {
+            setIsVerifying(false);
         }
         // Reset form
         setSelectedCourse('');
         setSelectedTrainee(null);
-        setPin('');
+        setPassword('');
         setError('');
         setAction('delete');
     };
@@ -73,7 +95,7 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
     const handleClose = () => {
         setSelectedCourse('');
         setSelectedTrainee(null);
-        setPin('');
+        setPassword('');
         setError('');
         setAction('delete');
         onClose();
@@ -190,13 +212,13 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
 
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                            PIN *
+                            Password *
                         </label>
                         <input
                             type="password"
-                            value={pin}
-                            onChange={(e) => setPin(e.target.value)}
-                            placeholder="Enter PIN to confirm"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your password to confirm"
                             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                         />
                     </div>
@@ -211,14 +233,14 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
                     </button>
                     <button
                         onClick={handleConfirm}
-                        disabled={!selectedCourse || !selectedTrainee || !pin}
+                        disabled={!selectedCourse || !selectedTrainee || !password || isVerifying}
                         className={`px-4 py-2 text-white rounded-md disabled:bg-gray-500 disabled:cursor-not-allowed ${
                             action === 'archive' 
                                 ? 'bg-sky-600 hover:bg-sky-700' 
                                 : 'bg-red-600 hover:bg-red-700'
                         }`}
                     >
-                        {action === 'archive' ? 'Archive Trainee' : 'Delete Trainee'}
+                        {isVerifying ? 'Checking...' : action === 'archive' ? 'Archive Trainee' : 'Delete Trainee'}
                     </button>
                 </div>
             </div>

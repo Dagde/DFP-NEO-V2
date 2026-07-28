@@ -55,7 +55,7 @@ interface CourseRosterViewProps {
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
     onDeleteTrainee: (trainee: Trainee) => void;
-    onArchiveTrainee?: (trainee: Trainee) => void;
+    onArchiveTrainee?: (trainee: Trainee) => Promise<void> | void;
     onOpenInstructorProfile?: (instructorName: string) => void;
     // New callbacks for course editing
     onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
@@ -65,6 +65,7 @@ interface CourseRosterViewProps {
     currencyRequirements?: CurrencyRequirement[];
     currentUserId?: string;
     currentUserName?: string;
+    currentUserRole?: string;
     pt051Assessments?: Map<string, any>;
     pt051PerformanceLoading?: boolean;
     userProfile?: any;
@@ -164,6 +165,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     currencyRequirements = [],
     currentUserId,
     currentUserName,
+    currentUserRole,
     pt051Assessments,
     pt051PerformanceLoading = false,
     userProfile,
@@ -203,6 +205,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
     const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+    const normalisedCurrentUserRole = String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+    const canManageTraineeRemoval = normalisedCurrentUserRole === 'ADMIN' || normalisedCurrentUserRole === 'SUPER_ADMIN';
 
     // Course Edit state
     const [courseToEdit, setCourseToEdit] = useState<string | null>(null);
@@ -399,8 +403,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             Upload
                         </button>
                         <button
-                            onClick={() => setShowDeleteConfirmation(true)}
-                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
+                            onClick={() => {
+                                if (!canManageTraineeRemoval) return;
+                                setShowDeleteConfirmation(true);
+                            }}
+                            className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 ${canManageTraineeRemoval ? '' : 'cursor-not-allowed'}`}
                         >
                             Delete Trainee
                         </button>
@@ -526,6 +533,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onClose={() => setShowDeleteConfirmation(false)}
                     onConfirm={handleDeleteTrainee}
                     onArchive={onArchiveTrainee}
+                    canManageTraineeRemoval={canManageTraineeRemoval}
                     traineesData={traineesData}
                     courseColors={courseColors}
                 />

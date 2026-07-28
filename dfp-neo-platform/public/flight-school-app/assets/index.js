@@ -25552,14 +25552,16 @@ const DeleteTraineeConfirmation = ({
   onClose,
   onConfirm,
   onArchive,
+  canManageTraineeRemoval = false,
   traineesData,
   courseColors
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
-  const [pin, setPin] = reactExports.useState("");
+  const [password, setPassword] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const [action, setAction] = reactExports.useState("delete");
+  const [isVerifying, setIsVerifying] = reactExports.useState(false);
   if (!isOpen) return null;
   const courses = Object.keys(courseColors).sort();
   const handleCourseChange = (course) => {
@@ -25572,7 +25574,8 @@ const DeleteTraineeConfirmation = ({
     setSelectedTrainee(trainee || null);
     setError("");
   };
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
+    if (!canManageTraineeRemoval) return;
     if (!selectedCourse) {
       setError("Please select a course");
       return;
@@ -25581,25 +25584,42 @@ const DeleteTraineeConfirmation = ({
       setError("Please select a trainee");
       return;
     }
-    if (pin !== "1111") {
-      setError("Incorrect PIN");
+    if (!password) {
+      setError("Please enter your password");
       return;
     }
-    if (action === "archive" && onArchive) {
-      onArchive(selectedTrainee);
-    } else {
-      onConfirm(selectedTrainee);
+    setIsVerifying(true);
+    try {
+      const isValidPassword = await verifyCurrentUserPassword(password);
+      if (!isValidPassword) {
+        setError("The password was not accepted");
+        return;
+      }
+      if (action === "archive" && !onArchive) {
+        setError("Archive is not available for this trainee list.");
+        return;
+      }
+      if (action === "archive" && onArchive) {
+        await onArchive(selectedTrainee);
+      } else {
+        await onConfirm(selectedTrainee);
+      }
+    } catch (error2) {
+      setError("The app could not verify your password");
+      return;
+    } finally {
+      setIsVerifying(false);
     }
     setSelectedCourse("");
     setSelectedTrainee(null);
-    setPin("");
+    setPassword("");
     setError("");
     setAction("delete");
   };
   const handleClose = () => {
     setSelectedCourse("");
     setSelectedTrainee(null);
-    setPin("");
+    setPassword("");
     setError("");
     setAction("delete");
     onClose();
@@ -25705,14 +25725,14 @@ const DeleteTraineeConfirmation = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: "PIN *" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: "Password *" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
             type: "password",
-            value: pin,
-            onChange: (e) => setPin(e.target.value),
-            placeholder: "Enter PIN to confirm",
+            value: password,
+            onChange: (e) => setPassword(e.target.value),
+            placeholder: "Enter your password to confirm",
             className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
           }
         )
@@ -25731,9 +25751,9 @@ const DeleteTraineeConfirmation = ({
         "button",
         {
           onClick: handleConfirm,
-          disabled: !selectedCourse || !selectedTrainee || !pin,
+          disabled: !selectedCourse || !selectedTrainee || !password || isVerifying,
           className: `px-4 py-2 text-white rounded-md disabled:bg-gray-500 disabled:cursor-not-allowed ${action === "archive" ? "bg-sky-600 hover:bg-sky-700" : "bg-red-600 hover:bg-red-700"}`,
-          children: action === "archive" ? "Archive Trainee" : "Delete Trainee"
+          children: isVerifying ? "Checking..." : action === "archive" ? "Archive Trainee" : "Delete Trainee"
         }
       )
     ] })
@@ -26588,6 +26608,7 @@ const CourseRosterView = ({
   currencyRequirements = [],
   currentUserId,
   currentUserName,
+  currentUserRole,
   pt051Assessments,
   pt051PerformanceLoading = false,
   userProfile,
@@ -26625,6 +26646,8 @@ const CourseRosterView = ({
   const [selectedCourseForDeletion, setSelectedCourseForDeletion] = reactExports.useState("");
   const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = reactExports.useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = reactExports.useState(false);
+  const normalisedCurrentUserRole = String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const canManageTraineeRemoval = normalisedCurrentUserRole === "ADMIN" || normalisedCurrentUserRole === "SUPER_ADMIN";
   const [courseToEdit, setCourseToEdit] = reactExports.useState(null);
   const [showBulkUpload, setShowBulkUpload] = reactExports.useState(false);
   reactExports.useEffect(() => {
@@ -26767,8 +26790,11 @@ const CourseRosterView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
-              onClick: () => setShowDeleteConfirmation(true),
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500",
+              onClick: () => {
+                if (!canManageTraineeRemoval) return;
+                setShowDeleteConfirmation(true);
+              },
+              className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 ${canManageTraineeRemoval ? "" : "cursor-not-allowed"}`,
               children: "Delete Trainee"
             }
           ),
@@ -26881,6 +26907,7 @@ const CourseRosterView = ({
         onClose: () => setShowDeleteConfirmation(false),
         onConfirm: handleDeleteTrainee,
         onArchive: onArchiveTrainee,
+        canManageTraineeRemoval,
         traineesData,
         courseColors
       }
@@ -54330,6 +54357,7 @@ const TraineeView = (props) => {
           currencyRequirements: props.currencyRequirements,
           currentUserId: props.currentUserId,
           currentUserName: props.currentUserName,
+          currentUserRole: props.currentUserRole,
           resourceDisplayNames: props.resourceDisplayNames,
           personnelDisplaySettings: props.personnelDisplaySettings,
           trainingReportTerminology: props.trainingReportTerminology,
@@ -120820,6 +120848,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
+            currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames,
             personnelDisplaySettings,
             trainingReportTerminology,
@@ -120955,6 +120984,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
+            currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames,
             personnelDisplaySettings,
             trainingReportTerminology,
