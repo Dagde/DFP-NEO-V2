@@ -33,6 +33,8 @@ const generateRandomIdNumber = (): number => {
 
 const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
+const isActiveStaffRecord = (instructor: Instructor): boolean =>
+    (instructor as any)?.isActive !== false;
 const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
     instructor.isQFI === true ||
@@ -311,6 +313,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const qfis = useMemo(() => {
       return instructorsData
+          .filter(isActiveStaffRecord)
           .filter(i => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel))
           .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
   }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
@@ -389,7 +392,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const simIps = useMemo(() => {
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
-        const simIpCandidates = instructorsData.filter(i => {
+        const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             const isSimIp = i.role === 'SIM IP';
             if (!isSimIp) return false;
             console.log(`🔍 [SIM IP FILTER] Found active-context SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
@@ -412,7 +415,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
         console.log('🔍 [OFI FILTER] All instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
 
-        const ofiCandidates = instructorsData.filter(i => {
+        const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             if (!isOfi) return false;
             console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}`);
@@ -439,7 +442,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     const otherStaff = useMemo(() => {
         console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
 
-        const otherStaffCandidates = instructorsData.filter(i => {
+        const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             // Keep recognised active flying/crew staff in the main staff list.
             const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
             const isSimIp = i.role === 'SIM IP';

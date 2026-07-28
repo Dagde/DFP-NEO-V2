@@ -38689,8 +38689,8 @@ appliedUpdates.forEach(update => {
                     throw new Error(errorData.error || errorData.details || `Archive failed (${response.status})`);
                 }
             }
-            setInstructorsData(prev => prev.map(i => (
-                i.idNumber === id || String((i as any).id || '') === dbId ? archivedInstructor : i
+            setInstructorsData(prev => prev.filter(i => (
+                i.idNumber !== id && String((i as any).id || '') !== dbId
             )));
             setArchivedInstructorsData(prev => {
                 const withoutDuplicate = prev.filter(i => i.idNumber !== id && String((i as any).id || '') !== dbId);
