@@ -26042,12 +26042,13 @@ const CourseEditFlyout = ({
   ] });
 };
 const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
-  const [password, setPassword] = reactExports.useState("");
+  const passwordInputRef = reactExports.useRef(null);
   const [updateType, setUpdateType] = reactExports.useState("minor");
   const [error, setError] = reactExports.useState("");
   const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const password = passwordInputRef.current?.value || "";
     if (!password.trim()) {
       setError("Enter your password.");
       return;
@@ -26077,10 +26078,9 @@ const UpdateConfirmationFlyout = ({ fileName, onConfirm, onClose }) => {
           {
             id: "password-input",
             type: "password",
-            value: password,
-            onChange: (e) => {
-              setPassword(e.target.value);
-              setError("");
+            ref: passwordInputRef,
+            onInput: () => {
+              if (error) setError("");
             },
             autoFocus: true,
             className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"

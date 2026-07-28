@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 interface UpdateConfirmationFlyoutProps {
   fileName: string;
@@ -7,13 +7,14 @@ interface UpdateConfirmationFlyoutProps {
 }
 
 const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({ fileName, onConfirm, onClose }) => {
-    const [password, setPassword] = useState('');
+    const passwordInputRef = useRef<HTMLInputElement | null>(null);
     const [updateType, setUpdateType] = useState<'bulk' | 'minor'>('minor');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const password = passwordInputRef.current?.value || '';
         if (!password.trim()) {
             setError('Enter your password.');
             return;
@@ -45,10 +46,9 @@ const UpdateConfirmationFlyout: React.FC<UpdateConfirmationFlyoutProps> = ({ fil
                         <input
                             id="password-input"
                             type="password"
-                            value={password}
-                            onChange={e => {
-                                setPassword(e.target.value);
-                                setError('');
+                            ref={passwordInputRef}
+                            onInput={() => {
+                                if (error) setError('');
                             }}
                             autoFocus
                             className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
