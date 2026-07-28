@@ -90549,6 +90549,7 @@ const normalisePersonnelRecord = (person) => {
     }
   };
 };
+const isRecordActive = (record) => record?.isActive !== false;
 const normalisePersonnelUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase().replace(/[\s-]+/g, "");
 const normaliseLocationMatchToken = (value) => String(value || "").trim().toUpperCase();
 const getConfiguredLocationTokens = (location) => {
@@ -104977,18 +104978,20 @@ const App = () => {
   }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
-    const locationFiltered = allInstructorsData.filter(personMatchesActiveLocation);
+    const activeInstructors = allInstructorsData.filter(isRecordActive);
+    const locationFiltered = activeInstructors.filter(personMatchesActiveLocation);
     const contextFiltered = activeContextUnitCodeSet.size > 0 ? locationFiltered.filter((i) => {
       const unitCode = normalisePersonnelUnitCode(i.unit);
       return !unitCode || activeContextUnitCodeSet.has(unitCode);
     }) : locationFiltered;
     if (setupTestProfile) {
-      const setupStaff = allInstructorsData.filter((i) => i._dataSource === "setup-test");
+      const setupStaff = activeInstructors.filter((i) => i._dataSource === "setup-test");
       const locationMatchedSetupStaff = locationFiltered.filter((i) => i._dataSource === "setup-test");
       const contextMatchedSetupStaff = contextFiltered.filter((i) => i._dataSource === "setup-test");
       const nextStaff = setupStaff.length > 0 ? setupStaff : contextMatchedSetupStaff;
       pushSetupTestPersonnelDiag("filter:staff", {
         allInstructors: allInstructorsData.length,
+        activeInstructors: activeInstructors.length,
         setupStaff: setupStaff.length,
         locationMatchedSetupStaff: locationMatchedSetupStaff.length,
         contextMatchedSetupStaff: contextMatchedSetupStaff.length,
@@ -105999,6 +106002,7 @@ const App = () => {
             }))
           });
           setInstructorsData(normalisedInstructors2);
+          setArchivedInstructorsData(normalisedInstructors2.filter((person) => !isRecordActive(person)));
           setIsStaffLoaded(true);
           setTraineesData(normalisedTrainees);
           setIsTraineeLoaded(true);
@@ -106063,6 +106067,7 @@ const App = () => {
           });
         }
         setInstructorsData(normalisedInstructors);
+        setArchivedInstructorsData(normalisedInstructors.filter((person) => !isRecordActive(person)));
         setIsStaffLoaded(true);
         setTraineesData(data.trainees);
         setIsTraineeLoaded(true);
@@ -109913,12 +109918,13 @@ ${"=".repeat(60)}`);
     }
   }, [publishedSchedules, date, school, baselineSchedules]);
   const staffCallsignAssignments = reactExports.useMemo(
-    () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings, activeUnitCallsignSettings),
+    () => getStaffCallsignAssignments(allInstructorsData.filter(isRecordActive), personnelDisplaySettings, activeUnitCallsignSettings),
     [activeUnitCallsignSettings, allInstructorsData, personnelDisplaySettings]
   );
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     allInstructorsData.forEach((instructor) => {
+      if (!isRecordActive(instructor)) return;
       if (!instructor.name) return;
       const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
       const savedCallsign = String(instructor.callsign || "").trim();
@@ -117988,26 +117994,77 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     setInstructorForSct(instructor);
     setShowSctRequest(true);
   }, []);
-  const handleArchiveInstructor = reactExports.useCallback((id) => {
-    setInstructorsData((prev) => {
-      const instructorToArchive = prev.find((i) => i.idNumber === id);
-      if (instructorToArchive) {
-        setArchivedInstructorsData((archived) => [...archived, instructorToArchive]);
-        return prev.filter((i) => i.idNumber !== id);
+  const handleArchiveInstructor = reactExports.useCallback(async (id) => {
+    const instructorToArchive = allInstructorsDataRef.current.find((i) => i.idNumber === id);
+    if (!instructorToArchive) return;
+    const dbId = String(instructorToArchive.id || "").trim();
+    const archivedInstructor = { ...instructorToArchive, isActive: false };
+    try {
+      if (dbId && instructorToArchive._dataSource === "database") {
+        const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: false })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || errorData.details || `Archive failed (${response.status})`);
+        }
       }
-      return prev;
-    });
-  }, []);
-  const handleRestoreInstructor = reactExports.useCallback((id) => {
-    setArchivedInstructorsData((prev) => {
-      const instructorToRestore = prev.find((i) => i.idNumber === id);
-      if (instructorToRestore) {
-        setInstructorsData((instructors) => [...instructors, instructorToRestore]);
-        return prev.filter((i) => i.idNumber !== id);
+      setInstructorsData((prev) => prev.map((i) => i.idNumber === id || String(i.id || "") === dbId ? archivedInstructor : i));
+      setArchivedInstructorsData((prev) => {
+        const withoutDuplicate = prev.filter((i) => i.idNumber !== id && String(i.id || "") !== dbId);
+        return [...withoutDuplicate, archivedInstructor];
+      });
+      logAudit({
+        page: "Staff",
+        action: "archive",
+        description: "Archived staff member",
+        changes: `Archived: ${instructorToArchive.rank || ""} ${instructorToArchive.name}`.trim()
+      });
+    } catch (error) {
+      console.error("[Staff Archive] Failed:", error);
+      setErrorMessage(`Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [scopedApiPath]);
+  const handleRestoreInstructor = reactExports.useCallback(async (id) => {
+    const instructorToRestore = archivedInstructorsData.find((i) => i.idNumber === id) || allInstructorsDataRef.current.find((i) => i.idNumber === id);
+    if (!instructorToRestore) return;
+    const dbId = String(instructorToRestore.id || "").trim();
+    const restoredInstructor = { ...instructorToRestore, isActive: true };
+    try {
+      if (dbId && instructorToRestore._dataSource === "database") {
+        const response = await fetch(scopedApiPath(`/api/personnel/${encodeURIComponent(dbId)}`), {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: true })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || errorData.details || `Restore failed (${response.status})`);
+        }
       }
-      return prev;
-    });
-  }, []);
+      setArchivedInstructorsData((prev) => prev.filter((i) => i.idNumber !== id && String(i.id || "") !== dbId));
+      setInstructorsData((prev) => {
+        const exists = prev.some((i) => i.idNumber === id || String(i.id || "") === dbId);
+        if (exists) {
+          return prev.map((i) => i.idNumber === id || String(i.id || "") === dbId ? restoredInstructor : i);
+        }
+        return [...prev, restoredInstructor];
+      });
+      logAudit({
+        page: "Staff",
+        action: "restore",
+        description: "Restored archived staff member",
+        changes: `Restored: ${instructorToRestore.rank || ""} ${instructorToRestore.name}`.trim()
+      });
+    } catch (error) {
+      console.error("[Staff Restore] Failed:", error);
+      setErrorMessage(`Could not restore ${instructorToRestore.name}. ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [archivedInstructorsData, scopedApiPath]);
   reactExports.useCallback((newInstructors) => {
     setInstructorsData(newInstructors.map(normalisePersonnelRecord));
     setSuccessMessage("Instructors successfully replaced!");
@@ -118080,10 +118137,12 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     console.log("🔄 Refreshing database data after database modification...");
     if (isSetupTestMode()) {
       const setupPersonnel = readSetupTestPersonnel();
-      setInstructorsData((setupPersonnel.instructors || []).map((person) => ({
+      const setupInstructors = (setupPersonnel.instructors || []).map((person) => ({
         ...normalisePersonnelRecord(person),
         _dataSource: "setup-test"
-      })));
+      }));
+      setInstructorsData(setupInstructors);
+      setArchivedInstructorsData(setupInstructors.filter((person) => !isRecordActive(person)));
       setTraineesData((setupPersonnel.trainees || []).map((trainee) => ({
         ...trainee,
         _dataSource: "setup-test"
@@ -118105,6 +118164,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           const nonDbInstructors = prev.filter((i) => i._dataSource !== "database");
           return [...nonDbInstructors, ...dbPersonnel];
         });
+        setArchivedInstructorsData(dbPersonnel.filter((person) => !isRecordActive(person)));
         console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
       }
       const traineesRes = await fetch(scopedApiPath("/api/trainees"), { credentials: "include" });
@@ -121680,18 +121740,10 @@ ${error instanceof Error ? error.message : String(error)}`,
             onNavigateToCurrency: handleNavigateToCurrency,
             onBulkUpdateInstructors: handleBulkUpdateInstructors,
             onArchiveInstructor: (id) => {
-              const instructorToArchive = instructorsData.find((i) => i.idNumber === id);
-              if (instructorToArchive) {
-                setInstructorsData((prev) => prev.filter((i) => i.idNumber !== id));
-                setArchivedInstructorsData((prev) => [...prev, instructorToArchive]);
-              }
+              void handleArchiveInstructor(id);
             },
             onRestoreInstructor: (id) => {
-              const instructorToRestore = archivedInstructorsData.find((i) => i.idNumber === id);
-              if (instructorToRestore) {
-                setArchivedInstructorsData((prev) => prev.filter((i) => i.idNumber !== id));
-                setInstructorsData((prev) => [...prev, instructorToRestore]);
-              }
+              void handleRestoreInstructor(id);
             },
             locations,
             units,
