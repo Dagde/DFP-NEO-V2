@@ -12,6 +12,7 @@ import PinEntryFlyout from './PinEntryFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import {
     DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
@@ -4353,7 +4354,12 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     }}
                     onCancel={() => setShowRemovePin(false)}
                     title="Confirm Permanent Removal"
-                    message="⚠ This will permanently remove this event from the schedule and cannot be undone. Enter your PIN to confirm."
+                    message="This will permanently remove this event from the schedule and cannot be undone. Enter your password to confirm."
+                    inputLabel="Password"
+                    inputType="password"
+                    maxLength={128}
+                    invalidMessage="The password was not accepted."
+                    onValidateEntry={verifyCurrentUserPassword}
                 />
             )}
 

@@ -7,19 +7,48 @@ interface PinEntryFlyoutProps {
   title?: string;
   message?: string;
   annotation?: string;
+  inputLabel?: string;
+  inputType?: string;
+  maxLength?: number;
+  invalidMessage?: string;
+  onValidateEntry?: (entry: string) => Promise<boolean> | boolean;
 }
 
-const PinEntryFlyout: React.FC<PinEntryFlyoutProps> = ({ correctPin, onConfirm, onCancel, title, message, annotation }) => {
+const PinEntryFlyout: React.FC<PinEntryFlyoutProps> = ({
+    correctPin,
+    onConfirm,
+    onCancel,
+    title,
+    message,
+    annotation,
+    inputLabel = 'PIN',
+    inputType = 'text',
+    maxLength = 4,
+    invalidMessage = 'Incorrect PIN. Please try again.',
+    onValidateEntry,
+}) => {
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
+    const [isChecking, setIsChecking] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (pin === correctPin) {
+        setIsChecking(true);
+        try {
+            const isValid = onValidateEntry
+                ? await onValidateEntry(pin)
+                : pin === correctPin;
+            if (!isValid) {
+                setError(invalidMessage);
+                setPin('');
+                return;
+            }
             onConfirm();
-        } else {
-            setError('Incorrect PIN. Please try again.');
+        } catch (error) {
+            setError('The app could not verify your password.');
             setPin('');
+        } finally {
+            setIsChecking(false);
         }
     };
 
@@ -39,25 +68,28 @@ const PinEntryFlyout: React.FC<PinEntryFlyoutProps> = ({ correctPin, onConfirm, 
                         )}
                         <input
                             id="pin-input"
-                            type="text"
+                            type={inputType}
                             value={pin}
                             onChange={e => {
                                 setPin(e.target.value);
                                 setError('');
                             }}
-                            maxLength={4}
+                            maxLength={maxLength}
                             autoFocus
                             autoComplete="off"
                             autoCorrect="off"
                             autoCapitalize="off"
                             spellCheck="false"
-                            className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white text-center text-2xl tracking-[.5em] focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                            placeholder={inputLabel}
+                            className={`block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${inputType === 'password' ? '' : 'text-center text-2xl tracking-[.5em]'}`}
                         />
                         {error && <p className="text-red-400 text-sm text-center">{error}</p>}
                     </div>
                     <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
                         <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold">Cancel</button>
-                        <button type="submit" className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">Submit</button>
+                        <button type="submit" disabled={isChecking} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed">
+                            {isChecking ? 'Checking...' : 'Submit'}
+                        </button>
                     </div>
                 </form>
             </div>

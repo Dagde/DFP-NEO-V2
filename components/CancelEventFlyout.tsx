@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PinEntryFlyout from './PinEntryFlyout';
 import { CancellationCode } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 
 interface CancelEventFlyoutProps {
   eventId: string;
@@ -152,7 +153,7 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
             <div className="bg-gray-700/30 border border-gray-600 rounded-md p-3">
               <p className="text-gray-400 text-sm">
                 <strong className="text-white">Note:</strong> After selecting a cancellation code,
-                you will be prompted to enter your PIN to complete the cancellation.
+                you will be prompted to enter your password to complete the cancellation.
               </p>
             </div>
           </div>
@@ -170,7 +171,7 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
               disabled={!isPinEnabled}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"
             >
-              Proceed to PIN
+              Proceed
             </button>
           </div>
         </div>
@@ -183,7 +184,12 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
           onConfirm={handlePinConfirm}
           onCancel={handlePinCancel}
           title="Confirm Cancellation"
-          message="Enter your PIN to confirm event cancellation."
+          message="Enter your password to confirm event cancellation."
+          inputLabel="Password"
+          inputType="password"
+          maxLength={128}
+          invalidMessage="The password was not accepted."
+          onValidateEntry={verifyCurrentUserPassword}
         />
       )}
     </>

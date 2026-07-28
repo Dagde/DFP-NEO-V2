@@ -27122,16 +27122,38 @@ const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
     ] })
   ] });
 };
-const PinEntryFlyout = ({ correctPin, onConfirm, onCancel, title, message, annotation }) => {
+const PinEntryFlyout = ({
+  correctPin,
+  onConfirm,
+  onCancel,
+  title,
+  message,
+  annotation,
+  inputLabel = "PIN",
+  inputType = "text",
+  maxLength = 4,
+  invalidMessage = "Incorrect PIN. Please try again.",
+  onValidateEntry
+}) => {
   const [pin, setPin] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
-  const handleSubmit = (e) => {
+  const [isChecking, setIsChecking] = reactExports.useState(false);
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (pin === correctPin) {
+    setIsChecking(true);
+    try {
+      const isValid = onValidateEntry ? await onValidateEntry(pin) : pin === correctPin;
+      if (!isValid) {
+        setError(invalidMessage);
+        setPin("");
+        return;
+      }
       onConfirm();
-    } else {
-      setError("Incorrect PIN. Please try again.");
+    } catch (error2) {
+      setError("The app could not verify your password.");
       setPin("");
+    } finally {
+      setIsChecking(false);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-xs border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
@@ -27144,26 +27166,27 @@ const PinEntryFlyout = ({ correctPin, onConfirm, onCancel, title, message, annot
           "input",
           {
             id: "pin-input",
-            type: "text",
+            type: inputType,
             value: pin,
             onChange: (e) => {
               setPin(e.target.value);
               setError("");
             },
-            maxLength: 4,
+            maxLength,
             autoFocus: true,
             autoComplete: "off",
             autoCorrect: "off",
             autoCapitalize: "off",
             spellCheck: "false",
-            className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white text-center text-2xl tracking-[.5em] focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+            placeholder: inputLabel,
+            className: `block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${inputType === "password" ? "" : "text-center text-2xl tracking-[.5em]"}`
           }
         ),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm text-center", children: error })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Submit" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "submit", disabled: isChecking, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed", children: isChecking ? "Checking..." : "Submit" })
       ] })
     ] })
   ] }) });
@@ -27272,7 +27295,7 @@ const CancelEventFlyout = ({
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/30 border border-red-500/50 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm", children: error }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/30 border border-gray-600 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Note:" }),
-          " After selecting a cancellation code, you will be prompted to enter your PIN to complete the cancellation."
+          " After selecting a cancellation code, you will be prompted to enter your password to complete the cancellation."
         ] }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
@@ -27290,7 +27313,7 @@ const CancelEventFlyout = ({
             onClick: handleProceedToPin,
             disabled: !isPinEnabled,
             className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed",
-            children: "Proceed to PIN"
+            children: "Proceed"
           }
         )
       ] })
@@ -27302,7 +27325,12 @@ const CancelEventFlyout = ({
         onConfirm: handlePinConfirm,
         onCancel: handlePinCancel,
         title: "Confirm Cancellation",
-        message: "Enter your PIN to confirm event cancellation."
+        message: "Enter your password to confirm event cancellation.",
+        inputLabel: "Password",
+        inputType: "password",
+        maxLength: 128,
+        invalidMessage: "The password was not accepted.",
+        onValidateEntry: verifyCurrentUserPassword
       }
     )
   ] });
@@ -30925,7 +30953,12 @@ ${swapNote}` : swapNote
         },
         onCancel: () => setShowRemovePin(false),
         title: "Confirm Permanent Removal",
-        message: "⚠ This will permanently remove this event from the schedule and cannot be undone. Enter your PIN to confirm."
+        message: "This will permanently remove this event from the schedule and cannot be undone. Enter your password to confirm.",
+        inputLabel: "Password",
+        inputType: "password",
+        maxLength: 128,
+        invalidMessage: "The password was not accepted.",
+        onValidateEntry: verifyCurrentUserPassword
       }
     ),
     showRestoreConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowRestoreConfirm(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-green-500/50", onClick: (e) => e.stopPropagation(), children: [
