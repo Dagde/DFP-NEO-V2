@@ -5,10 +5,18 @@ import RestoreConfirmationFlyout from './RestoreConfirmationFlyout';
 interface ArchivedInstructorsFlyoutProps {
   archivedInstructors: Instructor[];
   onClose: () => void;
-  onRestore: (id: string | number | null) => void;
+  onRestore: (id: string | number | null) => Promise<void> | void;
+  canRestore?: boolean;
+  onRequestRestorePassword?: (instructorName: string) => Promise<boolean>;
 }
 
-const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({ archivedInstructors, onClose, onRestore }) => {
+const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
+  archivedInstructors,
+  onClose,
+  onRestore,
+  canRestore = false,
+  onRequestRestorePassword,
+}) => {
   const [instructorToRestore, setInstructorToRestore] = useState<Instructor | null>(null);
   const getArchiveIdentifier = (instructor: Instructor): string | number | null => {
     const dbId = String((instructor as any).id || '').trim();
@@ -48,7 +56,10 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({ a
                         <span>{instructor.name}</span>
                     </div>
                     <button
-                        onClick={() => setInstructorToRestore(instructor)}
+                        onClick={() => {
+                          if (!canRestore) return;
+                          setInstructorToRestore(instructor);
+                        }}
                         className="p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors"
                         aria-label={`Restore ${instructor.name}`}
                     >
@@ -69,8 +80,12 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({ a
       {instructorToRestore && (
         <RestoreConfirmationFlyout
           instructorName={instructorToRestore.name}
-          onConfirm={() => {
-            onRestore(getArchiveIdentifier(instructorToRestore));
+          onConfirm={async () => {
+            const passwordAccepted = onRequestRestorePassword
+              ? await onRequestRestorePassword(instructorToRestore.name)
+              : true;
+            if (!passwordAccepted) return;
+            await onRestore(getArchiveIdentifier(instructorToRestore));
             setInstructorToRestore(null);
           }}
           onClose={() => setInstructorToRestore(null)}

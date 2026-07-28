@@ -29,8 +29,8 @@ interface StaffViewProps {
   onUpdateInstructor: (data: any) => Promise<void>;
   onNavigateToCurrency: (person: any) => void;
   onBulkUpdateInstructors: (updates: any[]) => void;
-  onArchiveInstructor: (id: string | number | null) => void;
-  onRestoreInstructor: (id: string | number | null) => void;
+  onArchiveInstructor: (id: string | number | null) => Promise<void> | void;
+  onRestoreInstructor: (id: string | number | null) => Promise<void> | void;
   onRequestSct?: (instructor: any) => void;
   locations?: string[];
   units?: string[];
@@ -43,6 +43,7 @@ interface StaffViewProps {
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
+  currentUserRole?: string;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
@@ -222,6 +223,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onProfileTabConsumed={props.onProfileTabConsumed}
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
+            currentUserRole={props.currentUserRole}
             resourceDisplayNames={props.resourceDisplayNames}
             personnelDisplaySettings={props.personnelDisplaySettings}
             instructorLabel={props.instructorLabel}

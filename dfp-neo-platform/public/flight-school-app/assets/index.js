@@ -52956,7 +52956,13 @@ const RestoreConfirmationFlyout = ({ instructorName, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const ArchivedInstructorsFlyout = ({ archivedInstructors, onClose, onRestore }) => {
+const ArchivedInstructorsFlyout = ({
+  archivedInstructors,
+  onClose,
+  onRestore,
+  canRestore = false,
+  onRequestRestorePassword
+}) => {
   const [instructorToRestore, setInstructorToRestore] = reactExports.useState(null);
   const getArchiveIdentifier = (instructor) => {
     const dbId = String(instructor.id || "").trim();
@@ -52992,7 +52998,10 @@ const ArchivedInstructorsFlyout = ({ archivedInstructors, onClose, onRestore }) 
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "button",
                       {
-                        onClick: () => setInstructorToRestore(instructor),
+                        onClick: () => {
+                          if (!canRestore) return;
+                          setInstructorToRestore(instructor);
+                        },
                         className: "p-1 rounded-full text-gray-400 hover:bg-green-500/20 hover:text-green-400 transition-colors",
                         "aria-label": `Restore ${instructor.name}`,
                         children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }) })
@@ -53011,8 +53020,10 @@ const ArchivedInstructorsFlyout = ({ archivedInstructors, onClose, onRestore }) 
       RestoreConfirmationFlyout,
       {
         instructorName: instructorToRestore.name,
-        onConfirm: () => {
-          onRestore(getArchiveIdentifier(instructorToRestore));
+        onConfirm: async () => {
+          const passwordAccepted = onRequestRestorePassword ? await onRequestRestorePassword(instructorToRestore.name) : true;
+          if (!passwordAccepted) return;
+          await onRestore(getArchiveIdentifier(instructorToRestore));
           setInstructorToRestore(null);
         },
         onClose: () => setInstructorToRestore(null)
@@ -53102,6 +53113,7 @@ const InstructorListView = ({
   onProfileTabConsumed,
   currentUserId,
   currentUserName,
+  currentUserRole,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
   instructorLabel = "QFI",
@@ -53116,7 +53128,7 @@ const InstructorListView = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, currentUserRole, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -53137,6 +53149,8 @@ const InstructorListView = ({
   const [newInstructorTemplate, setNewInstructorTemplate] = reactExports.useState(null);
   const [isArchiveMode, setIsArchiveMode] = reactExports.useState(false);
   const [instructorToArchive, setInstructorToArchive] = reactExports.useState(null);
+  const normalisedCurrentUserRole = String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  const canManageArchive = normalisedCurrentUserRole === "ADMIN" || normalisedCurrentUserRole === "SUPER_ADMIN";
   const [showArchivedFlyout, setShowArchivedFlyout] = reactExports.useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = reactExports.useState("ALL");
   reactExports.useEffect(() => {
@@ -53428,7 +53442,32 @@ const InstructorListView = ({
     setIsArchiveMode(false);
     setShowBulkUpdate(true);
   };
+  const requestArchivePassword = async (message, title) => {
+    const password = await showDarkPrompt({
+      title,
+      message,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return false;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted.", title, "warning");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await showDarkAlert("The app could not verify your password.", "Password Check Failed", "error");
+      return false;
+    }
+  };
   const toggleArchiveMode = () => {
+    if (!canManageArchive) return;
     setIsArchiveMode(!isArchiveMode);
     setSelectedInstructor(null);
   };
@@ -53444,6 +53483,7 @@ const InstructorListView = ({
         onMouseLeave: handleMouseLeave,
         onClick: (e) => {
           if (isArchiveMode) {
+            if (!canManageArchive) return;
             setInstructorToArchive(instructor);
           } else {
             handleInstructorClick(e, instructor);
@@ -53679,6 +53719,11 @@ const InstructorListView = ({
       {
         instructorName: instructorToArchive.name,
         onConfirm: async () => {
+          const passwordAccepted = await requestArchivePassword(
+            `Enter your password to archive ${instructorToArchive.name}.`,
+            "Archive Password Required"
+          );
+          if (!passwordAccepted) return;
           await onArchiveInstructor(getStaffArchiveIdentifier(instructorToArchive));
           setInstructorToArchive(null);
           setIsArchiveMode(false);
@@ -53691,7 +53736,12 @@ const InstructorListView = ({
       {
         archivedInstructors: archivedInstructorsData,
         onClose: () => setShowArchivedFlyout(false),
-        onRestore: onRestoreInstructor
+        onRestore: onRestoreInstructor,
+        canRestore: canManageArchive,
+        onRequestRestorePassword: (instructorName) => requestArchivePassword(
+          `Enter your password to restore ${instructorName}.`,
+          "Restore Password Required"
+        )
       }
     )
   ] });
@@ -54115,6 +54165,7 @@ const StaffView = (props) => {
           onProfileTabConsumed: props.onProfileTabConsumed,
           currentUserId: props.currentUserId,
           currentUserName: props.currentUserName,
+          currentUserRole: props.currentUserRole,
           resourceDisplayNames: props.resourceDisplayNames,
           personnelDisplaySettings: props.personnelDisplaySettings,
           instructorLabel: props.instructorLabel,
@@ -121694,6 +121745,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onProfileTabConsumed: handleProfileTabConsumed,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
+            currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,
@@ -121812,6 +121864,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
+            currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames,
             personnelDisplaySettings,
             instructorLabel,

@@ -9,6 +9,8 @@ import BulkUpdateFlyout from './BulkUpdateFlyout';
 import ArchiveConfirmationFlyout from './ArchiveConfirmationFlyout';
 import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
+import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
     comparePeopleByConfiguredRank,
@@ -150,6 +152,7 @@ interface InstructorListViewProps {
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
+  currentUserRole?: string;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
   instructorLabel?: string;
@@ -195,6 +198,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onProfileTabConsumed,
     currentUserId,
     currentUserName,
+    currentUserRole,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
     instructorLabel = 'QFI',
@@ -210,7 +214,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, currentUserRole, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -235,6 +239,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   // State for archiving
   const [isArchiveMode, setIsArchiveMode] = useState(false);
   const [instructorToArchive, setInstructorToArchive] = useState<Instructor | null>(null);
+  const normalisedCurrentUserRole = String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const canManageArchive = normalisedCurrentUserRole === 'ADMIN' || normalisedCurrentUserRole === 'SUPER_ADMIN';
   const [showArchivedFlyout, setShowArchivedFlyout] = useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = useState('ALL');
 
@@ -588,7 +594,33 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       setShowBulkUpdate(true);
   };
 
+  const requestArchivePassword = async (message: string, title: string): Promise<boolean> => {
+    const password = await showDarkPrompt({
+        title,
+        message,
+        inputLabel: 'Password',
+        inputType: 'password',
+        inputPlaceholder: 'Enter password',
+        confirmText: 'Confirm',
+        cancelText: 'Cancel',
+        variant: 'warning',
+    });
+    if (!password) return false;
+    try {
+        const isValid = await verifyCurrentUserPassword(password);
+        if (!isValid) {
+            await showDarkAlert('The password was not accepted.', title, 'warning');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        await showDarkAlert('The app could not verify your password.', 'Password Check Failed', 'error');
+        return false;
+    }
+  };
+
   const toggleArchiveMode = () => {
+    if (!canManageArchive) return;
     setIsArchiveMode(!isArchiveMode);
     setSelectedInstructor(null);
   }
@@ -611,6 +643,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             onMouseLeave={handleMouseLeave}
             onClick={(e) => {
                 if (isArchiveMode) {
+                    if (!canManageArchive) return;
                     setInstructorToArchive(instructor);
                 } else {
                     handleInstructorClick(e, instructor);
@@ -905,6 +938,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         <ArchiveConfirmationFlyout
           instructorName={instructorToArchive.name}
           onConfirm={async () => {
+            const passwordAccepted = await requestArchivePassword(
+              `Enter your password to archive ${instructorToArchive.name}.`,
+              'Archive Password Required',
+            );
+            if (!passwordAccepted) return;
             await onArchiveInstructor(getStaffArchiveIdentifier(instructorToArchive));
             setInstructorToArchive(null);
             setIsArchiveMode(false);
@@ -917,6 +955,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             archivedInstructors={archivedInstructorsData}
             onClose={() => setShowArchivedFlyout(false)}
             onRestore={onRestoreInstructor}
+            canRestore={canManageArchive}
+            onRequestRestorePassword={(instructorName) => requestArchivePassword(
+              `Enter your password to restore ${instructorName}.`,
+              'Restore Password Required',
+            )}
         />
       )}
     </>
