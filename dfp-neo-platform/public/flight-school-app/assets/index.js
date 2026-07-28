@@ -14306,7 +14306,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       const flags = qualificationsToFlags(row.qualifications);
       return {
         id: `setup-staff-${index + 1}`,
-        idNumber: Number(row.pmkeys) || 9e5 + index + 1,
+        idNumber: Number(row.pmkeys) || 4e6 + index + 1,
         name: fullName,
         rank: row.rank || "Rank",
         role: row.position || "Instructor",
@@ -14337,7 +14337,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const trainees = traineesEnabled ? effectiveTraineeRows.map((row, index) => {
       const fullName = [row.surname, row.givenNames].filter(Boolean).join(", ") || row.givenNames || row.surname || `Trainee ${index + 1}`;
       return {
-        idNumber: Number(row.pmkeys) || 8e5 + index + 1,
+        idNumber: Number(row.pmkeys) || 45e5 + index + 1,
         fullName,
         name: fullName,
         rank: row.rank || "Rank",
@@ -26517,7 +26517,7 @@ const TraineeBulkUploadFlyout = ({
   ] });
 };
 const generateNewTraineeTemplate = (defaults = {}) => ({
-  idNumber: Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6,
+  idNumber: 4e6 + Math.floor(Math.random() * 1e6),
   fullName: "",
   // Will be constructed on save
   name: "",
@@ -53021,7 +53021,7 @@ const ArchivedInstructorsFlyout = ({ archivedInstructors, onClose, onRestore }) 
   ] });
 };
 const generateRandomIdNumber$1 = () => {
-  return Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6;
+  return 4e6 + Math.floor(Math.random() * 1e6);
 };
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isActiveStaffRecord = (instructor) => instructor?.isActive !== false;

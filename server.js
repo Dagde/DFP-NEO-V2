@@ -365,6 +365,7 @@ async function runPrismaRuntimeMaintenance(db) {
     // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
     await ensureCommercialConfigTables(db);
     await migrateLegacyQfiPersonnelRoles(db);
+    await migrateMissingPersonnelIdNumbers(db);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(db);
     // Ensure Course.lmpType column exists (migration for existing DBs)
@@ -437,6 +438,71 @@ async function migrateLegacyQfiPersonnelRoles(db) {
   }
 
   console.log(`✅ migrateLegacyQfiPersonnelRoles: updated ${updatedCount} personnel record(s)`);
+}
+
+const GENERATED_PERSONNEL_ID_MIN = 4000000;
+const GENERATED_PERSONNEL_ID_MAX = 4999999;
+
+function isUsablePersonnelIdNumber(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0;
+}
+
+function makeGeneratedPersonnelIdNumber(usedNumbers) {
+  const range = GENERATED_PERSONNEL_ID_MAX - GENERATED_PERSONNEL_ID_MIN + 1;
+  for (let attempt = 0; attempt < range * 2; attempt++) {
+    const candidate = GENERATED_PERSONNEL_ID_MIN + Math.floor(Math.random() * range);
+    if (!usedNumbers.has(candidate)) {
+      usedNumbers.add(candidate);
+      return candidate;
+    }
+  }
+  throw new Error('No available generated personnel ID numbers remain');
+}
+
+async function getUsedPersonnelIdNumbers(db) {
+  const [personnel, trainees] = await Promise.all([
+    db.personnel.findMany({ select: { idNumber: true } }),
+    db.trainee.findMany({ select: { idNumber: true } }),
+  ]);
+  const usedNumbers = new Set();
+  [...personnel, ...trainees].forEach((record) => {
+    if (isUsablePersonnelIdNumber(record.idNumber)) {
+      usedNumbers.add(Number(record.idNumber));
+    }
+  });
+  return usedNumbers;
+}
+
+async function generateUniquePersonnelIdNumber(db, usedNumbers = null) {
+  const numbers = usedNumbers || await getUsedPersonnelIdNumbers(db);
+  return makeGeneratedPersonnelIdNumber(numbers);
+}
+
+async function migrateMissingPersonnelIdNumbers(db) {
+  const usedNumbers = await getUsedPersonnelIdNumbers(db);
+  const [personnel, trainees] = await Promise.all([
+    db.personnel.findMany({ select: { id: true, name: true, idNumber: true } }),
+    db.trainee.findMany({ select: { id: true, name: true, idNumber: true } }),
+  ]);
+
+  let staffUpdated = 0;
+  for (const person of personnel) {
+    if (isUsablePersonnelIdNumber(person.idNumber)) continue;
+    const idNumber = makeGeneratedPersonnelIdNumber(usedNumbers);
+    await db.personnel.update({ where: { id: person.id }, data: { idNumber } });
+    staffUpdated++;
+  }
+
+  let traineesUpdated = 0;
+  for (const trainee of trainees) {
+    if (isUsablePersonnelIdNumber(trainee.idNumber)) continue;
+    const idNumber = makeGeneratedPersonnelIdNumber(usedNumbers);
+    await db.trainee.update({ where: { id: trainee.id }, data: { idNumber } });
+    traineesUpdated++;
+  }
+
+  console.log(`✅ migrateMissingPersonnelIdNumbers: assigned ${staffUpdated} staff and ${traineesUpdated} trainee ID number(s)`);
 }
 
 function logApiTiming(label, startedAt, details = {}) {
@@ -3297,12 +3363,15 @@ app.post('/api/personnel', async (req, res) => {
   try {
     const db = await getPrisma();
     const body = normalisePersonnelPayloadForUnit(req.body);
+    const idNumber = isUsablePersonnelIdNumber(body.idNumber)
+      ? Number(body.idNumber)
+      : await generateUniquePersonnelIdNumber(db);
 
     // Auto-link to existing User by PMKEYS
     let linkedUserId = null;
-    if (body.idNumber) {
+    if (idNumber) {
       const existingUser = await db.user.findFirst({
-        where: { userId: body.idNumber.toString() }
+        where: { userId: idNumber.toString() }
       });
       if (existingUser) {
         linkedUserId = existingUser.id;
@@ -3326,7 +3395,7 @@ app.post('/api/personnel', async (req, res) => {
         unit: body.unit || null,
         flight: body.flight || null,
         location: body.location || null,
-        idNumber: body.idNumber || null,
+        idNumber,
         callsignNumber: body.callsignNumber || null,
         email: body.email || null,
         phoneNumber: body.phoneNumber || null,
@@ -3396,6 +3465,11 @@ app.patch('/api/personnel/:id', async (req, res) => {
       if (field in updates) {
         sanitizedUpdates[field] = updates[field];
       }
+    }
+    if ('idNumber' in sanitizedUpdates) {
+      sanitizedUpdates.idNumber = isUsablePersonnelIdNumber(sanitizedUpdates.idNumber)
+        ? Number(sanitizedUpdates.idNumber)
+        : await generateUniquePersonnelIdNumber(db);
     }
 
     if ('crew' in updates) {
@@ -5114,12 +5188,15 @@ app.post('/api/trainees', async (req, res) => {
       phoneNumber, email, permissions, preferences, unavailability
     } = req.body;
 
-    if (!idNumber || !name) {
-      return res.status(400).json({ error: 'idNumber and name are required' });
+    if (!name) {
+      return res.status(400).json({ error: 'name is required' });
     }
+    const traineeIdNumber = isUsablePersonnelIdNumber(idNumber)
+      ? Number(idNumber)
+      : await generateUniquePersonnelIdNumber(db);
 
     // Check if trainee with this idNumber already exists
-    const existing = await db.trainee.findFirst({ where: { idNumber: Number(idNumber) } });
+    const existing = await db.trainee.findFirst({ where: { idNumber: traineeIdNumber } });
     if (existing) {
       // Update existing record instead
       const updated = await db.trainee.update({
@@ -5156,7 +5233,7 @@ app.post('/api/trainees', async (req, res) => {
     // Create new trainee
     const created = await db.trainee.create({
       data: {
-        idNumber: Number(idNumber),
+        idNumber: traineeIdNumber,
         name,
         fullName: fullName || name,
         rank: rank || 'FLGOFF',
@@ -5224,18 +5301,17 @@ app.post('/api/trainees/bulk', async (req, res) => {
       console.log(`🔵 Marked all existing ${course} trainees as inactive for replacement`);
     }
 
+    const usedPersonnelIdNumbers = await getUsedPersonnelIdNumbers(db);
     for (const t of trainees) {
       try {
-        if (!t.idNumber || !t.name) {
+        if (!t.name) {
           skippedCount++;
           continue;
         }
 
-        const idNum = Number(t.idNumber);
-        if (isNaN(idNum) || idNum <= 0) {
-          skippedCount++;
-          continue;
-        }
+        const idNum = isUsablePersonnelIdNumber(t.idNumber)
+          ? Number(t.idNumber)
+          : makeGeneratedPersonnelIdNumber(usedPersonnelIdNumbers);
 
         // Look for existing trainee by idNumber in this course (or any course if no course filter)
         const whereClause = course 
@@ -5326,7 +5402,7 @@ app.patch('/api/trainees/:id', async (req, res) => {
     // Sanitize: only include fields that exist in the Trainee schema
     // Strip client-side fields like _dataSource, id (managed by DB), scores, etc.
     const TRAINEE_FIELDS = [
-      'name', 'fullName', 'rank', 'role', 'service', 'course', 'lmpType', 'traineeCallsign',
+      'idNumber', 'name', 'fullName', 'rank', 'role', 'service', 'course', 'lmpType', 'traineeCallsign',
       'seatConfig', 'isPaused', 'unavailability', 'unit', 'flight', 'location',
       'phoneNumber', 'email', 'primaryInstructor', 'secondaryInstructor',
       'lastEventDate', 'lastFlightDate', 'currencyStatus', 'permissions',
@@ -5337,6 +5413,11 @@ app.patch('/api/trainees/:id', async (req, res) => {
       if (field in updates) {
         sanitizedUpdates[field] = updates[field];
       }
+    }
+    if ('idNumber' in sanitizedUpdates) {
+      sanitizedUpdates.idNumber = isUsablePersonnelIdNumber(sanitizedUpdates.idNumber)
+        ? Number(sanitizedUpdates.idNumber)
+        : await generateUniquePersonnelIdNumber(db);
     }
 
     // Update the trainee record

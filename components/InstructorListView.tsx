@@ -28,7 +28,7 @@ import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 // Helper to generate a unique random ID for new instructors
 const generateRandomIdNumber = (): number => {
-    return Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000;
+    return 4000000 + Math.floor(Math.random() * 1000000);
 };
 
 const isPilotRole = (instructor: Instructor): boolean =>

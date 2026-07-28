@@ -5361,7 +5361,7 @@ const InitialSetupWizard: React.FC<{
             const flags = qualificationsToFlags(row.qualifications);
             return {
                 id: `setup-staff-${index + 1}`,
-                idNumber: Number(row.pmkeys) || 900000 + index + 1,
+                idNumber: Number(row.pmkeys) || 4000000 + index + 1,
                 name: fullName,
                 rank: row.rank || 'Rank',
                 role: row.position || 'Instructor',
@@ -5393,7 +5393,7 @@ const InitialSetupWizard: React.FC<{
             ? effectiveTraineeRows.map((row, index) => {
                 const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Trainee ${index + 1}`;
                 return {
-                    idNumber: Number(row.pmkeys) || 800000 + index + 1,
+                    idNumber: Number(row.pmkeys) || 4500000 + index + 1,
                     fullName,
                     name: fullName,
                     rank: row.rank || 'Rank',

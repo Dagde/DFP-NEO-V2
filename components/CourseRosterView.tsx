@@ -92,7 +92,7 @@ interface CourseRosterViewProps {
 }
 
 const generateNewTraineeTemplate = (defaults: Partial<Pick<Trainee, 'course' | 'unit' | 'location' | 'service'>> = {}): Trainee => ({
-    idNumber: Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000,
+    idNumber: 4000000 + Math.floor(Math.random() * 1000000),
     fullName: '', // Will be constructed on save
     name: '',
     rank: 'PLTOFF',
