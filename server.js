@@ -11371,7 +11371,10 @@ async function ensureInstructorArrayColumns(db) {
 
 // Shared allocation logic used by both preview and apply
 function buildReallocation(trainees, personnel) {
-  const units = ['1FTS', '2FTS', 'CFS'];
+  const units = Array.from(new Set((trainees || [])
+    .map(t => String(t.unit || '').trim())
+    .filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b));
   const allResults = [];
 
   // Seeded deterministic shuffle for reproducibility
@@ -11386,6 +11389,20 @@ function buildReallocation(trainees, personnel) {
   for (const unit of units) {
     const unitTrainees = trainees.filter(t => t.unit === unit);
     const unitStaff = personnel.filter(p => p.unit === unit);
+    if (unitTrainees.length === 0) continue;
+    if (unitStaff.length === 0) {
+      console.log(`Skipping trainee reallocation for ${unit}: no matching staff found`);
+      unitTrainees.forEach(trainee => {
+        allResults.push({
+          id: trainee.id,
+          name: trainee.name,
+          unit: trainee.unit,
+          primaryInstructors: [],
+          secondaryInstructors: []
+        });
+      });
+      continue;
+    }
 
     const MIN_SECONDARY_PER_TRAINEE = 2;
 
