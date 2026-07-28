@@ -43,6 +43,7 @@ interface TraineeLmpViewProps {
   insertEventTypes?: InsertEventTypeConfig[];
   onInsertCustomEvent?: (trainee: Trainee, event: InsertLmpEventRequest) => Promise<boolean> | boolean;
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
+  trainingReportDisplayName?: string;
 }
 
 export interface InsertLmpEventRequest {
@@ -807,6 +808,7 @@ interface AcademicLmpTabProps {
     onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
     canOpenPt051?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
+    trainingReportDisplayName?: string;
 }
 
 const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
@@ -817,6 +819,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
     onOpenPt051ForLesson,
     canOpenPt051 = true,
     onAccessDenied,
+    trainingReportDisplayName = 'PT-051',
 }) => {
     const [selectedLesson, setSelectedLesson] = useState<SyllabusItemDetail | null>(null);
 
@@ -1075,21 +1078,21 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                                 <button
                                     onClick={() => {
                                         if (!canOpenPt051) {
-                                            onAccessDenied?.('PT-051 from Individual LMP');
+                                            onAccessDenied?.(`${trainingReportDisplayName} from Individual LMP`);
                                             return;
                                         }
                                         handleOpenPt051(selectedLesson);
                                     }}
                                     disabled={!canOpenPt051}
-                                    title={canOpenPt051 ? undefined : 'Your permission profile does not allow opening PT-051 records'}
+                                    title={canOpenPt051 ? undefined : `Your permission profile does not allow opening ${trainingReportDisplayName} records`}
                                     className={`w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt051 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    {completedLessonCodes.has(selectedLesson.code) ? 'View / Edit PT-051' : 'Open PT-051'}
+                                    {completedLessonCodes.has(selectedLesson.code) ? `View / Edit ${trainingReportDisplayName}` : `Open ${trainingReportDisplayName}`}
                                 </button>
                                 <span className="text-xs text-gray-500 italic">
                                     {completedLessonCodes.has(selectedLesson.code)
                                         ? 'View or edit the attendance record for this lesson'
-                                        : 'Mark this lesson as attended via PT-051'}
+                                        : `Mark this lesson as attended via ${trainingReportDisplayName}`}
                                 </span>
                             </div>
                         )}
@@ -1157,6 +1160,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     insertEventTypes = [],
     onInsertCustomEvent,
     onUpdateLmpItem,
+    trainingReportDisplayName = 'PT-051',
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -1251,7 +1255,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             onClick={() => onGeneratePt051ForItem(trainee, selectedItem)}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
                         >
-                            Generate<br />PT-051
+                            Generate<br />{trainingReportDisplayName}
                         </button>
                     )}
                     <AuditButton pageName="Individual LMP" />
@@ -1316,6 +1320,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         onOpenPt051ForLesson={onOpenPt051ForLesson}
                         canOpenPt051={canOpenPt051}
                         onAccessDenied={onAccessDenied}
+                        trainingReportDisplayName={trainingReportDisplayName}
                     />
                 ) : (
                     /* ── NEO Build LMP Tab (existing) ── */

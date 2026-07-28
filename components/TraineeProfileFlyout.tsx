@@ -2428,6 +2428,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             insertEventTypes={insertEventTypes}
                             aircraftConfigurations={aircraftConfigurations}
                             aircraftCrewComposition={aircraftCrewComposition}
+                            trainingReportDisplayName={activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName}
                           />
                         </div>
                       );

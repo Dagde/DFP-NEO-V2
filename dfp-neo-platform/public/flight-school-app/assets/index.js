@@ -21100,7 +21100,8 @@ const AcademicLmpTab = ({
   allTraineesData,
   onOpenPt051ForLesson,
   canOpenPt051 = true,
-  onAccessDenied
+  onAccessDenied,
+  trainingReportDisplayName = "PT-051"
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
   const academicSyllabus = reactExports.useMemo(() => {
@@ -21324,18 +21325,18 @@ const AcademicLmpTab = ({
           {
             onClick: () => {
               if (!canOpenPt051) {
-                onAccessDenied?.("PT-051 from Individual LMP");
+                onAccessDenied?.(`${trainingReportDisplayName} from Individual LMP`);
                 return;
               }
               handleOpenPt051(selectedLesson);
             },
             disabled: !canOpenPt051,
-            title: canOpenPt051 ? void 0 : "Your permission profile does not allow opening PT-051 records",
+            title: canOpenPt051 ? void 0 : `Your permission profile does not allow opening ${trainingReportDisplayName} records`,
             className: `w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt051 ? "opacity-50 cursor-not-allowed" : ""}`,
-            children: completedLessonCodes.has(selectedLesson.code) ? "View / Edit PT-051" : "Open PT-051"
+            children: completedLessonCodes.has(selectedLesson.code) ? `View / Edit ${trainingReportDisplayName}` : `Open ${trainingReportDisplayName}`
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 italic", children: completedLessonCodes.has(selectedLesson.code) ? "View or edit the attendance record for this lesson" : "Mark this lesson as attended via PT-051" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 italic", children: completedLessonCodes.has(selectedLesson.code) ? "View or edit the attendance record for this lesson" : `Mark this lesson as attended via ${trainingReportDisplayName}` })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Lesson Details" }),
@@ -21380,7 +21381,8 @@ const TraineeLmpView = ({
   onGeneratePt051ForItem,
   insertEventTypes = [],
   onInsertCustomEvent,
-  onUpdateLmpItem
+  onUpdateLmpItem,
+  trainingReportDisplayName = "PT-051"
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -21469,7 +21471,7 @@ const TraineeLmpView = ({
             children: [
               "Generate",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "PT-051"
+              trainingReportDisplayName
             ]
           }
         ),
@@ -21520,7 +21522,8 @@ const TraineeLmpView = ({
           allTraineesData,
           onOpenPt051ForLesson,
           canOpenPt051,
-          onAccessDenied
+          onAccessDenied,
+          trainingReportDisplayName
         }
       ) : (
         /* ── NEO Build LMP Tab (existing) ── */
@@ -25137,7 +25140,8 @@ ${errorText || `HTTP ${response.status}`}`);
                     onUpdateLmpItem,
                     insertEventTypes,
                     aircraftConfigurations,
-                    aircraftCrewComposition
+                    aircraftCrewComposition,
+                    trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName
                   }
                 ) });
               })(),
