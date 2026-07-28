@@ -20967,6 +20967,7 @@ const formatDisplayType = (displayType, resourceDisplayNames) => {
 };
 const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialLmpItem = (item) => item.lmpSource === "remedial" || item.isRemedial === true || item.module === "Remedial" || REMEDIAL_EVENT_CODE_REGEX$2.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || "");
+const isAddedLmpItem = (item) => item.lmpSource === "custom" || item.lmpSource === "remedial" || item.isRemedial === true || !item.masterEventId && item.lmpSource !== "master";
 const formatHours$1 = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
@@ -20984,7 +20985,7 @@ const formatLmpSortieLabel = (item, resourceDisplayNames) => {
 const formatLmpDurationLabel = (item) => `${formatHours$1(item.duration)}h`;
 const DEFAULT_ASSESSED_ELEMENTS$2 = ["Airmanship", "Preparation", "Technique"];
 const getAssessedElements = (item) => Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : DEFAULT_ASSESSED_ELEMENTS$2;
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
@@ -21048,8 +21049,8 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
         {
           label: "Overall Score",
           value: item.type === "Ground School" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm", children: "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300", children: "Complete" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-8 h-8 ${isAddedItem ? "bg-amber-500" : "bg-green-500"} rounded-full flex items-center justify-center text-white font-bold text-sm`, children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: isAddedItem ? "text-amber-300" : "text-green-300", children: "Complete" })
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xl ${getScoreColor(score.score, "text")}`, children: score.score })
         }
       ),
@@ -21080,7 +21081,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
     ] })
   ] })
 ] });
-const CheckIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-green-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }) });
+const CheckIcon = ({ tone = "green" }) => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: `h-4 w-4 ${tone === "amber" ? "text-amber-400" : "text-green-400"} flex-shrink-0`, viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }) });
 const MissedIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) });
 const AcademicLmpTab = ({
   trainee,
@@ -21511,6 +21512,7 @@ const TraineeLmpView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[310px] min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-3 space-y-2", children: traineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
+            const isAddedItem = isAddedLmpItem(item);
             const isSelected = selectedItem?.code === item.code;
             const phaseLabel = item.phase || "Phase";
             const moduleLabel = formatLmpModuleLabel(item.module);
@@ -21524,7 +21526,7 @@ const TraineeLmpView = ({
                 onClick: () => setSelectedItem(item),
                 "aria-pressed": isSelected,
                 title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
-                className: `relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? "border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? "border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800" : "border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800"}`,
+                className: `relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? isCompleted && isAddedItem ? "border-amber-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : "border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? isAddedItem ? "border-amber-500/70 bg-amber-950/20 text-gray-100 hover:border-amber-300/80 hover:bg-gray-800" : "border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800" : "border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute left-3 top-2 max-w-[42%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: phaseLabel }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute right-3 top-2 max-w-[42%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: sortieLabel }),
@@ -21534,7 +21536,7 @@ const TraineeLmpView = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: dayLabel }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0", children: durationLabel })
                   ] }),
-                  isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2", "aria-label": "Completed", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) })
+                  isCompleted && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1/2 top-2 -translate-x-1/2", "aria-label": "Completed", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, { tone: isAddedItem ? "amber" : "green" }) })
                 ]
               }
             ) }, item.id || item.code);
@@ -21547,6 +21549,7 @@ const TraineeLmpView = ({
               resourceDisplayNames,
               aircraftConfigurations,
               isRemedial: isRemedialLmpItem(selectedItem),
+              isAddedItem: isAddedLmpItem(selectedItem),
               onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);
                 if (deleted) setSelectedItem(null);

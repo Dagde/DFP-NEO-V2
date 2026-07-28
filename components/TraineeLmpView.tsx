@@ -613,6 +613,12 @@ const isRemedialLmpItem = (item: SyllabusItemDetail): boolean =>
     REMEDIAL_EVENT_CODE_REGEX.test(item.id || '') ||
     REMEDIAL_EVENT_CODE_REGEX.test(item.code || '');
 
+const isAddedLmpItem = (item: SyllabusItemDetail): boolean =>
+    item.lmpSource === 'custom' ||
+    item.lmpSource === 'remedial' ||
+    item.isRemedial === true ||
+    (!item.masterEventId && item.lmpSource !== 'master');
+
 const formatHours = (value: unknown): string => {
     const numericValue = Number(value);
     return Number.isFinite(numericValue) ? numericValue.toFixed(1) : '0.0';
@@ -648,8 +654,9 @@ const DetailView: React.FC<{
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
     isRemedial?: boolean;
+    isAddedItem?: boolean;
     onDelete?: (item: SyllabusItemDetail) => void;
-}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, onDelete }) => (
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, isAddedItem = false, onDelete }) => (
     <div className="space-y-6">
         {isRemedial && (
             <div className="flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3">
@@ -716,10 +723,10 @@ const DetailView: React.FC<{
                         value={
                             item.type === 'Ground School' ? (
                                 <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                    <div className={`w-8 h-8 ${isAddedItem ? 'bg-amber-500' : 'bg-green-500'} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
                                         -
                                     </div>
-                                    <span className="text-green-300">Complete</span>
+                                    <span className={isAddedItem ? 'text-amber-300' : 'text-green-300'}>Complete</span>
                                 </div>
                             ) : (
                                 <span className={`text-xl ${getScoreColor(score.score, 'text')}`}>{score.score}</span>
@@ -761,8 +768,8 @@ const DetailView: React.FC<{
     </div>
 );
 
-const CheckIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+const CheckIcon: React.FC<{ tone?: 'green' | 'amber' }> = ({ tone = 'green' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${tone === 'amber' ? 'text-amber-400' : 'text-green-400'} flex-shrink-0`} viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
     </svg>
 );
@@ -1293,6 +1300,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             <ul className="p-3 space-y-2">
                                 {traineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
+                                    const isAddedItem = isAddedLmpItem(item);
                                     const isSelected = selectedItem?.code === item.code;
                                     const phaseLabel = item.phase || 'Phase';
                                     const moduleLabel = formatLmpModuleLabel(item.module);
@@ -1308,9 +1316,15 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                                 title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
                                                 className={`relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
                                                     isSelected
-                                                        ? 'border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40'
+                                                        ? isCompleted && isAddedItem
+                                                            ? 'border-amber-300 bg-sky-800/85 text-white shadow-sky-950/40'
+                                                            : isCompleted
+                                                                ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
+                                                                : 'border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40'
                                                         : isCompleted
-                                                            ? 'border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800'
+                                                            ? isAddedItem
+                                                                ? 'border-amber-500/70 bg-amber-950/20 text-gray-100 hover:border-amber-300/80 hover:bg-gray-800'
+                                                                : 'border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800'
                                                             : 'border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800'
                                                 }`}
                                             >
@@ -1332,7 +1346,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                                 </span>
                                                 {isCompleted && (
                                                     <span className="absolute left-1/2 top-2 -translate-x-1/2" aria-label="Completed">
-                                                        <CheckIcon />
+                                                        <CheckIcon tone={isAddedItem ? 'amber' : 'green'} />
                                                     </span>
                                                 )}
                                             </button>
@@ -1352,6 +1366,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         resourceDisplayNames={resourceDisplayNames}
                                         aircraftConfigurations={aircraftConfigurations}
                                         isRemedial={isRemedialLmpItem(selectedItem)}
+                                        isAddedItem={isAddedLmpItem(selectedItem)}
                                         onDelete={isRemedialLmpItem(selectedItem) && onDeleteRemedialItem
                                             ? async (item) => {
                                                 const deleted = await onDeleteRemedialItem(trainee, item);
