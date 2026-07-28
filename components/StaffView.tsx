@@ -29,8 +29,8 @@ interface StaffViewProps {
   onUpdateInstructor: (data: any) => Promise<void>;
   onNavigateToCurrency: (person: any) => void;
   onBulkUpdateInstructors: (updates: any[]) => void;
-  onArchiveInstructor: (id: number) => void;
-  onRestoreInstructor: (id: number) => void;
+  onArchiveInstructor: (id: string | number | null) => void;
+  onRestoreInstructor: (id: string | number | null) => void;
   onRequestSct?: (instructor: any) => void;
   locations?: string[];
   units?: string[];

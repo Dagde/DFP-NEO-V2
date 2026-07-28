@@ -5,11 +5,15 @@ import RestoreConfirmationFlyout from './RestoreConfirmationFlyout';
 interface ArchivedInstructorsFlyoutProps {
   archivedInstructors: Instructor[];
   onClose: () => void;
-  onRestore: (id: number) => void;
+  onRestore: (id: string | number | null) => void;
 }
 
 const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({ archivedInstructors, onClose, onRestore }) => {
   const [instructorToRestore, setInstructorToRestore] = useState<Instructor | null>(null);
+  const getArchiveIdentifier = (instructor: Instructor): string | number | null => {
+    const dbId = String((instructor as any).id || '').trim();
+    return dbId || instructor.idNumber || null;
+  };
 
   return (
     <>
@@ -36,7 +40,7 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({ a
                 <ul className="space-y-2">
                 {archivedInstructors.map((instructor) => (
                     <li 
-                    key={instructor.idNumber}
+                    key={String(getArchiveIdentifier(instructor) || instructor.name)}
                     className="p-3 bg-gray-700/50 rounded-md text-gray-300 flex items-center justify-between"
                     >
                     <div className="flex items-center space-x-4">
@@ -66,7 +70,7 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({ a
         <RestoreConfirmationFlyout
           instructorName={instructorToRestore.name}
           onConfirm={() => {
-            onRestore(instructorToRestore.idNumber);
+            onRestore(getArchiveIdentifier(instructorToRestore));
             setInstructorToRestore(null);
           }}
           onClose={() => setInstructorToRestore(null)}

@@ -35,6 +35,10 @@ const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
 const isActiveStaffRecord = (instructor: Instructor): boolean =>
     (instructor as any)?.isActive !== false;
+const getStaffArchiveIdentifier = (instructor: Instructor): string | number | null => {
+    const dbId = String((instructor as any).id || '').trim();
+    return dbId || instructor.idNumber || null;
+};
 const installStaffArchiveDiagDownloader = () => {
     (window as any).downloadStaffArchiveDiag = () => {
         try {
@@ -181,8 +185,8 @@ interface InstructorListViewProps {
   onUpdateInstructor: (data: Instructor) => void;
   onNavigateToCurrency: (person: Instructor) => void;
   onBulkUpdateInstructors: (instructors: Instructor[]) => void;
-  onArchiveInstructor: (id: number) => Promise<void> | void;
-  onRestoreInstructor: (id: number) => Promise<void> | void;
+  onArchiveInstructor: (id: string | number | null) => Promise<void> | void;
+  onRestoreInstructor: (id: string | number | null) => Promise<void> | void;
   locations: string[];
   units: string[];
   selectedPersonForProfile?: Instructor | null;
@@ -998,7 +1002,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                 role: instructorToArchive.role,
                 isActive: (instructorToArchive as any).isActive,
             });
-            await onArchiveInstructor(instructorToArchive.idNumber);
+            await onArchiveInstructor(getStaffArchiveIdentifier(instructorToArchive));
             pushStaffArchiveDiag('list:archive-confirm-returned', {
                 id: (instructorToArchive as any).id,
                 idNumber: instructorToArchive.idNumber,

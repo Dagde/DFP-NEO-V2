@@ -38713,24 +38713,43 @@ appliedUpdates.forEach(update => {
         setShowSctRequest(true);
     }, []);
 
-    const handleArchiveInstructor = useCallback(async (id: number) => {
+    const handleArchiveInstructor = useCallback(async (identifier: string | number | null | undefined) => {
+        const identifierText = String(identifier ?? '').trim();
+        const matchesArchiveIdentifier = (instructor: Instructor): boolean => {
+            const dbId = String((instructor as any).id || '').trim();
+            if (identifierText && dbId === identifierText) return true;
+            if (identifierText && instructor.idNumber !== null && instructor.idNumber !== undefined) {
+                return String(instructor.idNumber) === identifierText;
+            }
+            return false;
+        };
         pushStaffArchiveDiag('app:archive:start', {
-            id,
+            identifier,
             allCount: allInstructorsDataRef.current.length,
             activeMatches: allInstructorsDataRef.current
-                .filter(i => i.idNumber === id)
+                .filter(matchesArchiveIdentifier)
                 .map((i: any) => ({ id: i.id, name: i.name, idNumber: i.idNumber, isActive: i.isActive, source: i._dataSource })),
         });
-        const instructorToArchive = allInstructorsDataRef.current.find(i => i.idNumber === id);
+        const instructorToArchive = allInstructorsDataRef.current.find(matchesArchiveIdentifier);
         if (!instructorToArchive) {
-            pushStaffArchiveDiag('app:archive:not-found', { id });
+            pushStaffArchiveDiag('app:archive:not-found', { identifier });
             return;
         }
         const dbId = String((instructorToArchive as any).id || '').trim();
+        const targetIdNumber = instructorToArchive.idNumber;
+        const matchesTargetInstructor = (instructor: Instructor): boolean => {
+            const candidateDbId = String((instructor as any).id || '').trim();
+            if (dbId && candidateDbId === dbId) return true;
+            if (targetIdNumber !== null && targetIdNumber !== undefined) {
+                return String(instructor.idNumber) === String(targetIdNumber);
+            }
+            return false;
+        };
         const archivedInstructor = { ...instructorToArchive, isActive: false };
         pushStaffArchiveDiag('app:archive:resolved', {
-            id,
+            identifier,
             dbId,
+            targetIdNumber,
             name: instructorToArchive.name,
             isActive: (instructorToArchive as any).isActive,
             source: (instructorToArchive as any)._dataSource,
@@ -38745,7 +38764,7 @@ appliedUpdates.forEach(update => {
                     body: JSON.stringify({ isActive: false }),
                 });
                 pushStaffArchiveDiag('app:archive:patch-response', {
-                    id,
+                    identifier,
                     dbId,
                     status: response.status,
                     ok: response.ok,
@@ -38758,13 +38777,11 @@ appliedUpdates.forEach(update => {
             setInstructorsData(prev => {
                 const before = prev.length;
                 const matchingBefore = prev
-                    .filter(i => i.idNumber === id || String((i as any).id || '') === dbId)
+                    .filter(matchesTargetInstructor)
                     .map((i: any) => ({ id: i.id, name: i.name, idNumber: i.idNumber, isActive: i.isActive, source: i._dataSource }));
-                const next = prev.filter(i => (
-                    i.idNumber !== id && String((i as any).id || '') !== dbId
-                ));
+                const next = prev.filter(i => !matchesTargetInstructor(i));
                 pushStaffArchiveDiag('app:archive:set-active-state', {
-                    id,
+                    identifier,
                     dbId,
                     before,
                     after: next.length,
@@ -38774,10 +38791,10 @@ appliedUpdates.forEach(update => {
                 return next;
             });
             setArchivedInstructorsData(prev => {
-                const withoutDuplicate = prev.filter(i => i.idNumber !== id && String((i as any).id || '') !== dbId);
+                const withoutDuplicate = prev.filter(i => !matchesTargetInstructor(i));
                 const next = [...withoutDuplicate, archivedInstructor];
                 pushStaffArchiveDiag('app:archive:set-archived-state', {
-                    id,
+                    identifier,
                     dbId,
                     before: prev.length,
                     after: next.length,
@@ -38790,11 +38807,11 @@ appliedUpdates.forEach(update => {
                 description: 'Archived staff member',
                 changes: `Archived: ${instructorToArchive.rank || ''} ${instructorToArchive.name}`.trim(),
             });
-            pushStaffArchiveDiag('app:archive:done', { id, dbId, name: instructorToArchive.name });
+            pushStaffArchiveDiag('app:archive:done', { identifier, dbId, name: instructorToArchive.name });
         } catch (error) {
             console.error('[Staff Archive] Failed:', error);
             pushStaffArchiveDiag('app:archive:error', {
-                id,
+                identifier,
                 dbId,
                 name: instructorToArchive.name,
                 error: error instanceof Error ? error.message : String(error),
@@ -38803,11 +38820,29 @@ appliedUpdates.forEach(update => {
         }
     }, [scopedApiPath]);
 
-    const handleRestoreInstructor = useCallback(async (id: number) => {
-        const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id)
-            || allInstructorsDataRef.current.find(i => i.idNumber === id);
+    const handleRestoreInstructor = useCallback(async (identifier: string | number | null | undefined) => {
+        const identifierText = String(identifier ?? '').trim();
+        const matchesRestoreIdentifier = (instructor: Instructor): boolean => {
+            const dbId = String((instructor as any).id || '').trim();
+            if (identifierText && dbId === identifierText) return true;
+            if (identifierText && instructor.idNumber !== null && instructor.idNumber !== undefined) {
+                return String(instructor.idNumber) === identifierText;
+            }
+            return false;
+        };
+        const instructorToRestore = archivedInstructorsData.find(matchesRestoreIdentifier)
+            || allInstructorsDataRef.current.find(matchesRestoreIdentifier);
         if (!instructorToRestore) return;
         const dbId = String((instructorToRestore as any).id || '').trim();
+        const targetIdNumber = instructorToRestore.idNumber;
+        const matchesTargetInstructor = (instructor: Instructor): boolean => {
+            const candidateDbId = String((instructor as any).id || '').trim();
+            if (dbId && candidateDbId === dbId) return true;
+            if (targetIdNumber !== null && targetIdNumber !== undefined) {
+                return String(instructor.idNumber) === String(targetIdNumber);
+            }
+            return false;
+        };
         const restoredInstructor = { ...instructorToRestore, isActive: true };
 
         try {
@@ -38823,14 +38858,12 @@ appliedUpdates.forEach(update => {
                     throw new Error(errorData.error || errorData.details || `Restore failed (${response.status})`);
                 }
             }
-            setArchivedInstructorsData(prev => prev.filter(i => (
-                i.idNumber !== id && String((i as any).id || '') !== dbId
-            )));
+            setArchivedInstructorsData(prev => prev.filter(i => !matchesTargetInstructor(i)));
             setInstructorsData(prev => {
-                const exists = prev.some(i => i.idNumber === id || String((i as any).id || '') === dbId);
+                const exists = prev.some(matchesTargetInstructor);
                 if (exists) {
                     return prev.map(i => (
-                        i.idNumber === id || String((i as any).id || '') === dbId ? restoredInstructor : i
+                        matchesTargetInstructor(i) ? restoredInstructor : i
                     ));
                 }
                 return [...prev, restoredInstructor];
