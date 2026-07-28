@@ -613,11 +613,28 @@ const isRemedialLmpItem = (item: SyllabusItemDetail): boolean =>
     REMEDIAL_EVENT_CODE_REGEX.test(item.id || '') ||
     REMEDIAL_EVENT_CODE_REGEX.test(item.code || '');
 
-const isAddedLmpItem = (item: SyllabusItemDetail): boolean =>
-    item.lmpSource === 'custom' ||
-    item.lmpSource === 'remedial' ||
-    item.isRemedial === true ||
-    (!item.masterEventId && item.lmpSource !== 'master');
+const getLmpItemKeys = (item: Partial<SyllabusItemDetail>): string[] =>
+    [item.id, item.code, item.masterEventId]
+        .map(value => String(value || '').replace(/\*/g, '').trim().toUpperCase())
+        .filter(Boolean);
+
+const isAddedLmpItem = (item: SyllabusItemDetail, masterLmpKeys?: Set<string>): boolean => {
+    if (
+        item.lmpSource === 'custom' ||
+        item.lmpSource === 'remedial' ||
+        item.isRemedial === true
+    ) {
+        return true;
+    }
+
+    const itemKeys = getLmpItemKeys(item);
+    if (masterLmpKeys && masterLmpKeys.size > 0 && itemKeys.length > 0) {
+        return !itemKeys.some(key => masterLmpKeys.has(key));
+    }
+
+    return /X\d+$/i.test(String(item.code || item.id || '')) ||
+        (!item.masterEventId && item.lmpSource !== 'master');
+};
 
 const formatHours = (value: unknown): string => {
     const numericValue = Number(value);
@@ -1165,6 +1182,14 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
         return ids;
     }, [scores, traineeLmp]);
 
+    const masterLmpKeys = useMemo(() => {
+        const keys = new Set<string>();
+        (syllabusDetails || [])
+            .filter(item => item.lmpSource !== 'custom' && item.lmpSource !== 'remedial' && item.isRemedial !== true)
+            .forEach(item => getLmpItemKeys(item).forEach(key => keys.add(key)));
+        return keys;
+    }, [syllabusDetails]);
+
     useEffect(() => {
         if (activeTab !== 'neo') return;
         if (traineeLmp.length === 0) {
@@ -1300,7 +1325,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             <ul className="p-3 space-y-2">
                                 {traineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
-                                    const isAddedItem = isAddedLmpItem(item);
+                                    const isAddedItem = isAddedLmpItem(item, masterLmpKeys);
                                     const isSelected = selectedItem?.code === item.code;
                                     const phaseLabel = item.phase || 'Phase';
                                     const moduleLabel = formatLmpModuleLabel(item.module);
@@ -1316,15 +1341,15 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                                 title={`${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ''}`}
                                                 className={`relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${
                                                     isSelected
-                                                        ? isCompleted && isAddedItem
+                                                        ? isAddedItem
                                                             ? 'border-amber-300 bg-sky-800/85 text-white shadow-sky-950/40'
                                                             : isCompleted
                                                                 ? 'border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40'
                                                                 : 'border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40'
-                                                        : isCompleted
-                                                            ? isAddedItem
-                                                                ? 'border-amber-500/70 bg-amber-950/20 text-gray-100 hover:border-amber-300/80 hover:bg-gray-800'
-                                                                : 'border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800'
+                                                        : isAddedItem
+                                                            ? 'border-amber-500/70 bg-amber-950/20 text-gray-100 hover:border-amber-300/80 hover:bg-gray-800'
+                                                            : isCompleted
+                                                                ? 'border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800'
                                                             : 'border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800'
                                                 }`}
                                             >
@@ -1366,7 +1391,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         resourceDisplayNames={resourceDisplayNames}
                                         aircraftConfigurations={aircraftConfigurations}
                                         isRemedial={isRemedialLmpItem(selectedItem)}
-                                        isAddedItem={isAddedLmpItem(selectedItem)}
+                                        isAddedItem={isAddedLmpItem(selectedItem, masterLmpKeys)}
                                         onDelete={isRemedialLmpItem(selectedItem) && onDeleteRemedialItem
                                             ? async (item) => {
                                                 const deleted = await onDeleteRemedialItem(trainee, item);

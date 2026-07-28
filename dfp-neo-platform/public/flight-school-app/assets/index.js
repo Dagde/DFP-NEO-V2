@@ -20967,7 +20967,17 @@ const formatDisplayType = (displayType, resourceDisplayNames) => {
 };
 const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialLmpItem = (item) => item.lmpSource === "remedial" || item.isRemedial === true || item.module === "Remedial" || REMEDIAL_EVENT_CODE_REGEX$2.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || "");
-const isAddedLmpItem = (item) => item.lmpSource === "custom" || item.lmpSource === "remedial" || item.isRemedial === true || !item.masterEventId && item.lmpSource !== "master";
+const getLmpItemKeys = (item) => [item.id, item.code, item.masterEventId].map((value) => String(value || "").replace(/\*/g, "").trim().toUpperCase()).filter(Boolean);
+const isAddedLmpItem = (item, masterLmpKeys) => {
+  if (item.lmpSource === "custom" || item.lmpSource === "remedial" || item.isRemedial === true) {
+    return true;
+  }
+  const itemKeys = getLmpItemKeys(item);
+  if (masterLmpKeys && masterLmpKeys.size > 0 && itemKeys.length > 0) {
+    return !itemKeys.some((key) => masterLmpKeys.has(key));
+  }
+  return /X\d+$/i.test(String(item.code || item.id || "")) || !item.masterEventId && item.lmpSource !== "master";
+};
 const formatHours$1 = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toFixed(1) : "0.0";
@@ -21389,6 +21399,11 @@ const TraineeLmpView = ({
     if (ids.has("BIF1") && !ids.has("BIF FTD3")) ids.add("BIF FTD3");
     return ids;
   }, [scores, traineeLmp]);
+  const masterLmpKeys = reactExports.useMemo(() => {
+    const keys = /* @__PURE__ */ new Set();
+    (syllabusDetails || []).filter((item) => item.lmpSource !== "custom" && item.lmpSource !== "remedial" && item.isRemedial !== true).forEach((item) => getLmpItemKeys(item).forEach((key) => keys.add(key)));
+    return keys;
+  }, [syllabusDetails]);
   reactExports.useEffect(() => {
     if (activeTab !== "neo") return;
     if (traineeLmp.length === 0) {
@@ -21512,7 +21527,7 @@ const TraineeLmpView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[310px] min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain bg-gray-950/25", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-3 space-y-2", children: traineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
-            const isAddedItem = isAddedLmpItem(item);
+            const isAddedItem = isAddedLmpItem(item, masterLmpKeys);
             const isSelected = selectedItem?.code === item.code;
             const phaseLabel = item.phase || "Phase";
             const moduleLabel = formatLmpModuleLabel(item.module);
@@ -21526,7 +21541,7 @@ const TraineeLmpView = ({
                 onClick: () => setSelectedItem(item),
                 "aria-pressed": isSelected,
                 title: `${item.code}${item.eventDescription ? ` - ${item.eventDescription}` : ""}`,
-                className: `relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? isCompleted && isAddedItem ? "border-amber-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : "border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? isAddedItem ? "border-amber-500/70 bg-amber-950/20 text-gray-100 hover:border-amber-300/80 hover:bg-gray-800" : "border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800" : "border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800"}`,
+                className: `relative h-[88px] w-full overflow-hidden rounded-md border px-3 py-2 text-left shadow-sm transition ${isSelected ? isAddedItem ? "border-amber-300 bg-sky-800/85 text-white shadow-sky-950/40" : isCompleted ? "border-emerald-300 bg-sky-800/85 text-white shadow-sky-950/40" : "border-sky-300 bg-sky-800/85 text-white shadow-sky-950/40" : isAddedItem ? "border-amber-500/70 bg-amber-950/20 text-gray-100 hover:border-amber-300/80 hover:bg-gray-800" : isCompleted ? "border-emerald-500/60 bg-gray-900 text-gray-100 hover:border-emerald-300/70 hover:bg-gray-800" : "border-gray-700 bg-gray-900 text-gray-200 hover:border-sky-500/60 hover:bg-gray-800"}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute left-3 top-2 max-w-[42%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-400"}`, children: phaseLabel }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `absolute right-3 top-2 max-w-[42%] truncate text-[10px] font-bold uppercase ${isSelected ? "text-sky-100" : "text-gray-300"}`, children: sortieLabel }),
@@ -21549,7 +21564,7 @@ const TraineeLmpView = ({
               resourceDisplayNames,
               aircraftConfigurations,
               isRemedial: isRemedialLmpItem(selectedItem),
-              isAddedItem: isAddedLmpItem(selectedItem),
+              isAddedItem: isAddedLmpItem(selectedItem, masterLmpKeys),
               onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);
                 if (deleted) setSelectedItem(null);
