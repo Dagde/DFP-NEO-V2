@@ -74572,6 +74572,7 @@ const sectionLabels = {
   "user-list": "User List",
   "staff-database": "Staff Database",
   "trainee-database": "Trainee Database",
+  "trainee-reallocation": "Trainee Reallocation",
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
@@ -74659,6 +74660,14 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M22 10v6M2 10l10-5 10 5-10 5z" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M6 12v5c3 3 9 3 12 0v-5" })
   ] }),
+  "trainee-reallocation": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M16 3h5v5" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M21 3l-7 7" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 21H3v-5" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3 21l7-7" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "7", cy: "7", r: "3" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "17", cy: "17", r: "3" })
+  ] }),
   "validation": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M17 3.13A8 8 0 0112 2 8 8 0 015 6" }),
@@ -74708,6 +74717,7 @@ const sectionDescriptions = {
   "user-list": "View and manage user accounts",
   "staff-database": "Staff records and details",
   "trainee-database": "Trainee records and details",
+  "trainee-reallocation": "Preview trainee instructor allocation across configured units",
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
@@ -74745,6 +74755,7 @@ const sectionColors = {
   "business-rules": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   // ACCESS & SECURITY - violet icons
   "user-list": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
+  "trainee-reallocation": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   // DATA MANAGEMENT - emerald icons
   "data-loaders": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
   "staff-database": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
@@ -74820,7 +74831,8 @@ const sectionGroups = [
       "platform-permission-profiles",
       "user-list",
       "staff-database",
-      "trainee-database"
+      "trainee-database",
+      "trainee-reallocation"
     ]
   },
   {
@@ -74856,6 +74868,82 @@ const sectionGroups = [
     sections: ["emergency"]
   }
 ];
+const TraineeReallocationSection = () => {
+  const [loading, setLoading] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  const [preview, setPreview] = reactExports.useState(null);
+  const loadPreview = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/trainee-reallocation/preview", { credentials: "include" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `Preview failed with HTTP ${response.status}`);
+      }
+      setPreview(data);
+    } catch (err) {
+      setPreview(null);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+  const allocations = Array.isArray(preview?.allocations) ? preview.allocations : [];
+  const unitCounts = allocations.reduce((acc, allocation) => {
+    const unit = String(allocation?.unit || "Unassigned").trim() || "Unassigned";
+    acc[unit] = (acc[unit] || 0) + 1;
+    return acc;
+  }, {});
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Trainee Reallocation" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Preview primary and secondary instructor allocation from configured trainee and staff records." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => void loadPreview(),
+          disabled: loading,
+          className: "rounded-md border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-violet-100 hover:bg-violet-500/30 disabled:cursor-wait disabled:opacity-60",
+          children: loading ? "Loading..." : "Preview"
+        }
+      )
+    ] }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100", children: error }),
+    preview?.summary && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Trainees" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.total ?? 0 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "With Primary" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.primary?.with1 ?? 0 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "With Two Secondary" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.secondary?.with2 ?? 0 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs uppercase tracking-wide text-gray-400", children: "Without Primary" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: preview.summary.primary?.with0 ?? 0 })
+      ] })
+    ] }),
+    allocations.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-white", children: "Units Included" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-4 md:grid-cols-3 lg:grid-cols-4", children: Object.entries(unitCounts).map(([unit, count]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-gray-100", children: unit }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400", children: [
+          count,
+          " trainee",
+          count === 1 ? "" : "s"
+        ] })
+      ] }, unit)) })
+    ] })
+  ] });
+};
 const SettingsViewWithMenu = (props) => {
   const contentScrollRef = reactExports.useRef(null);
   const normaliseLegacySettingsSection = (section) => section === "platform-configuration" ? "platform-configuration-health" : section;
@@ -75277,7 +75365,7 @@ const SettingsViewWithMenu = (props) => {
             activeSection: "sct-events"
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           CurrencyBuilderView,
           {
             onBack: () => setEmbeddedCurrencyBuilderOpen(false),
@@ -75332,6 +75420,7 @@ const SettingsViewWithMenu = (props) => {
             activeUnitCodes: props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : props.activeUnitCode ? [props.activeUnitCode] : []
           }
         ),
+        activeSection === "trainee-reallocation" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeReallocationSection, {}),
         activeSection === "organisation" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           OrganisationSettings,
           {

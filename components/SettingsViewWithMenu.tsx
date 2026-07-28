@@ -211,6 +211,7 @@ type SettingsSection =
     | 'user-list'
     | 'staff-database'
     | 'trainee-database'
+    | 'trainee-reallocation'
     | 'validation'
     | 'organisation'
     | 'crew-composition'
@@ -275,6 +276,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'user-list': 'User List',
     'staff-database': 'Staff Database',
     'trainee-database': 'Trainee Database',
+    'trainee-reallocation': 'Trainee Reallocation',
     'validation': 'Cancellation Codes',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
@@ -397,6 +399,16 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M6 12v5c3 3 9 3 12 0v-5"/>
     </svg>
   ),
+  'trainee-reallocation': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <path d="M16 3h5v5"/>
+      <path d="M21 3l-7 7"/>
+      <path d="M8 21H3v-5"/>
+      <path d="M3 21l7-7"/>
+      <circle cx="7" cy="7" r="3"/>
+      <circle cx="17" cy="17" r="3"/>
+    </svg>
+  ),
   'validation': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
@@ -464,6 +476,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'user-list': 'View and manage user accounts',
   'staff-database': 'Staff records and details',
   'trainee-database': 'Trainee records and details',
+  'trainee-reallocation': 'Preview trainee instructor allocation across configured units',
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles and composition profiles',
@@ -509,6 +522,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'business-rules':    'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   // ACCESS & SECURITY - violet icons
   'user-list':         'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
+  'trainee-reallocation': 'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // DATA MANAGEMENT - emerald icons
   'data-loaders':      'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
   'staff-database':    'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
@@ -594,6 +608,7 @@ const sectionGroups: {
         'user-list',
         'staff-database',
         'trainee-database',
+        'trainee-reallocation',
     ],
   },
   {
@@ -632,6 +647,99 @@ const sectionGroups: {
 
 const highlightedCrewPageSections: SettingsMenuSection[] = ['crew-composition', 'standard-missions'];
 const isHighlightedCrewPageSection = (section: SettingsMenuSection) => highlightedCrewPageSections.includes(section);
+
+const TraineeReallocationSection: React.FC = () => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [preview, setPreview] = useState<any>(null);
+
+    const loadPreview = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const response = await fetch('/api/trainee-reallocation/preview', { credentials: 'include' });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+                throw new Error(data?.error || `Preview failed with HTTP ${response.status}`);
+            }
+            setPreview(data);
+        } catch (err) {
+            setPreview(null);
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const allocations = Array.isArray(preview?.allocations) ? preview.allocations : [];
+    const unitCounts = allocations.reduce((acc: Record<string, number>, allocation: any) => {
+        const unit = String(allocation?.unit || 'Unassigned').trim() || 'Unassigned';
+        acc[unit] = (acc[unit] || 0) + 1;
+        return acc;
+    }, {});
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <h2 className="text-xl font-bold text-white">Trainee Reallocation</h2>
+                    <p className="mt-1 text-sm text-gray-400">Preview primary and secondary instructor allocation from configured trainee and staff records.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => void loadPreview()}
+                    disabled={loading}
+                    className="rounded-md border border-violet-500/40 bg-violet-500/20 px-4 py-2 text-sm font-semibold text-violet-100 hover:bg-violet-500/30 disabled:cursor-wait disabled:opacity-60"
+                >
+                    {loading ? 'Loading...' : 'Preview'}
+                </button>
+            </div>
+
+            {error && (
+                <div className="rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-100">
+                    {error}
+                </div>
+            )}
+
+            {preview?.summary && (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Trainees</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{preview.summary.total ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">With Primary</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{preview.summary.primary?.with1 ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">With Two Secondary</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{preview.summary.secondary?.with2 ?? 0}</div>
+                    </div>
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                        <div className="text-xs uppercase tracking-wide text-gray-400">Without Primary</div>
+                        <div className="mt-2 text-2xl font-bold text-white">{preview.summary.primary?.with0 ?? 0}</div>
+                    </div>
+                </div>
+            )}
+
+            {allocations.length > 0 && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800">
+                    <div className="border-b border-gray-700 px-4 py-3">
+                        <h3 className="text-sm font-semibold text-white">Units Included</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 p-4 md:grid-cols-3 lg:grid-cols-4">
+                        {Object.entries(unitCounts).map(([unit, count]) => (
+                            <div key={unit} className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2">
+                                <div className="text-sm font-semibold text-gray-100">{unit}</div>
+                                <div className="text-xs text-gray-400">{count} trainee{count === 1 ? '' : 's'}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     type ActiveSection = SettingsMenuSection | 'home';
@@ -1183,6 +1291,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'user-list' &&
                      activeSection !== 'staff-database' &&
                      activeSection !== 'trainee-database' &&
+                     activeSection !== 'trainee-reallocation' &&
                      activeSection !== 'organisation' &&
                      !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
@@ -1239,6 +1348,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onNavigateToProfile={props.onNavigateToProfile}
                             activeUnitCodes={props.activeUnitCodes && props.activeUnitCodes.length > 0 ? props.activeUnitCodes : (props.activeUnitCode ? [props.activeUnitCode] : [])}
                         />
+                    )}
+                    {activeSection === 'trainee-reallocation' && (
+                        <TraineeReallocationSection />
                     )}
                     {activeSection === 'organisation' && (
                         <OrganisationSettings
