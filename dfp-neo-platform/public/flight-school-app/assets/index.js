@@ -45835,7 +45835,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     }
   ) });
 };
-const CourseTab = ({ summary, trainees, events }) => {
+const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = reactExports.useState(false);
   const evaluatedRisks = trainees.map((t) => evaluateTraineeRisk(t, thresholds).riskLevel);
@@ -45875,7 +45875,7 @@ const CourseTab = ({ summary, trainees, events }) => {
           sub: `of ${trainees.length} trainees`
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { label: "PT-051 Records", value: summary.totalPt051s, sub: `${trainees.length} trainees` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { label: `${trainingReportDisplayName} Records`, value: summary.totalPt051s, sub: `${trainees.length} trainees` }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         StatCard$1,
         {
@@ -46044,7 +46044,7 @@ const CourseTab = ({ summary, trainees, events }) => {
     ] })
   ] });
 };
-const TraineeTab = ({ trainees }) => {
+const TraineeTab = ({ trainees, trainingReportDisplayName }) => {
   const { thresholds } = useThresholds();
   const [search, setSearch] = reactExports.useState("");
   const [filter, setFilter] = reactExports.useState("all");
@@ -46138,7 +46138,10 @@ const TraineeTab = ({ trainees }) => {
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Avg" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Recent" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Trend" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "PT-051s" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: [
+              trainingReportDisplayName,
+              "s"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Risk" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Prog." })
           ] }) }),
@@ -46787,7 +46790,8 @@ const EventsTab = ({ events }) => {
     ] })
   ] });
 };
-const TrainingIntelligenceTab = () => {
+const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports" }) => {
+  const reportRecordName = String(trainingReportDisplayName || "Training Reports").trim() || "Training Reports";
   const [courses, setCourses] = reactExports.useState([]);
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [recentRuns, setRecentRuns] = reactExports.useState([]);
@@ -46911,7 +46915,7 @@ const TrainingIntelligenceTab = () => {
           clearInterval(pollRef.current);
           pollRef.current = null;
         } else if (data.status === "running") {
-          setRunProgress("Processing PT-051 records…");
+          setRunProgress(`Processing ${reportRecordName} records…`);
         }
       } catch {
       }
@@ -46978,7 +46982,11 @@ const TrainingIntelligenceTab = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-white font-bold text-lg leading-tight", children: "Training Intelligence Engine" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400 text-xs", children: "Offline PT-051 analytics · all data stored in database" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-slate-400 text-xs", children: [
+            "Offline ",
+            reportRecordName,
+            " analytics · all data stored in database"
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
@@ -47047,7 +47055,9 @@ const TrainingIntelligenceTab = () => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-slate-400 text-sm mt-1 mb-4", children: [
         "Select a course and click ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Run Analytics" }),
-        " to process PT-051 data."
+        " to process ",
+        reportRecordName,
+        " data."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleRunAnalytics, className: "rounded-md bg-cyan-600 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-500", children: "Run Analytics Now" })
     ] }),
@@ -47066,8 +47076,8 @@ const TrainingIntelligenceTab = () => {
         },
         tab.id
       )) }),
-      activeTab === "course" && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseTab, { summary, trainees, events }),
-      activeTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeTab, { trainees }),
+      activeTab === "course" && /* @__PURE__ */ jsxRuntimeExports.jsx(CourseTab, { summary, trainees, events, trainingReportDisplayName: reportRecordName }),
+      activeTab === "trainee" && /* @__PURE__ */ jsxRuntimeExports.jsx(TraineeTab, { trainees, trainingReportDisplayName: reportRecordName }),
       activeTab === "events" && /* @__PURE__ */ jsxRuntimeExports.jsx(EventsTab, { events })
     ] })
   ] }) });
@@ -50449,7 +50459,7 @@ const BuildIntelligenceView = (props) => {
           syllabusDetails: props.syllabusDetails,
           operationalContext: props.operationalContext
         }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, {})),
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, { trainingReportDisplayName: props.trainingReportDisplayName })),
       activeTab === "bli" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         BliTab,
         {
@@ -121678,7 +121688,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             analysis: buildIntelligenceAnalysis,
             resourceDisplayNames,
             operationalModel: activeOperationalModel,
-            operationalContext: activeOperationalContext
+            operationalContext: activeOperationalContext,
+            trainingReportDisplayName: configuredTrainingReportDisplayName
           }
         );
       case "MyDashboard":

@@ -1327,7 +1327,8 @@ const CourseTab: React.FC<{
   summary: TIECourseSummary;
   trainees: TIETraineeSummary[];
   events: TIEEventSummary[];
-}> = ({ summary, trainees, events }) => {
+  trainingReportDisplayName: string;
+}> = ({ summary, trainees, events, trainingReportDisplayName }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = useState(false);
   const evaluatedRisks = trainees.map(t => evaluateTraineeRisk(t, thresholds).riskLevel);
@@ -1371,7 +1372,7 @@ const CourseTab: React.FC<{
           sub={`trainees avg ≥ ${thresholds.concernThresholdGrade}.0`} />
         <StatCard label="At-Risk" value={atRisk}
           color={atRisk > 0 ? 'text-red-400' : 'text-gray-400'} sub={`of ${trainees.length} trainees`} />
-        <StatCard label="PT-051 Records" value={summary.totalPt051s} sub={`${trainees.length} trainees`} />
+        <StatCard label={`${trainingReportDisplayName} Records`} value={summary.totalPt051s} sub={`${trainees.length} trainees`} />
         <StatCard label="Events" value={events.length}
           sub={`${bottleneckEvents.length} bottleneck`}
           color={bottleneckEvents.length > 0 ? 'text-orange-400' : 'text-white'} />
@@ -1574,7 +1575,7 @@ const CourseTab: React.FC<{
 
 // ── TRAINEE TAB ─────────────────────────────────────────────────────────────────
 
-const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) => {
+const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDisplayName: string }> = ({ trainees, trainingReportDisplayName }) => {
   const { thresholds } = useThresholds();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
@@ -1676,7 +1677,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Avg</th>
                   <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Recent</th>
                   <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Trend</th>
-                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">PT-051s</th>
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">{trainingReportDisplayName}s</th>
                   <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Risk</th>
                   <th className="text-left text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Prog.</th>
                 </tr>
@@ -2522,7 +2523,12 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
 
 // ── MAIN COMPONENT ──────────────────────────────────────────────────────────────
 
-const TrainingIntelligenceTab: React.FC = () => {
+interface TrainingIntelligenceTabProps {
+  trainingReportDisplayName?: string;
+}
+
+const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ trainingReportDisplayName = 'Training Reports' }) => {
+  const reportRecordName = String(trainingReportDisplayName || 'Training Reports').trim() || 'Training Reports';
   const [courses, setCourses] = useState<TIECourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [recentRuns, setRecentRuns] = useState<TIERun[]>([]);
@@ -2647,7 +2653,7 @@ const TrainingIntelligenceTab: React.FC = () => {
           clearInterval(pollRef.current!);
           pollRef.current = null;
         } else if (data.status === 'running') {
-          setRunProgress('Processing PT-051 records\u2026');
+          setRunProgress(`Processing ${reportRecordName} records\u2026`);
         }
       } catch { /* poll silently */ }
     }, 2000);
@@ -2719,7 +2725,7 @@ const TrainingIntelligenceTab: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-shrink-0">
             <h2 className="text-white font-bold text-lg leading-tight">Training Intelligence Engine</h2>
-            <p className="text-slate-400 text-xs">Offline PT-051 analytics &middot; all data stored in database</p>
+            <p className="text-slate-400 text-xs">Offline {reportRecordName} analytics &middot; all data stored in database</p>
           </div>
           <div className="flex-1 min-w-0" />
           <div className="flex items-center gap-2">
@@ -2771,7 +2777,7 @@ const TrainingIntelligenceTab: React.FC = () => {
       {!loading && !summary && !isRunning && (
         <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-10 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           <p className="text-white font-semibold text-lg">No analytics data yet</p>
-          <p className="text-slate-400 text-sm mt-1 mb-4">Select a course and click <strong>Run Analytics</strong> to process PT-051 data.</p>
+          <p className="text-slate-400 text-sm mt-1 mb-4">Select a course and click <strong>Run Analytics</strong> to process {reportRecordName} data.</p>
           <button onClick={handleRunAnalytics} className="rounded-md bg-cyan-600 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-500">
             Run Analytics Now
           </button>
@@ -2812,10 +2818,10 @@ const TrainingIntelligenceTab: React.FC = () => {
 
           {/* Tab panels */}
           {activeTab === 'course' && (
-            <CourseTab summary={summary} trainees={trainees} events={events} />
+            <CourseTab summary={summary} trainees={trainees} events={events} trainingReportDisplayName={reportRecordName} />
           )}
           {activeTab === 'trainee' && (
-            <TraineeTab trainees={trainees} />
+            <TraineeTab trainees={trainees} trainingReportDisplayName={reportRecordName} />
           )}
           {activeTab === 'events' && (
             <EventsTab events={events} />

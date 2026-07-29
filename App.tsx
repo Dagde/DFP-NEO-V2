@@ -42713,6 +42713,7 @@ appliedUpdates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             operationalModel={activeOperationalModel}
                             operationalContext={activeOperationalContext}
+                            trainingReportDisplayName={configuredTrainingReportDisplayName}
                         />;
             case 'MyDashboard':
                 // Get all events from published schedules for PT-051 lookup

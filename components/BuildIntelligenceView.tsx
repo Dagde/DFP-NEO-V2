@@ -99,6 +99,7 @@ interface BuildIntelligenceViewProps {
     unitCodes?: string[];
     isSharedFleetContext?: boolean;
   };
+  trainingReportDisplayName?: string;
   
   // From Build Analysis
   buildDate: string;
@@ -263,7 +264,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                   operationalContext={props.operationalContext}
                 />
               ) : (
-                <TrainingIntelligenceTab />
+                <TrainingIntelligenceTab trainingReportDisplayName={props.trainingReportDisplayName} />
               )
             )}
 
