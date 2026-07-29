@@ -38,7 +38,7 @@ const CourseTraineeSelectionFlyout: React.FC<CourseTraineeSelectionFlyoutProps> 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/70 z-[10000] flex items-center justify-center animate-fade-in" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
                 <div className="p-4 border-b border-gray-700 bg-gray-900/50">
                     <h2 className="text-xl font-bold text-white">Confirm Attendees for {courseNumber}</h2>
