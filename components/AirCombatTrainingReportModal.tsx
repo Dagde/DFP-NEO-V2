@@ -549,13 +549,12 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-5 py-4">
-          <h3 className="text-xl font-bold text-white">{eventCode}</h3>
+        <div className="flex justify-end bg-gray-800 px-5 pt-4">
           <button type="button" onClick={onCancel} className="text-3xl leading-none text-gray-400 hover:text-white">x</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-4">
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-5 pb-4 pt-2">
             <div className="flex items-center gap-4">
               <div>
                 <input
@@ -641,6 +640,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
             </div>
           </div>
 
+          <div className="p-5">
           <div className="p-4 md:p-6">
             <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
               <dl
@@ -1036,6 +1036,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               {saveError}
             </div>
           )}
+          </div>
           </div>
         </div>
       </div>
