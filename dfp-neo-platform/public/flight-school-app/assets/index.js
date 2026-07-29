@@ -27513,9 +27513,11 @@ const MassBriefConfirmationFlyout = ({
   isOpen,
   onClose,
   event,
-  confirmedTrainees
+  confirmedTrainees,
+  trainingReportDisplayName = "Training Report"
 }) => {
   if (!isOpen) return null;
+  const reportName = String(trainingReportDisplayName || "").trim() || "Training Report";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white mb-4", children: "Mass Brief Completed!" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
@@ -27531,7 +27533,10 @@ const MassBriefConfirmationFlyout = ({
             " ",
             trainee.name
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-green-400 text-sm", children: "DCO status set in PT-051" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400 text-sm", children: [
+            "Mission status saved in ",
+            reportName
+          ] })
         ] })
       ] }, trainee.fullName)) })
     ] }),
@@ -31231,7 +31236,8 @@ ${swapNote}` : swapNote
           onClose();
         },
         event,
-        confirmedTrainees: completedTrainees
+        confirmedTrainees: completedTrainees,
+        trainingReportDisplayName
       }
     )
   ] });

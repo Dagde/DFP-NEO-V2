@@ -14,6 +14,7 @@ interface MassBriefConfirmationFlyoutProps {
   onClose: () => void;
   event: any;
   confirmedTrainees: Trainee[];
+  trainingReportDisplayName?: string;
 }
 
 const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
@@ -152,9 +153,11 @@ const MassBriefConfirmationFlyout: React.FC<MassBriefConfirmationFlyoutProps> = 
   isOpen,
   onClose,
   event,
-  confirmedTrainees
+  confirmedTrainees,
+  trainingReportDisplayName = 'Training Report'
 }) => {
   if (!isOpen) return null;
+  const reportName = String(trainingReportDisplayName || '').trim() || 'Training Report';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -178,7 +181,7 @@ const MassBriefConfirmationFlyout: React.FC<MassBriefConfirmationFlyoutProps> = 
                 </div>
                 <div className="flex-1">
                   <p className="text-white font-medium">{trainee.rank} {trainee.name}</p>
-                  <p className="text-green-400 text-sm">DCO status set in PT-051</p>
+                  <p className="text-green-400 text-sm">Mission status saved in {reportName}</p>
                 </div>
               </div>
             ))}

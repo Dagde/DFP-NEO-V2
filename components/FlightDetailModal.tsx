@@ -4600,6 +4600,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     }}
                     event={event}
                     confirmedTrainees={completedTrainees}
+                    trainingReportDisplayName={trainingReportDisplayName}
                 />
             )}
         </>
