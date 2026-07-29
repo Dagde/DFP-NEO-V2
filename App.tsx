@@ -30253,8 +30253,9 @@ const App: React.FC = () => {
     };
 
     const handleGeneratePt051FromLmpItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
+        const reportDisplayName = trainingReportTemplate.displayName || trainingReportTemplate.genericName || 'Training Report';
         if (!canViewTraineePt051(trainee)) {
-            denyPlatformAction('PT-051 from Individual LMP');
+            denyPlatformAction(`${reportDisplayName} from Individual LMP`);
             return;
         }
 
@@ -30279,8 +30280,8 @@ const App: React.FC = () => {
                 duration: existingAssessment.duration ?? eventForAssessment.duration,
             });
             await showDarkAlert(
-                `A PT-051 already exists for ${item.code}.\n\nPlease wait while NEO redirects you to the existing PT-051.`,
-                'PT-051 Already Exists',
+                `A ${reportDisplayName} already exists for ${item.code}.\n\nPlease wait while NEO redirects you to the existing ${reportDisplayName}.`,
+                `${reportDisplayName} Already Exists`,
                 'info',
                 3600
             );
@@ -30289,7 +30290,7 @@ const App: React.FC = () => {
         }
 
         if (!canEditTraineePt051(trainee)) {
-            denyPlatformAction('generate PT-051 from Individual LMP');
+            denyPlatformAction(`generate ${reportDisplayName} from Individual LMP`);
             return;
         }
 
@@ -30329,12 +30330,12 @@ const App: React.FC = () => {
                 updated.add(`${eventForAssessment.id}-${trainee.fullName}`);
                 return updated;
             });
-            logAudit('Individual LMP', 'Generate', `Generated PT-051 for ${trainee.fullName} - Event: ${item.code} (${eventForAssessment.date})`);
+            logAudit('Individual LMP', 'Generate', `Generated ${reportDisplayName} for ${trainee.fullName} - Event: ${item.code} (${eventForAssessment.date})`);
         } catch (error) {
             console.warn('[PT051] Failed to persist generated Individual LMP PT-051:', error);
             await showDarkAlert(
-                `PT-051 was generated locally, but could not be saved to the database.\n\n${error instanceof Error ? error.message : String(error)}`,
-                'PT-051 Save Failed',
+                `${reportDisplayName} was generated locally, but could not be saved to the database.\n\n${error instanceof Error ? error.message : String(error)}`,
+                `${reportDisplayName} Save Failed`,
                 'error'
             );
             return;
