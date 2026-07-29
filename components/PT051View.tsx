@@ -561,7 +561,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: undefined }
     );
     const [dcoResult, setDcoResult] = useState<string>(
-        initialAssessment?.dcoResult || (enabledCompletionResults.length === 0 ? 'Complete' : '')
+        initialAssessment?.dcoResult || (missionStatusOptions.length === 1 ? missionStatusOptions[0].code : '')
     );
     const [dpcoFollowUp, setDpcoFollowUp] = useState<{ action: DpcoFollowUpAction; extraEventHours?: number; extraHours?: number }>(() => ({
         action: (initialAssessment?.dpcoFollowUp?.action || '') as DpcoFollowUpAction,

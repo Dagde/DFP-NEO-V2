@@ -22004,7 +22004,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
   );
   const [dcoResult, setDcoResult] = reactExports.useState(
-    initialAssessment?.dcoResult || (enabledCompletionResults.length === 0 ? "Complete" : "")
+    initialAssessment?.dcoResult || (missionStatusOptions.length === 1 ? missionStatusOptions[0].code : "")
   );
   const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
     action: initialAssessment?.dpcoFollowUp?.action || "",
@@ -58222,8 +58222,8 @@ const AirCombatTrainingReportModal = ({
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
-  const enabledCompletionResults2 = reportTemplate.completionResults.filter((option) => option.enabled !== false);
-  const missionStatusOptions = enabledCompletionResults2.length > 0 ? enabledCompletionResults2 : [{ code: "Complete", label: "Complete", enabled: true }];
+  const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
+  const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
   const missionStatusLabelByCode = reactExports.useMemo(() => new Map(reportTemplate.completionResults.map((option) => [
     String(option.code || "").trim().toUpperCase(),
     String(option.label || "").trim()
@@ -58280,7 +58280,7 @@ const AirCombatTrainingReportModal = ({
   const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
   const [overallResult, setOverallResult] = reactExports.useState(initialReport?.overallResult || "");
   const [dcoResult, setDcoResult] = reactExports.useState(
-    initialReport?.dcoResult || (enabledCompletionResults2.length === 0 ? "Complete" : "")
+    initialReport?.dcoResult || (enabledCompletionResults.length === 0 ? "Complete" : "")
   );
   const [dpcoFollowUp, setDpcoFollowUp] = reactExports.useState(() => ({
     action: initialReport?.dpcoFollowUp?.action || "",
