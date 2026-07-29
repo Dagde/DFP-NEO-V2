@@ -19,6 +19,12 @@ import {
     comparePeopleByConfiguredRank,
     type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
+import {
+    getTrainingReportCompletionResultOptions,
+    normaliseTrainingReportTemplate,
+    type TrainingReportCompletionCode,
+    type TrainingReportTemplate,
+} from '../utils/trainingReportTerminology';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -32,6 +38,7 @@ interface PostFlightViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftNumberSettings?: AircraftNumberSettings;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
+  trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
   getSunTimesForAirfieldDate?: (targetDate: string, airfieldCode?: string | null) => any;
 }
 
@@ -47,7 +54,7 @@ const stripPostFlightDutyRoutePrefix = (value?: string | null): string => {
 };
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, getSunTimesForAirfieldDate }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, getSunTimesForAirfieldDate }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -87,7 +94,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     );
 
     // State
-    const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
+    const missionStatusOptions = useMemo(() => (
+        getTrainingReportCompletionResultOptions(trainingReportTemplate)
+    ), [trainingReportTemplate]);
+    const missionStatusFieldLabel = useMemo(() => (
+        normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result
+    ), [trainingReportTemplate]);
+
+    const [result, setResult] = useState<TrainingReportCompletionCode | ''>('');
     const [aircraftNumber, setAircraftNumber] = useState(scheduledAircraftNumber.number || '001');
     const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(scheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     const [from, setFrom] = useState<string>(school);
@@ -989,7 +1003,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         setIsSolo(!checked);
     };
 
-    const ResultRadio: React.FC<{ value: string }> = ({ value }) => (
+    const ResultRadio: React.FC<{ value: TrainingReportCompletionCode; label: string }> = ({ value, label }) => (
         <label className="flex items-center space-x-2 cursor-pointer">
             <input
                 type="radio"
@@ -999,7 +1013,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 onChange={(e) => handleResultChange(e.target.value as any)}
                 className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
             />
-            <span className="text-white">{value}</span>
+            <span className="text-white">{label}</span>
         </label>
     );
 
@@ -1338,11 +1352,11 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 <div className="flex items-start gap-6">
                     {/* Result (Left) — subtle blue hue outline */}
                     <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg border border-sky-500/40 ring-1 ring-sky-500/20 self-stretch flex flex-col justify-center">
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">{missionStatusFieldLabel}</label>
                         <div className="flex flex-col space-y-3">
-                            <ResultRadio value="DCO" />
-                            <ResultRadio value="DPCO" />
-                            <ResultRadio value="DNCO" />
+                            {missionStatusOptions.map((option) => (
+                                <ResultRadio key={option.code} value={option.code} label={option.label} />
+                            ))}
                         </div>
                     </div>
 

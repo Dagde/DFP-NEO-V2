@@ -7,6 +7,12 @@ import {
     formatAircraftNumber,
     type AircraftNumberSettings,
 } from '../utils/aircraftNumberFormat';
+import {
+    getTrainingReportCompletionResultOptions,
+    normaliseTrainingReportTemplate,
+    type TrainingReportCompletionCode,
+    type TrainingReportTemplate,
+} from '../utils/trainingReportTerminology';
 
 interface PostFlightModalProps {
   event: ScheduleEvent;
@@ -16,9 +22,10 @@ interface PostFlightModalProps {
   traineesData: Trainee[];
   resourceDisplayNames?: ResourceDisplayNames;
   aircraftNumberSettings?: AircraftNumberSettings;
+  trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
 }
 
-const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSave, school, traineesData, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
+const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSave, school, traineesData, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, trainingReportTemplate }) => {
     // Find trainee or pilot for header
     const person = useMemo(() => {
         const personName = event.student || event.pilot;
@@ -26,7 +33,14 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
     }, [event, traineesData]);
 
     // State
-    const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
+    const missionStatusOptions = useMemo(() => (
+        getTrainingReportCompletionResultOptions(trainingReportTemplate)
+    ), [trainingReportTemplate]);
+    const missionStatusFieldLabel = useMemo(() => (
+        normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result
+    ), [trainingReportTemplate]);
+
+    const [result, setResult] = useState<TrainingReportCompletionCode | ''>('');
     const [aircraftNumber, setAircraftNumber] = useState('001');
     const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(aircraftNumberSettings.defaultPrefix);
     // FIX: Explicitly type 'from' and 'to' as string to allow any airport code.
@@ -72,7 +86,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
         onClose();
     };
 
-    const ResultRadio: React.FC<{ value: string }> = ({ value }) => (
+    const ResultRadio: React.FC<{ value: TrainingReportCompletionCode; label: string }> = ({ value, label }) => (
         <label className="flex items-center space-x-2 cursor-pointer">
             <input
                 type="radio"
@@ -82,7 +96,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
                 onChange={(e) => setResult(e.target.value as any)}
                 className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
             />
-            <span className="text-white">{value}</span>
+            <span className="text-white">{label}</span>
         </label>
     );
 
@@ -117,11 +131,11 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
 
                         {/* Result (Top Right) */}
                         <div className="bg-gray-700/50 p-4 rounded-lg">
-                            <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">{missionStatusFieldLabel}</label>
                             <div className="flex items-center space-x-6">
-                                <ResultRadio value="DCO" />
-                                <ResultRadio value="DPCO" />
-                                <ResultRadio value="DNCO" />
+                                {missionStatusOptions.map((option) => (
+                                    <ResultRadio key={option.code} value={option.code} label={option.label} />
+                                ))}
                             </div>
                         </div>
                     </div>

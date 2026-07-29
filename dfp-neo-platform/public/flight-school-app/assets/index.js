@@ -4745,6 +4745,24 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
     }
   };
 };
+const getTrainingReportCompletionResultOptions = (template) => {
+  const normalised = normaliseTrainingReportTemplate(template || null);
+  const seen = /* @__PURE__ */ new Set();
+  const options = normalised.completionResults.filter((option) => option.enabled !== false).filter((option) => {
+    const code = String(option.code || "").trim().toUpperCase();
+    if (!["DCO", "DPCO", "DNCO"].includes(code) || seen.has(code)) return false;
+    seen.add(code);
+    return true;
+  }).map((option) => ({
+    code: option.code,
+    label: String(option.label || option.code).trim() || option.code
+  }));
+  return options.length > 0 ? options : [
+    { code: "DCO", label: "DCO" },
+    { code: "DPCO", label: "DPCO" },
+    { code: "DNCO", label: "DNCO" }
+  ];
+};
 const findTrainingReportUnit = (config, unitCode) => {
   const rawUnitCode = String(unitCode || "").trim();
   if (!rawUnitCode || rawUnitCode.includes("+")) return null;
@@ -75764,7 +75782,7 @@ const stripPostFlightDutyRoutePrefix = (value) => {
   const parts = text.split(/\s*:\s*/);
   return (parts.length > 1 ? parts.slice(1).join(" : ") : text).trim();
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, getSunTimesForAirfieldDate }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings, trainingReportTemplate, getSunTimesForAirfieldDate }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -75793,6 +75811,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     () => parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings),
     [aircraftNumberSettings, event.aircraftNumber]
   );
+  const missionStatusOptions = reactExports.useMemo(() => getTrainingReportCompletionResultOptions(trainingReportTemplate), [trainingReportTemplate]);
+  const missionStatusFieldLabel = reactExports.useMemo(() => normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result, [trainingReportTemplate]);
   const [result, setResult] = reactExports.useState("");
   const [aircraftNumber, setAircraftNumber] = reactExports.useState(scheduledAircraftNumber.number || "001");
   const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(scheduledAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
@@ -76578,7 +76598,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
     setIsDual(checked);
     setIsSolo(!checked);
   };
-  const ResultRadio = ({ value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
+  const ResultRadio = ({ value, label }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {
@@ -76590,7 +76610,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
         className: "h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500"
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: value })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white", children: label })
   ] });
   const ApproachInput = ({ kind, label, isChecked, setIsChecked, count, setCount }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 flex items-end space-x-2 rounded-md border border-gray-700/70 bg-gray-900/20 px-2 py-1", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer h-[38px]", children: [
@@ -76741,12 +76761,8 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6 max-w-7xl mx-auto w-full", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-700/50 p-4 rounded-lg border border-sky-500/40 ring-1 ring-sky-500/20 self-stretch flex flex-col justify-center", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Result" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col space-y-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(ResultRadio, { value: "DCO" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(ResultRadio, { value: "DPCO" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(ResultRadio, { value: "DNCO" })
-            ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: missionStatusFieldLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-3", children: missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(ResultRadio, { value: option.code, label: option.label }, option.code)) })
           ] }),
           postFlightCurrencies.length > 0 && (() => {
             const flightDate = event.date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
@@ -122564,6 +122580,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
             PostFlightView,
             {
               event: eventForPostFlight,
+              trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, eventForPostFlight.unit || activeUnitCode),
               onReturn: () => {
                 setEventForPostFlight(null);
                 handleNavigation("Program Schedule");

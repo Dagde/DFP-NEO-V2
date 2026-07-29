@@ -92,6 +92,7 @@ export const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
 export const TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH = 20;
 export const TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH = 40;
 export const TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH = 40;
+export type TrainingReportCompletionCode = 'DCO' | 'DPCO' | 'DNCO';
 
 export const DEFAULT_TRAINING_REPORT_TERMINOLOGY: TrainingReportTerminology = {
   name: 'Report',
@@ -358,6 +359,33 @@ export const normaliseTrainingReportTemplate = (
       },
     },
   };
+};
+
+export const getTrainingReportCompletionResultOptions = (
+  template?: Partial<TrainingReportTemplate> | null,
+): Array<{ code: TrainingReportCompletionCode; label: string }> => {
+  const normalised = normaliseTrainingReportTemplate(template || null);
+  const seen = new Set<string>();
+  const options = normalised.completionResults
+    .filter((option) => option.enabled !== false)
+    .filter((option) => {
+      const code = String(option.code || '').trim().toUpperCase();
+      if (!['DCO', 'DPCO', 'DNCO'].includes(code) || seen.has(code)) return false;
+      seen.add(code);
+      return true;
+    })
+    .map((option) => ({
+      code: option.code,
+      label: String(option.label || option.code).trim() || option.code,
+    }));
+
+  return options.length > 0
+    ? options
+    : [
+        { code: 'DCO', label: 'DCO' },
+        { code: 'DPCO', label: 'DPCO' },
+        { code: 'DNCO', label: 'DNCO' },
+      ];
 };
 
 export const getTrainingReportTerminology = (config?: PlatformConfig | null): TrainingReportTerminology => {
