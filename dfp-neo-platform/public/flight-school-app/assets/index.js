@@ -77270,6 +77270,89 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
     )
   ] });
 };
+const RemedialInputRow = React.memo(({
+  label,
+  menuKey,
+  state,
+  setState,
+  instructors,
+  openInstructorMenu,
+  setOpenInstructorMenu,
+  setValidationMessage
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end space-x-2", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-28 flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300", children: label }) }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "4.5rem" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Qty" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0", value: state.quantity, onChange: (e) => setState((p) => ({ ...p, quantity: parseInt(e.target.value, 10) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "6rem" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Dur (hrs)" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", step: "0.1", min: "0", value: state.duration, onChange: (e) => setState((p) => ({ ...p, duration: parseFloat(e.target.value) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "10.5rem" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Day/Night" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-3 overflow-hidden rounded-md border border-gray-600 bg-gray-700", children: ["Day", "Night", "Day/Night"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "button",
+      {
+        type: "button",
+        onClick: () => setState((p) => ({ ...p, dayNight: option })),
+        className: `h-[38px] text-xs font-semibold transition-colors ${state.dayNight === option ? "bg-sky-600 text-white" : "text-gray-300 hover:bg-gray-600"}`,
+        children: option === "Day/Night" ? "Both" : option
+      },
+      option
+    )) })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-grow", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Instructor" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
+      {
+        type: "button",
+        onMouseDown: (event) => {
+          event.preventDefault();
+          setOpenInstructorMenu((current) => current === menuKey ? null : menuKey);
+        },
+        onKeyDown: (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setOpenInstructorMenu((current) => current === menuKey ? null : menuKey);
+          }
+        },
+        className: "mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || "Select instructor..." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-gray-400", children: "▾" })
+        ]
+      }
+    ),
+    openInstructorMenu === menuKey && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "div",
+      {
+        className: "absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto overscroll-contain rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl",
+        onWheel: (event) => event.stopPropagation(),
+        children: instructors.map((instructor) => {
+          const selectInstructor = () => {
+            setState((p) => ({ ...p, instructor: instructor.name }));
+            setValidationMessage("");
+            setOpenInstructorMenu(null);
+          };
+          return /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onMouseDown: (event) => event.preventDefault(),
+              onMouseUp: selectInstructor,
+              onClick: selectInstructor,
+              className: `block min-h-[42px] w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? "bg-sky-600 text-white" : "text-gray-200"}`,
+              children: instructor.name
+            },
+            instructor.idNumber || instructor.name
+          );
+        })
+      }
+    )
+  ] })
+] }));
 const AddRemedialPackageFlyout = ({
   trainee,
   instructors,
@@ -77428,82 +77511,6 @@ const AddRemedialPackageFlyout = ({
     setValidationMessage("");
     onSave(trainee, eventToRemediate, remedialEvents);
   };
-  const InputRow = ({ label, menuKey, state, setState }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end space-x-2", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-28 flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300", children: label }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "4.5rem" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Qty" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0", value: state.quantity, onChange: (e) => setState((p) => ({ ...p, quantity: parseInt(e.target.value, 10) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "6rem" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Dur (hrs)" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", step: "0.1", min: "0", value: state.duration, onChange: (e) => setState((p) => ({ ...p, duration: parseFloat(e.target.value) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "10.5rem" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Day/Night" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-3 overflow-hidden rounded-md border border-gray-600 bg-gray-700", children: ["Day", "Night", "Day/Night"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => setState((p) => ({ ...p, dayNight: option })),
-          className: `h-[38px] text-xs font-semibold transition-colors ${state.dayNight === option ? "bg-sky-600 text-white" : "text-gray-300 hover:bg-gray-600"}`,
-          children: option === "Day/Night" ? "Both" : option
-        },
-        option
-      )) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-grow", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Instructor" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          onMouseDown: (event) => {
-            event.preventDefault();
-            setOpenInstructorMenu((current) => current === menuKey ? null : menuKey);
-          },
-          onKeyDown: (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              setOpenInstructorMenu((current) => current === menuKey ? null : menuKey);
-            }
-          },
-          className: "mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || "Select instructor..." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-gray-400", children: "▾" })
-          ]
-        }
-      ),
-      openInstructorMenu === menuKey && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto overscroll-contain rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl",
-          onWheel: (event) => event.stopPropagation(),
-          children: instructors.map((instructor) => {
-            const selectInstructor = () => {
-              setState((p) => ({ ...p, instructor: instructor.name }));
-              setValidationMessage("");
-              setOpenInstructorMenu(null);
-            };
-            return /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onMouseDown: (event) => {
-                  event.preventDefault();
-                },
-                onMouseUp: selectInstructor,
-                onClick: selectInstructor,
-                className: `block min-h-[42px] w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? "bg-sky-600 text-white" : "text-gray-200"}`,
-                children: instructor.name
-              },
-              instructor.idNumber || instructor.name
-            );
-          })
-        }
-      )
-    ] })
-  ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-start justify-center px-4 pb-4 pt-[96px] animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 flex flex-col max-h-[calc(100vh-112px)]", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
@@ -77581,9 +77588,45 @@ const AddRemedialPackageFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 2: Build Remedial Package" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Tutorials", menuKey: "tutorials", state: tutState, setState: setTutState }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: `${resourceDisplayNames.ftd}s`, menuKey: "ftd", state: ftdState, setState: setFtdState }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Flights", menuKey: "flights", state: flightState, setState: setFlightState })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              RemedialInputRow,
+              {
+                label: "Tutorials",
+                menuKey: "tutorials",
+                state: tutState,
+                setState: setTutState,
+                instructors,
+                openInstructorMenu,
+                setOpenInstructorMenu,
+                setValidationMessage
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              RemedialInputRow,
+              {
+                label: `${resourceDisplayNames.ftd}s`,
+                menuKey: "ftd",
+                state: ftdState,
+                setState: setFtdState,
+                instructors,
+                openInstructorMenu,
+                setOpenInstructorMenu,
+                setValidationMessage
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              RemedialInputRow,
+              {
+                label: "Flights",
+                menuKey: "flights",
+                state: flightState,
+                setState: setFlightState,
+                instructors,
+                openInstructorMenu,
+                setOpenInstructorMenu,
+                setValidationMessage
+              }
+            )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvents, className: "w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add Events to Package" }),
           validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100", children: validationMessage }),
