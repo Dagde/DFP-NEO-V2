@@ -119108,12 +119108,15 @@ ${error instanceof Error ? error.message : String(error)}`,
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
     if (!syllabusItem) return;
+    const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
+    const eventDate = isNextDayContext ? buildDfpDate : date;
     const newEvent = {
       id: v4(),
+      date: eventDate,
       type: "ground",
       flightNumber: data.flightNumber,
       startTime: data.startTime,
-      duration: syllabusItem.duration,
+      duration: data.duration ?? syllabusItem.duration,
       instructor: data.instructor,
       attendees: data.attendees,
       resourceId: data.resourceId,
@@ -119125,9 +119128,21 @@ ${error instanceof Error ? error.message : String(error)}`,
       authNotes: data.location
       // Using notes field as location for CPTs
     };
-    setNextDayBuildEvents((prev) => [...prev, newEvent]);
+    if (isNextDayContext) {
+      setNextDayBuildEvents((prev) => [...prev, newEvent]);
+      setShowAddGroundEvent(false);
+      setSuccessMessage("Ground event added to the build.");
+      return;
+    }
+    const updatedEventsForDate = [...publishedSchedules[eventDate] || [], newEvent];
+    setPublishedSchedules((prev) => ({
+      ...prev,
+      [eventDate]: [...prev[eventDate] || [], newEvent]
+    }));
+    setEvents((prev) => [...prev, newEvent]);
+    persistScheduleForDate(eventDate, updatedEventsForDate);
     setShowAddGroundEvent(false);
-    setSuccessMessage("Ground event added to the build.");
+    setSuccessMessage("Ground event added to the DFP.");
   };
   const handleSaveAcademicEvent = (data) => {
     console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====");

@@ -39524,12 +39524,15 @@ appliedUpdates.forEach(update => {
         const syllabusItem = syllabusDetails.find(s => s.code === data.flightNumber);
         if (!syllabusItem) return;
 
-        const newEvent: Omit<ScheduleEvent, 'date'> = {
+        const isNextDayContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+        const eventDate = isNextDayContext ? buildDfpDate : date;
+        const newEvent: ScheduleEvent = {
             id: uuidv4(),
+            date: eventDate,
             type: 'ground',
             flightNumber: data.flightNumber,
             startTime: data.startTime,
-            duration: syllabusItem.duration,
+            duration: data.duration ?? syllabusItem.duration,
             instructor: data.instructor,
             attendees: data.attendees,
             resourceId: data.resourceId,
@@ -39541,9 +39544,22 @@ appliedUpdates.forEach(update => {
             authNotes: data.location // Using notes field as location for CPTs
         };
 
-        setNextDayBuildEvents(prev => [...prev, newEvent]);
+        if (isNextDayContext) {
+            setNextDayBuildEvents(prev => [...prev, newEvent]);
+            setShowAddGroundEvent(false);
+            setSuccessMessage('Ground event added to the build.');
+            return;
+        }
+
+        const updatedEventsForDate = [...(publishedSchedules[eventDate] || []), newEvent];
+        setPublishedSchedules(prev => ({
+            ...prev,
+            [eventDate]: [...(prev[eventDate] || []), newEvent],
+        }));
+        setEvents(prev => [...prev, newEvent]);
+        persistScheduleForDate(eventDate, updatedEventsForDate);
         setShowAddGroundEvent(false);
-        setSuccessMessage('Ground event added to the build.');
+        setSuccessMessage('Ground event added to the DFP.');
     };
 
     // Academic session save — creates one grouped ground event per trainee, flagged isAcademic=true
