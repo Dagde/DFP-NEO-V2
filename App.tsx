@@ -25500,7 +25500,7 @@ const App: React.FC = () => {
                 .filter((trainee: any) => {
                     if ((trainee as any)?._dataSource !== 'database') return false;
                     const traineeUnitCode = String(trainee?.unit || '').trim().toUpperCase();
-                    if (hasConfiguredCourseUnitScope && activeContextUnitCodeSet.size > 0) {
+                    if (activeContextUnitCodeSet.size > 0) {
                         return Boolean(traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode));
                     }
                     return true;
@@ -25508,7 +25508,7 @@ const App: React.FC = () => {
                 .map((trainee: any) => normaliseCourseName(trainee?.course))
                 .filter(Boolean)
         );
-    }, [activeContextUnitCodeSet, activeOperationalModel, hasConfiguredCourseUnitScope, normaliseCourseName, traineesData]);
+    }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
 
     const courseMatchesActiveContext = useCallback((course: Course): boolean => {
         const courseUnits = getCourseUnitCodes(course);
@@ -39511,14 +39511,14 @@ appliedUpdates.forEach(update => {
 
     const allTraineesByCourse = useMemo(() => {
         const groups: { [course: string]: Trainee[] } = {};
-        allTraineesData.forEach(trainee => {
+        traineesData.forEach(trainee => {
             if (!groups[trainee.course]) {
                 groups[trainee.course] = [];
             }
             groups[trainee.course].push(trainee);
         });
         return groups;
-    }, [allTraineesData]);
+    }, [traineesData]);
 
     const handleSaveGroundEvent = (data: any) => {
         const syllabusItem = syllabusDetails.find(s => s.code === data.flightNumber);

@@ -86,6 +86,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
 
     const traineeSelectorRef = useRef<HTMLDivElement>(null);
     const availableTrainees = useMemo(() => traineesData.filter(t => !t.isPaused).map(t => t.fullName), [traineesData]);
+    const activeCourseNames = useMemo(() => Object.keys(activeCourses), [activeCourses]);
 
     const isCptEvent = useMemo(() => flightNumber.includes('CPT'), [flightNumber]);
     const [selectedCpt, setSelectedCpt] = useState('CPT 1');
@@ -95,6 +96,16 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
         const selectedSyllabus = groundSyllabus.find(s => s.code === flightNumber);
         if (selectedSyllabus) setDuration(selectedSyllabus.duration);
     }, [flightNumber, groundSyllabus]);
+
+    useEffect(() => {
+        if (activeCourseNames.length === 0) {
+            if (selectedCourse) setSelectedCourse('');
+            return;
+        }
+        if (!activeCourseNames.includes(selectedCourse)) {
+            setSelectedCourse(activeCourseNames[0]);
+        }
+    }, [activeCourseNames, selectedCourse]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -285,7 +296,8 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                             <div>
                                                 <label htmlFor="ground-course" className="block text-sm font-medium text-gray-400">Course</label>
                                                 <select id="ground-course" value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm">
-                                                    {Object.keys(activeCourses).map(name => <option key={name} value={name}>{name}</option>)}
+                                                    {activeCourseNames.length === 0 && <option value="">No courses available</option>}
+                                                    {activeCourseNames.map(name => <option key={name} value={name}>{name}</option>)}
                                                 </select>
                                             </div>
                                             <div className="flex items-center space-x-3 pt-6">

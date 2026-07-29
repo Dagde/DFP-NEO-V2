@@ -35034,6 +35034,7 @@ const AddGroundEventFlyout = ({
   const [showCourseConfirm, setShowCourseConfirm] = reactExports.useState(false);
   const traineeSelectorRef = reactExports.useRef(null);
   const availableTrainees = reactExports.useMemo(() => traineesData.filter((t) => !t.isPaused).map((t) => t.fullName), [traineesData]);
+  const activeCourseNames = reactExports.useMemo(() => Object.keys(activeCourses), [activeCourses]);
   const isCptEvent = reactExports.useMemo(() => flightNumber.includes("CPT"), [flightNumber]);
   const [selectedCpt, setSelectedCpt] = reactExports.useState("CPT 1");
   const cptLabel = resourceDisplayNames.cpt;
@@ -35041,6 +35042,15 @@ const AddGroundEventFlyout = ({
     const selectedSyllabus = groundSyllabus.find((s) => s.code === flightNumber);
     if (selectedSyllabus) setDuration(selectedSyllabus.duration);
   }, [flightNumber, groundSyllabus]);
+  reactExports.useEffect(() => {
+    if (activeCourseNames.length === 0) {
+      if (selectedCourse) setSelectedCourse("");
+      return;
+    }
+    if (!activeCourseNames.includes(selectedCourse)) {
+      setSelectedCourse(activeCourseNames[0]);
+    }
+  }, [activeCourseNames, selectedCourse]);
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
       if (traineeSelectorRef.current && !traineeSelectorRef.current.contains(event.target)) {
@@ -35212,7 +35222,10 @@ const AddGroundEventFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4 items-center", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-course", className: "block text-sm font-medium text-gray-400", children: "Course" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-course", value: selectedCourse, onChange: (e) => setSelectedCourse(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Object.keys(activeCourses).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name)) })
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { id: "ground-course", value: selectedCourse, onChange: (e) => setSelectedCourse(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: [
+                            activeCourseNames.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No courses available" }),
+                            activeCourseNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
+                          ] })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 pt-6", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", id: "entire-course", checked: isEntireCourse, onChange: handleEntireCourseChange, className: "h-5 w-5 bg-gray-700 rounded accent-sky-500" }),
@@ -107621,13 +107634,13 @@ const App = () => {
       traineesData.filter((trainee) => {
         if (trainee?._dataSource !== "database") return false;
         const traineeUnitCode = String(trainee?.unit || "").trim().toUpperCase();
-        if (hasConfiguredCourseUnitScope && activeContextUnitCodeSet.size > 0) {
+        if (activeContextUnitCodeSet.size > 0) {
           return Boolean(traineeUnitCode && activeContextUnitCodeSet.has(traineeUnitCode));
         }
         return true;
       }).map((trainee) => normaliseCourseName(trainee?.course)).filter(Boolean)
     );
-  }, [activeContextUnitCodeSet, activeOperationalModel, hasConfiguredCourseUnitScope, normaliseCourseName, traineesData]);
+  }, [activeContextUnitCodeSet, activeOperationalModel, normaliseCourseName, traineesData]);
   const courseMatchesActiveContext = reactExports.useCallback((course) => {
     const courseUnits = getCourseUnitCodes(course);
     const hasCourseUnit = courseUnits.length > 0;
@@ -119084,14 +119097,14 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const allTraineesByCourse = reactExports.useMemo(() => {
     const groups = {};
-    allTraineesData.forEach((trainee) => {
+    traineesData.forEach((trainee) => {
       if (!groups[trainee.course]) {
         groups[trainee.course] = [];
       }
       groups[trainee.course].push(trainee);
     });
     return groups;
-  }, [allTraineesData]);
+  }, [traineesData]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
     if (!syllabusItem) return;
