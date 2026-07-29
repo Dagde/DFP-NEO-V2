@@ -119095,7 +119095,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       setSelectedEventIds(/* @__PURE__ */ new Set());
     }
   };
-  const allTraineesByCourse = reactExports.useMemo(() => {
+  reactExports.useMemo(() => {
     const groups = {};
     traineesData.forEach((trainee) => {
       if (!groups[trainee.course]) {
@@ -119105,21 +119105,48 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     return groups;
   }, [traineesData]);
+  const addGroundTileTraineesByCourse = reactExports.useMemo(() => {
+    const groups = {};
+    traineesData.forEach((trainee) => {
+      const courseName = String(trainee?.course || "").trim();
+      if (!courseName || trainee?.isPaused) return;
+      const traineeUnitCode = normalisePersonnelUnitCode(trainee?.unit);
+      if (activeContextUnitCodeSet.size > 0 && (!traineeUnitCode || !activeContextUnitCodeSet.has(traineeUnitCode))) {
+        return;
+      }
+      if (!groups[courseName]) {
+        groups[courseName] = [];
+      }
+      groups[courseName].push(trainee);
+    });
+    return groups;
+  }, [activeContextUnitCodeSet, traineesData]);
+  const addGroundTileCourseColors = reactExports.useMemo(() => {
+    const entries = Object.entries(addGroundTileTraineesByCourse).map(([courseName]) => [courseName, courseColors[courseName] || scopedCourseColors[courseName] || "bg-sky-400/80"]);
+    return Object.fromEntries(entries);
+  }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
     if (!syllabusItem) return;
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const eventDate = isNextDayContext ? buildDfpDate : date;
-    const newEvent = {
+    const existingEventsForDate = isNextDayContext ? nextDayBuildEvents.map((event) => ({ ...event, date: eventDate })) : publishedSchedules[eventDate] || [];
+    const requestedResourceId = String(data.resourceId || "").trim() || "Ground 1";
+    const resourceMatch = requestedResourceId.match(/^(.+?)\s*(\d+)$/);
+    const resourceBase = (resourceMatch?.[1] || requestedResourceId).trim();
+    const selectedResourceNumber = Number(resourceMatch?.[2] || 1);
+    const resourceLabelForNumber = (resourceNumber) => `${resourceBase} ${resourceNumber}`.trim();
+    const proposedDuration = data.duration ?? syllabusItem.duration;
+    const candidateEventBase = {
       id: v4(),
       date: eventDate,
       type: "ground",
       flightNumber: data.flightNumber,
       startTime: data.startTime,
-      duration: data.duration ?? syllabusItem.duration,
+      duration: proposedDuration,
       instructor: data.instructor,
       attendees: data.attendees,
-      resourceId: data.resourceId,
+      resourceId: requestedResourceId,
       color: "bg-teal-400/80",
       flightType: "Dual",
       locationType: "Local",
@@ -119128,10 +119155,19 @@ ${error instanceof Error ? error.message : String(error)}`,
       authNotes: data.location
       // Using notes field as location for CPTs
     };
+    const selectedResourceNumbers = [
+      selectedResourceNumber,
+      ...Array.from({ length: 23 }, (_, index) => index + 1).filter((resourceNumber) => resourceNumber !== selectedResourceNumber)
+    ];
+    const firstClearResource = selectedResourceNumbers.map(resourceLabelForNumber).find((resourceId) => !existingEventsForDate.some((existingEvent) => String(existingEvent.resourceId || "").trim() === resourceId && checkTimeOverlap(candidateEventBase, existingEvent)));
+    const newEvent = {
+      ...candidateEventBase,
+      resourceId: firstClearResource || requestedResourceId
+    };
     if (isNextDayContext) {
       setNextDayBuildEvents((prev) => [...prev, newEvent]);
       setShowAddGroundEvent(false);
-      setSuccessMessage("Ground event added to the build.");
+      setSuccessMessage(newEvent.resourceId === requestedResourceId ? "Ground event added to the build." : `Ground event added to the build on ${newEvent.resourceId}.`);
       return;
     }
     const updatedEventsForDate = [...publishedSchedules[eventDate] || [], newEvent];
@@ -119142,7 +119178,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     setEvents((prev) => [...prev, newEvent]);
     persistScheduleForDate(eventDate, updatedEventsForDate);
     setShowAddGroundEvent(false);
-    setSuccessMessage("Ground event added to the DFP.");
+    setSuccessMessage(newEvent.resourceId === requestedResourceId ? "Ground event added to the DFP." : `Ground event added to the DFP on ${newEvent.resourceId}.`);
   };
   const handleSaveAcademicEvent = (data) => {
     console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====");
@@ -124123,8 +124159,8 @@ Do you want to replace the existing entry?`,
           onSave: handleSaveGroundEvent,
           onSaveAcademic: handleSaveAcademicEvent,
           groundSyllabus: visibleSyllabusDetails.filter((s) => s.type === "Ground School"),
-          activeCourses: scopedCourseColors,
-          allTraineesByCourse,
+          activeCourses: addGroundTileCourseColors,
+          allTraineesByCourse: addGroundTileTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
           traineesData,
           syllabusDetails: visibleSyllabusDetails,
@@ -124132,7 +124168,7 @@ Do you want to replace the existing entry?`,
           traineeLMPs,
           events,
           date: buildDfpDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
-          courseColors: scopedCourseColors,
+          courseColors: addGroundTileCourseColors,
           school,
           currentLocationName: activeLocationDisplayName,
           locationAbbreviations,
