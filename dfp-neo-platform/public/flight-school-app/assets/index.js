@@ -58201,6 +58201,14 @@ const AirCombatTrainingReportModal = ({
   const commentFields = reportTemplate.modules.comments.fields;
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
+  const missionStatusLabelByCode = reactExports.useMemo(() => new Map(reportTemplate.completionResults.map((option) => [
+    String(option.code || "").trim().toUpperCase(),
+    String(option.label || "").trim()
+  ])), [reportTemplate.completionResults]);
+  const getMissionStatusLabel = (code, fallback) => {
+    const configuredLabel = missionStatusLabelByCode.get(code.trim().toUpperCase());
+    return configuredLabel || fallback;
+  };
   const enabledGradeOptions = reactExports.useMemo(() => reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || "").trim()), [reportTemplate.grades.options]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(enabledGradeOptions.map((option) => [option.value, option.label])), [enabledGradeOptions]);
   const formatGradeOption = (value) => {
@@ -58673,7 +58681,10 @@ const AirCombatTrainingReportModal = ({
                 ] }, option.code)) })
               ] }),
               dcoResult === "DPCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DPCO action" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: [
+                  getMissionStatusLabel("DPCO", "DPCO"),
+                  " action"
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === "extra-event" ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -58840,7 +58851,10 @@ const AirCombatTrainingReportModal = ({
                 ] })
               ] }),
               dcoResult === "DNCO" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: "DNCO action" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-bold uppercase tracking-wide text-sky-200", children: [
+                  getMissionStatusLabel("DNCO", "DNCO"),
+                  " action"
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2 text-sm font-semibold text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? "border-sky-400/80 bg-sky-500/15" : "border-gray-700 bg-gray-900/70 hover:border-gray-500"}`, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",

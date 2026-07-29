@@ -158,6 +158,16 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const missionStatusOptions = enabledCompletionResults.length > 0
     ? enabledCompletionResults
     : [{ code: 'Complete', label: 'Complete', enabled: true }];
+  const missionStatusLabelByCode = useMemo(() => (
+    new Map(reportTemplate.completionResults.map((option) => [
+      String(option.code || '').trim().toUpperCase(),
+      String(option.label || '').trim(),
+    ]))
+  ), [reportTemplate.completionResults]);
+  const getMissionStatusLabel = (code: string, fallback: string): string => {
+    const configuredLabel = missionStatusLabelByCode.get(code.trim().toUpperCase());
+    return configuredLabel || fallback;
+  };
   const enabledGradeOptions = useMemo(() => (
     reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || '').trim())
   ), [reportTemplate.grades.options]);
@@ -674,7 +684,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                     </div>
                     {dcoResult === 'DPCO' && (
                       <div className="-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
-                        <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DPCO action</div>
+                        <div className="text-xs font-bold uppercase tracking-wide text-sky-200">{getMissionStatusLabel('DPCO', 'DPCO')} action</div>
                         <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                           <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-event' ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                             <input
@@ -808,7 +818,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                     )}
                     {dcoResult === 'DNCO' && (
                       <div className="-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
-                        <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DNCO action</div>
+                        <div className="text-xs font-bold uppercase tracking-wide text-sky-200">{getMissionStatusLabel('DNCO', 'DNCO')} action</div>
                         <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                           <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                             <input
