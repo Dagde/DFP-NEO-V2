@@ -6,7 +6,10 @@ import { showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import {
     DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+    getTrainingReportCompletionResultOptions,
+    normaliseTrainingReportTemplate,
     normaliseTrainingReportTerminology,
+    type TrainingReportTemplate,
     type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 
@@ -41,13 +44,25 @@ interface HateSheetViewProps {
     onAccessDenied?: (actionLabel: string) => void;
     isLoading?: boolean;
     trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
+    trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
     const { isFrozen } = useSystemFreeze();
     const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
     const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
     const trainingReportName = reportTerminology.name;
+    const reportTemplate = React.useMemo(
+        () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
+        [trainingReportTemplate, trainingReportTerminology]
+    );
+    const missionStatusLabelMap = React.useMemo(() => {
+        const options = getTrainingReportCompletionResultOptions(reportTemplate);
+        return new Map(options.map(option => [option.code, option.label]));
+    }, [reportTemplate]);
+    const getMissionStatusDisplayLabel = (statusCode: string) => (
+        missionStatusLabelMap.get(statusCode as any) || statusCode
+    );
 
     // Helper function to format date
     const formatDate = (timestamp: number) => {
@@ -264,18 +279,19 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             return <span className="text-sm text-gray-500">-</span>;
         }
 
-        const status = item.dcoResult || 'None';
-        const statusClass = status === 'DCO'
+        const statusCode = String(item.dcoResult || '').trim().toUpperCase();
+        const statusClass = statusCode === 'DCO'
             ? 'bg-green-500/20 text-green-300'
-            : status === 'DPCO'
+            : statusCode === 'DPCO'
                 ? 'bg-amber-500/20 text-amber-300'
-                : status === 'DNCO'
+                : statusCode === 'DNCO'
                     ? 'bg-red-500/20 text-red-300'
                     : 'bg-gray-600/40 text-gray-300';
+        const statusLabel = statusCode ? getMissionStatusDisplayLabel(statusCode) : 'None';
 
         return (
             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`}>
-                {status}
+                {statusLabel}
             </span>
         );
     };

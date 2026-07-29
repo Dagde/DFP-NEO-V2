@@ -20268,11 +20268,20 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$1 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
   const trainingReportName = reportTerminology.name;
+  const reportTemplate = React.useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
+    [trainingReportTemplate, trainingReportTerminology]
+  );
+  const missionStatusLabelMap = React.useMemo(() => {
+    const options = getTrainingReportCompletionResultOptions(reportTemplate);
+    return new Map(options.map((option) => [option.code, option.label]));
+  }, [reportTemplate]);
+  const getMissionStatusDisplayLabel = (statusCode) => missionStatusLabelMap.get(statusCode) || statusCode;
   const combinedHistory = React.useMemo(() => {
     const completedAssessments = assessments.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
@@ -20418,9 +20427,10 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     if (item.type !== "PT-051") {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "-" });
     }
-    const status = item.dcoResult || "None";
-    const statusClass = status === "DCO" ? "bg-green-500/20 text-green-300" : status === "DPCO" ? "bg-amber-500/20 text-amber-300" : status === "DNCO" ? "bg-red-500/20 text-red-300" : "bg-gray-600/40 text-gray-300";
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`, children: status });
+    const statusCode = String(item.dcoResult || "").trim().toUpperCase();
+    const statusClass = statusCode === "DCO" ? "bg-green-500/20 text-green-300" : statusCode === "DPCO" ? "bg-amber-500/20 text-amber-300" : statusCode === "DNCO" ? "bg-red-500/20 text-red-300" : "bg-gray-600/40 text-gray-300";
+    const statusLabel = statusCode ? getMissionStatusDisplayLabel(statusCode) : "None";
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`, children: statusLabel });
   };
   const handleRowClick = (item) => {
     if (item.type === "LMP Score") {
@@ -25110,7 +25120,8 @@ ${errorText || `HTTP ${response.status}`}`);
                     },
                     canEditPt051,
                     isLoading: pt051PerformanceLoading,
-                    trainingReportTerminology
+                    trainingReportTerminology,
+                    trainingReportTemplate: activeTrainingReportTemplate
                   }
                 ) });
               })(),
