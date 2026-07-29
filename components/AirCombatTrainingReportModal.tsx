@@ -550,12 +550,12 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4" onKeyDownCapture={stopEditableKeyPropagation}>
       <div className="flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-5 py-4">
-          <h3 className="text-xl font-bold text-white">Staff Profile</h3>
+          <h3 className="text-xl font-bold text-white">{reportTemplate.displayName || reportName || 'Training Report'}</h3>
           <button type="button" onClick={onCancel} className="text-3xl leading-none text-gray-400 hover:text-white">x</button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-4">
+          <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-4">
             <div className="flex items-center gap-4">
               <div>
                 <input
