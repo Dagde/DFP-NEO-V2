@@ -127,6 +127,7 @@ interface InstructorProfileFlyoutProps {
   crewPositionTerminology?: CrewPositionTerminology;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
+  trainingReportDisplayName?: string;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -337,6 +338,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   crewPositionTerminology,
   staffQualificationCatalogue,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  trainingReportDisplayName = 'Training Report',
 }) => {
   const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -1401,7 +1403,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2">
                                     <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300">
-                                      {report.reportName || 'PT-051'}
+                                      {report.reportName || trainingReportDisplayName}
                                     </span>
                                   </td>
                                   <td className="whitespace-nowrap px-4 py-2 text-center">
@@ -2243,7 +2245,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             <div className="mb-4">
               <h3 className="text-lg font-bold text-white">Create Training Report</h3>
               <p className="mt-1 text-sm text-gray-400">
-                Select the Air Combat event to open a new PT-051 training report for {instructor.name}.
+                Select the Air Combat event to open a new {trainingReportDisplayName} training report for {instructor.name}.
               </p>
             </div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">Event</label>

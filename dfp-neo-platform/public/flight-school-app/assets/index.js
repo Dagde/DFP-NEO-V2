@@ -50847,7 +50847,8 @@ const InstructorProfileFlyout = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  trainingReportDisplayName = "Training Report"
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -51855,7 +51856,7 @@ const InstructorProfileFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-xs font-semibold text-white", children: report.trainingCode || "-" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-[180px] truncate text-[10px] text-gray-400", children: report.trainingTitle || "-" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300", children: report.reportName || "PT-051" }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-300", children: report.reportName || trainingReportDisplayName }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full px-2 py-0.5 text-[10px] font-bold ${isComplete ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"}`, children: report.overallResult || report.status || "Draft" }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-300", children: report.instructorName || "-" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "whitespace-nowrap px-4 py-2 text-xs text-gray-400", children: [
@@ -52651,7 +52652,9 @@ const InstructorProfileFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Create Training Report" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
-          "Select the Air Combat event to open a new PT-051 training report for ",
+          "Select the Air Combat event to open a new ",
+          trainingReportDisplayName,
+          " training report for ",
           instructor.name,
           "."
         ] })
@@ -53290,6 +53293,7 @@ const InstructorListView = ({
   crewPositionTerminology,
   staffQualificationCatalogue,
   sctTerminology,
+  trainingReportDisplayName = "Training Report",
   defaultUnitCode = "",
   defaultLocationName = ""
 }) => {
@@ -53852,7 +53856,8 @@ const InstructorListView = ({
         operationalModel,
         crewPositionTerminology,
         staffQualificationCatalogue,
-        sctTerminology
+        sctTerminology,
+        trainingReportDisplayName
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -122048,6 +122053,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            trainingReportDisplayName: configuredTrainingReportDisplayName,
             defaultLocationName: activeLocationDisplayName
           }
         );
