@@ -29918,7 +29918,7 @@ const App: React.FC = () => {
 
     const openPt051FromTraineeProfile = useCallback((trainee: Trainee, assessment: Pt051Assessment) => {
         if (!canViewTraineePt051(trainee)) {
-            denyPlatformAction('PT-051 record');
+            denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
             return;
         }
 
@@ -29967,13 +29967,14 @@ const App: React.FC = () => {
         logAudit(
             'Performance History',
             'View',
-            `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
+            `Viewed ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
         );
         handleNavigation('PT051');
     }, [
         attachForwardedTrainingReportNotes,
         buildDfpDate,
         canViewTraineePt051,
+        configuredTrainingReportDisplayName,
         denyPlatformAction,
         eventsForDate,
         highestPriorityEvents,
@@ -41902,7 +41903,7 @@ appliedUpdates.forEach(update => {
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
                                 if (!canViewTraineePt051(trainee)) {
-                                    denyPlatformAction('PT-051 performance history');
+                                    denyPlatformAction(`${configuredTrainingReportDisplayName} performance history`);
                                     return;
                                 }
                                 openTraineeProfileTab(trainee, 'hatesheet');
@@ -42058,7 +42059,7 @@ appliedUpdates.forEach(update => {
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
                                 if (!canViewTraineePt051(trainee)) {
-                                    denyPlatformAction('PT-051 performance history');
+                                    denyPlatformAction(`${configuredTrainingReportDisplayName} performance history`);
                                     return;
                                 }
                                 openTraineeProfileTab(trainee, 'hatesheet');

@@ -111001,7 +111001,7 @@ ${"=".repeat(60)}`);
   }, [traineeLMPs]);
   const openPt051FromTraineeProfile = reactExports.useCallback((trainee, assessment) => {
     if (!canViewTraineePt051(trainee)) {
-      denyPlatformAction("PT-051 record");
+      denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
       return;
     }
     const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents].find((event) => event.id === assessment.eventId);
@@ -111039,13 +111039,14 @@ ${"=".repeat(60)}`);
     logAudit(
       "Performance History",
       "View",
-      `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
+      `Viewed ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
     );
     handleNavigation("PT051");
   }, [
     attachForwardedTrainingReportNotes,
     buildDfpDate,
     canViewTraineePt051,
+    configuredTrainingReportDisplayName,
     denyPlatformAction,
     eventsForDate,
     highestPriorityEvents,
@@ -120838,7 +120839,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
               if (!canViewTraineePt051(trainee)) {
-                denyPlatformAction("PT-051 performance history");
+                denyPlatformAction(`${configuredTrainingReportDisplayName} performance history`);
                 return;
               }
               openTraineeProfileTab(trainee, "hatesheet");
@@ -120989,7 +120990,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
               if (!canViewTraineePt051(trainee)) {
-                denyPlatformAction("PT-051 performance history");
+                denyPlatformAction(`${configuredTrainingReportDisplayName} performance history`);
                 return;
               }
               openTraineeProfileTab(trainee, "hatesheet");
