@@ -122289,10 +122289,16 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.log("eventForPt051:", eventForPt051);
         console.log("selectedTraineeForHateSheet:", selectedTraineeForHateSheet);
         if (eventForPt051 && selectedTraineeForHateSheet) {
+          const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
+          const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || selectedTrainingReportTemplate.genericName || "Training Report";
           if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow this PT-051 record." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-300 mb-4", children: [
+                "Your permission profile does not allow this ",
+                selectedTrainingReportName,
+                " record."
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("CourseRoster"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
             ] }) });
           }
@@ -122320,7 +122326,10 @@ ${error instanceof Error ? error.message : String(error)}`,
           const pt051LoadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
           if (!loadedPt051Keys.has(pt051LoadKey)) {
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-center", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-sky-300 mb-2", children: "Loading PT-051" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-lg font-semibold text-sky-300 mb-2", children: [
+                "Loading ",
+                selectedTrainingReportName
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Fetching the saved assessment record..." })
             ] }) });
           }
@@ -122332,7 +122341,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               initialAssessment: existingAssessment,
               instructorLabel,
               trainingReportTerminology: getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
-              trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
+              trainingReportTemplate: selectedTrainingReportTemplate,
               trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
               trainingReportContextUnitCode: activeUnitCode,
               formatResourceLabel: formatResourceDisplayLabel,
@@ -122355,7 +122364,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               },
               onDeleteAssessment: async (assessmentId) => {
                 if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
-                  denyPlatformAction("delete PT-051 assessment");
+                  denyPlatformAction(`delete ${selectedTrainingReportName} assessment`);
                   return;
                 }
                 console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
@@ -122367,13 +122376,13 @@ ${error instanceof Error ? error.message : String(error)}`,
                 if (!response.ok) {
                   const errorText = await response.text().catch(() => "");
                   await showDarkAlert2(
-                    `PT-051 could not be deleted from the database. It has not been removed locally.
+                    `${selectedTrainingReportName} could not be deleted from the database. It has not been removed locally.
 
 ${errorText || `HTTP ${response.status}`}`,
-                    "PT-051 Delete Failed",
+                    `${selectedTrainingReportName} Delete Failed`,
                     "error"
                   );
-                  throw new Error(errorText || `Failed to delete PT-051 record (${response.status})`);
+                  throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
                 }
                 const assessmentKey2 = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
                 console.log("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
@@ -122392,13 +122401,13 @@ ${errorText || `HTTP ${response.status}`}`,
                   return updated;
                 });
                 console.log("📋 App.tsx: Logging to audit...");
-                logAudit("Performance History", "Delete", `Deleted PT-051 for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
+                logAudit("Performance History", "Delete", `Deleted ${selectedTrainingReportName} for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
                 console.log("✅ App.tsx: Audit logged successfully");
-                setSuccessMessage("PT-051 Assessment Deleted!");
+                setSuccessMessage(`${selectedTrainingReportName} Assessment Deleted!`);
               },
               onSave: async (assessment, isAutoSave) => {
                 if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
-                  if (!isAutoSave) denyPlatformAction("save PT-051 assessment");
+                  if (!isAutoSave) denyPlatformAction(`save ${selectedTrainingReportName} assessment`);
                   return;
                 }
                 const updatedAssessment = {
@@ -122420,9 +122429,9 @@ ${errorText || `HTTP ${response.status}`}`,
                 const performanceSave = persistPt051AssessmentRecord(normalizedAssessment).then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
                   console.warn("[PT051] Failed to persist trainee performance record:", err);
                   if (!isAutoSave) {
-                    void showDarkAlert2(`PT-051 could not be saved to the database.
+                    void showDarkAlert2(`${selectedTrainingReportName} could not be saved to the database.
 
-${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "error");
+${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportName} Save Failed`, "error");
                     throw err;
                   }
                 });
@@ -122433,12 +122442,12 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                     assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
                     assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
                   ].filter(Boolean).join(", ");
-                  logAudit("Performance History", "Edit", `Modified PT-051 for ${normalizedAssessment.traineeFullName} - Event: ${normalizedAssessment.flightNumber} (${normalizedAssessment.date})`, changes);
+                  logAudit("Performance History", "Edit", `Modified ${selectedTrainingReportName} for ${normalizedAssessment.traineeFullName} - Event: ${normalizedAssessment.flightNumber} (${normalizedAssessment.date})`, changes);
                   await performanceSave;
                   await maybeInsertTrainingReportExtraLmpEvent(normalizedAssessment);
                   await maybeExtendTrainingReportNextLmpEvent(normalizedAssessment);
                   await maybePassTrainingReportNotesToNextLmpEvent(normalizedAssessment);
-                  setSuccessMessage("PT-051 Assessment Saved!");
+                  setSuccessMessage(`${selectedTrainingReportName} Assessment Saved!`);
                   const eventId = assessment.flightNumber;
                   if (eventId) {
                     const traineeObj = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
