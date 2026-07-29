@@ -516,6 +516,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const activeTrainingReportTemplate = trainingReportTemplate
       || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode)
       || DEFAULT_TRAINING_REPORT_TEMPLATE;
+    const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
     const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
 
     useEffect(() => {
@@ -1503,7 +1504,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const handleHateSheetClick = () => {
         if (!canViewPt051) {
-            onAccessDenied?.('PT-051 performance history');
+            onAccessDenied?.(`${activeTrainingReportDisplayName} performance history`);
             return;
         }
         if (pt051Assessments !== undefined) {
@@ -1589,7 +1590,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const openInlinePt051 = (assessment: Pt051Assessment) => {
         if (!canViewPt051) {
-            onAccessDenied?.('PT-051 record');
+            onAccessDenied?.(`${activeTrainingReportDisplayName} record`);
             return;
         }
         setInlinePt051Assessment(assessment);
@@ -1600,7 +1601,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const persistInlinePt051Assessment = async (assessment: Pt051Assessment, isAutoSave?: boolean) => {
         if (!canEditPt051) {
-            if (!isAutoSave) onAccessDenied?.('save PT-051 assessment');
+            if (!isAutoSave) onAccessDenied?.(`save ${activeTrainingReportDisplayName} assessment`);
             return;
         }
         const eventId = assessment.eventId || inlinePt051Event?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || 'undated'}`;
@@ -1640,7 +1641,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const deleteInlinePt051Assessment = async (assessmentId: string) => {
         if (!canEditPt051) {
-            onAccessDenied?.('delete PT-051 assessment');
+            onAccessDenied?.(`delete ${activeTrainingReportDisplayName} assessment`);
             return;
         }
         const eventId = inlinePt051Assessment?.eventId || inlinePt051Event?.id || assessmentId;
@@ -2332,7 +2333,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       </div>
                     )}
 
-                    {/* ── PT-051 PERFORMANCE HISTORY TAB (inline) ── */}
+                    {/* ── TRAINING REPORT PERFORMANCE HISTORY TAB (inline) ── */}
                     {activeTab === 'hatesheet' && (() => {
                       const traineeAssessments = pt051Assessments
                         ? Array.from(pt051Assessments.values()).filter((a: Pt051Assessment) => a.traineeFullName === trainee.fullName)

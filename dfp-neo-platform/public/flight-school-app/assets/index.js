@@ -23524,6 +23524,7 @@ const TraineeProfileFlyout = ({
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
+  const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
   reactExports.useEffect(() => {
     if (activeTab !== "review") return;
@@ -24328,7 +24329,7 @@ const TraineeProfileFlyout = ({
   };
   const handleHateSheetClick = () => {
     if (!canViewPt051) {
-      onAccessDenied?.("PT-051 performance history");
+      onAccessDenied?.(`${activeTrainingReportDisplayName} performance history`);
       return;
     }
     if (pt051Assessments !== void 0) {
@@ -24401,7 +24402,7 @@ const TraineeProfileFlyout = ({
   };
   const openInlinePt051 = (assessment) => {
     if (!canViewPt051) {
-      onAccessDenied?.("PT-051 record");
+      onAccessDenied?.(`${activeTrainingReportDisplayName} record`);
       return;
     }
     setInlinePt051Assessment(assessment);
@@ -24411,7 +24412,7 @@ const TraineeProfileFlyout = ({
   };
   const persistInlinePt051Assessment = async (assessment, isAutoSave) => {
     if (!canEditPt051) {
-      if (!isAutoSave) onAccessDenied?.("save PT-051 assessment");
+      if (!isAutoSave) onAccessDenied?.(`save ${activeTrainingReportDisplayName} assessment`);
       return;
     }
     const eventId = assessment.eventId || inlinePt051Event?.id || `pt051-${trainee.idNumber}-${assessment.flightNumber}-${assessment.date || "undated"}`;
@@ -24450,7 +24451,7 @@ ${errorText || `HTTP ${response.status}`}`);
   };
   const deleteInlinePt051Assessment = async (assessmentId) => {
     if (!canEditPt051) {
-      onAccessDenied?.("delete PT-051 assessment");
+      onAccessDenied?.(`delete ${activeTrainingReportDisplayName} assessment`);
       return;
     }
     const eventId = inlinePt051Assessment?.eventId || inlinePt051Event?.id || assessmentId;
