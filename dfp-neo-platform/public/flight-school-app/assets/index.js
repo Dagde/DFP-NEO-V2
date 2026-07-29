@@ -77457,7 +77457,16 @@ const AddRemedialPackageFlyout = ({
         "button",
         {
           type: "button",
-          onClick: () => setOpenInstructorMenu((current) => current === menuKey ? null : menuKey),
+          onMouseDown: (event) => {
+            event.preventDefault();
+            setOpenInstructorMenu((current) => current === menuKey ? null : menuKey);
+          },
+          onKeyDown: (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setOpenInstructorMenu((current) => current === menuKey ? null : menuKey);
+            }
+          },
           className: "mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || "Select instructor..." }),
@@ -77465,35 +77474,34 @@ const AddRemedialPackageFlyout = ({
           ]
         }
       ),
-      openInstructorMenu === menuKey && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl", children: instructors.map((instructor) => {
-        const selectInstructor = () => {
-          setState((p) => ({ ...p, instructor: instructor.name }));
-          setValidationMessage("");
-          setOpenInstructorMenu(null);
-        };
-        return /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onMouseDown: (event) => {
-              event.preventDefault();
-              selectInstructor();
-            },
-            onTouchStart: (event) => {
-              event.preventDefault();
-              selectInstructor();
-            },
-            onClick: () => {
+      openInstructorMenu === menuKey && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto overscroll-contain rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl",
+          onWheel: (event) => event.stopPropagation(),
+          children: instructors.map((instructor) => {
+            const selectInstructor = () => {
               setState((p) => ({ ...p, instructor: instructor.name }));
               setValidationMessage("");
               setOpenInstructorMenu(null);
-            },
-            className: `block min-h-[42px] w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? "bg-sky-600 text-white" : "text-gray-200"}`,
-            children: instructor.name
-          },
-          instructor.idNumber || instructor.name
-        );
-      }) })
+            };
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onMouseDown: (event) => {
+                  event.preventDefault();
+                },
+                onMouseUp: selectInstructor,
+                onClick: selectInstructor,
+                className: `block min-h-[42px] w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? "bg-sky-600 text-white" : "text-gray-200"}`,
+                children: instructor.name
+              },
+              instructor.idNumber || instructor.name
+            );
+          })
+        }
+      )
     ] })
   ] });
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-start justify-center px-4 pb-4 pt-[96px] animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 flex flex-col max-h-[calc(100vh-112px)]", onClick: (e) => e.stopPropagation(), children: [

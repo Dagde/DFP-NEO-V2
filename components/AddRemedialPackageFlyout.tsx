@@ -296,14 +296,26 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
             <label className="block text-xs font-medium text-gray-400">Instructor</label>
             <button
               type="button"
-              onClick={() => setOpenInstructorMenu(current => current === menuKey ? null : menuKey)}
+              onMouseDown={event => {
+                event.preventDefault();
+                setOpenInstructorMenu(current => current === menuKey ? null : menuKey);
+              }}
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setOpenInstructorMenu(current => current === menuKey ? null : menuKey);
+                }
+              }}
               className="mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
               <span className={state.instructor ? 'truncate' : 'truncate text-gray-400'}>{state.instructor || 'Select instructor...'}</span>
               <span className="ml-2 text-gray-400">▾</span>
             </button>
             {openInstructorMenu === menuKey && (
-              <div className="absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl">
+              <div
+                className="absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto overscroll-contain rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl"
+                onWheel={event => event.stopPropagation()}
+              >
                 {instructors.map(instructor => {
                   const selectInstructor = () => {
                     setState(p => ({ ...p, instructor: instructor.name }));
@@ -317,17 +329,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                     type="button"
                     onMouseDown={event => {
                       event.preventDefault();
-                      selectInstructor();
                     }}
-                    onTouchStart={event => {
-                      event.preventDefault();
-                      selectInstructor();
-                    }}
-                    onClick={() => {
-                      setState(p => ({ ...p, instructor: instructor.name }));
-                      setValidationMessage('');
-                      setOpenInstructorMenu(null);
-                    }}
+                    onMouseUp={selectInstructor}
+                    onClick={selectInstructor}
                     className={`block min-h-[42px] w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? 'bg-sky-600 text-white' : 'text-gray-200'}`}
                   >
                     {instructor.name}
