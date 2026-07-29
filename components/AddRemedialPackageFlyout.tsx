@@ -39,6 +39,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [eventToRemediateId, setEventToRemediateId] = useState<string>('');
   const [remedialEvents, setRemedialEvents] = useState<RemedialPackageEvent[]>([]);
   const [validationMessage, setValidationMessage] = useState<string>('');
+  const [openInstructorMenu, setOpenInstructorMenu] = useState<string | null>(null);
 
   // State for the three new rows
   const [tutState, setTutState] = useState<RemedialRowState>({ quantity: 0, duration: 1.0, instructor: '', dayNight: 'Day' });
@@ -260,9 +261,10 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   
   const InputRow: React.FC<{
     label: string;
+    menuKey: string;
     state: RemedialRowState;
     setState: React.Dispatch<React.SetStateAction<RemedialRowState>>;
-  }> = ({ label, state, setState }) => (
+  }> = ({ label, menuKey, state, setState }) => (
     <div className="flex items-end space-x-2">
         <div className="w-28 flex-shrink-0">
             <label className="block text-sm font-medium text-gray-300">{label}</label>
@@ -290,21 +292,35 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
               ))}
             </div>
         </div>
-        <div className="flex-grow">
+        <div className="relative flex-grow">
             <label className="block text-xs font-medium text-gray-400">Instructor</label>
-            <select
-              value={state.instructor}
-              onChange={e => {
-                setState(p => ({ ...p, instructor: e.target.value }));
-                setValidationMessage('');
-              }}
-              className="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+            <button
+              type="button"
+              onClick={() => setOpenInstructorMenu(current => current === menuKey ? null : menuKey)}
+              className="mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
-              <option value="">Select instructor...</option>
-              {instructors.map(i => (
-                <option key={i.idNumber} value={i.name}>{i.name}</option>
-              ))}
-            </select>
+              <span className={state.instructor ? 'truncate' : 'truncate text-gray-400'}>{state.instructor || 'Select instructor...'}</span>
+              <span className="ml-2 text-gray-400">▾</span>
+            </button>
+            {openInstructorMenu === menuKey && (
+              <div className="absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl">
+                {instructors.map(instructor => (
+                  <button
+                    key={instructor.idNumber || instructor.name}
+                    type="button"
+                    onMouseDown={event => event.preventDefault()}
+                    onClick={() => {
+                      setState(p => ({ ...p, instructor: instructor.name }));
+                      setValidationMessage('');
+                      setOpenInstructorMenu(null);
+                    }}
+                    className={`block w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? 'bg-sky-600 text-white' : 'text-gray-200'}`}
+                  >
+                    {instructor.name}
+                  </button>
+                ))}
+              </div>
+            )}
         </div>
     </div>
   );
@@ -353,27 +369,27 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                   Other
                 </button>
               </div>
-              <div className="relative">
-                <select
-                  value={eventToRemediateId}
-                  onChange={e => setEventToRemediateId(e.target.value)}
-                  className="block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm"
-                  size="8"
-                >
-                  <option value="" disabled>Select an event to remediate...</option>
-                  {eventOptions.map(event => (
-                    <option 
-                      key={event.id} 
-                      value={event.id}
-                      style={{ 
-                        color: lastCompletedEvent?.id === event.id ? '#ef4444' : '#ffffff',
-                        fontWeight: lastCompletedEvent?.id === event.id ? 'bold' : 'normal'
+              <div className="max-h-64 overflow-y-auto rounded-md border border-gray-600 bg-gray-900/80 p-1">
+                {eventOptions.length === 0 ? (
+                  <div className="px-3 py-3 text-sm text-gray-400">No events available.</div>
+                ) : eventOptions.map(event => {
+                  const selected = eventToRemediateId === event.id;
+                  const isLastCompleted = lastCompletedEvent?.id === event.id;
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      onClick={() => {
+                        setEventToRemediateId(event.id);
+                        setValidationMessage('');
                       }}
+                      className={`mb-1 flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors last:mb-0 ${selected ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'} ${isLastCompleted ? 'font-bold' : 'font-medium'}`}
                     >
-                      {getEventOptionLabel(event)}
-                    </option>
-                  ))}
-                </select>
+                      <span className={isLastCompleted && !selected ? 'text-red-300' : ''}>{getEventOptionLabel(event)}</span>
+                      {selected && <span className="text-xs font-bold uppercase tracking-wide text-sky-100">Selected</span>}
+                    </button>
+                  );
+                })}
               </div>
               <div className="mt-2 text-xs space-y-1">
                 {selectionMode === 'suggested' && suggestedRemedialEvents.length === 0 && (
@@ -401,9 +417,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
               <fieldset className="p-4 border border-gray-600 rounded-lg">
                 <legend className="px-2 text-sm font-semibold text-gray-300">Step 2: Build Remedial Package</legend>
                 <div className="mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3">
-                    <InputRow label="Tutorials" state={tutState} setState={setTutState} />
-                    <InputRow label={`${resourceDisplayNames.ftd}s`} state={ftdState} setState={setFtdState} />
-                    <InputRow label="Flights" state={flightState} setState={setFlightState} />
+                    <InputRow label="Tutorials" menuKey="tutorials" state={tutState} setState={setTutState} />
+                    <InputRow label={`${resourceDisplayNames.ftd}s`} menuKey="ftd" state={ftdState} setState={setFtdState} />
+                    <InputRow label="Flights" menuKey="flights" state={flightState} setState={setFlightState} />
                 </div>
                 <button onClick={handleAddEvents} className="w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add Events to Package</button>
                 {validationMessage && (
