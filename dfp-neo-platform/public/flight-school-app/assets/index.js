@@ -77870,6 +77870,7 @@ const FullPageProgressGraph = ({
   riskThresholds,
   courseColors,
   initialSelectedCourse,
+  trainingReportName = "Training Report",
   onClose
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState(initialSelectedCourse);
@@ -77917,10 +77918,10 @@ const FullPageProgressGraph = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data) => /* @__PURE__ */ jsxRuntimeExports.jsx(CourseGraph, { data }, data.course.name)) }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data) => /* @__PURE__ */ jsxRuntimeExports.jsx(CourseGraph, { data, trainingReportName }, data.course.name)) }) })
   ] });
 };
-const CourseGraph = ({ data }) => {
+const CourseGraph = ({ data, trainingReportName }) => {
   const { course, startDate, endDate, totalEvents, weeklyProgress, color, metric } = data;
   const SVG_WIDTH = 800;
   const SVG_HEIGHT = 450;
@@ -78004,7 +78005,9 @@ const CourseGraph = ({ data }) => {
           startDate.toLocaleDateString("en-GB")
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          "Total PT-051 Events: ",
+          "Total ",
+          trainingReportName,
+          " Events: ",
           totalEvents
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -78788,6 +78791,7 @@ const CourseProgressView = ({
       riskThresholds,
       courseColors,
       initialSelectedCourse: selectedGraphCourse,
+      trainingReportName,
       onClose: () => {
         setShowFullGraph(false);
         setSelectedGraphCourse(null);

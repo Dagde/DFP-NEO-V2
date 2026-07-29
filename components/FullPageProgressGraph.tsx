@@ -10,6 +10,7 @@ interface FullPageProgressGraphProps {
     riskThresholds: CourseRiskThresholds;
     courseColors: { [key: string]: string };
     initialSelectedCourse: string | null;
+    trainingReportName?: string;
     onClose: () => void;
 }
 
@@ -31,6 +32,7 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
     riskThresholds,
     courseColors,
     initialSelectedCourse,
+    trainingReportName = 'Training Report',
     onClose
 }) => {
     const [selectedCourse, setSelectedCourse] = useState<string | null>(initialSelectedCourse);
@@ -86,7 +88,7 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
 
             <div className="flex-1 overflow-y-auto p-6">
                 <div className="space-y-8 max-w-7xl mx-auto">
-                    {displayData.map(data => <CourseGraph key={data.course.name} data={data} />)}
+                    {displayData.map(data => <CourseGraph key={data.course.name} data={data} trainingReportName={trainingReportName} />)}
                 </div>
             </div>
         </div>
@@ -95,9 +97,10 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
 
 interface CourseGraphProps {
     data: CourseGraphData;
+    trainingReportName: string;
 }
 
-const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
+const CourseGraph: React.FC<CourseGraphProps> = ({ data, trainingReportName }) => {
     const { course, startDate, endDate, totalEvents, weeklyProgress, color, metric } = data;
     const SVG_WIDTH = 800;
     const SVG_HEIGHT = 450;
@@ -193,7 +196,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
                 <h2 className="text-lg font-bold text-white text-center">{course.name}</h2>
                 <div data-progress-graph-course-meta="true" className="flex flex-wrap justify-between gap-3 text-sm text-white/80 mt-2">
                     <span>Start: {startDate.toLocaleDateString('en-GB')}</span>
-                    <span>Total PT-051 Events: {totalEvents}</span>
+                    <span>Total {trainingReportName} Events: {totalEvents}</span>
                     <span>Graduation: {endDate.toLocaleDateString('en-GB')}</span>
                     <span className={`px-2 py-0.5 rounded border font-semibold ${metric.riskColorClass}`}>{metric.riskLabel}</span>
                 </div>

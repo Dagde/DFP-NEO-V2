@@ -983,6 +983,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                     riskThresholds={riskThresholds}
                     courseColors={courseColors}
                     initialSelectedCourse={selectedGraphCourse}
+                    trainingReportName={trainingReportName}
                     onClose={() => {
                         setShowFullGraph(false);
                         setSelectedGraphCourse(null);
