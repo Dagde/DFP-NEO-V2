@@ -77277,6 +77277,7 @@ const AddRemedialPackageFlyout = ({
   pt051Assessments = [],
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  trainingReportName = "Training Report",
   onClose,
   onSave
 }) => {
@@ -77322,7 +77323,7 @@ const AddRemedialPackageFlyout = ({
       const eventKey = entry.item.id || entry.item.code;
       if (!eventKey) return;
       if (entry.grade === 0) {
-        suggestions.set(eventKey, { item: entry.item, reason: "Failed PT-051", date: entry.date });
+        suggestions.set(eventKey, { item: entry.item, reason: `Failed ${trainingReportName}`, date: entry.date });
         return;
       }
       if (entry.grade === 1) {
@@ -77330,7 +77331,7 @@ const AddRemedialPackageFlyout = ({
         const next = assessedLmpItems[index + 1];
         const isDoubleMarginal = previous?.grade === 1 || next?.grade === 1;
         if (isDoubleMarginal) {
-          suggestions.set(eventKey, { item: entry.item, reason: "Double marginal PT-051", date: entry.date });
+          suggestions.set(eventKey, { item: entry.item, reason: `Double marginal ${trainingReportName}`, date: entry.date });
         }
       }
     });
@@ -77352,7 +77353,7 @@ const AddRemedialPackageFlyout = ({
       }
     });
     return Array.from(suggestions.values()).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-  }, [scores, pt051Assessments, traineeLmp]);
+  }, [scores, pt051Assessments, traineeLmp, trainingReportName]);
   const eventOptions = selectionMode === "suggested" ? suggestedRemedialEvents.map((suggestion) => suggestion.item) : traineeLmp;
   const getEventOptionLabel = (event) => {
     const suggestion = suggestedRemedialEvents.find((s) => s.item.id === event.id || s.item.code === event.code);
@@ -124062,6 +124063,7 @@ Do you want to replace the existing entry?`,
             (assessment) => assessment.traineeFullName === selectedTraineeForRemedial.fullName
           ),
           traineeLmp: traineeLMPs.get(selectedTraineeForRemedial.fullName) || [],
+          trainingReportName: configuredTrainingReportDisplayName,
           onClose: () => setShowAddRemedialPackage(false),
           onSave: handleSaveRemedialPackage
         }

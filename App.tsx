@@ -45299,6 +45299,7 @@ appliedUpdates.forEach(update => {
                         assessment => assessment.traineeFullName === selectedTraineeForRemedial.fullName
                     )}
                     traineeLmp={traineeLMPs.get(selectedTraineeForRemedial.fullName) || []}
+                    trainingReportName={configuredTrainingReportDisplayName}
                     onClose={() => setShowAddRemedialPackage(false)}
                     onSave={handleSaveRemedialPackage}
                 />

@@ -14,6 +14,7 @@ interface AddRemedialPackageFlyoutProps {
   pt051Assessments?: Pt051Assessment[];
   traineeLmp: SyllabusItemDetail[];
   resourceDisplayNames?: ResourceDisplayNames;
+  trainingReportName?: string;
   onClose: () => void;
   onSave: (
     trainee: Trainee,
@@ -29,6 +30,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   pt051Assessments = [],
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  trainingReportName = 'Training Report',
   onClose,
   onSave
 }) => {
@@ -101,7 +103,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
       if (!eventKey) return;
 
       if (entry.grade === 0) {
-        suggestions.set(eventKey, { item: entry.item, reason: 'Failed PT-051', date: entry.date });
+        suggestions.set(eventKey, { item: entry.item, reason: `Failed ${trainingReportName}`, date: entry.date });
         return;
       }
 
@@ -110,7 +112,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
         const next = assessedLmpItems[index + 1];
         const isDoubleMarginal = previous?.grade === 1 || next?.grade === 1;
         if (isDoubleMarginal) {
-          suggestions.set(eventKey, { item: entry.item, reason: 'Double marginal PT-051', date: entry.date });
+          suggestions.set(eventKey, { item: entry.item, reason: `Double marginal ${trainingReportName}`, date: entry.date });
         }
       }
     });
@@ -141,7 +143,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
     return Array.from(suggestions.values())
       .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-  }, [scores, pt051Assessments, traineeLmp]);
+  }, [scores, pt051Assessments, traineeLmp, trainingReportName]);
 
   const eventOptions = selectionMode === 'suggested'
     ? suggestedRemedialEvents.map(suggestion => suggestion.item)
