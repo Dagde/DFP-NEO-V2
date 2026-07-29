@@ -382,9 +382,7 @@ export const getTrainingReportCompletionResultOptions = (
   return options.length > 0
     ? options
     : [
-        { code: 'DCO', label: 'DCO' },
-        { code: 'DPCO', label: 'DPCO' },
-        { code: 'DNCO', label: 'DNCO' },
+        { code: 'DCO', label: 'Complete' },
       ];
 };
 

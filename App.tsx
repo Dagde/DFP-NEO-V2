@@ -43702,7 +43702,7 @@ appliedUpdates.forEach(update => {
                 if (eventForPostFlight) {
                     return <PostFlightView
                                 event={eventForPostFlight}
-                                trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, eventForPostFlight.unit || activeUnitCode)}
+                                trainingReportTemplate={trainingReportTemplate}
                                 onReturn={() => {
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');

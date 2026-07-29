@@ -4758,9 +4758,7 @@ const getTrainingReportCompletionResultOptions = (template) => {
     label: String(option.label || option.code).trim() || option.code
   }));
   return options.length > 0 ? options : [
-    { code: "DCO", label: "DCO" },
-    { code: "DPCO", label: "DPCO" },
-    { code: "DNCO", label: "DNCO" }
+    { code: "DCO", label: "Complete" }
   ];
 };
 const findTrainingReportUnit = (config, unitCode) => {
@@ -122580,7 +122578,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
             PostFlightView,
             {
               event: eventForPostFlight,
-              trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, eventForPostFlight.unit || activeUnitCode),
+              trainingReportTemplate,
               onReturn: () => {
                 setEventForPostFlight(null);
                 handleNavigation("Program Schedule");
