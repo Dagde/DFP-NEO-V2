@@ -8,6 +8,7 @@ import { useSystemFreeze } from '../context/SystemFreezeContext';
 import {
     DEFAULT_TRAINING_REPORT_TEMPLATE,
     DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+    getTrainingReportCompletionResultOptions,
     getUnitTrainingReportTemplate,
     normaliseTrainingReportTemplate,
     type TrainingReportTerminology,
@@ -333,10 +334,15 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const overviewFields = reportTemplate.modules.overview.fields;
     const overallFields = reportTemplate.modules.overallAssessment.fields;
     const commentFieldsConfig = reportTemplate.modules.comments.fields;
-    const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
-    const missionStatusOptions = enabledCompletionResults.length > 0
-        ? enabledCompletionResults
-        : [{ code: 'Complete', label: 'Complete', enabled: true }];
+    const missionStatusOptions = useMemo(() => (
+        getTrainingReportCompletionResultOptions(reportTemplate)
+    ), [reportTemplate]);
+    const missionStatusLabelMap = useMemo(() => (
+        new Map(missionStatusOptions.map((option) => [option.code, option.label]))
+    ), [missionStatusOptions]);
+    const getMissionStatusLabel = (code: 'DCO' | 'DPCO' | 'DNCO', fallback: string) => (
+        missionStatusLabelMap.get(code) || fallback
+    );
     const gradeOptions = useMemo(() => (
         reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || '').trim())
     ), [reportTemplate.grades.options]);
@@ -1467,7 +1473,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     </div>
                                     {dcoResult === 'DPCO' && (
                                         <div className="-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
-                                            <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DPCO action</div>
+                                            <div className="text-xs font-bold uppercase tracking-wide text-sky-200">{getMissionStatusLabel('DPCO', 'DPCO')} action</div>
                                             <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                                                 <label className={`grid cursor-pointer grid-cols-[20px_1fr_78px_36px] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dpcoFollowUp.action === 'extra-event' ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                                                     <input
@@ -1595,7 +1601,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                     )}
                                     {dcoResult === 'DNCO' && (
                                         <div className="-mt-3 rounded-lg border border-sky-500/45 bg-gray-950/60 p-3">
-                                            <div className="text-xs font-bold uppercase tracking-wide text-sky-200">DNCO action</div>
+                                            <div className="text-xs font-bold uppercase tracking-wide text-sky-200">{getMissionStatusLabel('DNCO', 'DNCO')} action</div>
                                             <div className="mt-3 space-y-2 text-sm font-semibold text-white">
                                                 <label className={`grid cursor-pointer grid-cols-[20px_1fr] items-center gap-2 rounded-md border px-2 py-1.5 transition ${dncoFollowUp.requestExtraFlight ? 'border-sky-400/80 bg-sky-500/15' : 'border-gray-700 bg-gray-900/70 hover:border-gray-500'}`}>
                                                     <input
