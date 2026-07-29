@@ -185,7 +185,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [showRecentEventPicker, setShowRecentEventPicker] = useState(false);
   const [selectedSourceEvent, setSelectedSourceEvent] = useState<ScheduleEvent | undefined>(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
-  const [eventCodeField, setEventCodeField] = useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || '');
+  const [eventCodeField, setEventCodeField] = useState(initialReport?.eventCode || sourceEvent?.flightNumber || sourceEvent?.eventCode || item?.code || '');
   const selectedEventCode = String(eventCodeField || activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || '').trim();
   const matchedItem = useMemo(() => (
     item || syllabusDetails.find(candidate => (

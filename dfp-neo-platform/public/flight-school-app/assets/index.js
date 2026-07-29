@@ -58220,7 +58220,7 @@ const AirCombatTrainingReportModal = ({
   const [showRecentEventPicker, setShowRecentEventPicker] = reactExports.useState(false);
   const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
   const activeSourceEvent = selectedSourceEvent || sourceEvent;
-  const [eventCodeField, setEventCodeField] = reactExports.useState(initialReport?.eventCode || item?.code || sourceEvent?.flightNumber || sourceEvent?.eventCode || "");
+  const [eventCodeField, setEventCodeField] = reactExports.useState(initialReport?.eventCode || sourceEvent?.flightNumber || sourceEvent?.eventCode || item?.code || "");
   const selectedEventCode = String(eventCodeField || activeSourceEvent?.flightNumber || activeSourceEvent?.eventCode || initialReport?.eventCode || "").trim();
   const matchedItem = reactExports.useMemo(() => item || syllabusDetails.find((candidate) => String(candidate.code || "").trim().toUpperCase() === selectedEventCode.toUpperCase()), [item, selectedEventCode, syllabusDetails]);
   const effectiveAssignment = reactExports.useMemo(() => assignment || (matchedItem ? getAirCombatAssignmentFromItem(matchedItem, locationCode, unitCode || staff.unit, currentUserName) : void 0), [assignment, currentUserName, locationCode, matchedItem, staff.unit, unitCode]);
@@ -111402,6 +111402,24 @@ ${error instanceof Error ? error.message : String(error)}`,
     const reportEvent = buildAirCombatTrainingReportEventFromItem(staff, assignment, item);
     setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
   };
+  const getAirCombatTrainingReportDraftFromEvent = (staff, sourceEvent) => {
+    const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim().toUpperCase());
+    let assignment;
+    if (matchingItem) {
+      const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+      const allAssignments = [...staffAssignments.courses, ...staffAssignments.trainingPackages];
+      const trainingCodes = new Set([
+        ...matchingItem.courses || [],
+        matchingItem.phase,
+        matchingItem.module
+      ].map((value) => String(value || "").trim()).filter(Boolean));
+      assignment = allAssignments.find((candidate) => trainingCodes.has(candidate.code));
+      if (!assignment) {
+        assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+      }
+    }
+    return { staff, assignment, item: matchingItem, sourceEvent };
+  };
   const handleAddTrainingReportForStaff = (staff) => {
     const pendingContext = pendingDashboardTrainingReportContext;
     const normaliseStaffName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
@@ -111419,25 +111437,18 @@ ${error instanceof Error ? error.message : String(error)}`,
       setPendingDashboardTrainingReportContext(null);
       return;
     }
+    const recentEvent = getRecentTrainingReportEventsForStaff(staff)[0];
+    if (recentEvent) {
+      setAirCombatTrainingReportDraft({
+        ...getAirCombatTrainingReportDraftFromEvent(staff, recentEvent),
+        startInEditMode: true
+      });
+      return;
+    }
     setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
   };
   const handleOpenAirCombatTrainingReportFromFlightDetails = async (staff, sourceEvent) => {
-    const matchingItem = syllabusDetails.find((item) => String(item.code || "").trim().toUpperCase() === String(sourceEvent.flightNumber || "").trim().toUpperCase());
-    let assignment;
-    if (matchingItem) {
-      const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
-      const allAssignments = [...staffAssignments.courses, ...staffAssignments.trainingPackages];
-      const trainingCodes = new Set([
-        ...matchingItem.courses || [],
-        matchingItem.phase,
-        matchingItem.module
-      ].map((value) => String(value || "").trim()).filter(Boolean));
-      assignment = allAssignments.find((candidate) => trainingCodes.has(candidate.code));
-      if (!assignment) {
-        assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
-      }
-    }
-    setAirCombatTrainingReportDraft({ staff, assignment, item: matchingItem, sourceEvent });
+    setAirCombatTrainingReportDraft(getAirCombatTrainingReportDraftFromEvent(staff, sourceEvent));
   };
   const handleSaveAirCombatTrainingReport = async (report) => {
     appendTrainingReportFollowUpDiag("app:save-received", {

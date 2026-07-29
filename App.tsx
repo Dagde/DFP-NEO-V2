@@ -30398,6 +30398,28 @@ const App: React.FC = () => {
         setAirCombatTrainingReportDraft({ staff, assignment, item, sourceEvent: reportEvent });
     };
 
+    const getAirCombatTrainingReportDraftFromEvent = (
+        staff: Instructor,
+        sourceEvent: ScheduleEvent,
+    ): AirCombatTrainingReportDraft => {
+        const matchingItem = syllabusDetails.find(item => String(item.code || '').trim().toUpperCase() === String(sourceEvent.flightNumber || sourceEvent.eventCode || '').trim().toUpperCase());
+        let assignment: AirCombatTrainingAssignment | undefined;
+        if (matchingItem) {
+            const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
+            const allAssignments = [...staffAssignments.courses, ...staffAssignments.trainingPackages];
+            const trainingCodes = new Set([
+                ...(matchingItem.courses || []),
+                matchingItem.phase,
+                matchingItem.module,
+            ].map(value => String(value || '').trim()).filter(Boolean));
+            assignment = allAssignments.find(candidate => trainingCodes.has(candidate.code));
+            if (!assignment) {
+                assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+            }
+        }
+        return { staff, assignment, item: matchingItem, sourceEvent };
+    };
+
     const handleAddTrainingReportForStaff = (staff: Instructor) => {
         const pendingContext = pendingDashboardTrainingReportContext;
         const normaliseStaffName = (value?: string | null) => String(value || '')
@@ -30421,6 +30443,14 @@ const App: React.FC = () => {
             setPendingDashboardTrainingReportContext(null);
             return;
         }
+        const recentEvent = getRecentTrainingReportEventsForStaff(staff)[0];
+        if (recentEvent) {
+            setAirCombatTrainingReportDraft({
+                ...getAirCombatTrainingReportDraftFromEvent(staff, recentEvent),
+                startInEditMode: true,
+            });
+            return;
+        }
         setAirCombatTrainingReportDraft({ staff, startInEditMode: true });
     };
 
@@ -30428,22 +30458,7 @@ const App: React.FC = () => {
         staff: Instructor,
         sourceEvent: ScheduleEvent,
     ) => {
-        const matchingItem = syllabusDetails.find(item => String(item.code || '').trim().toUpperCase() === String(sourceEvent.flightNumber || '').trim().toUpperCase());
-        let assignment: AirCombatTrainingAssignment | undefined;
-        if (matchingItem) {
-            const staffAssignments = normaliseAirCombatTrainingAssignments(staff.preferences);
-            const allAssignments = [...staffAssignments.courses, ...staffAssignments.trainingPackages];
-            const trainingCodes = new Set([
-                ...(matchingItem.courses || []),
-                matchingItem.phase,
-                matchingItem.module,
-            ].map(value => String(value || '').trim()).filter(Boolean));
-            assignment = allAssignments.find(candidate => trainingCodes.has(candidate.code));
-            if (!assignment) {
-                assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
-            }
-        }
-        setAirCombatTrainingReportDraft({ staff, assignment, item: matchingItem, sourceEvent });
+        setAirCombatTrainingReportDraft(getAirCombatTrainingReportDraftFromEvent(staff, sourceEvent));
     };
 
     const handleSaveAirCombatTrainingReport = async (report: AirCombatTrainingReport) => {
