@@ -304,21 +304,36 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
             </button>
             {openInstructorMenu === menuKey && (
               <div className="absolute left-0 right-0 z-[90] mt-1 max-h-56 overflow-y-auto rounded-md border border-sky-500/40 bg-gray-900 shadow-2xl">
-                {instructors.map(instructor => (
+                {instructors.map(instructor => {
+                  const selectInstructor = () => {
+                    setState(p => ({ ...p, instructor: instructor.name }));
+                    setValidationMessage('');
+                    setOpenInstructorMenu(null);
+                  };
+
+                  return (
                   <button
                     key={instructor.idNumber || instructor.name}
                     type="button"
-                    onMouseDown={event => event.preventDefault()}
+                    onMouseDown={event => {
+                      event.preventDefault();
+                      selectInstructor();
+                    }}
+                    onTouchStart={event => {
+                      event.preventDefault();
+                      selectInstructor();
+                    }}
                     onClick={() => {
                       setState(p => ({ ...p, instructor: instructor.name }));
                       setValidationMessage('');
                       setOpenInstructorMenu(null);
                     }}
-                    className={`block w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? 'bg-sky-600 text-white' : 'text-gray-200'}`}
+                    className={`block min-h-[42px] w-full px-3 py-2 text-left text-sm hover:bg-sky-700/70 ${state.instructor === instructor.name ? 'bg-sky-600 text-white' : 'text-gray-200'}`}
                   >
                     {instructor.name}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
         </div>
