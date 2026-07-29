@@ -25919,6 +25919,7 @@ const App: React.FC = () => {
         () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
         [activeTrainingReportUnitCode, platformConfig]
     );
+    const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || 'PT-051';
     const activeTrainingReportPhraseBank = useMemo(
         () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
         [activeTrainingReportUnitCode, phraseBank, platformConfig]
@@ -43416,7 +43417,7 @@ appliedUpdates.forEach(update => {
 
                 if (eventForPt051 && selectedTraineeForHateSheet) {
                     const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
-                    const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || selectedTrainingReportTemplate.genericName || 'Training Report';
+                    const selectedTrainingReportName = configuredTrainingReportDisplayName || selectedTrainingReportTemplate.displayName || 'PT-051';
                     if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
                         return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
                             <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
@@ -44956,17 +44957,17 @@ appliedUpdates.forEach(update => {
                     }}
                     onOpenPt051={(trainee) => {
                         if (!canViewTraineePt051(trainee)) {
-                            denyPlatformAction('PT-051 record');
+                            denyPlatformAction(`${configuredTrainingReportDisplayName} record`);
                             return;
                         }
                         setEventForPt051(selectedEvent);
                         setSelectedTraineeForHateSheet(trainee);
 
-                        // Log PT-051 view to audit trail from Flight Detail
-                        logAudit('Flight Detail', 'View', `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
+                        logAudit('Flight Detail', 'View', `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
 
                         handleNavigation('PT051');
                     }}
+                    trainingReportDisplayName={configuredTrainingReportDisplayName}
                     onOpenTrainingReport={(normaliseOperationalModel(activeOperationalModel) === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel))
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}
