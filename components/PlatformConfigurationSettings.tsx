@@ -5124,6 +5124,38 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       rowSavePlan?.configToSave || candidateConfig
     ));
+    if (hasRowChanges && rowSavePlan) {
+      try {
+        localStorage.setItem('dfp_resource_rows_last_save_trace', JSON.stringify({
+          savedAt: new Date().toISOString(),
+          protectionVersion: 'CCH 3.255',
+          today: rowSavePlan.today,
+          tomorrow: rowSavePlan.tomorrow,
+          changedContexts: rowSavePlan.changedContexts,
+          poolSummaries: (rowSavePlan.configToSave.resourcePools || [])
+            .filter((pool: any) => {
+              const poolLocation = String(pool?.locationCode || '').trim().toUpperCase();
+              const poolUnit = String(pool?.unitCode || '').trim().toUpperCase();
+              return rowSavePlan.changedContexts.some(context => (
+                String(context.locationCode || '').trim().toUpperCase() === poolLocation &&
+                String(context.unitCode || '').trim().toUpperCase() === poolUnit
+              ));
+            })
+            .map((pool: any) => ({
+              id: pool?.id || null,
+              code: pool?.code || null,
+              name: pool?.name || null,
+              locationCode: pool?.locationCode || null,
+              unitCode: pool?.unitCode || null,
+              currentDayRowsKeptInSettings: normaliseDfpResourceRowsSnapshot(pool?.settings || {}),
+              historyCount: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory.length : 0,
+              history: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory : [],
+            })),
+        }));
+      } catch {
+        // Diagnostics are helpful but should never block a settings save.
+      }
+    }
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
     const saveBlocker = getPlatformConfigSaveBlocker(configToSave);

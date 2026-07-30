@@ -69551,6 +69551,32 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
       rowSavePlan?.configToSave || candidateConfig
     ));
+    if (hasRowChanges && rowSavePlan) {
+      try {
+        localStorage.setItem("dfp_resource_rows_last_save_trace", JSON.stringify({
+          savedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          protectionVersion: "CCH 3.255",
+          today: rowSavePlan.today,
+          tomorrow: rowSavePlan.tomorrow,
+          changedContexts: rowSavePlan.changedContexts,
+          poolSummaries: (rowSavePlan.configToSave.resourcePools || []).filter((pool) => {
+            const poolLocation = String(pool?.locationCode || "").trim().toUpperCase();
+            const poolUnit = String(pool?.unitCode || "").trim().toUpperCase();
+            return rowSavePlan.changedContexts.some((context) => String(context.locationCode || "").trim().toUpperCase() === poolLocation && String(context.unitCode || "").trim().toUpperCase() === poolUnit);
+          }).map((pool) => ({
+            id: pool?.id || null,
+            code: pool?.code || null,
+            name: pool?.name || null,
+            locationCode: pool?.locationCode || null,
+            unitCode: pool?.unitCode || null,
+            currentDayRowsKeptInSettings: normaliseDfpResourceRowsSnapshot(pool?.settings || {}),
+            historyCount: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory.length : 0,
+            history: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory : []
+          }))
+        }));
+      } catch {
+      }
+    }
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
     const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
@@ -108438,6 +108464,12 @@ const App = () => {
     return matches.length ? matches[matches.length - 1] : null;
   }, []);
   const buildDfpResourceRowsDiagnosticReport = reactExports.useCallback(() => {
+    let lastSaveTrace = null;
+    try {
+      lastSaveTrace = JSON.parse(localStorage.getItem("dfp_resource_rows_last_save_trace") || "null");
+    } catch {
+      lastSaveTrace = null;
+    }
     const targetDates = Array.from(new Set([
       getLocalIsoDateForResourceRows(-1),
       getLocalIsoDateForResourceRows(0),
@@ -108460,9 +108492,11 @@ const App = () => {
     const poolsToReport = contextPools.length ? contextPools : activePlatformResourcePool ? [activePlatformResourcePool] : pools.slice(0, 10);
     return {
       reportType: "DFP resource row diagnostics",
+      diagnosticVersion: "CCH 3.255",
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
+      resourceRowSaveTrace: lastSaveTrace,
       activeContext: {
         selectedDate: date,
         browserYesterday: getLocalIsoDateForResourceRows(-1),
