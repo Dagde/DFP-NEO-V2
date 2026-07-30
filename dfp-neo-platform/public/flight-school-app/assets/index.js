@@ -2123,7 +2123,7 @@ const PLATFORM_PERMISSION_CATALOG = [
     group: "Trainees",
     items: [
       ["trainee.roster.view", "View trainee roster"],
-      ["trainee.profile.own", "View own trainee profile"],
+      ["trainee.profile.own", "If trainee, view own profile"],
       ["trainee.profile.others", "View other trainee profiles"],
       ["trainee.pt051.own", "View own training report"],
       ["trainee.pt051.others", "View other trainee training reports"],
