@@ -4781,6 +4781,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return normaliseDfpResourceRowsSnapshot(matchingEntry?.rows || settings);
   };
 
+  const buildDfpResourceRowsSettings = (
+    settings: Record<string, any>,
+    rows: DfpResourceRowsSnapshot,
+  ): Record<string, any> => DFP_RESOURCE_ROW_KEYS.reduce((nextSettings, key) => ({
+    ...nextSettings,
+    [key]: rows[key],
+  }), { ...settings });
+
+  const getEditableDfpResourceRows = (pool: any): DfpResourceRowsSnapshot => (
+    getDfpResourceRowsForDate(pool, getLocalDateString(1))
+  );
+
   const buildResourceRowSavePlan = () => {
     const today = getLocalDateString();
     const tomorrow = getLocalDateString(1);
@@ -4796,8 +4808,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const key = getResourcePoolSaveKey(pool, index);
       const previousPool = previousPoolsByKey.get(key);
       const previousRows = previousPool
-        ? normaliseDfpResourceRowsSnapshot((previousPool as any).settings || {})
+        ? getDfpResourceRowsForDate(previousPool, tomorrow)
         : normaliseDfpResourceRowsSnapshot({});
+      const todayRows = previousPool
+        ? getDfpResourceRowsForDate(previousPool, today)
+        : normaliseDfpResourceRowsSnapshot(pool.settings || {});
       const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
       const rowsChanged = !sameDfpResourceRows(previousRows, nextRows) || !previousPool;
 
@@ -4805,7 +4820,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         return {
           ...pool,
           settings: {
-            ...(pool.settings || {}),
+            ...buildDfpResourceRowsSettings(pool.settings || {}, todayRows),
             applyToV2Runtime: true,
           },
         };
@@ -4819,26 +4834,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const existingHistory = Array.isArray(pool.settings?.dfpResourceRowsHistory)
         ? [...pool.settings.dfpResourceRowsHistory]
         : [];
-      const hasTodayHistory = existingHistory.some((entry: any) => {
+      const retainedHistory = existingHistory.filter((entry: any) => {
+        const effectiveFrom = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
+        return effectiveFrom < tomorrow;
+      });
+      const hasTodayHistory = retainedHistory.some((entry: any) => {
         const effectiveFrom = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
         const effectiveTo = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
         return today >= effectiveFrom && today <= effectiveTo;
       });
       const nextHistory = previousPool && !hasTodayHistory
         ? [
-          ...existingHistory,
+          ...retainedHistory,
           {
             effectiveFrom: '0000-01-01',
             effectiveTo: today,
-            rows: getDfpResourceRowsForDate(previousPool, today),
+            rows: todayRows,
+          },
+          {
+            effectiveFrom: tomorrow,
+            rows: nextRows,
           },
         ]
-        : existingHistory;
+        : [
+          ...retainedHistory,
+          {
+            effectiveFrom: tomorrow,
+            rows: nextRows,
+          },
+        ];
 
       return {
         ...pool,
         settings: {
-          ...(pool.settings || {}),
+          ...buildDfpResourceRowsSettings(pool.settings || {}, todayRows),
           applyToV2Runtime: true,
           dfpResourceRowsEffectiveFrom: tomorrow,
           dfpResourceRowsHistory: nextHistory,
@@ -7926,6 +7955,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             )}
             {visibleResourcePoolRows.map(({ pool, index }) => {
+              const editableDfpRows = getEditableDfpResourceRows(pool);
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               return (
@@ -8104,11 +8134,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        <NumberField label="Aircraft" value={pool.settings?.aircraft ?? 24} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
-                        <NumberField label="Simulator" value={pool.settings?.ftd ?? 5} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
-                        <NumberField label="Trainer" value={pool.settings?.cpt ?? 4} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
-                        <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
-                        <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                        <NumberField label="Aircraft" value={editableDfpRows.aircraft} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                        <NumberField label="Simulator" value={editableDfpRows.ftd} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                        <NumberField label="Trainer" value={editableDfpRows.cpt} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                        <NumberField label="STBY" value={editableDfpRows.standby} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
+                        <NumberField label="Ground" value={editableDfpRows.ground} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                       </div>
                     </div>
                   </div>

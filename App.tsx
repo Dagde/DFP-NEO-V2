@@ -40166,7 +40166,7 @@ appliedUpdates.forEach(update => {
         if (event.type !== 'flight') return [];
 
         const settings = activePlatformResourcePool?.settings || {};
-        const rawAircraftCount = Number(settings.aircraft ?? configuredAirframeCount ?? 0);
+        const rawAircraftCount = Number(configuredAirframeCount ?? settings.aircraft ?? 0);
         const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 0;
         const configuredNumbers = Array.isArray(settings.aircraftInventoryNumbers)
             ? settings.aircraftInventoryNumbers.map((value: any) => String(value ?? '').trim())

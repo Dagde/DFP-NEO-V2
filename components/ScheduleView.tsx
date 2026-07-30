@@ -7180,7 +7180,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             ? platformConfig.resourcePools.findIndex((candidate: any) => candidate === pool || String(candidate?.id || candidate?.code || '') === String(pool?.id || pool?.code || ''))
             : -1;
         const settings = pool?.settings || {};
-        const rawAircraftCount = Number(settings.aircraft ?? airframeCount ?? 5);
+        const rawAircraftCount = Number(airframeCount ?? settings.aircraft ?? 5);
         const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 5;
         const numberSettings = normaliseAircraftNumberSettings(settings);
         const prefix = numberSettings.usePrefix ? String(numberSettings.defaultPrefix || numberSettings.prefixes[0] || '').trim() : '';
@@ -7309,7 +7309,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             resourcePools: (current?.resourcePools || []).map((pool: any, poolIndex: number) => {
                 if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
                 const settings = pool?.settings || {};
-                const rawCount = Number(settings.aircraft ?? flightLinePoolContext.aircraftCount ?? 5);
+                const rawCount = Number(flightLinePoolContext.aircraftCount ?? settings.aircraft ?? 5);
                 const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : 5;
                 const existingNumbers = Array.isArray(settings.aircraftInventoryNumbers)
                     ? settings.aircraftInventoryNumbers.map((entry: any) => String(entry ?? '').trim())

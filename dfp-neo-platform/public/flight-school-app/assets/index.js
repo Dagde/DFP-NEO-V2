@@ -16098,7 +16098,7 @@ const ScheduleView = ({
     const pool = pools[0] || null;
     const poolIndex = Array.isArray(platformConfig?.resourcePools) && pool ? platformConfig.resourcePools.findIndex((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "")) : -1;
     const settings = pool?.settings || {};
-    const rawAircraftCount = Number(settings.aircraft ?? airframeCount ?? 5);
+    const rawAircraftCount = Number(airframeCount ?? settings.aircraft ?? 5);
     const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 5;
     const numberSettings = normaliseAircraftNumberSettings(settings);
     const prefix = numberSettings.usePrefix ? String(numberSettings.defaultPrefix || numberSettings.prefixes[0] || "").trim() : "";
@@ -16216,7 +16216,7 @@ const ScheduleView = ({
       resourcePools: (current?.resourcePools || []).map((pool, poolIndex) => {
         if (poolIndex !== flightLinePoolContext.poolIndex) return pool;
         const settings = pool?.settings || {};
-        const rawCount = Number(settings.aircraft ?? flightLinePoolContext.aircraftCount ?? 5);
+        const rawCount = Number(flightLinePoolContext.aircraftCount ?? settings.aircraft ?? 5);
         const count = Number.isFinite(rawCount) ? Math.max(0, Math.floor(rawCount)) : 5;
         const existingNumbers = Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers.map((entry) => String(entry ?? "").trim()) : Array.from({ length: count }, (_, index) => String(index + 1).padStart(3, "0"));
         const nextNumbers = Array.from({ length: count }, (_, index) => existingNumbers[index] || String(index + 1).padStart(3, "0"));
@@ -69325,6 +69325,11 @@ This permanently removes the organisation record from platform configuration and
     }).pop();
     return normaliseDfpResourceRowsSnapshot(matchingEntry?.rows || settings);
   };
+  const buildDfpResourceRowsSettings = (settings, rows) => DFP_RESOURCE_ROW_KEYS.reduce((nextSettings, key) => ({
+    ...nextSettings,
+    [key]: rows[key]
+  }), { ...settings });
+  const getEditableDfpResourceRows = (pool) => getDfpResourceRowsForDate(pool, getLocalDateString2(1));
   const buildResourceRowSavePlan = () => {
     const today = getLocalDateString2();
     const tomorrow = getLocalDateString2(1);
@@ -69338,14 +69343,15 @@ This permanently removes the organisation record from platform configuration and
     const nextResourcePools = config.resourcePools.map((pool, index) => {
       const key = getResourcePoolSaveKey(pool, index);
       const previousPool = previousPoolsByKey.get(key);
-      const previousRows = previousPool ? normaliseDfpResourceRowsSnapshot(previousPool.settings || {}) : normaliseDfpResourceRowsSnapshot({});
+      const previousRows = previousPool ? getDfpResourceRowsForDate(previousPool, tomorrow) : normaliseDfpResourceRowsSnapshot({});
+      const todayRows = previousPool ? getDfpResourceRowsForDate(previousPool, today) : normaliseDfpResourceRowsSnapshot(pool.settings || {});
       const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
       const rowsChanged = !sameDfpResourceRows(previousRows, nextRows) || !previousPool;
       if (!rowsChanged) {
         return {
           ...pool,
           settings: {
-            ...pool.settings || {},
+            ...buildDfpResourceRowsSettings(pool.settings || {}, todayRows),
             applyToV2Runtime: true
           }
         };
@@ -69355,23 +69361,37 @@ This permanently removes the organisation record from platform configuration and
         unitCode: String(pool.unitCode || previousPool?.unitCode || "").trim()
       });
       const existingHistory = Array.isArray(pool.settings?.dfpResourceRowsHistory) ? [...pool.settings.dfpResourceRowsHistory] : [];
-      const hasTodayHistory = existingHistory.some((entry) => {
+      const retainedHistory = existingHistory.filter((entry) => {
+        const effectiveFrom = String(entry?.effectiveFrom || "0000-01-01").slice(0, 10);
+        return effectiveFrom < tomorrow;
+      });
+      const hasTodayHistory = retainedHistory.some((entry) => {
         const effectiveFrom = String(entry?.effectiveFrom || "0000-01-01").slice(0, 10);
         const effectiveTo = String(entry?.effectiveTo || "9999-12-31").slice(0, 10);
         return today >= effectiveFrom && today <= effectiveTo;
       });
       const nextHistory = previousPool && !hasTodayHistory ? [
-        ...existingHistory,
+        ...retainedHistory,
         {
           effectiveFrom: "0000-01-01",
           effectiveTo: today,
-          rows: getDfpResourceRowsForDate(previousPool, today)
+          rows: todayRows
+        },
+        {
+          effectiveFrom: tomorrow,
+          rows: nextRows
         }
-      ] : existingHistory;
+      ] : [
+        ...retainedHistory,
+        {
+          effectiveFrom: tomorrow,
+          rows: nextRows
+        }
+      ];
       return {
         ...pool,
         settings: {
-          ...pool.settings || {},
+          ...buildDfpResourceRowsSettings(pool.settings || {}, todayRows),
           applyToV2Runtime: true,
           dfpResourceRowsEffectiveFrom: tomorrow,
           dfpResourceRowsHistory: nextHistory
@@ -72133,6 +72153,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] })
           ] }),
           visibleResourcePoolRows.map(({ pool, index }) => {
+            const editableDfpRows = getEditableDfpResourceRows(pool);
             const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -72308,11 +72329,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "These row counts drive the DFP resource columns. Saved changes apply from tomorrow forward." })
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: pool.settings?.ftd ?? 5, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: pool.settings?.cpt ?? 4, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: editableDfpRows.aircraft, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: editableDfpRows.ftd, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: editableDfpRows.cpt, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: editableDfpRows.standby, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: editableDfpRows.ground, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
                       ] })
                     ] })
                   ] })
@@ -119791,7 +119812,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const getFlightLineAircraftConflictReasons = reactExports.useCallback((event, allEventsForDate, targetDate) => {
     if (event.type !== "flight") return [];
     const settings = activePlatformResourcePool?.settings || {};
-    const rawAircraftCount = Number(settings.aircraft ?? configuredAirframeCount ?? 0);
+    const rawAircraftCount = Number(configuredAirframeCount ?? settings.aircraft ?? 0);
     const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 0;
     const configuredNumbers = Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers.map((value) => String(value ?? "").trim()) : [];
     const validAircraftNumbers = Array.from({ length: aircraftCount }, (_, index) => configuredNumbers[index] || String(index + 1).padStart(3, "0"));
