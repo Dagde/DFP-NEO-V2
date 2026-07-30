@@ -5116,6 +5116,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ? null
       : buildResourceRowSavePlan(candidateConfig);
     const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
+    const rowSaveTomorrowDisplay = rowSavePlan ? formatDateLabel(rowSavePlan.tomorrow) : '';
     try {
       localStorage.setItem('dfp_resource_rows_last_save_attempt_trace', JSON.stringify({
         savedAt: new Date().toISOString(),
@@ -5156,7 +5157,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         [
           'DFP Resource Rows have changed.',
           '',
-          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
+          `The current day is not affected. The new row layout applies from ${rowSaveTomorrowDisplay} forward.`,
           '',
           'Past days keep the resource rows they had on that day.',
           '',
@@ -5226,7 +5227,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         setConfig(configToSave);
         onShowSuccess(
           hasRowChanges && rowSavePlan
-            ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSavePlan.tomorrow}.`
+            ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSaveTomorrowDisplay}.`
             : options?.successMessage || 'Platform configuration saved.'
         );
         return true;
@@ -5281,7 +5282,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           },
         }));
         onShowSuccess(
-          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? '' : 's'} deleted)` : ''}.`
+          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSaveTomorrowDisplay} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? '' : 's'} deleted)` : ''}.`
         );
       }
       if (!reloadPage) {
