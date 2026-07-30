@@ -25959,6 +25959,14 @@ const App: React.FC = () => {
         [activeTrainingReportUnitCode, platformConfig]
     );
     const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || 'PT-051';
+    const getConfiguredMissionStatusLabel = useCallback((code?: string | null) => {
+        const cleanCode = String(code || '').trim().toUpperCase();
+        if (!cleanCode) return '';
+        const configuredResult = Array.isArray(trainingReportTemplate.completionResults)
+            ? trainingReportTemplate.completionResults.find(result => String(result?.code || '').trim().toUpperCase() === cleanCode)
+            : null;
+        return String(configuredResult?.label || cleanCode).trim() || cleanCode;
+    }, [trainingReportTemplate]);
     const activeTrainingReportPhraseBank = useMemo(
         () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
         [activeTrainingReportUnitCode, phraseBank, platformConfig]
@@ -32905,7 +32913,7 @@ const App: React.FC = () => {
         const changes = [
             assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
             assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
-            assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
+            assessment.dcoResult ? `Mission Status: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
             assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
         ].filter(Boolean).join(', ');
 
@@ -43845,7 +43853,7 @@ appliedUpdates.forEach(update => {
                                 const changes = [
                                     assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
                                     assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
-                                    assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
+                                    assessment.dcoResult ? `Mission Status: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
                                     assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
                                 ].filter(Boolean).join(', ');
 

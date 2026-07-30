@@ -59,7 +59,7 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
                     <div><strong>Grade:</strong> {assessment.overallGrade}</div>
                   )}
                   {assessment.dcoResult && (
-                    <div><strong>DCO Result:</strong> {assessment.dcoResult}</div>
+                    <div><strong>Mission Status:</strong> {assessment.dcoResult}</div>
                   )}
                   {assessment.overallComments && (
                     <div style={{ marginTop: '5px' }}><strong>Comments:</strong> {assessment.overallComments}</div>
