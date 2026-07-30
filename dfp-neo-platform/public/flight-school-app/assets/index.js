@@ -3047,11 +3047,7 @@ const buildSettingsSnapshot = (state) => {
   return {
     locations: state.locations || [],
     locationAbbreviations: state.locationAbbreviations || {},
-    serviceDefinitions: state.serviceDefinitions || [
-      { longName: "Air Force", shortName: "RAAF" },
-      { longName: "Navy", shortName: "RAN" },
-      { longName: "Army", shortName: "ARA" }
-    ],
+    serviceDefinitions: state.serviceDefinitions || [],
     units: state.units || [],
     unitLocations: state.unitLocations || {},
     locationOpAreas: state.locationOpAreas || {},
@@ -109328,52 +109324,14 @@ ${"=".repeat(60)}`);
   const [showUnsavedWarning, setShowUnsavedWarning] = reactExports.useState(false);
   const [pendingNavigation, setPendingNavigation] = reactExports.useState(null);
   const [selectedPersonForLogbook, setSelectedPersonForLogbook] = reactExports.useState(null);
-  const [locations, setLocations] = reactExports.useState(["East Sale", "Pearce", "Williamtown", "Amberley", "Tindal", "Edinburgh"]);
-  const [locationAbbreviations, setLocationAbbreviations] = reactExports.useState({
-    "East Sale": "ESL",
-    "Pearce": "PEA",
-    "Williamtown": "WLM",
-    "Amberley": "AMB",
-    "Tindal": "TIN",
-    "Edinburgh": "EDI"
-  });
-  const [serviceDefinitions, setServiceDefinitions] = reactExports.useState([
-    { longName: "Air Force", shortName: "RAAF" },
-    { longName: "Navy", shortName: "RAN" },
-    { longName: "Army", shortName: "ARA" }
-  ]);
-  const [locationOpAreas, setLocationOpAreas] = reactExports.useState({
-    "East Sale": ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"],
-    "Pearce": [],
-    "Williamtown": []
-  });
+  const [locations, setLocations] = reactExports.useState([]);
+  const [locationAbbreviations, setLocationAbbreviations] = reactExports.useState({});
+  const [serviceDefinitions, setServiceDefinitions] = reactExports.useState([]);
+  const [locationOpAreas, setLocationOpAreas] = reactExports.useState({});
   const [sctEvents, setSctEvents] = reactExports.useState([]);
-  const [units, setUnits] = reactExports.useState(["1FTS", "CFS", "2FTS", "76SQN", "77SQN", "1SQN", "6SQN", "2SQN", "10SQN"]);
-  const [unitLocations, setUnitLocations] = reactExports.useState({
-    "1FTS": "East Sale",
-    "CFS": "East Sale",
-    "2FTS": "Pearce",
-    "76SQN": "Williamtown",
-    "77SQN": "Williamtown",
-    "1SQN": "Amberley",
-    "6SQN": "Amberley",
-    "2SQN": "Williamtown",
-    "10SQN": "Edinburgh"
-  });
-  const [formationCallsigns, setFormationCallsigns] = reactExports.useState([
-    { name: "Avon", code: "AVON", unit: "1FTS", location: "East Sale", locationCode: "ESL" },
-    { name: "Garret", code: "GART", unit: "1FTS", location: "East Sale", locationCode: "ESL" },
-    { name: "Gypsy", code: "GYPS", unit: "1FTS", location: "East Sale", locationCode: "ESL" },
-    { name: "Merlin", code: "MERL", unit: "1FTS", location: "East Sale", locationCode: "ESL" },
-    { name: "Mustang", code: "MUST", unit: "CFS", location: "East Sale", locationCode: "ESL" },
-    { name: "Spitfire", code: "SPIT", unit: "CFS", location: "East Sale", locationCode: "ESL" },
-    { name: "Tempest", code: "TMPS", unit: "CFS", location: "East Sale", locationCode: "ESL" },
-    { name: "Typhoon", code: "TYPN", unit: "CFS", location: "East Sale", locationCode: "ESL" },
-    { name: "Roulettes", code: "RLTS", unit: "CFS", location: "East Sale", locationCode: "ESL" },
-    { name: "Vampire", code: "VAMP", unit: "2FTS", location: "Pearce", locationCode: "PEA" },
-    { name: "Voodoo", code: "VODO", unit: "2FTS", location: "Pearce", locationCode: "PEA" },
-    { name: "Vulcan", code: "VULC", unit: "2FTS", location: "Pearce", locationCode: "PEA" }
-  ]);
+  const [units, setUnits] = reactExports.useState([]);
+  const [unitLocations, setUnitLocations] = reactExports.useState({});
+  const [formationCallsigns, setFormationCallsigns] = reactExports.useState([]);
   const configuredContinuationEvents = reactExports.useMemo(
     () => normaliseContinuationEventSettings(sctEvents),
     [sctEvents]

@@ -317,11 +317,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
   return {
     locations: state.locations || [],
     locationAbbreviations: state.locationAbbreviations || {},
-    serviceDefinitions: state.serviceDefinitions || [
-      { longName: 'Air Force', shortName: 'RAAF' },
-      { longName: 'Navy',      shortName: 'RAN'  },
-      { longName: 'Army',      shortName: 'ARA'  },
-    ],
+    serviceDefinitions: state.serviceDefinitions || [],
     units: state.units || [],
     unitLocations: state.unitLocations || {},
     locationOpAreas: state.locationOpAreas || {},

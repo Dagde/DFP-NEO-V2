@@ -27192,45 +27192,14 @@ const App: React.FC = () => {
     const [selectedPersonForLogbook, setSelectedPersonForLogbook] = useState<Instructor | Trainee | null>(null);
 
     // Settings state
-    const [locations, setLocations] = useState<string[]>(['East Sale', 'Pearce', 'Williamtown', 'Amberley', 'Tindal', 'Edinburgh']);
-    const [locationAbbreviations, setLocationAbbreviations] = useState<Record<string, string>>({
-        'East Sale': 'ESL',
-        'Pearce': 'PEA',
-        'Williamtown': 'WLM',
-        'Amberley': 'AMB',
-        'Tindal': 'TIN',
-        'Edinburgh': 'EDI',
-    });
-    const [serviceDefinitions, setServiceDefinitions] = useState<Array<{ longName: string; shortName: string }>>([
-        { longName: 'Air Force', shortName: 'RAAF' },
-        { longName: 'Navy',      shortName: 'RAN'  },
-        { longName: 'Army',      shortName: 'ARA'  },
-    ]);
-    const [locationOpAreas, setLocationOpAreas] = useState<Record<string, string[]>>({
-        'East Sale': ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'],
-        'Pearce': [],
-        'Williamtown': [],
-    });
+    const [locations, setLocations] = useState<string[]>([]);
+    const [locationAbbreviations, setLocationAbbreviations] = useState<Record<string, string>>({});
+    const [serviceDefinitions, setServiceDefinitions] = useState<Array<{ longName: string; shortName: string }>>([]);
+    const [locationOpAreas, setLocationOpAreas] = useState<Record<string, string[]>>({});
     const [sctEvents, setSctEvents] = useState<any[]>([]);
-    const [units, setUnits] = useState<string[]>(['1FTS', 'CFS', '2FTS', '76SQN', '77SQN', '1SQN', '6SQN', '2SQN', '10SQN']);
-    const [unitLocations, setUnitLocations] = useState<Record<string, string>>({
-        '1FTS': 'East Sale', 'CFS': 'East Sale', '2FTS': 'Pearce', '76SQN': 'Williamtown', '77SQN': 'Williamtown',
-        '1SQN': 'Amberley', '6SQN': 'Amberley', '2SQN': 'Williamtown', '10SQN': 'Edinburgh'
-    });
-    const [formationCallsigns, setFormationCallsigns] = useState<FormationCallsign[]>([
-        { name: 'Avon', code: 'AVON', unit: '1FTS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Garret', code: 'GART', unit: '1FTS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Gypsy', code: 'GYPS', unit: '1FTS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Merlin', code: 'MERL', unit: '1FTS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Mustang', code: 'MUST', unit: 'CFS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Spitfire', code: 'SPIT', unit: 'CFS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Tempest', code: 'TMPS', unit: 'CFS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Typhoon', code: 'TYPN', unit: 'CFS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Roulettes', code: 'RLTS', unit: 'CFS', location: 'East Sale', locationCode: 'ESL' },
-        { name: 'Vampire', code: 'VAMP', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
-        { name: 'Voodoo', code: 'VODO', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
-        { name: 'Vulcan', code: 'VULC', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' }
-    ]);
+    const [units, setUnits] = useState<string[]>([]);
+    const [unitLocations, setUnitLocations] = useState<Record<string, string>>({});
+    const [formationCallsigns, setFormationCallsigns] = useState<FormationCallsign[]>([]);
 
     const configuredContinuationEvents = useMemo(
         () => normaliseContinuationEventSettings(sctEvents),
