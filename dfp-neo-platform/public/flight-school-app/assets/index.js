@@ -2128,8 +2128,8 @@ const PLATFORM_PERMISSION_CATALOG = [
       ["trainee.pt051.own", "View own training report"],
       ["trainee.pt051.others", "View other trainee training reports"],
       ["trainee.pt051.edit", "Edit training reports"],
-      ["trainee.lmp.own", "View own individual LMP"],
-      ["trainee.lmp.others", "View other trainee individual LMP"],
+      ["trainee.lmp.own", "If trainee, view own Individual LMP"],
+      ["trainee.lmp.others", "View other trainees' Individual LMPs"],
       ["trainee.remedial.add", "Add remedial package"]
     ]
   },
