@@ -26190,6 +26190,141 @@ const App: React.FC = () => {
     const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount, date);
     const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4, date);
     const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6, date);
+
+    const getLocalIsoDateForResourceRows = useCallback((offsetDays = 0): string => {
+        const dateValue = new Date();
+        dateValue.setDate(dateValue.getDate() + offsetDays);
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }, []);
+
+    const getResourceRowHistoryMatchForDiag = useCallback((settings: Record<string, any>, targetDate: string) => {
+        const history = Array.isArray(settings?.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+        const matches = history
+            .map((entry: any, index: number) => {
+                const effectiveFrom = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
+                const effectiveTo = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+                const hasRows = !!entry?.rows && typeof entry.rows === 'object';
+                const matchesDate = effectiveFrom === '0000-01-01' && effectiveTo !== '9999-12-31'
+                    ? targetDate === effectiveTo && hasRows
+                    : targetDate >= effectiveFrom && targetDate <= effectiveTo && hasRows;
+                return {
+                    index,
+                    matchesDate,
+                    effectiveFrom,
+                    effectiveTo,
+                    rows: entry?.rows || null,
+                    rawEntry: entry,
+                };
+            })
+            .filter((entry: any) => entry.matchesDate);
+        return matches.length ? matches[matches.length - 1] : null;
+    }, []);
+
+    const buildDfpResourceRowsDiagnosticReport = useCallback(() => {
+        const targetDates = Array.from(new Set([
+            getLocalIsoDateForResourceRows(-1),
+            getLocalIsoDateForResourceRows(0),
+            date,
+            getLocalIsoDateForResourceRows(1),
+        ].filter(Boolean)));
+        const rowKeys = ['aircraft', 'ftd', 'cpt', 'standby', 'ground'] as const;
+        const pools = Array.isArray(platformConfig?.resourcePools) ? platformConfig.resourcePools : [];
+        const activePoolKey = String(activePlatformResourcePool?.id || activePlatformResourcePool?.code || '').trim();
+        const contextLocation = String(school || '').trim().toUpperCase();
+        const contextUnitCodes = String(activeUnitCode || '').split(/[+/]/).map(unit => unit.trim().toUpperCase()).filter(Boolean);
+        const contextPools = pools.filter((pool: any) => {
+            const poolKey = String(pool?.id || pool?.code || '').trim();
+            const poolLocation = String(pool?.locationCode || '').trim().toUpperCase();
+            const poolUnit = String(pool?.unitCode || '').trim().toUpperCase();
+            if (activePoolKey && poolKey === activePoolKey) return true;
+            if (contextLocation && poolLocation && poolLocation !== contextLocation) return false;
+            return !poolUnit || contextUnitCodes.includes(poolUnit) || contextUnitCodes.length === 0;
+        });
+        const poolsToReport = contextPools.length ? contextPools : (activePlatformResourcePool ? [activePlatformResourcePool] : pools.slice(0, 10));
+
+        return {
+            reportType: 'DFP resource row diagnostics',
+            generatedAt: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            activeContext: {
+                selectedDate: date,
+                browserYesterday: getLocalIsoDateForResourceRows(-1),
+                browserToday: getLocalIsoDateForResourceRows(0),
+                browserTomorrow: getLocalIsoDateForResourceRows(1),
+                school,
+                activeUnitCode,
+                activeView,
+                activePoolKey: activePoolKey || null,
+            },
+            activeDfpCounts: {
+                aircraft: configuredAirframeCount,
+                ftd: configuredFtdCount,
+                cpt: configuredCptCount,
+                standby: configuredStandbyCount,
+                ground: configuredGroundCount,
+            },
+            resourcePools: poolsToReport.map((pool: any, poolIndex: number) => {
+                const settings = pool?.settings || {};
+                return {
+                    index: pools.indexOf(pool),
+                    fallbackIndex: poolIndex,
+                    isActivePool: activePoolKey
+                        ? String(pool?.id || pool?.code || '').trim() === activePoolKey
+                        : pool === activePlatformResourcePool,
+                    id: pool?.id || null,
+                    code: pool?.code || null,
+                    name: pool?.name || null,
+                    poolType: pool?.poolType || null,
+                    locationCode: pool?.locationCode || null,
+                    unitCode: pool?.unitCode || null,
+                    aircraftTypeCode: pool?.aircraftTypeCode || null,
+                    rawCurrentSettings: Object.fromEntries(rowKeys.map(key => [key, settings[key] ?? null])),
+                    aircraftInventoryNumbers: Array.isArray(settings.aircraftInventoryNumbers) ? settings.aircraftInventoryNumbers : [],
+                    dfpResourceRowsEffectiveFrom: settings.dfpResourceRowsEffectiveFrom || null,
+                    dfpResourceRowsHistory: Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [],
+                    dateReads: Object.fromEntries(targetDates.map(targetDate => [
+                        targetDate,
+                        {
+                            historyMatch: getResourceRowHistoryMatchForDiag(settings, targetDate),
+                            counts: Object.fromEntries(rowKeys.map(key => [
+                                key,
+                                getResourcePoolCount(pool, key, key === 'aircraft' ? 24 : key === 'ftd' ? availableFtdCount : key === 'cpt' ? availableCptCount : key === 'standby' ? 4 : 6, targetDate),
+                            ])),
+                        },
+                    ])),
+                };
+            }),
+        };
+    }, [
+        activePlatformResourcePool,
+        activeUnitCode,
+        activeView,
+        availableCptCount,
+        availableFtdCount,
+        configuredAirframeCount,
+        configuredCptCount,
+        configuredFtdCount,
+        configuredGroundCount,
+        configuredStandbyCount,
+        date,
+        getLocalIsoDateForResourceRows,
+        getResourceRowHistoryMatchForDiag,
+        platformConfig?.resourcePools,
+        school,
+    ]);
+
+    const downloadDfpResourceRowsDiagnosticReport = useCallback(() => {
+        const report = buildDfpResourceRowsDiagnosticReport();
+        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
+        const filename = `dfp-resource-rows-diag_${contextStamp || 'app'}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
+        if (!downloadJsonDiagnosticFile(filename, report)) {
+            console.error('[DFP-RESOURCE-ROWS-DIAG] Could not download diagnostic report:', report);
+        }
+    }, [activeUnitCode, buildDfpResourceRowsDiagnosticReport, date, school]);
     const currentAircraftConfigState = useMemo(() => ({
         availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
         aircraftConfigCapacities: neoAircraftConfigCapacities,
@@ -45837,6 +45972,14 @@ appliedUpdates.forEach(update => {
                     title="Download startup/load diagnostic JSON report"
                 >
                     Diag
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadDfpResourceRowsDiagnosticReport}
+                    className="rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-400/60 hover:text-amber-100"
+                    title="Download DFP resource row diagnostic JSON report"
+                >
+                    Rows
                 </button>
             </div>
         )}
