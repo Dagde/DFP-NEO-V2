@@ -69295,29 +69295,34 @@ This permanently removes the organisation record from platform configuration and
     ...nextSettings,
     [key]: rows[key]
   }), { ...settings });
+  const normaliseDfpResourceRowsHistory = (settings = {}) => Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+  const sameDfpResourceRowsHistory = (leftSettings = {}, rightSettings = {}) => JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings));
   const getEditableDfpResourceRows = (pool) => getDfpResourceRowsForDate(pool, getLocalDateString2(1));
-  const buildResourceRowSavePlan = () => {
+  const buildResourceRowSavePlan = (candidateConfig = config) => {
     const today = getLocalDateString2();
     const tomorrow = getLocalDateString2(1);
     const previousPoolsByKey = new Map(
       loadedConfigRef.current.resourcePools.map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
     );
     const nextPoolsByKey = new Map(
-      config.resourcePools.map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
+      (candidateConfig.resourcePools || []).map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
     );
     const changedContexts = [];
-    const nextResourcePools = config.resourcePools.map((pool, index) => {
+    const nextResourcePools = (candidateConfig.resourcePools || []).map((pool, index) => {
       const key = getResourcePoolSaveKey(pool, index);
       const previousPool = previousPoolsByKey.get(key);
-      const previousRows = previousPool ? getDfpResourceRowsForDate(previousPool, tomorrow) : normaliseDfpResourceRowsSnapshot({});
+      previousPool ? getDfpResourceRowsForDate(previousPool, tomorrow) : normaliseDfpResourceRowsSnapshot({});
       const todayRows = previousPool ? getDfpResourceRowsForDate(previousPool, today) : normaliseDfpResourceRowsSnapshot(pool.settings || {});
+      const previousRawRows = previousPool ? normaliseDfpResourceRowsSnapshot(previousPool.settings || {}) : normaliseDfpResourceRowsSnapshot({});
       const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
-      const rowsChanged = !sameDfpResourceRows(previousRows, nextRows) || !previousPool;
+      const rawRowsChanged = !previousPool || !sameDfpResourceRows(previousRawRows, nextRows);
+      const historyChanged = previousPool ? !sameDfpResourceRowsHistory(previousPool.settings || {}, pool.settings || {}) : false;
+      const rowsChanged = rawRowsChanged || historyChanged;
       if (!rowsChanged) {
         return {
           ...pool,
           settings: {
-            ...buildDfpResourceRowsSettings(pool.settings || {}, todayRows),
+            ...pool.settings || {},
             applyToV2Runtime: true
           }
         };
@@ -69375,7 +69380,7 @@ This permanently removes the organisation record from platform configuration and
     const uniqueContexts = changedContexts.filter((context, index, contexts) => context.locationCode && contexts.findIndex((candidate) => candidate.locationCode.toUpperCase() === context.locationCode.toUpperCase() && candidate.unitCode.toUpperCase() === context.unitCode.toUpperCase()) === index);
     return {
       configToSave: {
-        ...config,
+        ...candidateConfig,
         resourcePools: nextResourcePools
       },
       changedContexts: uniqueContexts,
@@ -69522,8 +69527,29 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const save = async (configOverride, restoreSection, options) => {
+    const candidateConfig = configOverride && Array.isArray(configOverride.locations) ? configOverride : config;
+    const rowSavePlan = options?.skipResourceRowProtection ? null : buildResourceRowSavePlan(candidateConfig);
+    const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
+    if (hasRowChanges && rowSavePlan) {
+      const confirmed = await showDarkConfirm(
+        [
+          "DFP Resource Rows have changed.",
+          "",
+          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
+          "",
+          "Past days keep the resource rows they had on that day.",
+          "",
+          "Any future built or published schedules for the affected location/unit will be deleted because their row layout may no longer match the new DFP resource rows.",
+          "",
+          "Continue and save these row changes?"
+        ].join("\n"),
+        "DFP Resource Rows Changed",
+        "warning"
+      );
+      if (!confirmed) return false;
+    }
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
-      configOverride && Array.isArray(configOverride.locations) ? configOverride : config
+      rowSavePlan?.configToSave || candidateConfig
     ));
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
@@ -69545,7 +69571,9 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         writeSetupTestPlatformConfig(configToSave);
         loadedConfigRef.current = configToSave;
         setConfig(configToSave);
-        onShowSuccess(options?.successMessage || "Platform configuration saved.");
+        onShowSuccess(
+          hasRowChanges && rowSavePlan ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSavePlan.tomorrow}.` : options?.successMessage || "Platform configuration saved."
+        );
         return true;
       }
       const sessionToken = localStorage.getItem("dfp_session_token");
@@ -69589,9 +69617,21 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       });
       loadedConfigRef.current = configToSave;
       notifyPlatformConfigUpdated(configToSave);
+      if (hasRowChanges && rowSavePlan) {
+        const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
+        window.dispatchEvent(new CustomEvent("dfpFutureSchedulesCleared", {
+          detail: {
+            startDate: rowSavePlan.tomorrow,
+            contexts: rowSavePlan.changedContexts
+          }
+        }));
+        onShowSuccess(
+          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? "" : "s"} deleted)` : ""}.`
+        );
+      }
       if (!reloadPage) {
         await reloadPlatformConfig();
-        onShowSuccess(options?.successMessage || "Platform configuration saved.");
+        if (!hasRowChanges) onShowSuccess(options?.successMessage || "Platform configuration saved.");
         return true;
       }
       shouldReload = true;
@@ -69617,44 +69657,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     }
   };
   const saveResourcePoolsAndExitEdit = async () => {
-    const rowSavePlan = buildResourceRowSavePlan();
-    const hasRowChanges = rowSavePlan.changedContexts.length > 0;
-    if (hasRowChanges) {
-      const confirmed = await showDarkConfirm(
-        [
-          "DFP Resource Rows have changed.",
-          "",
-          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
-          "",
-          "Past days keep the resource rows they had on that day.",
-          "",
-          "Any future built or published schedules for the affected location/unit will be deleted because their row layout may no longer match the new DFP resource rows.",
-          "",
-          "Continue and save these row changes?"
-        ].join("\n"),
-        "DFP Resource Rows Changed",
-        "warning"
-      );
-      if (!confirmed) return;
-    }
-    const saved = await save(
-      hasRowChanges ? rowSavePlan.configToSave : void 0,
-      "platform-resource-pools",
-      hasRowChanges ? { successMessage: "DFP resource rows saved. Cleaning future DFP schedules..." } : void 0
-    );
+    const saved = await save(void 0, "platform-resource-pools");
     if (saved) {
-      if (hasRowChanges) {
-        const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
-        window.dispatchEvent(new CustomEvent("dfpFutureSchedulesCleared", {
-          detail: {
-            startDate: rowSavePlan.tomorrow,
-            contexts: rowSavePlan.changedContexts
-          }
-        }));
-        onShowSuccess(
-          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? "" : "s"} deleted)` : ""}.`
-        );
-      }
       setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
       setResourcePoolsUnlocked(false);
     }

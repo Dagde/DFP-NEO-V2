@@ -4792,22 +4792,32 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     [key]: rows[key],
   }), { ...settings });
 
+  const normaliseDfpResourceRowsHistory = (settings: Record<string, any> = {}): any[] => (
+    Array.isArray(settings.dfpResourceRowsHistory)
+      ? settings.dfpResourceRowsHistory
+      : []
+  );
+
+  const sameDfpResourceRowsHistory = (leftSettings: Record<string, any> = {}, rightSettings: Record<string, any> = {}): boolean => (
+    JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings))
+  );
+
   const getEditableDfpResourceRows = (pool: any): DfpResourceRowsSnapshot => (
     getDfpResourceRowsForDate(pool, getLocalDateString(1))
   );
 
-  const buildResourceRowSavePlan = () => {
+  const buildResourceRowSavePlan = (candidateConfig: PlatformConfig = config) => {
     const today = getLocalDateString();
     const tomorrow = getLocalDateString(1);
     const previousPoolsByKey = new Map(
       loadedConfigRef.current.resourcePools.map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
     );
     const nextPoolsByKey = new Map(
-      config.resourcePools.map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
+      (candidateConfig.resourcePools || []).map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
     );
     const changedContexts: Array<{ locationCode: string; unitCode: string }> = [];
 
-    const nextResourcePools = config.resourcePools.map((pool: any, index: number) => {
+    const nextResourcePools = (candidateConfig.resourcePools || []).map((pool: any, index: number) => {
       const key = getResourcePoolSaveKey(pool, index);
       const previousPool = previousPoolsByKey.get(key);
       const previousRows = previousPool
@@ -4816,14 +4826,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const todayRows = previousPool
         ? getDfpResourceRowsForDate(previousPool, today)
         : normaliseDfpResourceRowsSnapshot(pool.settings || {});
+      const previousRawRows = previousPool
+        ? normaliseDfpResourceRowsSnapshot((previousPool as any).settings || {})
+        : normaliseDfpResourceRowsSnapshot({});
       const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
-      const rowsChanged = !sameDfpResourceRows(previousRows, nextRows) || !previousPool;
+      const rawRowsChanged = !previousPool || !sameDfpResourceRows(previousRawRows, nextRows);
+      const historyChanged = previousPool
+        ? !sameDfpResourceRowsHistory((previousPool as any).settings || {}, pool.settings || {})
+        : false;
+      const rowsChanged = rawRowsChanged || historyChanged;
 
       if (!rowsChanged) {
         return {
           ...pool,
           settings: {
-            ...buildDfpResourceRowsSettings(pool.settings || {}, todayRows),
+            ...(pool.settings || {}),
             applyToV2Runtime: true,
           },
         };
@@ -4897,7 +4914,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     return {
       configToSave: {
-        ...config,
+        ...candidateConfig,
         resourcePools: nextResourcePools,
       },
       changedContexts: uniqueContexts,
@@ -5077,12 +5094,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const save = async (
     configOverride?: PlatformConfig,
     restoreSection?: string,
-    options?: { reloadPage?: boolean; successMessage?: string },
+    options?: { reloadPage?: boolean; successMessage?: string; skipResourceRowProtection?: boolean },
   ) => {
+    const candidateConfig = configOverride && Array.isArray(configOverride.locations)
+      ? configOverride
+      : config;
+    const rowSavePlan = options?.skipResourceRowProtection
+      ? null
+      : buildResourceRowSavePlan(candidateConfig);
+    const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
+    if (hasRowChanges && rowSavePlan) {
+      const confirmed = await showDarkConfirm(
+        [
+          'DFP Resource Rows have changed.',
+          '',
+          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
+          '',
+          'Past days keep the resource rows they had on that day.',
+          '',
+          'Any future built or published schedules for the affected location/unit will be deleted because their row layout may no longer match the new DFP resource rows.',
+          '',
+          'Continue and save these row changes?',
+        ].join('\n'),
+        'DFP Resource Rows Changed',
+        'warning',
+      );
+      if (!confirmed) return false;
+    }
     const configToSave = buildSeparationReadyConfig(normaliseSettingsPlatformConfig(
-      configOverride && Array.isArray(configOverride.locations)
-        ? configOverride
-        : config
+      rowSavePlan?.configToSave || candidateConfig
     ));
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
@@ -5104,7 +5144,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         writeSetupTestPlatformConfig(configToSave);
         loadedConfigRef.current = configToSave;
         setConfig(configToSave);
-        onShowSuccess(options?.successMessage || 'Platform configuration saved.');
+        onShowSuccess(
+          hasRowChanges && rowSavePlan
+            ? `DFP resource rows saved. Current day and past days are unchanged. New rows apply from ${rowSavePlan.tomorrow}.`
+            : options?.successMessage || 'Platform configuration saved.'
+        );
         return true;
       }
       const sessionToken = localStorage.getItem('dfp_session_token');
@@ -5148,9 +5192,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       });
       loadedConfigRef.current = configToSave;
       notifyPlatformConfigUpdated(configToSave);
+      if (hasRowChanges && rowSavePlan) {
+        const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
+        window.dispatchEvent(new CustomEvent('dfpFutureSchedulesCleared', {
+          detail: {
+            startDate: rowSavePlan.tomorrow,
+            contexts: rowSavePlan.changedContexts,
+          },
+        }));
+        onShowSuccess(
+          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? '' : 's'} deleted)` : ''}.`
+        );
+      }
       if (!reloadPage) {
         await reloadPlatformConfig();
-        onShowSuccess(options?.successMessage || 'Platform configuration saved.');
+        if (!hasRowChanges) onShowSuccess(options?.successMessage || 'Platform configuration saved.');
         return true;
       }
       shouldReload = true;
@@ -5178,47 +5234,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveResourcePoolsAndExitEdit = async () => {
-    const rowSavePlan = buildResourceRowSavePlan();
-    const hasRowChanges = rowSavePlan.changedContexts.length > 0;
-    if (hasRowChanges) {
-      const confirmed = await showDarkConfirm(
-        [
-          'DFP Resource Rows have changed.',
-          '',
-          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
-          '',
-          'Past days keep the resource rows they had on that day.',
-          '',
-          'Any future built or published schedules for the affected location/unit will be deleted because their row layout may no longer match the new DFP resource rows.',
-          '',
-          'Continue and save these row changes?',
-        ].join('\n'),
-        'DFP Resource Rows Changed',
-        'warning',
-      );
-      if (!confirmed) return;
-    }
-
-    const saved = await save(
-      hasRowChanges ? rowSavePlan.configToSave : undefined,
-      'platform-resource-pools',
-      hasRowChanges
-        ? { successMessage: 'DFP resource rows saved. Cleaning future DFP schedules...' }
-        : undefined,
-    );
+    const saved = await save(undefined, 'platform-resource-pools');
     if (saved) {
-      if (hasRowChanges) {
-        const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
-        window.dispatchEvent(new CustomEvent('dfpFutureSchedulesCleared', {
-          detail: {
-            startDate: rowSavePlan.tomorrow,
-            contexts: rowSavePlan.changedContexts,
-          },
-        }));
-        onShowSuccess(
-          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? '' : 's'} deleted)` : ''}.`
-        );
-      }
       setNewAircraftTypeVisibleIds(new Set());
       setResourcePoolsUnlocked(false);
     }
