@@ -69530,6 +69530,40 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     const candidateConfig = configOverride && Array.isArray(configOverride.locations) ? configOverride : config;
     const rowSavePlan = options?.skipResourceRowProtection ? null : buildResourceRowSavePlan(candidateConfig);
     const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
+    try {
+      localStorage.setItem("dfp_resource_rows_last_save_attempt_trace", JSON.stringify({
+        savedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        protectionVersion: "CCH 3.256",
+        restoreSection: restoreSection || null,
+        canEdit,
+        skippedResourceRowProtection: !!options?.skipResourceRowProtection,
+        detectedResourceRowChanges: hasRowChanges,
+        today: rowSavePlan?.today || null,
+        tomorrow: rowSavePlan?.tomorrow || null,
+        changedContexts: rowSavePlan?.changedContexts || [],
+        currentPoolRows: (candidateConfig.resourcePools || []).map((pool) => ({
+          id: pool?.id || null,
+          code: pool?.code || null,
+          name: pool?.name || null,
+          locationCode: pool?.locationCode || null,
+          unitCode: pool?.unitCode || null,
+          rawRowsInSettings: normaliseDfpResourceRowsSnapshot(pool?.settings || {}),
+          historyCount: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory.length : 0,
+          history: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory : []
+        })),
+        plannedPoolRows: (rowSavePlan?.configToSave.resourcePools || []).map((pool) => ({
+          id: pool?.id || null,
+          code: pool?.code || null,
+          name: pool?.name || null,
+          locationCode: pool?.locationCode || null,
+          unitCode: pool?.unitCode || null,
+          rawRowsPlannedForSave: normaliseDfpResourceRowsSnapshot(pool?.settings || {}),
+          historyCount: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory.length : 0,
+          history: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory : []
+        }))
+      }));
+    } catch {
+    }
     if (hasRowChanges && rowSavePlan) {
       const confirmed = await showDarkConfirm(
         [
@@ -69555,7 +69589,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       try {
         localStorage.setItem("dfp_resource_rows_last_save_trace", JSON.stringify({
           savedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          protectionVersion: "CCH 3.255",
+          protectionVersion: "CCH 3.256",
           today: rowSavePlan.today,
           tomorrow: rowSavePlan.tomorrow,
           changedContexts: rowSavePlan.changedContexts,
@@ -108465,10 +108499,16 @@ const App = () => {
   }, []);
   const buildDfpResourceRowsDiagnosticReport = reactExports.useCallback(() => {
     let lastSaveTrace = null;
+    let lastSaveAttemptTrace = null;
     try {
       lastSaveTrace = JSON.parse(localStorage.getItem("dfp_resource_rows_last_save_trace") || "null");
     } catch {
       lastSaveTrace = null;
+    }
+    try {
+      lastSaveAttemptTrace = JSON.parse(localStorage.getItem("dfp_resource_rows_last_save_attempt_trace") || "null");
+    } catch {
+      lastSaveAttemptTrace = null;
     }
     const targetDates = Array.from(new Set([
       getLocalIsoDateForResourceRows(-1),
@@ -108492,11 +108532,12 @@ const App = () => {
     const poolsToReport = contextPools.length ? contextPools : activePlatformResourcePool ? [activePlatformResourcePool] : pools.slice(0, 10);
     return {
       reportType: "DFP resource row diagnostics",
-      diagnosticVersion: "CCH 3.255",
+      diagnosticVersion: "CCH 3.256",
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
       resourceRowSaveTrace: lastSaveTrace,
+      resourceRowSaveAttemptTrace: lastSaveAttemptTrace,
       activeContext: {
         selectedDate: date,
         browserYesterday: getLocalIsoDateForResourceRows(-1),

@@ -26225,10 +26225,16 @@ const App: React.FC = () => {
 
     const buildDfpResourceRowsDiagnosticReport = useCallback(() => {
         let lastSaveTrace: any = null;
+        let lastSaveAttemptTrace: any = null;
         try {
             lastSaveTrace = JSON.parse(localStorage.getItem('dfp_resource_rows_last_save_trace') || 'null');
         } catch {
             lastSaveTrace = null;
+        }
+        try {
+            lastSaveAttemptTrace = JSON.parse(localStorage.getItem('dfp_resource_rows_last_save_attempt_trace') || 'null');
+        } catch {
+            lastSaveAttemptTrace = null;
         }
         const targetDates = Array.from(new Set([
             getLocalIsoDateForResourceRows(-1),
@@ -26253,11 +26259,12 @@ const App: React.FC = () => {
 
         return {
             reportType: 'DFP resource row diagnostics',
-            diagnosticVersion: 'CCH 3.255',
+            diagnosticVersion: 'CCH 3.256',
             generatedAt: new Date().toISOString(),
             url: window.location.href,
             userAgent: navigator.userAgent,
             resourceRowSaveTrace: lastSaveTrace,
+            resourceRowSaveAttemptTrace: lastSaveAttemptTrace,
             activeContext: {
                 selectedDate: date,
                 browserYesterday: getLocalIsoDateForResourceRows(-1),

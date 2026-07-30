@@ -5103,6 +5103,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ? null
       : buildResourceRowSavePlan(candidateConfig);
     const hasRowChanges = (rowSavePlan?.changedContexts.length || 0) > 0;
+    try {
+      localStorage.setItem('dfp_resource_rows_last_save_attempt_trace', JSON.stringify({
+        savedAt: new Date().toISOString(),
+        protectionVersion: 'CCH 3.256',
+        restoreSection: restoreSection || null,
+        canEdit,
+        skippedResourceRowProtection: !!options?.skipResourceRowProtection,
+        detectedResourceRowChanges: hasRowChanges,
+        today: rowSavePlan?.today || null,
+        tomorrow: rowSavePlan?.tomorrow || null,
+        changedContexts: rowSavePlan?.changedContexts || [],
+        currentPoolRows: (candidateConfig.resourcePools || []).map((pool: any) => ({
+          id: pool?.id || null,
+          code: pool?.code || null,
+          name: pool?.name || null,
+          locationCode: pool?.locationCode || null,
+          unitCode: pool?.unitCode || null,
+          rawRowsInSettings: normaliseDfpResourceRowsSnapshot(pool?.settings || {}),
+          historyCount: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory.length : 0,
+          history: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory : [],
+        })),
+        plannedPoolRows: (rowSavePlan?.configToSave.resourcePools || []).map((pool: any) => ({
+          id: pool?.id || null,
+          code: pool?.code || null,
+          name: pool?.name || null,
+          locationCode: pool?.locationCode || null,
+          unitCode: pool?.unitCode || null,
+          rawRowsPlannedForSave: normaliseDfpResourceRowsSnapshot(pool?.settings || {}),
+          historyCount: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory.length : 0,
+          history: Array.isArray(pool?.settings?.dfpResourceRowsHistory) ? pool.settings.dfpResourceRowsHistory : [],
+        })),
+      }));
+    } catch {
+      // Diagnostics are helpful but should never block a settings save.
+    }
     if (hasRowChanges && rowSavePlan) {
       const confirmed = await showDarkConfirm(
         [
@@ -5128,7 +5163,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       try {
         localStorage.setItem('dfp_resource_rows_last_save_trace', JSON.stringify({
           savedAt: new Date().toISOString(),
-          protectionVersion: 'CCH 3.255',
+          protectionVersion: 'CCH 3.256',
           today: rowSavePlan.today,
           tomorrow: rowSavePlan.tomorrow,
           changedContexts: rowSavePlan.changedContexts,
