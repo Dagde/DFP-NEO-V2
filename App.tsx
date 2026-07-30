@@ -7066,8 +7066,9 @@ function generateDfpInternal(
         config.runtimeResourceContext?.runtimeAircraftTypeCode
         || config.runtimeResourceContext?.resourcePoolAircraftTypeCode
         || config.runtimeResourceContext?.runtimeAircraftTypeName
-        || 'PC-21'
-    ).trim() || 'PC-21';
+        || config.resourceDisplayNames?.aircraft
+        || 'Aircraft'
+    ).trim() || 'Aircraft';
     const buildAircraftResourceIdPrefix = `${buildAircraftResourcePrefix} `;
     const buildAircraftResourceCount = Math.max(0, Math.floor(Number(availableAircraftCount) || 0));
     const buildResources = [
