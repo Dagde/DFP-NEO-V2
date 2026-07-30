@@ -4097,7 +4097,7 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   staffRankEquivalency: DEFAULT_RANK_EQUIVALENCY_CONFIG,
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: "Civilian titles",
-  instructorLabel: "QFI",
+  instructorLabel: "Instructor",
   simIpDisplayEnabled: true,
   simIpDisplayLabel: "Contractor Staff",
   contractorStaffEventEligibility: {
@@ -17741,7 +17741,7 @@ const STABLE_ROLE_COLOUR_OVERRIDES = {
   trainee: "text-lime-300"
 };
 const normaliseRoleKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
-const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI", simIpDisplayLabel = "Contractor Staff") => {
+const getStaffRoleDisplay = (role, terminology, instructorLabel = "Instructor", simIpDisplayLabel = "Contractor Staff") => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || "").trim();
   const label = getCrewPositionDisplayLabel(role, terminology, "Unassigned");
@@ -17812,7 +17812,7 @@ const PersonnelColumn = ({
   useUnitColors = false,
   useRoleColors = false,
   crewPositionTerminology,
-  instructorLabel = "QFI",
+  instructorLabel = "Instructor",
   simIpDisplayLabel = "Contractor Staff"
 }) => {
   const groupedPersonnel = React.useMemo(() => {
@@ -17991,7 +17991,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "QFI", simIpDisplayLabel = "Contractor Staff" }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "Instructor", simIpDisplayLabel = "Contractor Staff" }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
   console.log("  - events count:", events?.length);
@@ -21786,7 +21786,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -50892,7 +50892,7 @@ const InstructorProfileFlyout = ({
   currentUserId,
   currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "QFI",
+  instructorLabel = "Instructor",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = "flight_school",
   crewPositionTerminology,
@@ -53338,7 +53338,7 @@ const InstructorListView = ({
   currentUserRole,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
-  instructorLabel = "QFI",
+  instructorLabel = "Instructor",
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue,
@@ -83115,7 +83115,7 @@ const NextDayInstructorScheduleView = ({
   aircraftNumberSettings,
   operationalModel,
   crewPositionTerminology,
-  instructorLabel = "QFI",
+  instructorLabel = "Instructor",
   simIpDisplayLabel = "Contractor Staff"
 }) => {
   const scrollContainerRef = reactExports.useRef(null);

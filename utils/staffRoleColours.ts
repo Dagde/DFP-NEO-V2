@@ -34,7 +34,7 @@ const normaliseRoleKey = (value?: string): string =>
 export const getStaffRoleDisplay = (
   role: string | undefined,
   terminology?: CrewPositionTerminology,
-  instructorLabel = 'QFI',
+  instructorLabel = 'Instructor',
   simIpDisplayLabel = 'Contractor Staff',
 ): { key: string; label: string; textClassName: string } => {
   const entry = findCrewPositionEntry(role, terminology);

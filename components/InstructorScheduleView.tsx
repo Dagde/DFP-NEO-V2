@@ -183,7 +183,7 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
 };
 
 
-const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = 'QFI', simIpDisplayLabel = 'Contractor Staff' }) => {
+const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = 'Instructor', simIpDisplayLabel = 'Contractor Staff' }) => {
   // ERROR TRACKING: Log all props to identify missing seatConfigs
   console.log('🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:');
   console.log('  - date:', date);

@@ -67,7 +67,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
   useUnitColors = false,
   useRoleColors = false,
   crewPositionTerminology,
-  instructorLabel = 'QFI',
+  instructorLabel = 'Instructor',
   simIpDisplayLabel = 'Contractor Staff',
 }) => {
   // Group personnel by unit if needed, preserving the incoming sorted unit order.

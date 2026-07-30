@@ -202,7 +202,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     currentUserRole,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
-    instructorLabel = 'QFI',
+    instructorLabel = 'Instructor',
     operationalModel = 'flight_school',
     crewPositionTerminology,
     staffQualificationCatalogue,

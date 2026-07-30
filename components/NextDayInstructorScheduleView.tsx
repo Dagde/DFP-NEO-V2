@@ -125,7 +125,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     aircraftNumberSettings,
     operationalModel,
     crewPositionTerminology,
-    instructorLabel = 'QFI',
+    instructorLabel = 'Instructor',
     simIpDisplayLabel = 'Contractor Staff',
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);

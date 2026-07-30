@@ -332,7 +332,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   profileInitialTab, onProfileTabConsumed,
   currentUserId, currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = 'QFI',
+  instructorLabel = 'Instructor',
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = 'flight_school',
   crewPositionTerminology,
