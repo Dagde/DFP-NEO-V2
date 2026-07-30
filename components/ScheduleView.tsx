@@ -7175,7 +7175,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const activeUnit = units.find((unit: any) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
         const unitForPool = activeUnit || { code: unitCode, locationCode };
         const pools = getRelevantResourcePoolsForUnit(platformConfig, unitForPool);
-        const pool = pools.find((candidate: any) => candidate?.settings?.applyToV2Runtime === true) || pools[0] || null;
+        const pool = pools[0] || null;
         const poolIndex = Array.isArray(platformConfig?.resourcePools) && pool
             ? platformConfig.resourcePools.findIndex((candidate: any) => candidate === pool || String(candidate?.id || candidate?.code || '') === String(pool?.id || pool?.code || ''))
             : -1;

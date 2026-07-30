@@ -22824,7 +22824,7 @@ const App: React.FC = () => {
                 poolType: activePlatformResourcePool.poolType,
                 aircraftType: activePlatformResourcePool.aircraftTypeCode,
                 runtimeAircraftType: activeRuntimeAircraftTypeCode,
-                appliesToV2Runtime: activePlatformResourcePool.settings?.applyToV2Runtime === true,
+                controlsDfpResourceRows: true,
                 settings: activePlatformResourcePool.settings,
             });
         } else {
@@ -25744,6 +25744,30 @@ const App: React.FC = () => {
     // Track which snapshot dates have already been loaded to avoid redundant fetches
     const loadedSnapshotDates = React.useRef<Set<string>>(new Set());
     const loadingSnapshotDates = React.useRef<Set<string>>(new Set());
+    useEffect(() => {
+        const handleFutureSchedulesCleared = (event: Event) => {
+            const startDate = String((event as CustomEvent<{ startDate?: string }>).detail?.startDate || '').slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return;
+            setPublishedSchedules(prev => Object.fromEntries(
+                Object.entries(prev).filter(([scheduleDate]) => scheduleDate < startDate)
+            ));
+            setBaselineSchedules(prev => Object.fromEntries(
+                Object.entries(prev).filter(([scheduleDate]) => getDailySnapshotDate(scheduleDate) < startDate)
+            ));
+            setSnapshotDates(prev => prev.filter((snapshotDate) => snapshotDate < startDate));
+            Object.keys(snapshotKeysByDateRef.current).forEach((snapshotDate) => {
+                if (snapshotDate >= startDate) delete snapshotKeysByDateRef.current[snapshotDate];
+            });
+            Array.from(loadedSnapshotDates.current).forEach((snapshotKey) => {
+                if (getDailySnapshotDate(snapshotKey) >= startDate) loadedSnapshotDates.current.delete(snapshotKey);
+            });
+            Array.from(loadingSnapshotDates.current).forEach((snapshotKey) => {
+                if (getDailySnapshotDate(snapshotKey) >= startDate) loadingSnapshotDates.current.delete(snapshotKey);
+            });
+        };
+        window.addEventListener('dfpFutureSchedulesCleared', handleFutureSchedulesCleared);
+        return () => window.removeEventListener('dfpFutureSchedulesCleared', handleFutureSchedulesCleared);
+    }, []);
     type DfpSnapshotStatus = 'idle' | 'loading' | 'cached' | 'loaded' | 'empty' | 'retrying' | 'error';
     const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = useState<{
         status: DfpSnapshotStatus;
@@ -26161,11 +26185,11 @@ const App: React.FC = () => {
         (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
         [resourceDisplayNames]
     );
-    const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, 'aircraft', 24);
-    const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, 'ftd', availableFtdCount);
-    const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount);
-    const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4);
-    const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6);
+    const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, 'aircraft', 24, date);
+    const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, 'ftd', availableFtdCount, date);
+    const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount, date);
+    const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4, date);
+    const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6, date);
     const currentAircraftConfigState = useMemo(() => ({
         availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
         aircraftConfigCapacities: neoAircraftConfigCapacities,
@@ -27553,9 +27577,8 @@ const App: React.FC = () => {
         if (setupTestProfile && !activePlatformResourcePool) {
             return [];
         }
-        // Stage 3: resource rows may come from Platform Configuration only when
-        // the selected location pool explicitly opts in. Otherwise V2 behaviour
-        // remains unchanged.
+        // Stage 3: configured DFP resource rows drive the schedule. Row count
+        // history lets the current and past days keep the layout they were built with.
         const aircraftRowCount = configuredAirframeCount;
 
         // Check for deployment events that overlap with the current date

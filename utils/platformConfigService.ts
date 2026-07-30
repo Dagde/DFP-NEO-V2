@@ -50,6 +50,11 @@ export interface PlatformResourcePool {
     ground?: number;
     standby?: number;
     applyToV2Runtime?: boolean;
+    dfpResourceRowsHistory?: Array<{
+      effectiveFrom?: string;
+      effectiveTo?: string;
+      rows?: Record<string, number>;
+    }>;
     [key: string]: any;
   };
 }
@@ -322,7 +327,15 @@ export const normalisePlatformConfig = (source?: Partial<PlatformConfig> | null)
     units: Array.isArray(raw.units) ? raw.units : [],
     unitTypes: Array.isArray(raw.unitTypes) ? raw.unitTypes : [],
     aircraftTypes: Array.isArray(raw.aircraftTypes) ? raw.aircraftTypes : [],
-    resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools : [],
+    resourcePools: Array.isArray(raw.resourcePools)
+      ? raw.resourcePools.map((pool) => ({
+        ...pool,
+        settings: {
+          ...(pool.settings || {}),
+          applyToV2Runtime: true,
+        },
+      }))
+      : [],
     modules: Array.isArray(raw.modules) ? raw.modules : [],
     unitModules: Array.isArray(raw.unitModules) ? raw.unitModules : [],
     licenses: Array.isArray(raw.licenses) ? raw.licenses : [],
@@ -926,33 +939,45 @@ export const getLocationResourcePool = (
   const targetUnit = normaliseUnitIdentifier(unitCode);
   if (targetUnit) {
     const unitPools = pools.filter((pool) => normaliseUnitIdentifier(pool.unitCode) === targetUnit);
-    const runtimeUnitPool = unitPools.find(isResourcePoolRuntimeEnabled);
-    if (runtimeUnitPool) return runtimeUnitPool;
     if (unitPools.length > 0) return unitPools[0];
   }
 
   const sharedPools = pools.filter((pool) => String(pool.poolType || '').trim().toLowerCase() === 'shared');
-  const runtimeSharedPool = sharedPools.find(isResourcePoolRuntimeEnabled);
-  if (runtimeSharedPool) return runtimeSharedPool;
-
   const locationLevelPools = pools.filter((pool) => !normaliseLocationIdentifier(pool.unitCode));
-  const runtimeLocationLevelPool = locationLevelPools.find(isResourcePoolRuntimeEnabled);
-  if (runtimeLocationLevelPool) return runtimeLocationLevelPool;
-
-  const runtimeLocationPool = pools.find(isResourcePoolRuntimeEnabled);
-  return runtimeLocationPool || sharedPools[0] || locationLevelPools[0] || pools[0] || null;
+  return sharedPools[0] || locationLevelPools[0] || pools[0] || null;
 };
 
 export const isResourcePoolRuntimeEnabled = (
   pool: PlatformResourcePool | null,
-): boolean => pool?.settings?.applyToV2Runtime === true;
+): boolean => !!pool && pool.status !== 'INACTIVE';
+
+const getResourceRowsForDate = (
+  settings: Record<string, any>,
+  targetDate?: string,
+): Record<string, number> | null => {
+  if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return null;
+  const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+  const matches = history.filter((entry: any) => {
+    const from = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
+    const to = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+    return targetDate >= from && targetDate <= to && entry?.rows && typeof entry.rows === 'object';
+  });
+  const entry = matches[matches.length - 1];
+  return entry?.rows || null;
+};
 
 export const getResourcePoolCount = (
   pool: PlatformResourcePool | null,
   key: 'aircraft' | 'ftd' | 'cpt' | 'ground' | 'standby',
   fallback: number,
+  targetDate?: string,
 ): number => {
   const settings = pool?.settings || {};
+  const datedRows = getResourceRowsForDate(settings, targetDate);
+  if (datedRows) {
+    const historicalValue = Number(datedRows[key]);
+    if (Number.isFinite(historicalValue) && historicalValue >= 0) return historicalValue;
+  }
   const aliases: Record<typeof key, string[]> = {
     aircraft: ['aircraft', 'airframes'],
     ftd: ['ftd', 'simulator', 'simulators'],

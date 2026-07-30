@@ -1552,7 +1552,7 @@ const PLATFORM_FIELD_LABELS = {
     'settings.cpt': 'Procedural trainer rows',
     'settings.standby': 'STBY rows',
     'settings.ground': 'Ground rows',
-    'settings.applyToV2Runtime': 'Apply resource pool to V2 DFP',
+    'settings.applyToV2Runtime': 'DFP resource rows enabled',
   },
   CommercialUnitModule: {
     unitCode: 'Unit',
@@ -8937,7 +8937,7 @@ async function seedCommercialConfigIfEmpty(db) {
       VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, 'PC-21', $2, $3, 'Shared', 'ACTIVE', $4::jsonb, $5::timestamp, $5::timestamp)
       ON CONFLICT ("code") DO NOTHING
     `, locationCode, `${locationCode}-PC21-POOL`, `${locationName} PC-21 Resource Pool`, JSON.stringify({
-      applyToV2Runtime: false,
+      applyToV2Runtime: true,
       aircraftLabel: 'PC-21',
       aircraftNumberUsePrefix: true,
       aircraftNumberPrefixes: ['A54'],
@@ -11857,6 +11857,52 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/daily-snapshot/dates error:', error);
     res.status(500).json({ error: 'Failed to load snapshot dates', details: error.message });
+  }
+});
+
+// DELETE /api/daily-snapshot/future - Clear future DFP snapshots after row layout changes
+app.delete('/api/daily-snapshot/future', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const startDate = String(req.body?.startDate || req.query.startDate || '').slice(0, 10);
+    const school = String(req.body?.school || req.query.school || '').trim().replace(/[^A-Za-z0-9_-]/g, '-').toUpperCase();
+    const unit = String(req.body?.unit || req.query.unit || '').trim().replace(/[^A-Za-z0-9_-]/g, '-').toUpperCase();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      return res.status(400).json({ success: false, error: 'startDate must use YYYY-MM-DD' });
+    }
+    if (!school) {
+      return res.status(400).json({ success: false, error: 'school is required' });
+    }
+
+    const rows = unit
+      ? await db.$queryRawUnsafe(
+          `DELETE FROM "DailySnapshot"
+           WHERE substring(date from 1 for 10) >= $1::text
+             AND upper(date) LIKE $2::text
+           RETURNING date`,
+          startDate,
+          `%__${school}__${unit}`
+        )
+      : await db.$queryRawUnsafe(
+          `DELETE FROM "DailySnapshot"
+           WHERE substring(date from 1 for 10) >= $1::text
+             AND (
+               upper(date) LIKE $2::text
+               OR upper(date) LIKE $3::text
+             )
+           RETURNING date`,
+          startDate,
+          `%__${school}`,
+          `%__${school}__%`
+        );
+
+    const deletedDates = (rows || []).map((row) => row.date);
+    console.log(`✅ DELETE /api/daily-snapshot/future - Deleted ${deletedDates.length} snapshot(s) from ${startDate} for ${school}${unit ? `/${unit}` : ''}`);
+    res.json({ success: true, deleted: deletedDates.length, dates: deletedDates });
+  } catch (error) {
+    console.error('❌ DELETE /api/daily-snapshot/future error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete future snapshots', details: error.message });
   }
 });
 

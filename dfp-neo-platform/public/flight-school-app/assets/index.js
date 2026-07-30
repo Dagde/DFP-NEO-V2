@@ -2220,7 +2220,13 @@ const normalisePlatformConfig = (source) => {
     units: Array.isArray(raw.units) ? raw.units : [],
     unitTypes: Array.isArray(raw.unitTypes) ? raw.unitTypes : [],
     aircraftTypes: Array.isArray(raw.aircraftTypes) ? raw.aircraftTypes : [],
-    resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools : [],
+    resourcePools: Array.isArray(raw.resourcePools) ? raw.resourcePools.map((pool) => ({
+      ...pool,
+      settings: {
+        ...pool.settings || {},
+        applyToV2Runtime: true
+      }
+    })) : [],
     modules: Array.isArray(raw.modules) ? raw.modules : [],
     unitModules: Array.isArray(raw.unitModules) ? raw.unitModules : [],
     licenses: Array.isArray(raw.licenses) ? raw.licenses : [],
@@ -2630,22 +2636,30 @@ const getLocationResourcePool = (config, locationCode, unitCode) => {
   const targetUnit = normaliseUnitIdentifier(unitCode);
   if (targetUnit) {
     const unitPools = pools.filter((pool) => normaliseUnitIdentifier(pool.unitCode) === targetUnit);
-    const runtimeUnitPool = unitPools.find(isResourcePoolRuntimeEnabled);
-    if (runtimeUnitPool) return runtimeUnitPool;
     if (unitPools.length > 0) return unitPools[0];
   }
   const sharedPools = pools.filter((pool) => String(pool.poolType || "").trim().toLowerCase() === "shared");
-  const runtimeSharedPool = sharedPools.find(isResourcePoolRuntimeEnabled);
-  if (runtimeSharedPool) return runtimeSharedPool;
   const locationLevelPools = pools.filter((pool) => !normaliseLocationIdentifier(pool.unitCode));
-  const runtimeLocationLevelPool = locationLevelPools.find(isResourcePoolRuntimeEnabled);
-  if (runtimeLocationLevelPool) return runtimeLocationLevelPool;
-  const runtimeLocationPool = pools.find(isResourcePoolRuntimeEnabled);
-  return runtimeLocationPool || sharedPools[0] || locationLevelPools[0] || pools[0] || null;
+  return sharedPools[0] || locationLevelPools[0] || pools[0] || null;
 };
-const isResourcePoolRuntimeEnabled = (pool) => pool?.settings?.applyToV2Runtime === true;
-const getResourcePoolCount = (pool, key, fallback) => {
+const getResourceRowsForDate = (settings, targetDate) => {
+  if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) return null;
+  const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+  const matches = history.filter((entry2) => {
+    const from = String(entry2?.effectiveFrom || "0000-01-01").slice(0, 10);
+    const to = String(entry2?.effectiveTo || "9999-12-31").slice(0, 10);
+    return targetDate >= from && targetDate <= to && entry2?.rows && typeof entry2.rows === "object";
+  });
+  const entry = matches[matches.length - 1];
+  return entry?.rows || null;
+};
+const getResourcePoolCount = (pool, key, fallback, targetDate) => {
   const settings = pool?.settings || {};
+  const datedRows = getResourceRowsForDate(settings, targetDate);
+  if (datedRows) {
+    const historicalValue = Number(datedRows[key]);
+    if (Number.isFinite(historicalValue) && historicalValue >= 0) return historicalValue;
+  }
   const aliases = {
     aircraft: ["aircraft", "airframes"],
     ftd: ["ftd", "simulator", "simulators"],
@@ -16081,7 +16095,7 @@ const ScheduleView = ({
     const activeUnit = units.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
     const unitForPool = activeUnit || { code: unitCode, locationCode };
     const pools = getRelevantResourcePoolsForUnit(platformConfig, unitForPool);
-    const pool = pools.find((candidate) => candidate?.settings?.applyToV2Runtime === true) || pools[0] || null;
+    const pool = pools[0] || null;
     const poolIndex = Array.isArray(platformConfig?.resourcePools) && pool ? platformConfig.resourcePools.findIndex((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "")) : -1;
     const settings = pool?.settings || {};
     const rawAircraftCount = Number(settings.aircraft ?? airframeCount ?? 5);
@@ -65697,6 +65711,7 @@ const FormationCallsignsSection = ({
     ] })
   ] });
 };
+const DFP_RESOURCE_ROW_KEYS = ["aircraft", "ftd", "cpt", "standby", "ground"];
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const emptyConfig = {
@@ -66554,10 +66569,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "Resource Pools") {
     if (lowerTitle.includes("no usable resources")) {
-      return "Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, simulator, procedural trainer, STBY or Ground, then save.";
-    }
-    if (lowerTitle.includes("live dfp")) {
-      return "Open Resource Pools and enable Apply to Live DFP on the pool that should drive the active DFP resource rows.";
+      return "Open the Resource Pools section, enter non-zero counts for the DFP resource rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.";
     }
     return "Open Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.";
   }
@@ -66681,14 +66693,14 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
-      const unitRuntimePools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode && pool.settings?.applyToV2Runtime === true);
-      const sharedOrLocationRuntimePools = activeResourcePools.filter((pool) => toIdentifier(pool.locationCode) === locationCode && pool.settings?.applyToV2Runtime === true && (!toIdentifier(pool.unitCode) || String(pool.poolType || "").trim().toLowerCase() === "shared"));
+      const unitRuntimePools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode);
+      const sharedOrLocationRuntimePools = activeResourcePools.filter((pool) => toIdentifier(pool.locationCode) === locationCode && (!toIdentifier(pool.unitCode) || String(pool.poolType || "").trim().toLowerCase() === "shared"));
       if (unitRuntimePools.length === 0 && sharedOrLocationRuntimePools.length > 0) {
         add(
           "WARNING",
           "Unit Separation",
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} is a Fixed Crew unit without its own live DFP resource pool. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} is a Fixed Crew unit without its own DFP resource pool. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
           "Open Aircraft & Resource Pools and add or enable a unit-specific pool if this unit needs independent aircraft, simulator or trainer capacity after separation.",
           { focusSubsectionId: "platform-resource-pools" }
@@ -66713,18 +66725,15 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
       add("WARNING", "Resource Pools", `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
-    if (pool.settings?.applyToV2Runtime === true) {
-      const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
-      if (totalResources <= 0) {
-        add("CRITICAL", "Resource Pools", `${poolName} has no usable resources`, "This pool is applied to the live DFP, but all resource counts are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
-      }
+    const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
+    if (totalResources <= 0) {
+      add("CRITICAL", "Resource Pools", `${poolName} has no usable resources`, "This pool controls DFP resource rows, but all resource counts are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
-  const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
-  if (runtimePools.length === 0) {
-    add("WARNING", "Resource Pools", "No pool is applied to the live DFP", 'At least one resource pool should have "Apply to Live DFP" enabled so live resource counts come from platform configuration.', "runtime-pool-none", void 0, { focusSubsectionId: "platform-resource-pools" });
+  if (activeResourcePools.length === 0) {
+    add("WARNING", "Resource Pools", "No active DFP resource pool", "At least one active resource pool is needed before DFP resource rows can come from platform configuration.", "runtime-pool-none", void 0, { focusSubsectionId: "platform-resource-pools" });
   } else if (!items.some((item) => item.area === "Resource Pools" && item.severity === "CRITICAL")) {
-    add("OK", "Resource Pools", "Live DFP resource pools are configured", `${runtimePools.length} active resource pool${runtimePools.length === 1 ? "" : "s"} feed the live DFP.`, "runtime-pool-active");
+    add("OK", "Resource Pools", "DFP resource rows are configured", `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? "" : "s"} can feed DFP resource rows.`, "runtime-pool-active");
   }
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
   const missingCurrencyClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.currencyProfiles);
@@ -69072,7 +69081,7 @@ This permanently removes the organisation record from platform configuration and
             poolType: "Dedicated",
             status: "ACTIVE",
             settings: {
-              applyToV2Runtime: false,
+              applyToV2Runtime: true,
               aircraftLabel: defaultAircraftLabel,
               aircraftNumberUsePrefix: true,
               aircraftNumberPrefixes: ["A54"],
@@ -69284,9 +69293,154 @@ This permanently removes the organisation record from platform configuration and
     updateRow("resourcePools", index, {
       settings: {
         ...currentSettings,
+        applyToV2Runtime: true,
         ...changes
       }
     });
+  };
+  const getLocalDateString2 = (offsetDays = 0) => {
+    const dateValue = /* @__PURE__ */ new Date();
+    dateValue.setDate(dateValue.getDate() + offsetDays);
+    const year = dateValue.getFullYear();
+    const month = String(dateValue.getMonth() + 1).padStart(2, "0");
+    const day = String(dateValue.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const getResourcePoolSaveKey = (pool, fallbackIndex) => String(pool?.id || pool?.code || `${pool?.locationCode || ""}:${pool?.unitCode || ""}:${pool?.aircraftTypeCode || ""}:${fallbackIndex}`).trim();
+  const normaliseDfpResourceRowsSnapshot = (settings = {}) => ({
+    aircraft: Math.max(0, Math.floor(Number(settings.aircraft ?? 24) || 0)),
+    ftd: Math.max(0, Math.floor(Number(settings.ftd ?? 5) || 0)),
+    cpt: Math.max(0, Math.floor(Number(settings.cpt ?? 4) || 0)),
+    standby: Math.max(0, Math.floor(Number(settings.standby ?? 4) || 0)),
+    ground: Math.max(0, Math.floor(Number(settings.ground ?? 6) || 0))
+  });
+  const sameDfpResourceRows = (left, right) => DFP_RESOURCE_ROW_KEYS.every((key) => left[key] === right[key]);
+  const getDfpResourceRowsForDate = (pool, targetDate) => {
+    const settings = pool?.settings || {};
+    const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+    const matchingEntry = history.filter((entry) => {
+      const effectiveFrom = String(entry?.effectiveFrom || "0000-01-01").slice(0, 10);
+      const effectiveTo = String(entry?.effectiveTo || "9999-12-31").slice(0, 10);
+      return targetDate >= effectiveFrom && targetDate <= effectiveTo && entry?.rows && typeof entry.rows === "object";
+    }).pop();
+    return normaliseDfpResourceRowsSnapshot(matchingEntry?.rows || settings);
+  };
+  const buildResourceRowSavePlan = () => {
+    const today = getLocalDateString2();
+    const tomorrow = getLocalDateString2(1);
+    const previousPoolsByKey = new Map(
+      loadedConfigRef.current.resourcePools.map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
+    );
+    const nextPoolsByKey = new Map(
+      config.resourcePools.map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
+    );
+    const changedContexts = [];
+    const nextResourcePools = config.resourcePools.map((pool, index) => {
+      const key = getResourcePoolSaveKey(pool, index);
+      const previousPool = previousPoolsByKey.get(key);
+      const previousRows = previousPool ? normaliseDfpResourceRowsSnapshot(previousPool.settings || {}) : normaliseDfpResourceRowsSnapshot({});
+      const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
+      const rowsChanged = !sameDfpResourceRows(previousRows, nextRows) || !previousPool;
+      if (!rowsChanged) {
+        return {
+          ...pool,
+          settings: {
+            ...pool.settings || {},
+            applyToV2Runtime: true
+          }
+        };
+      }
+      changedContexts.push({
+        locationCode: String(pool.locationCode || previousPool?.locationCode || "").trim(),
+        unitCode: String(pool.unitCode || previousPool?.unitCode || "").trim()
+      });
+      const existingHistory = Array.isArray(pool.settings?.dfpResourceRowsHistory) ? [...pool.settings.dfpResourceRowsHistory] : [];
+      const hasTodayHistory = existingHistory.some((entry) => {
+        const effectiveFrom = String(entry?.effectiveFrom || "0000-01-01").slice(0, 10);
+        const effectiveTo = String(entry?.effectiveTo || "9999-12-31").slice(0, 10);
+        return today >= effectiveFrom && today <= effectiveTo;
+      });
+      const nextHistory = previousPool && !hasTodayHistory ? [
+        ...existingHistory,
+        {
+          effectiveFrom: "0000-01-01",
+          effectiveTo: today,
+          rows: getDfpResourceRowsForDate(previousPool, today)
+        }
+      ] : existingHistory;
+      return {
+        ...pool,
+        settings: {
+          ...pool.settings || {},
+          applyToV2Runtime: true,
+          dfpResourceRowsEffectiveFrom: tomorrow,
+          dfpResourceRowsHistory: nextHistory
+        }
+      };
+    });
+    loadedConfigRef.current.resourcePools.forEach((pool, index) => {
+      const key = getResourcePoolSaveKey(pool, index);
+      if (nextPoolsByKey.has(key)) return;
+      changedContexts.push({
+        locationCode: String(pool.locationCode || "").trim(),
+        unitCode: String(pool.unitCode || "").trim()
+      });
+    });
+    const uniqueContexts = changedContexts.filter((context, index, contexts) => context.locationCode && contexts.findIndex((candidate) => candidate.locationCode.toUpperCase() === context.locationCode.toUpperCase() && candidate.unitCode.toUpperCase() === context.unitCode.toUpperCase()) === index);
+    return {
+      configToSave: {
+        ...config,
+        resourcePools: nextResourcePools
+      },
+      changedContexts: uniqueContexts,
+      today,
+      tomorrow
+    };
+  };
+  const pruneFutureSnapshotCache = (startDate, locationCode, unitCode) => {
+    try {
+      const locationToken = String(locationCode || "").trim().toUpperCase();
+      const unitToken = String(unitCode || "").trim().toUpperCase();
+      Object.keys(localStorage).filter((key) => key.startsWith("dfp_snapshot_cache_")).forEach((key) => {
+        const snapshotKey = key.replace(/^dfp_snapshot_cache_/, "");
+        const snapshotDate = snapshotKey.slice(0, 10);
+        const upperKey = snapshotKey.toUpperCase();
+        if (snapshotDate < startDate) return;
+        if (unitToken && upperKey.endsWith(`__${locationToken}__${unitToken}`)) {
+          localStorage.removeItem(key);
+        } else if (!unitToken && (upperKey.endsWith(`__${locationToken}`) || upperKey.includes(`__${locationToken}__`))) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+    }
+  };
+  const deleteFutureSnapshotsForResourceRowChanges = async (contexts, startDate) => {
+    if (contexts.length === 0 || isSetupTestMode()) return 0;
+    const sessionToken = localStorage.getItem("dfp_session_token");
+    let deletedCount = 0;
+    for (const context of contexts) {
+      pruneFutureSnapshotCache(startDate, context.locationCode, context.unitCode);
+      try {
+        const res = await fetch(`${getApiBase()}/daily-snapshot/future`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+          },
+          body: JSON.stringify({
+            startDate,
+            school: context.locationCode,
+            unit: context.unitCode
+          })
+        });
+        if (!res.ok) continue;
+        const body = await res.json().catch(() => ({}));
+        deletedCount += Number(body.deleted || 0) || 0;
+      } catch {
+      }
+    }
+    return deletedCount;
   };
   const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
     const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
@@ -69477,8 +69631,44 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     }
   };
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-resource-pools");
+    const rowSavePlan = buildResourceRowSavePlan();
+    const hasRowChanges = rowSavePlan.changedContexts.length > 0;
+    if (hasRowChanges) {
+      const confirmed = await showDarkConfirm(
+        [
+          "DFP Resource Rows have changed.",
+          "",
+          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
+          "",
+          "Past days keep the resource rows they had on that day.",
+          "",
+          "Any future built or published schedules for the affected location/unit will be deleted because their row layout may no longer match the new DFP resource rows.",
+          "",
+          "Continue and save these row changes?"
+        ].join("\n"),
+        "DFP Resource Rows Changed",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
+    const saved = await save(
+      hasRowChanges ? rowSavePlan.configToSave : void 0,
+      "platform-resource-pools",
+      hasRowChanges ? { successMessage: "DFP resource rows saved. Cleaning future DFP schedules..." } : void 0
+    );
     if (saved) {
+      if (hasRowChanges) {
+        const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
+        window.dispatchEvent(new CustomEvent("dfpFutureSchedulesCleared", {
+          detail: {
+            startDate: rowSavePlan.tomorrow,
+            contexts: rowSavePlan.changedContexts
+          }
+        }));
+        onShowSuccess(
+          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? "" : "s"} deleted)` : ""}.`
+        );
+      }
       setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
       setResourcePoolsUnlocked(false);
     }
@@ -71743,7 +71933,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Resource Pools" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: config.resourcePools.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared live DFP resources." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared DFP resources." })
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 pb-4", children: [
@@ -71778,7 +71968,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Resource Pools" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100", children: config.resourcePools.length })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Resources, labels and live rows" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Resources, labels and DFP rows" })
               ]
             }
           )
@@ -71910,7 +72100,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Resource Pools" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map resources to units, labels, aircraft numbering and live DFP rows." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map resources to units, labels, aircraft numbering and DFP resource rows." })
           ] }),
           showResourcePoolDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -71945,7 +72135,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           visibleResourcePoolRows.map(({ pool, index }) => {
             const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
-            const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
@@ -71971,9 +72160,9 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         pool.unitCode ? `for ${pool.unitCode}` : ""
                       ] })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-md border px-2 py-1 text-right ${runtimeEnabled ? "border-emerald-400/40 bg-emerald-500/10" : "border-gray-700 bg-gray-900"}`, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "Live DFP" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-sm font-black ${runtimeEnabled ? "text-emerald-200" : "text-gray-300"}`, children: runtimeEnabled ? "On" : "Off" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-right", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "DFP" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-emerald-200", children: "Rows" })
                     ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
@@ -72114,28 +72303,16 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       }) })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Live DFP Rows" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Turn this on when these row counts should drive the active DFP." })
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          ToggleField,
-                          {
-                            label: "Apply to Live DFP",
-                            info: "Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet.",
-                            checked: runtimeEnabled,
-                            disabled: !canEditResourcePools,
-                            onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
-                          }
-                        )
-                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "DFP Resource Rows" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "These row counts drive the DFP resource columns. Saved changes apply from tomorrow forward." })
+                      ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: pool.settings?.ftd ?? 5, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: pool.settings?.cpt ?? 4, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEditResourcePools || !runtimeEnabled, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: pool.settings?.ftd ?? 5, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: pool.settings?.cpt ?? 4, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEditResourcePools, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
                       ] })
                     ] })
                   ] })
@@ -105370,7 +105547,7 @@ const App = () => {
         poolType: activePlatformResourcePool.poolType,
         aircraftType: activePlatformResourcePool.aircraftTypeCode,
         runtimeAircraftType: activeRuntimeAircraftTypeCode,
-        appliesToV2Runtime: activePlatformResourcePool.settings?.applyToV2Runtime === true,
+        controlsDfpResourceRows: true,
         settings: activePlatformResourcePool.settings
       });
     } else {
@@ -107843,6 +108020,30 @@ const App = () => {
   }, [snapshotDates, publishedSchedules]);
   const loadedSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
   const loadingSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
+  reactExports.useEffect(() => {
+    const handleFutureSchedulesCleared = (event) => {
+      const startDate = String(event.detail?.startDate || "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return;
+      setPublishedSchedules((prev) => Object.fromEntries(
+        Object.entries(prev).filter(([scheduleDate]) => scheduleDate < startDate)
+      ));
+      setBaselineSchedules((prev) => Object.fromEntries(
+        Object.entries(prev).filter(([scheduleDate]) => getDailySnapshotDate(scheduleDate) < startDate)
+      ));
+      setSnapshotDates((prev) => prev.filter((snapshotDate) => snapshotDate < startDate));
+      Object.keys(snapshotKeysByDateRef.current).forEach((snapshotDate) => {
+        if (snapshotDate >= startDate) delete snapshotKeysByDateRef.current[snapshotDate];
+      });
+      Array.from(loadedSnapshotDates.current).forEach((snapshotKey) => {
+        if (getDailySnapshotDate(snapshotKey) >= startDate) loadedSnapshotDates.current.delete(snapshotKey);
+      });
+      Array.from(loadingSnapshotDates.current).forEach((snapshotKey) => {
+        if (getDailySnapshotDate(snapshotKey) >= startDate) loadingSnapshotDates.current.delete(snapshotKey);
+      });
+    };
+    window.addEventListener("dfpFutureSchedulesCleared", handleFutureSchedulesCleared);
+    return () => window.removeEventListener("dfpFutureSchedulesCleared", handleFutureSchedulesCleared);
+  }, []);
   const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = reactExports.useState({ status: "idle", date: "", message: "" });
   const [showDfpRetrievalNotice, setShowDfpRetrievalNotice] = reactExports.useState(false);
   reactExports.useEffect(() => {
@@ -108214,11 +108415,11 @@ const App = () => {
     (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
     [resourceDisplayNames]
   );
-  const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24);
-  const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount);
-  const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount);
-  const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4);
-  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6);
+  const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24, date);
+  const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount, date);
+  const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount, date);
+  const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4, date);
+  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6, date);
   const currentAircraftConfigState = reactExports.useMemo(() => ({
     availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
     aircraftConfigCapacities: neoAircraftConfigCapacities,

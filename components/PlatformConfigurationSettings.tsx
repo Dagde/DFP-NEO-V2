@@ -138,6 +138,9 @@ type PlatformConfig = {
 
 type SettingsVisibilityMode = 'all' | 'unit' | 'location' | 'aircraftType' | 'parentOrganisation';
 type SettingsVisibilityFilter = Exclude<SettingsVisibilityMode, 'all'>;
+const DFP_RESOURCE_ROW_KEYS = ['aircraft', 'ftd', 'cpt', 'standby', 'ground'] as const;
+type DfpResourceRowKey = typeof DFP_RESOURCE_ROW_KEYS[number];
+type DfpResourceRowsSnapshot = Record<DfpResourceRowKey, number>;
 
 type SettingsVisibilityPolicy = {
   enabled: boolean;
@@ -1356,10 +1359,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'Resource Pools') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
-    }
-    if (lowerTitle.includes('live dfp')) {
-      return 'Open Resource Pools and enable Apply to Live DFP on the pool that should drive the active DFP resource rows.';
+      return 'Open the Resource Pools section, enter non-zero counts for the DFP resource rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
     return 'Open Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.';
   }
@@ -1513,12 +1513,10 @@ const buildConfigurationHealth = (
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
       const unitRuntimePools = activeResourcePools.filter((pool) => (
-        toIdentifier(pool.unitCode) === unitCode &&
-        pool.settings?.applyToV2Runtime === true
+        toIdentifier(pool.unitCode) === unitCode
       ));
       const sharedOrLocationRuntimePools = activeResourcePools.filter((pool) => (
         toIdentifier(pool.locationCode) === locationCode &&
-        pool.settings?.applyToV2Runtime === true &&
         (!toIdentifier(pool.unitCode) || String(pool.poolType || '').trim().toLowerCase() === 'shared')
       ));
       if (unitRuntimePools.length === 0 && sharedOrLocationRuntimePools.length > 0) {
@@ -1526,7 +1524,7 @@ const buildConfigurationHealth = (
           'WARNING',
           'Unit Separation',
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} is a Fixed Crew unit without its own live DFP resource pool. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} is a Fixed Crew unit without its own DFP resource pool. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
           'Open Aircraft & Resource Pools and add or enable a unit-specific pool if this unit needs independent aircraft, simulator or trainer capacity after separation.',
           { focusSubsectionId: 'platform-resource-pools' }
@@ -1554,20 +1552,17 @@ const buildConfigurationHealth = (
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
       add('WARNING', 'Resource Pools', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
-    if (pool.settings?.applyToV2Runtime === true) {
-      const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
-        .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
-      if (totalResources <= 0) {
-        add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool is applied to the live DFP, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
-      }
+    const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
+      .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
+    if (totalResources <= 0) {
+      add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool controls DFP resource rows, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
 
-  const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
-  if (runtimePools.length === 0) {
-    add('WARNING', 'Resource Pools', 'No pool is applied to the live DFP', 'At least one resource pool should have "Apply to Live DFP" enabled so live resource counts come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
+  if (activeResourcePools.length === 0) {
+    add('WARNING', 'Resource Pools', 'No active DFP resource pool', 'At least one active resource pool is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
   } else if (!items.some((item) => item.area === 'Resource Pools' && item.severity === 'CRITICAL')) {
-    add('OK', 'Resource Pools', 'Live DFP resource pools are configured', `${runtimePools.length} active resource pool${runtimePools.length === 1 ? '' : 's'} feed the live DFP.`, 'runtime-pool-active');
+    add('OK', 'Resource Pools', 'DFP resource rows are configured', `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
   }
 
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
@@ -4472,7 +4467,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             poolType: 'Dedicated',
             status: 'ACTIVE',
             settings: {
-              applyToV2Runtime: false,
+              applyToV2Runtime: true,
               aircraftLabel: defaultAircraftLabel,
               aircraftNumberUsePrefix: true,
               aircraftNumberPrefixes: ['A54'],
@@ -4744,9 +4739,195 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateRow('resourcePools', index, {
       settings: {
         ...currentSettings,
+        applyToV2Runtime: true,
         ...changes,
       },
     });
+  };
+
+  const getLocalDateString = (offsetDays = 0): string => {
+    const dateValue = new Date();
+    dateValue.setDate(dateValue.getDate() + offsetDays);
+    const year = dateValue.getFullYear();
+    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+    const day = String(dateValue.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getResourcePoolSaveKey = (pool: any, fallbackIndex: number): string => (
+    String(pool?.id || pool?.code || `${pool?.locationCode || ''}:${pool?.unitCode || ''}:${pool?.aircraftTypeCode || ''}:${fallbackIndex}`).trim()
+  );
+
+  const normaliseDfpResourceRowsSnapshot = (settings: Record<string, any> = {}): DfpResourceRowsSnapshot => ({
+    aircraft: Math.max(0, Math.floor(Number(settings.aircraft ?? 24) || 0)),
+    ftd: Math.max(0, Math.floor(Number(settings.ftd ?? 5) || 0)),
+    cpt: Math.max(0, Math.floor(Number(settings.cpt ?? 4) || 0)),
+    standby: Math.max(0, Math.floor(Number(settings.standby ?? 4) || 0)),
+    ground: Math.max(0, Math.floor(Number(settings.ground ?? 6) || 0)),
+  });
+
+  const sameDfpResourceRows = (left: DfpResourceRowsSnapshot, right: DfpResourceRowsSnapshot): boolean => (
+    DFP_RESOURCE_ROW_KEYS.every((key) => left[key] === right[key])
+  );
+
+  const getDfpResourceRowsForDate = (pool: any, targetDate: string): DfpResourceRowsSnapshot => {
+    const settings = pool?.settings || {};
+    const history = Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
+    const matchingEntry = history.filter((entry: any) => {
+      const effectiveFrom = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
+      const effectiveTo = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+      return targetDate >= effectiveFrom && targetDate <= effectiveTo && entry?.rows && typeof entry.rows === 'object';
+    }).pop();
+    return normaliseDfpResourceRowsSnapshot(matchingEntry?.rows || settings);
+  };
+
+  const buildResourceRowSavePlan = () => {
+    const today = getLocalDateString();
+    const tomorrow = getLocalDateString(1);
+    const previousPoolsByKey = new Map(
+      loadedConfigRef.current.resourcePools.map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
+    );
+    const nextPoolsByKey = new Map(
+      config.resourcePools.map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
+    );
+    const changedContexts: Array<{ locationCode: string; unitCode: string }> = [];
+
+    const nextResourcePools = config.resourcePools.map((pool: any, index: number) => {
+      const key = getResourcePoolSaveKey(pool, index);
+      const previousPool = previousPoolsByKey.get(key);
+      const previousRows = previousPool
+        ? normaliseDfpResourceRowsSnapshot((previousPool as any).settings || {})
+        : normaliseDfpResourceRowsSnapshot({});
+      const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
+      const rowsChanged = !sameDfpResourceRows(previousRows, nextRows) || !previousPool;
+
+      if (!rowsChanged) {
+        return {
+          ...pool,
+          settings: {
+            ...(pool.settings || {}),
+            applyToV2Runtime: true,
+          },
+        };
+      }
+
+      changedContexts.push({
+        locationCode: String(pool.locationCode || (previousPool as any)?.locationCode || '').trim(),
+        unitCode: String(pool.unitCode || (previousPool as any)?.unitCode || '').trim(),
+      });
+
+      const existingHistory = Array.isArray(pool.settings?.dfpResourceRowsHistory)
+        ? [...pool.settings.dfpResourceRowsHistory]
+        : [];
+      const hasTodayHistory = existingHistory.some((entry: any) => {
+        const effectiveFrom = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
+        const effectiveTo = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+        return today >= effectiveFrom && today <= effectiveTo;
+      });
+      const nextHistory = previousPool && !hasTodayHistory
+        ? [
+          ...existingHistory,
+          {
+            effectiveFrom: '0000-01-01',
+            effectiveTo: today,
+            rows: getDfpResourceRowsForDate(previousPool, today),
+          },
+        ]
+        : existingHistory;
+
+      return {
+        ...pool,
+        settings: {
+          ...(pool.settings || {}),
+          applyToV2Runtime: true,
+          dfpResourceRowsEffectiveFrom: tomorrow,
+          dfpResourceRowsHistory: nextHistory,
+        },
+      };
+    });
+
+    loadedConfigRef.current.resourcePools.forEach((pool: any, index: number) => {
+      const key = getResourcePoolSaveKey(pool, index);
+      if (nextPoolsByKey.has(key)) return;
+      changedContexts.push({
+        locationCode: String(pool.locationCode || '').trim(),
+        unitCode: String(pool.unitCode || '').trim(),
+      });
+    });
+
+    const uniqueContexts = changedContexts.filter((context, index, contexts) => (
+      context.locationCode &&
+      contexts.findIndex((candidate) => (
+        candidate.locationCode.toUpperCase() === context.locationCode.toUpperCase() &&
+        candidate.unitCode.toUpperCase() === context.unitCode.toUpperCase()
+      )) === index
+    ));
+
+    return {
+      configToSave: {
+        ...config,
+        resourcePools: nextResourcePools,
+      },
+      changedContexts: uniqueContexts,
+      today,
+      tomorrow,
+    };
+  };
+
+  const pruneFutureSnapshotCache = (startDate: string, locationCode: string, unitCode: string) => {
+    try {
+      const locationToken = String(locationCode || '').trim().toUpperCase();
+      const unitToken = String(unitCode || '').trim().toUpperCase();
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith('dfp_snapshot_cache_'))
+        .forEach((key) => {
+          const snapshotKey = key.replace(/^dfp_snapshot_cache_/, '');
+          const snapshotDate = snapshotKey.slice(0, 10);
+          const upperKey = snapshotKey.toUpperCase();
+          if (snapshotDate < startDate) return;
+          if (unitToken && upperKey.endsWith(`__${locationToken}__${unitToken}`)) {
+            localStorage.removeItem(key);
+          } else if (!unitToken && (upperKey.endsWith(`__${locationToken}`) || upperKey.includes(`__${locationToken}__`))) {
+            localStorage.removeItem(key);
+          }
+        });
+    } catch {
+      // Cache cleanup is best effort. The database deletion is authoritative.
+    }
+  };
+
+  const deleteFutureSnapshotsForResourceRowChanges = async (
+    contexts: Array<{ locationCode: string; unitCode: string }>,
+    startDate: string,
+  ): Promise<number> => {
+    if (contexts.length === 0 || isSetupTestMode()) return 0;
+    const sessionToken = localStorage.getItem('dfp_session_token');
+    let deletedCount = 0;
+
+    for (const context of contexts) {
+      pruneFutureSnapshotCache(startDate, context.locationCode, context.unitCode);
+      try {
+        const res = await fetch(`${getApiBase()}/daily-snapshot/future`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+          },
+          body: JSON.stringify({
+            startDate,
+            school: context.locationCode,
+            unit: context.unitCode,
+          }),
+        });
+        if (!res.ok) continue;
+        const body = await res.json().catch(() => ({}));
+        deletedCount += Number(body.deleted || 0) || 0;
+      } catch {
+        // Do not fail the settings save because a cleanup call failed.
+      }
+    }
+
+    return deletedCount;
   };
 
   const updateAircraftNumberPrefix = (poolIndex: number, prefixIndex: number, value: string) => {
@@ -4965,8 +5146,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-resource-pools');
+    const rowSavePlan = buildResourceRowSavePlan();
+    const hasRowChanges = rowSavePlan.changedContexts.length > 0;
+    if (hasRowChanges) {
+      const confirmed = await showDarkConfirm(
+        [
+          'DFP Resource Rows have changed.',
+          '',
+          `The current day is not affected. The new row layout applies from ${rowSavePlan.tomorrow} forward.`,
+          '',
+          'Past days keep the resource rows they had on that day.',
+          '',
+          'Any future built or published schedules for the affected location/unit will be deleted because their row layout may no longer match the new DFP resource rows.',
+          '',
+          'Continue and save these row changes?',
+        ].join('\n'),
+        'DFP Resource Rows Changed',
+        'warning',
+      );
+      if (!confirmed) return;
+    }
+
+    const saved = await save(
+      hasRowChanges ? rowSavePlan.configToSave : undefined,
+      'platform-resource-pools',
+      hasRowChanges
+        ? { successMessage: 'DFP resource rows saved. Cleaning future DFP schedules...' }
+        : undefined,
+    );
     if (saved) {
+      if (hasRowChanges) {
+        const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
+        window.dispatchEvent(new CustomEvent('dfpFutureSchedulesCleared', {
+          detail: {
+            startDate: rowSavePlan.tomorrow,
+            contexts: rowSavePlan.changedContexts,
+          },
+        }));
+        onShowSuccess(
+          `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSavePlan.tomorrow} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? '' : 's'} deleted)` : ''}.`
+        );
+      }
       setNewAircraftTypeVisibleIds(new Set());
       setResourcePoolsUnlocked(false);
     }
@@ -7504,7 +7724,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Resource Pools</div>
               <div className="mt-1 text-lg font-black text-cyan-100">{config.resourcePools.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Dedicated or shared live DFP resources.</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Dedicated or shared DFP resources.</div>
             </div>
           </div>
         </div>
@@ -7542,7 +7762,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <span>Resource Pools</span>
                 <span className="rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100">{config.resourcePools.length}</span>
               </span>
-              <span className="mt-1 block text-[11px] leading-relaxed">Resources, labels and live rows</span>
+              <span className="mt-1 block text-[11px] leading-relaxed">Resources, labels and DFP rows</span>
             </button>
           </div>
           {resourcePoolActiveTab === 'aircraftTypes' ? (
@@ -7674,7 +7894,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="space-y-3" role="tabpanel">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Resource Pools</h4>
-              <p className="mt-1 text-xs text-gray-500">Map resources to units, labels, aircraft numbering and live DFP rows.</p>
+              <p className="mt-1 text-xs text-gray-500">Map resources to units, labels, aircraft numbering and DFP resource rows.</p>
             </div>
             {showResourcePoolDeletePanel && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
@@ -7708,7 +7928,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             {visibleResourcePoolRows.map(({ pool, index }) => {
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
-              const runtimeEnabled = pool.settings?.applyToV2Runtime === true;
               return (
                 <div
                   key={pool.id || `platform-resource-pool-${index}`}
@@ -7732,9 +7951,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         {pool.poolType || 'Dedicated'} pool {pool.unitCode ? `for ${pool.unitCode}` : ''}
                       </div>
                     </div>
-                    <div className={`rounded-md border px-2 py-1 text-right ${runtimeEnabled ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-gray-700 bg-gray-900'}`}>
-                      <div className="text-[9px] font-black uppercase tracking-wide text-gray-500">Live DFP</div>
-                      <div className={`text-sm font-black ${runtimeEnabled ? 'text-emerald-200' : 'text-gray-300'}`}>{runtimeEnabled ? 'On' : 'Off'}</div>
+                    <div className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-right">
+                      <div className="text-[9px] font-black uppercase tracking-wide text-gray-500">DFP</div>
+                      <div className="text-sm font-black text-emerald-200">Rows</div>
                     </div>
                   </div>
 
@@ -7880,23 +8099,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className={resourceSectionPanelClass}>
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
-                          <div className={resourceSectionPanelTitleClass}>Live DFP Rows</div>
-                          <div className={resourceSectionPanelHintClass}>Turn this on when these row counts should drive the active DFP.</div>
+                          <div className={resourceSectionPanelTitleClass}>DFP Resource Rows</div>
+                          <div className={resourceSectionPanelHintClass}>These row counts drive the DFP resource columns. Saved changes apply from tomorrow forward.</div>
                         </div>
-                        <ToggleField
-                          label="Apply to Live DFP"
-                          info="Turn this on when you want the DFP to use this pool's aircraft, simulator, trainer, standby and ground row numbers. Leave it off if you are only setting up the pool and do not want it to affect the live schedule yet."
-                          checked={runtimeEnabled}
-                          disabled={!canEditResourcePools}
-                          onChange={(checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })}
-                        />
                       </div>
                       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        <NumberField label="Aircraft" value={pool.settings?.aircraft ?? 24} disabled={!canEditResourcePools || !runtimeEnabled} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
-                        <NumberField label="Simulator" value={pool.settings?.ftd ?? 5} disabled={!canEditResourcePools || !runtimeEnabled} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
-                        <NumberField label="Trainer" value={pool.settings?.cpt ?? 4} disabled={!canEditResourcePools || !runtimeEnabled} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
-                        <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEditResourcePools || !runtimeEnabled} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
-                        <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEditResourcePools || !runtimeEnabled} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                        <NumberField label="Aircraft" value={pool.settings?.aircraft ?? 24} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                        <NumberField label="Simulator" value={pool.settings?.ftd ?? 5} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                        <NumberField label="Trainer" value={pool.settings?.cpt ?? 4} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                        <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
+                        <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                       </div>
                     </div>
                   </div>
