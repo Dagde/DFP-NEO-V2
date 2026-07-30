@@ -1445,7 +1445,7 @@ const PLATFORM_PERMISSION_LABELS = {
   'staff.currency.edit': 'Edit staff currencies',
   'trainee.roster.view': 'View trainee roster',
   'trainee.profile.own': 'If trainee, view own profile',
-  'trainee.profile.others': 'View other trainee profiles',
+  'trainee.profile.others': "View other trainees' profiles",
   'trainee.pt051.own': 'If trainee, view own training reports',
   'trainee.pt051.others': "View other trainees' training reports",
   'trainee.pt051.edit': 'Edit training reports',
