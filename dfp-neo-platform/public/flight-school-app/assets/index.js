@@ -66945,6 +66945,7 @@ const PlatformConfigurationSettings = ({
   const pendingResourcePoolScrollIdRef = reactExports.useRef(null);
   const standardCrewCompositionRef = reactExports.useRef(null);
   const resourcePoolExitPromptOpenRef = reactExports.useRef(false);
+  const resourcePoolEditBaselineRef = reactExports.useRef(null);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
@@ -69298,11 +69299,16 @@ This permanently removes the organisation record from platform configuration and
   const normaliseDfpResourceRowsHistory = (settings = {}) => Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
   const sameDfpResourceRowsHistory = (leftSettings = {}, rightSettings = {}) => JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings));
   const getEditableDfpResourceRows = (pool) => getDfpResourceRowsForDate(pool, getLocalDateString2(1));
-  const buildResourceRowSavePlan = (candidateConfig = config) => {
+  const clonePlatformConfigForResourceRowBaseline = (sourceConfig) => JSON.parse(JSON.stringify(sourceConfig));
+  const enterResourcePoolsEditMode = () => {
+    resourcePoolEditBaselineRef.current = clonePlatformConfigForResourceRowBaseline(loadedConfigRef.current);
+    setResourcePoolsUnlocked(true);
+  };
+  const buildResourceRowSavePlan = (candidateConfig = config, baselineConfig = resourcePoolEditBaselineRef.current || loadedConfigRef.current) => {
     const today = getLocalDateString2();
     const tomorrow = getLocalDateString2(1);
     const previousPoolsByKey = new Map(
-      loadedConfigRef.current.resourcePools.map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
+      (baselineConfig.resourcePools || []).map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
     );
     const nextPoolsByKey = new Map(
       (candidateConfig.resourcePools || []).map((pool, index) => [getResourcePoolSaveKey(pool, index), pool])
@@ -69369,7 +69375,7 @@ This permanently removes the organisation record from platform configuration and
         }
       };
     });
-    loadedConfigRef.current.resourcePools.forEach((pool, index) => {
+    (baselineConfig.resourcePools || []).forEach((pool, index) => {
       const key = getResourcePoolSaveKey(pool, index);
       if (nextPoolsByKey.has(key)) return;
       changedContexts.push({
@@ -69533,7 +69539,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     try {
       localStorage.setItem("dfp_resource_rows_last_save_attempt_trace", JSON.stringify({
         savedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        protectionVersion: "CCH 3.256",
+        protectionVersion: "CCH 3.257",
         restoreSection: restoreSection || null,
         canEdit,
         skippedResourceRowProtection: !!options?.skipResourceRowProtection,
@@ -69589,7 +69595,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       try {
         localStorage.setItem("dfp_resource_rows_last_save_trace", JSON.stringify({
           savedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          protectionVersion: "CCH 3.256",
+          protectionVersion: "CCH 3.257",
           today: rowSavePlan.today,
           tomorrow: rowSavePlan.tomorrow,
           changedContexts: rowSavePlan.changedContexts,
@@ -69721,6 +69727,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     if (saved) {
       setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
       setResourcePoolsUnlocked(false);
+      resourcePoolEditBaselineRef.current = null;
     }
   };
   const saveCrewCompositionAndExitEdit = async () => {
@@ -69889,6 +69896,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const exitResourcePoolsEditMode = async () => {
     if (!resourcePoolsDirty) {
       setResourcePoolsUnlocked(false);
+      resourcePoolEditBaselineRef.current = null;
       return;
     }
     if (resourcePoolExitPromptOpenRef.current) return;
@@ -69910,6 +69918,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     }));
     setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
     setResourcePoolsUnlocked(false);
+    resourcePoolEditBaselineRef.current = null;
   };
   reactExports.useEffect(() => {
     if (!resourcePoolsUnlocked || !resourcePoolsDirty) return;
@@ -71967,7 +71976,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             "button",
             {
               type: "button",
-              onClick: () => setResourcePoolsUnlocked(true),
+              onClick: enterResourcePoolsEditMode,
               className: platformActionButtonClass,
               children: "Edit"
             }
@@ -108532,7 +108541,7 @@ const App = () => {
     const poolsToReport = contextPools.length ? contextPools : activePlatformResourcePool ? [activePlatformResourcePool] : pools.slice(0, 10);
     return {
       reportType: "DFP resource row diagnostics",
-      diagnosticVersion: "CCH 3.256",
+      diagnosticVersion: "CCH 3.257",
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,

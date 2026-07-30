@@ -26259,7 +26259,7 @@ const App: React.FC = () => {
 
         return {
             reportType: 'DFP resource row diagnostics',
-            diagnosticVersion: 'CCH 3.256',
+            diagnosticVersion: 'CCH 3.257',
             generatedAt: new Date().toISOString(),
             url: window.location.href,
             userAgent: navigator.userAgent,

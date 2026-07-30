@@ -1863,6 +1863,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const pendingResourcePoolScrollIdRef = useRef<string | null>(null);
   const standardCrewCompositionRef = useRef<HTMLDivElement | null>(null);
   const resourcePoolExitPromptOpenRef = useRef(false);
+  const resourcePoolEditBaselineRef = useRef<PlatformConfig | null>(null);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
@@ -4806,11 +4807,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     getDfpResourceRowsForDate(pool, getLocalDateString(1))
   );
 
-  const buildResourceRowSavePlan = (candidateConfig: PlatformConfig = config) => {
+  const clonePlatformConfigForResourceRowBaseline = (sourceConfig: PlatformConfig): PlatformConfig => (
+    JSON.parse(JSON.stringify(sourceConfig))
+  );
+
+  const enterResourcePoolsEditMode = () => {
+    resourcePoolEditBaselineRef.current = clonePlatformConfigForResourceRowBaseline(loadedConfigRef.current);
+    setResourcePoolsUnlocked(true);
+  };
+
+  const buildResourceRowSavePlan = (
+    candidateConfig: PlatformConfig = config,
+    baselineConfig: PlatformConfig = resourcePoolEditBaselineRef.current || loadedConfigRef.current,
+  ) => {
     const today = getLocalDateString();
     const tomorrow = getLocalDateString(1);
     const previousPoolsByKey = new Map(
-      loadedConfigRef.current.resourcePools.map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
+      (baselineConfig.resourcePools || []).map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
     );
     const nextPoolsByKey = new Map(
       (candidateConfig.resourcePools || []).map((pool: any, index: number) => [getResourcePoolSaveKey(pool, index), pool])
@@ -4895,7 +4908,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       };
     });
 
-    loadedConfigRef.current.resourcePools.forEach((pool: any, index: number) => {
+    (baselineConfig.resourcePools || []).forEach((pool: any, index: number) => {
       const key = getResourcePoolSaveKey(pool, index);
       if (nextPoolsByKey.has(key)) return;
       changedContexts.push({
@@ -5106,7 +5119,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     try {
       localStorage.setItem('dfp_resource_rows_last_save_attempt_trace', JSON.stringify({
         savedAt: new Date().toISOString(),
-        protectionVersion: 'CCH 3.256',
+        protectionVersion: 'CCH 3.257',
         restoreSection: restoreSection || null,
         canEdit,
         skippedResourceRowProtection: !!options?.skipResourceRowProtection,
@@ -5163,7 +5176,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       try {
         localStorage.setItem('dfp_resource_rows_last_save_trace', JSON.stringify({
           savedAt: new Date().toISOString(),
-          protectionVersion: 'CCH 3.256',
+          protectionVersion: 'CCH 3.257',
           today: rowSavePlan.today,
           tomorrow: rowSavePlan.tomorrow,
           changedContexts: rowSavePlan.changedContexts,
@@ -5305,6 +5318,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (saved) {
       setNewAircraftTypeVisibleIds(new Set());
       setResourcePoolsUnlocked(false);
+      resourcePoolEditBaselineRef.current = null;
     }
   };
 
@@ -5506,6 +5520,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const exitResourcePoolsEditMode = async () => {
     if (!resourcePoolsDirty) {
       setResourcePoolsUnlocked(false);
+      resourcePoolEditBaselineRef.current = null;
       return;
     }
     if (resourcePoolExitPromptOpenRef.current) return;
@@ -5527,6 +5542,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
     setNewAircraftTypeVisibleIds(new Set());
     setResourcePoolsUnlocked(false);
+    resourcePoolEditBaselineRef.current = null;
   };
 
   useEffect(() => {
@@ -7821,7 +7837,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ) : (
                 <button
                   type="button"
-                  onClick={() => setResourcePoolsUnlocked(true)}
+                  onClick={enterResourcePoolsEditMode}
                   className={platformActionButtonClass}
                 >
                   Edit
