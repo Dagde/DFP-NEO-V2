@@ -39,8 +39,8 @@ const ThemeContext = reactExports.createContext({
 const ThemeProvider = ({ children }) => {
   const [theme, setThemeState] = reactExports.useState(() => {
     try {
-      const saved = localStorage.getItem("app-theme");
-      return saved === "light" || saved === "dark" ? saved : "dark";
+      const saved2 = localStorage.getItem("app-theme");
+      return saved2 === "light" || saved2 === "dark" ? saved2 : "dark";
     } catch {
       return "dark";
     }
@@ -22284,8 +22284,8 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
     }
   };
   const handleManualSaveAndExit = async () => {
-    const saved = await handleSave(false);
-    if (saved) {
+    const saved2 = await handleSave(false);
+    if (saved2) {
       onBack();
     }
   };
@@ -35344,9 +35344,9 @@ const normaliseTafLocationCodes = (codes = []) => codes.map((code) => String(cod
 const normaliseTafLocationDraft = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
 const readSavedTafLocations = () => {
   try {
-    const saved = localStorage.getItem("tafLocations");
-    if (!saved) return null;
-    const parsed = JSON.parse(saved);
+    const saved2 = localStorage.getItem("tafLocations");
+    if (!saved2) return null;
+    const parsed = JSON.parse(saved2);
     return Array.isArray(parsed) ? normaliseTafLocationCodes(parsed) : null;
   } catch {
     return null;
@@ -39279,7 +39279,7 @@ const PrioritiesView = ({
   const fixedCrewTrainingStreams = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return [];
     const savedStreams = normaliseFixedCrewTrainingPriorityWeightsToStep(fixedCrewTrainingPriorities);
-    const saved = new Map(savedStreams.map((stream) => [stream.key, stream]));
+    const saved2 = new Map(savedStreams.map((stream) => [stream.key, stream]));
     const savedOrder = new Map(savedStreams.map((stream, index) => [stream.key, index]));
     const grouped = /* @__PURE__ */ new Map();
     syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).forEach((item) => {
@@ -39295,7 +39295,7 @@ const PrioritiesView = ({
         existing.eventCount += 1;
         return;
       }
-      const savedStream = saved.get(key);
+      const savedStream = saved2.get(key);
       grouped.set(key, {
         key,
         kind,
@@ -45508,7 +45508,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
   const { thresholds } = useThresholds();
   const [local, setLocal] = React.useState({ ...thresholds });
   const [saving, setSaving] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
+  const [saved2, setSaved] = React.useState(false);
   const [error, setError] = React.useState(null);
   const set = (key, val) => {
     const n = parseFloat(val);
@@ -45831,8 +45831,8 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
               {
                 onClick: handleSave,
                 disabled: saving,
-                className: `px-5 py-2 rounded-md text-sm font-semibold transition-all ${saved ? "bg-emerald-600 text-white" : saving ? "bg-gray-600 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"}`,
-                children: saved ? "✓ Saved" : saving ? "Saving…" : "Save Thresholds"
+                className: `px-5 py-2 rounded-md text-sm font-semibold transition-all ${saved2 ? "bg-emerald-600 text-white" : saving ? "bg-gray-600 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"}`,
+                children: saved2 ? "✓ Saved" : saving ? "Saving…" : "Save Thresholds"
               }
             )
           ] })
@@ -56388,9 +56388,9 @@ const SyllabusView = ({
           prerequisitesFlying: remapList(sourceItem.prerequisitesFlying),
           isActive: true
         };
-        const saved = await createSyllabusItem$1(copiedItem, `Cross-loaded ${activeCollectionNoun} from ${sourceUnit || "another unit"} into ${activeUnitNormalised}`);
-        savedItems.push(saved);
-        if (onAddItem) onAddItem(saved);
+        const saved2 = await createSyllabusItem$1(copiedItem, `Cross-loaded ${activeCollectionNoun} from ${sourceUnit || "another unit"} into ${activeUnitNormalised}`);
+        savedItems.push(saved2);
+        if (onAddItem) onAddItem(saved2);
       }
       clearSyllabusCache();
       setSelectedItem(savedItems[0] || null);
@@ -56544,9 +56544,9 @@ const SyllabusView = ({
           prerequisitesFlying: remapList(sourceItem.prerequisitesFlying),
           isActive: true
         };
-        const saved = await createSyllabusItem$1(copiedItem, `Copied Training Package ${source.title} into ${activeUnitNormalised}`);
-        savedItems.push(saved);
-        if (onAddItem) onAddItem(saved);
+        const saved2 = await createSyllabusItem$1(copiedItem, `Copied Training Package ${source.title} into ${activeUnitNormalised}`);
+        savedItems.push(saved2);
+        if (onAddItem) onAddItem(saved2);
       }
       setSelectedCourseType(targetPackageCode);
       setSelectedItem(savedItems[0] || null);
@@ -56667,10 +56667,10 @@ const SyllabusView = ({
     setSelectedItem(newItem);
     setEditedItem(JSON.parse(JSON.stringify(newItem)));
     setIsEditing(true);
-    createSyllabusItem$1({ ...newItem, id: void 0 }, `New event added via ${activeCollectionTitle} editor`).then((saved) => {
-      if (onAddItem) onAddItem(saved);
-      setSelectedItem(saved);
-      setEditedItem(JSON.parse(JSON.stringify(saved)));
+    createSyllabusItem$1({ ...newItem, id: void 0 }, `New event added via ${activeCollectionTitle} editor`).then((saved2) => {
+      if (onAddItem) onAddItem(saved2);
+      setSelectedItem(saved2);
+      setEditedItem(JSON.parse(JSON.stringify(saved2)));
     }).catch((err) => console.warn("Could not pre-create event in DB:", err));
   };
   const handleEventTileDrop = async (targetId, position = "before") => {
@@ -56690,8 +56690,8 @@ const SyllabusView = ({
         sortOrder: (index + 1) * 10
       })).filter(({ item, sortOrder }) => Number(item.sortOrder) !== sortOrder);
       const savedItems = await Promise.all(updates.map(async ({ item, sortOrder }) => {
-        const saved = await updateSyllabusItem(item.id, { sortOrder }, `Reordered ${activeCollectionTitle} events`);
-        return { ...item, ...saved, id: item.id, sortOrder };
+        const saved2 = await updateSyllabusItem(item.id, { sortOrder }, `Reordered ${activeCollectionTitle} events`);
+        return { ...item, ...saved2, id: item.id, sortOrder };
       }));
       savedItems.forEach(onUpdateItem);
       const selectedSaved = savedItems.find((item) => item.id === selectedItem?.id);
@@ -67003,8 +67003,8 @@ const PlatformConfigurationSettings = ({
     }
   };
   const saveRankTerminology = async () => {
-    const saved = await save(void 0, "platform-rank-terminology");
-    if (saved) setRankTerminologyUnlocked(false);
+    const saved2 = await save(void 0, "platform-rank-terminology");
+    if (saved2) setRankTerminologyUnlocked(false);
   };
   const rankTerminologyButtonClass = "rounded border border-gray-500 bg-gray-300 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
   const rankTerminologySectionActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
@@ -67651,8 +67651,8 @@ const PlatformConfigurationSettings = ({
     }
   };
   const saveOrganisationStructure = async () => {
-    const saved = await save(void 0, "platform-organisation", { reloadPage: false, successMessage: "Organisation structure saved." });
-    if (saved) {
+    const saved2 = await save(void 0, "platform-organisation", { reloadPage: false, successMessage: "Organisation structure saved." });
+    if (saved2) {
       setOrganisationStructureOptionDrafts({});
       setOrganisationStructureUnlocked(false);
     }
@@ -67714,8 +67714,8 @@ This permanently removes the organisation record from platform configuration and
       licenses: config.licenses.map((license) => String(license.organisationCode || "").trim() === organisationCode ? { ...license, organisationCode: "" } : license),
       userAccess: config.userAccess.map((access) => String(access.organisationCode || "").trim() === organisationCode ? { ...access, organisationCode: "" } : access)
     };
-    const saved = await save(nextConfig, "platform-organisation", { reloadPage: false, successMessage: `Organisation "${organisationLabel}" deleted.` });
-    if (saved) {
+    const saved2 = await save(nextConfig, "platform-organisation", { reloadPage: false, successMessage: `Organisation "${organisationLabel}" deleted.` });
+    if (saved2) {
       setConfig(nextConfig);
       setOrganisationStructureOptionDrafts({});
       setOrganisationStructureImportError("");
@@ -68317,11 +68317,11 @@ This permanently removes the organisation record from platform configuration and
     setConfig(configToSave);
     setTrainingReportNameDrafts({});
     setTrainingReportTextDrafts({});
-    const saved = await save(configToSave, "platform-training-report-template", {
+    const saved2 = await save(configToSave, "platform-training-report-template", {
       reloadPage: false,
       successMessage: "Training Report settings saved."
     });
-    if (saved) {
+    if (saved2) {
       setTrainingReportTemplateUnlocked(false);
     }
   };
@@ -68971,8 +68971,8 @@ This permanently removes the organisation record from platform configuration and
         settings: removedCode ? rewriteUnitCodesInSettings(organisation.settings || {}, removedCode, null) : organisation.settings
       }))
     };
-    const saved = await save(nextConfig, "platform-units", { successMessage: `Unit ${unitLabel} deleted.` });
-    if (saved) {
+    const saved2 = await save(nextConfig, "platform-units", { successMessage: `Unit ${unitLabel} deleted.` });
+    if (saved2) {
       setConfig(nextConfig);
       setSelectedUnitIndex(Math.max(0, unitIndex - 1));
       setEditingUnitIndex(null);
@@ -69720,16 +69720,16 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     }
   };
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-resource-pools");
-    if (saved) {
+    const saved2 = await save(void 0, "platform-resource-pools");
+    if (saved2) {
       setNewAircraftTypeVisibleIds(/* @__PURE__ */ new Set());
       setResourcePoolsUnlocked(false);
       resourcePoolEditBaselineRef.current = null;
     }
   };
   const saveCrewCompositionAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-crew-composition");
-    if (saved) setCrewCompositionUnlocked(false);
+    const saved2 = await save(void 0, "platform-crew-composition");
+    if (saved2) setCrewCompositionUnlocked(false);
   };
   const saveTaskProfilesAndExitEdit = async () => {
     const taskProfilesFromDrafts = OPERATIONAL_MODEL_OPTIONS.reduce((profiles, option) => ({
@@ -69752,22 +69752,22 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       }))
     };
-    const saved = await save(nextConfig, "platform-task-profiles");
-    if (saved) {
+    const saved2 = await save(nextConfig, "platform-task-profiles");
+    if (saved2) {
       setTaskProfilesUnlocked(false);
       setTaskProfileDrafts({});
       setTaskProfileAbbreviationDrafts({});
     }
   };
   const saveCurrencyProfilesAndExitEdit = async () => {
-    const saved = await save(void 0, "platform-currency-profiles");
-    if (saved) setCrewCompositionUnlocked(false);
+    const saved2 = await save(void 0, "platform-currency-profiles");
+    if (saved2) setCrewCompositionUnlocked(false);
   };
   const isSectionEditActive = (sectionId) => !sectionOnly || sectionEditUnlocked[sectionId] === true;
   const canEditSection = (sectionId) => canEdit && isSectionEditActive(sectionId);
   const saveSectionAndExitEdit = async (sectionId) => {
-    const saved = await save(void 0, sectionId);
-    if (saved) {
+    const saved2 = await save(void 0, sectionId);
+    if (saved2) {
       setSectionEditUnlocked((prev) => ({ ...prev, [sectionId]: false }));
     }
   };
@@ -70760,8 +70760,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 type: "button",
                 onClick: () => {
                   if (editingUnitIndex !== null) {
-                    void save(void 0, "platform-units").then((saved) => {
-                      if (saved) setEditingUnitIndex(null);
+                    void save(void 0, "platform-units").then((saved2) => {
+                      if (saved2) setEditingUnitIndex(null);
                     });
                     return;
                   }
@@ -76431,35 +76431,35 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const [crewLogOverride, setCrewLogOverride] = reactExports.useState({});
   const [captLogTouched, setCaptLogTouched] = reactExports.useState(/* @__PURE__ */ new Set());
   const [crewLogTouched, setCrewLogTouched] = reactExports.useState(/* @__PURE__ */ new Set());
-  function applySavedFormState(saved, source) {
-    if (!saved || typeof saved !== "object") return;
-    const savedAircraftNumber = String(saved.aircraftNumber || "").trim();
+  function applySavedFormState(saved2, source) {
+    if (!saved2 || typeof saved2 !== "object") return;
+    const savedAircraftNumber = String(saved2.aircraftNumber || "").trim();
     const scheduledAircraftNumberValue = String(event.aircraftNumber || "").trim();
     const aircraftNumberToRestore = scheduledAircraftNumberValue || savedAircraftNumber;
     const parsedAircraftNumberToRestore = aircraftNumberToRestore ? parseAircraftNumber(aircraftNumberToRestore, aircraftNumberSettings) : null;
-    if (saved.result != null && ["DCO", "DPCO", "DNCO", ""].includes(saved.result)) {
-      setResult(saved.result || "");
+    if (saved2.result != null && ["DCO", "DPCO", "DNCO", ""].includes(saved2.result)) {
+      setResult(saved2.result || "");
     }
     if (parsedAircraftNumberToRestore) {
       setAircraftNumber(parsedAircraftNumberToRestore.number || "001");
       setAircraftNumberPrefix(parsedAircraftNumberToRestore.prefix || aircraftNumberSettings.defaultPrefix);
     }
-    if (saved.from) setFrom(saved.from);
-    if (saved.to) setTo(saved.to);
-    if (saved.isFlightLog != null) setIsFlightLog(!!saved.isFlightLog);
-    if (saved.isFtdLog != null) setIsFtdLog(!!saved.isFtdLog);
-    if (saved.isSolo != null) setIsSolo(!!saved.isSolo);
-    if (saved.isDual != null) setIsDual(!!saved.isDual);
-    if (saved.duty) setDuty(stripPostFlightDutyRoutePrefix(saved.duty));
-    if (saved.takeoffTime) setTakeoffTime(saved.takeoffTime);
-    if (saved.landTime) setLandTime(saved.landTime);
-    if (saved.captainTime != null) setCaptainTime(String(saved.captainTime));
-    if (saved.instructorTime != null) setInstructorTime(String(saved.instructorTime));
-    if (saved.nightTime != null) setNightTime(String(saved.nightTime));
-    if (saved.ifActualTime != null) setIfActualTime(String(saved.ifActualTime));
-    if (saved.ifSimTime != null) setIfSimTime(String(saved.ifSimTime));
-    if (saved.ineffectiveTime != null) setIneffectiveTime(String(saved.ineffectiveTime));
-    const approaches = saved.approaches || {};
+    if (saved2.from) setFrom(saved2.from);
+    if (saved2.to) setTo(saved2.to);
+    if (saved2.isFlightLog != null) setIsFlightLog(!!saved2.isFlightLog);
+    if (saved2.isFtdLog != null) setIsFtdLog(!!saved2.isFtdLog);
+    if (saved2.isSolo != null) setIsSolo(!!saved2.isSolo);
+    if (saved2.isDual != null) setIsDual(!!saved2.isDual);
+    if (saved2.duty) setDuty(stripPostFlightDutyRoutePrefix(saved2.duty));
+    if (saved2.takeoffTime) setTakeoffTime(saved2.takeoffTime);
+    if (saved2.landTime) setLandTime(saved2.landTime);
+    if (saved2.captainTime != null) setCaptainTime(String(saved2.captainTime));
+    if (saved2.instructorTime != null) setInstructorTime(String(saved2.instructorTime));
+    if (saved2.nightTime != null) setNightTime(String(saved2.nightTime));
+    if (saved2.ifActualTime != null) setIfActualTime(String(saved2.ifActualTime));
+    if (saved2.ifSimTime != null) setIfSimTime(String(saved2.ifSimTime));
+    if (saved2.ineffectiveTime != null) setIneffectiveTime(String(saved2.ineffectiveTime));
+    const approaches = saved2.approaches || {};
     const restoreApproach = (value, setChecked, setCount) => {
       const count = Number(value || 0);
       setChecked(count > 0);
@@ -76469,40 +76469,40 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     restoreApproach(approaches.rnp, setRnpChecked, setRnpCount);
     restoreApproach(approaches.tacan, setTacanChecked, setTacanCount);
     restoreApproach(approaches.vor, setVorChecked, setVorCount);
-    if (saved.approachAssignments && typeof saved.approachAssignments === "object") {
+    if (saved2.approachAssignments && typeof saved2.approachAssignments === "object") {
       setApproachAssignments({
-        ils: normalisePostFlightName(saved.approachAssignments.ils),
-        rnp: normalisePostFlightName(saved.approachAssignments.rnp),
-        tacan: normalisePostFlightName(saved.approachAssignments.tacan),
-        vor: normalisePostFlightName(saved.approachAssignments.vor)
+        ils: normalisePostFlightName(saved2.approachAssignments.ils),
+        rnp: normalisePostFlightName(saved2.approachAssignments.rnp),
+        tacan: normalisePostFlightName(saved2.approachAssignments.tacan),
+        vor: normalisePostFlightName(saved2.approachAssignments.vor)
       });
     }
-    if (saved.currencyUpdates && typeof saved.currencyUpdates === "object") {
-      setCurrencyValues(saved.currencyUpdates);
-    } else if (saved.currencyValues && typeof saved.currencyValues === "object") {
-      setCurrencyValues(saved.currencyValues);
+    if (saved2.currencyUpdates && typeof saved2.currencyUpdates === "object") {
+      setCurrencyValues(saved2.currencyUpdates);
+    } else if (saved2.currencyValues && typeof saved2.currencyValues === "object") {
+      setCurrencyValues(saved2.currencyValues);
     }
-    if (saved.captainLog && typeof saved.captainLog === "object") setCaptLogOverride(saved.captainLog);
-    if (saved.crewLog && typeof saved.crewLog === "object") setCrewLogOverride(saved.crewLog);
+    if (saved2.captainLog && typeof saved2.captainLog === "object") setCaptLogOverride(saved2.captainLog);
+    if (saved2.crewLog && typeof saved2.crewLog === "object") setCrewLogOverride(saved2.crewLog);
     initialFormState.current = {
-      result: saved.result != null ? saved.result || "" : result,
+      result: saved2.result != null ? saved2.result || "" : result,
       aircraftNumber: parsedAircraftNumberToRestore ? parsedAircraftNumberToRestore.number || "001" : aircraftNumber,
       aircraftNumberPrefix: parsedAircraftNumberToRestore ? parsedAircraftNumberToRestore.prefix || aircraftNumberSettings.defaultPrefix : aircraftNumberPrefix,
-      from: saved.from || from,
-      to: saved.to || to,
-      isFlightLog: saved.isFlightLog ?? isFlightLog,
-      isFtdLog: saved.isFtdLog ?? isFtdLog,
-      isSolo: saved.isSolo ?? isSolo,
-      isDual: saved.isDual ?? isDual,
-      duty: stripPostFlightDutyRoutePrefix(saved.duty || duty),
-      takeoffTime: saved.takeoffTime || takeoffTime,
-      landTime: saved.landTime || landTime,
-      captainTime: saved.captainTime != null ? String(saved.captainTime) : captainTime,
-      instructorTime: saved.instructorTime != null ? String(saved.instructorTime) : instructorTime,
-      nightTime: saved.nightTime != null ? String(saved.nightTime) : nightTime,
-      ifActualTime: saved.ifActualTime != null ? String(saved.ifActualTime) : ifActualTime,
-      ifSimTime: saved.ifSimTime != null ? String(saved.ifSimTime) : ifSimTime,
-      ineffectiveTime: saved.ineffectiveTime != null ? String(saved.ineffectiveTime) : ineffectiveTime,
+      from: saved2.from || from,
+      to: saved2.to || to,
+      isFlightLog: saved2.isFlightLog ?? isFlightLog,
+      isFtdLog: saved2.isFtdLog ?? isFtdLog,
+      isSolo: saved2.isSolo ?? isSolo,
+      isDual: saved2.isDual ?? isDual,
+      duty: stripPostFlightDutyRoutePrefix(saved2.duty || duty),
+      takeoffTime: saved2.takeoffTime || takeoffTime,
+      landTime: saved2.landTime || landTime,
+      captainTime: saved2.captainTime != null ? String(saved2.captainTime) : captainTime,
+      instructorTime: saved2.instructorTime != null ? String(saved2.instructorTime) : instructorTime,
+      nightTime: saved2.nightTime != null ? String(saved2.nightTime) : nightTime,
+      ifActualTime: saved2.ifActualTime != null ? String(saved2.ifActualTime) : ifActualTime,
+      ifSimTime: saved2.ifSimTime != null ? String(saved2.ifSimTime) : ifSimTime,
+      ineffectiveTime: saved2.ineffectiveTime != null ? String(saved2.ineffectiveTime) : ineffectiveTime,
       ilsChecked: Number(approaches.ils || 0) > 0,
       ilsCount: Number(approaches.ils || 0),
       rnpChecked: Number(approaches.rnp || 0) > 0,
@@ -76511,12 +76511,12 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       tacanCount: Number(approaches.tacan || 0),
       vorChecked: Number(approaches.vor || 0) > 0,
       vorCount: Number(approaches.vor || 0),
-      approachAssignments: saved.approachAssignments || approachAssignments,
-      currencyValues: saved.currencyUpdates || saved.currencyValues || currencyValues
+      approachAssignments: saved2.approachAssignments || approachAssignments,
+      currencyValues: saved2.currencyUpdates || saved2.currencyValues || currencyValues
     };
     setIsDirty(false);
     setSaveStatus("Saved");
-    console.log(`[PostFlight] Restored saved form snapshot from ${source}:`, saved);
+    console.log(`[PostFlight] Restored saved form snapshot from ${source}:`, saved2);
   }
   const handleCaptLogChange = (key, value) => {
     setCaptLogTouched((prev) => new Set(prev).add(key));
@@ -88632,7 +88632,7 @@ const DfpSidePanelTimeline = ({
       activeAssistUnitCode.split(/[+\/,]/).map((code) => code.trim().toUpperCase()).filter(Boolean)
     );
     const savedStreams = normaliseFixedCrewTrainingPriorityWeights(fixedCrewTrainingPriorities);
-    const saved = new Map(savedStreams.map((stream) => [stream.key, stream]));
+    const saved2 = new Map(savedStreams.map((stream) => [stream.key, stream]));
     const savedOrder = new Map(savedStreams.map((stream, index) => [stream.key, index]));
     const grouped = /* @__PURE__ */ new Map();
     syllabusDetails.filter((item) => item.isActive !== false).filter((item) => !isSyllabusCourseShell(item)).forEach((item) => {
@@ -88648,7 +88648,7 @@ const DfpSidePanelTimeline = ({
         existing.eventCount = (existing.eventCount || 0) + 1;
         return;
       }
-      const savedStream = saved.get(key);
+      const savedStream = saved2.get(key);
       grouped.set(key, {
         key,
         kind,
@@ -104601,12 +104601,12 @@ const App = () => {
     return `${h.toString().padStart(2, "0")}${m.toString().padStart(2, "0")}`;
   };
   const [timezoneOffset, setTimezoneOffset] = reactExports.useState(() => {
-    const saved = localStorage.getItem("timezoneOffset");
-    return saved ? parseFloat(saved) : 11;
+    const saved2 = localStorage.getItem("timezoneOffset");
+    return saved2 ? parseFloat(saved2) : 11;
   });
   const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = reactExports.useState(() => {
-    const saved = localStorage.getItem("showDepartureDensityOverlay");
-    return saved !== null ? JSON.parse(saved) : false;
+    const saved2 = localStorage.getItem("showDepartureDensityOverlay");
+    return saved2 !== null ? JSON.parse(saved2) : false;
   });
   reactExports.useEffect(() => {
     localStorage.setItem("showDepartureDensityOverlay", JSON.stringify(showDepartureDensityOverlay));
@@ -104719,12 +104719,12 @@ const App = () => {
   const [previousView, setPreviousView] = reactExports.useState("Program Schedule");
   const [date, setDate] = reactExports.useState(() => {
     try {
-      const saved = localStorage.getItem("dfp_last_viewed_date");
-      if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
-        const savedDate = /* @__PURE__ */ new Date(saved + "T00:00:00Z");
+      const saved2 = localStorage.getItem("dfp_last_viewed_date");
+      if (saved2 && /^\d{4}-\d{2}-\d{2}$/.test(saved2)) {
+        const savedDate = /* @__PURE__ */ new Date(saved2 + "T00:00:00Z");
         const today = /* @__PURE__ */ new Date();
         const diffDays = (savedDate.getTime() - today.getTime()) / (1e3 * 3600 * 24);
-        if (diffDays >= -7 && diffDays <= 7) return saved;
+        if (diffDays >= -7 && diffDays <= 7) return saved2;
       }
     } catch (e) {
     }
@@ -107025,9 +107025,14 @@ const App = () => {
         const existingCompactCourseNamesFromLoad = new Set(
           Array.from(existingCourseNamesFromLoad).map((courseName) => courseName.toUpperCase().replace(/\s+/g, "")).filter(Boolean)
         );
+        const savedServiceDefinitionsForCourseRecovery = Array.isArray(saved.serviceDefinitions) ? saved.serviceDefinitions : [];
         const getRecoveredFlightSchoolCourse = (courseName, fallbackColor) => {
           const traineesForCourse = dbTraineesFromLoad.filter((trainee) => normaliseCourseName(trainee.course) === courseName);
-          const countByService = (service) => traineesForCourse.filter((trainee) => String(trainee.service || "").toUpperCase() === service).length;
+          const configuredServiceKeys = savedServiceDefinitionsForCourseRecovery.map((service) => [
+            String(service?.shortName || "").trim().toUpperCase(),
+            String(service?.longName || "").trim().toUpperCase()
+          ].filter(Boolean)).filter((serviceKeys) => serviceKeys.length > 0).slice(0, 3);
+          const countByConfiguredService = (serviceKeys = []) => serviceKeys.length > 0 ? traineesForCourse.filter((trainee) => serviceKeys.includes(String(trainee.service || "").trim().toUpperCase())).length : 0;
           const recoveredLmpType = String(traineesForCourse.find((trainee) => trainee?.lmpType)?.lmpType || "").trim();
           const recoveredAcademicLmpType = String(traineesForCourse.find((trainee) => trainee?.academicLmpType)?.academicLmpType || "").trim();
           return {
@@ -107035,9 +107040,9 @@ const App = () => {
             color: fallbackColor,
             startDate: "",
             gradDate: "",
-            raafStart: countByService("RAAF"),
-            navyStart: countByService("RAN"),
-            armyStart: countByService("ARA"),
+            raafStart: countByConfiguredService(configuredServiceKeys[0]),
+            navyStart: countByConfiguredService(configuredServiceKeys[1]),
+            armyStart: countByConfiguredService(configuredServiceKeys[2]),
             location: school,
             unit: activeUnitCode,
             status: "ACTIVE",
@@ -108180,11 +108185,11 @@ const App = () => {
   const [nextDayBuildEvents, setNextDayBuildEvents] = reactExports.useState([]);
   const [buildDfpDate, setBuildDfpDate] = reactExports.useState(() => {
     try {
-      const saved = localStorage.getItem("dfp_build_date");
-      if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+      const saved2 = localStorage.getItem("dfp_build_date");
+      if (saved2 && /^\d{4}-\d{2}-\d{2}$/.test(saved2)) {
         const today = /* @__PURE__ */ new Date();
         const todayStr = today.toISOString().split("T")[0];
-        if (saved > todayStr) return saved;
+        if (saved2 > todayStr) return saved2;
       }
     } catch (e) {
     }
@@ -109396,8 +109401,8 @@ ${"=".repeat(60)}`);
         school
       });
       try {
-        const saved = await loadSettingsFromDB();
-        if (!saved) {
+        const saved2 = await loadSettingsFromDB();
+        if (!saved2) {
           pushDfpDataDiag("startup:settings:end", {
             durationMs: Math.round(performance.now() - startedAt),
             foundSettings: false
@@ -109405,20 +109410,20 @@ ${"=".repeat(60)}`);
           setSettingsLoaded(true);
           return;
         }
-        if (saved.locations?.length) setLocations(saved.locations);
-        if (saved.locationAbbreviations && Object.keys(saved.locationAbbreviations).length) setLocationAbbreviations(saved.locationAbbreviations);
-        if (saved.serviceDefinitions?.length) setServiceDefinitions(saved.serviceDefinitions);
-        if (saved.units?.length) setUnits(saved.units);
-        if (saved.unitLocations) setUnitLocations(saved.unitLocations);
-        if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
-        const savedLocations = saved.locations?.length ? saved.locations : locations;
+        if (saved2.locations?.length) setLocations(saved2.locations);
+        if (saved2.locationAbbreviations && Object.keys(saved2.locationAbbreviations).length) setLocationAbbreviations(saved2.locationAbbreviations);
+        if (saved2.serviceDefinitions?.length) setServiceDefinitions(saved2.serviceDefinitions);
+        if (saved2.units?.length) setUnits(saved2.units);
+        if (saved2.unitLocations) setUnitLocations(saved2.unitLocations);
+        if (saved2.locationOpAreas) setLocationOpAreas(saved2.locationOpAreas);
+        const savedLocations = saved2.locations?.length ? saved2.locations : locations;
         const savedLocationAbbreviations = {
           ...locationAbbreviations,
-          ...saved.locationAbbreviations || {}
+          ...saved2.locationAbbreviations || {}
         };
-        const savedUnits = saved.units?.length ? saved.units : units;
-        const savedUnitLocations = saved.unitLocations || unitLocations;
-        const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
+        const savedUnits = saved2.units?.length ? saved2.units : units;
+        const savedUnitLocations = saved2.unitLocations || unitLocations;
+        const savedLocationOpAreas = saved2.locationOpAreas || locationOpAreas;
         const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes) && platformConfig.unitTypes.length > 0 ? platformConfig.unitTypes : ["Training"];
         const resolveLegacyLocationCode = (locationValue) => {
           const raw = String(locationValue || "").trim();
@@ -109496,90 +109501,90 @@ ${"=".repeat(60)}`);
         };
         const loadedPlatformConfigForLocation = mergeLegacyPlatformConfig(platformConfig);
         setPlatformConfig((prev) => mergeLegacyPlatformConfig(prev));
-        if (saved.eventLimits) setEventLimits(normaliseEventLimitsForDutySupSessions(saved.eventLimits));
-        if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
-        if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
-        if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
-        if (saved.dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings(saved.dispatchStaggerSettings));
-        if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
-        if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
-        if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
-        if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
-        if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
-        if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
-        if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
-        if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
-        if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
-        if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
+        if (saved2.eventLimits) setEventLimits(normaliseEventLimitsForDutySupSessions(saved2.eventLimits));
+        if (saved2.preferredDutyPeriod != null) setPreferredDutyPeriod(saved2.preferredDutyPeriod);
+        if (saved2.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved2.maxCrewDutyPeriod);
+        if (saved2.maxDispatchPerHour != null) setMaxDispatchPerHour(saved2.maxDispatchPerHour);
+        if (saved2.dispatchStaggerSettings) setDispatchStaggerSettings(normaliseDispatchStaggerSettings(saved2.dispatchStaggerSettings));
+        if (saved2.flightTurnaround != null) setFlightTurnaround(saved2.flightTurnaround);
+        if (saved2.ftdTurnaround != null) setFtdTurnaround(saved2.ftdTurnaround);
+        if (saved2.cptTurnaround != null) setCptTurnaround(saved2.cptTurnaround);
+        if (saved2.flyingStartTime != null) setFlyingStartTime(saved2.flyingStartTime);
+        if (saved2.flyingEndTime != null) setFlyingEndTime(saved2.flyingEndTime);
+        if (saved2.ftdStartTime != null) setFtdStartTime(saved2.ftdStartTime);
+        if (saved2.ftdEndTime != null) setFtdEndTime(saved2.ftdEndTime);
+        if (saved2.allowNightFlying != null) setAllowNightFlying(saved2.allowNightFlying);
+        if (saved2.commenceNightFlying != null) setCommenceNightFlying(saved2.commenceNightFlying);
+        if (saved2.ceaseNightFlying != null) setCeaseNightFlying(saved2.ceaseNightFlying);
         {
-          const savedExclusionsByUnit = saved.flyingWindowExclusionsByUnit && typeof saved.flyingWindowExclusionsByUnit === "object" ? Object.fromEntries(
-            Object.entries(saved.flyingWindowExclusionsByUnit).map(([unitKey, periods]) => [
+          const savedExclusionsByUnit = saved2.flyingWindowExclusionsByUnit && typeof saved2.flyingWindowExclusionsByUnit === "object" ? Object.fromEntries(
+            Object.entries(saved2.flyingWindowExclusionsByUnit).map(([unitKey, periods]) => [
               String(unitKey || "").trim().toUpperCase(),
               Array.isArray(periods) ? periods : []
             ]).filter(([unitKey]) => Boolean(unitKey))
           ) : {};
           const hasUnitScopedExclusions = Object.keys(savedExclusionsByUnit).length > 0;
-          const legacyExclusions = Array.isArray(saved.flyingWindowExclusions) ? saved.flyingWindowExclusions : [];
+          const legacyExclusions = Array.isArray(saved2.flyingWindowExclusions) ? saved2.flyingWindowExclusions : [];
           const nextExclusionsByUnit = hasUnitScopedExclusions ? savedExclusionsByUnit : legacyExclusions.length > 0 ? { [activeFlyingWindowExclusionUnitKey]: legacyExclusions } : {};
           setFlyingWindowExclusionsByUnit(nextExclusionsByUnit);
           setFlyingWindowExclusions(nextExclusionsByUnit[activeFlyingWindowExclusionUnitKey] || []);
         }
-        if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
-          setAvailableAircraftCount(saved.availableAircraftCount);
+        if (saved2.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
+          setAvailableAircraftCount(saved2.availableAircraftCount);
         }
         {
-          const savedNeoCapacityByUnit = saved.neoAircraftCapacityByUnit && typeof saved.neoAircraftCapacityByUnit === "object" ? saved.neoAircraftCapacityByUnit : {};
+          const savedNeoCapacityByUnit = saved2.neoAircraftCapacityByUnit && typeof saved2.neoAircraftCapacityByUnit === "object" ? saved2.neoAircraftCapacityByUnit : {};
           setNeoAircraftCapacityByUnit(savedNeoCapacityByUnit);
           const activeNeoCapacity = savedNeoCapacityByUnit[activeNeoAircraftCapacityUnitKey];
           if (activeNeoCapacity?.availableAircraftCount != null) {
             setNeoAvailableAircraftCount(activeNeoCapacity.availableAircraftCount);
-          } else if (saved.neoAvailableAircraftCount != null) {
-            setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
-          } else if (saved.availableAircraftCount != null) {
-            setNeoAvailableAircraftCount(saved.availableAircraftCount);
+          } else if (saved2.neoAvailableAircraftCount != null) {
+            setNeoAvailableAircraftCount(saved2.neoAvailableAircraftCount);
+          } else if (saved2.availableAircraftCount != null) {
+            setNeoAvailableAircraftCount(saved2.availableAircraftCount);
           }
           if (activeNeoCapacity?.aircraftConfigCapacities) {
             setNeoAircraftConfigCapacities(activeNeoCapacity.aircraftConfigCapacities);
-          } else if (saved.neoAircraftConfigCapacities) {
-            setNeoAircraftConfigCapacities(saved.neoAircraftConfigCapacities);
+          } else if (saved2.neoAircraftConfigCapacities) {
+            setNeoAircraftConfigCapacities(saved2.neoAircraftConfigCapacities);
           }
         }
-        if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
-        if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
-        if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
-        if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
-        if (saved.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved.tileStatusSettings));
-        if (saved.emergencyFreezeAuthority) {
-          setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(saved.emergencyFreezeAuthority, activeStaffQualificationCatalogue));
+        if (saved2.availableFtdCount != null) setAvailableFtdCount(saved2.availableFtdCount);
+        if (saved2.availableCptCount != null) setAvailableCptCount(saved2.availableCptCount);
+        if (saved2.timezoneOffset != null) setTimezoneOffset(saved2.timezoneOffset);
+        if (saved2.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved2.showDepartureDensityOverlay);
+        if (saved2.tileStatusSettings) setTileStatusSettings(normaliseTileStatusSettings(saved2.tileStatusSettings));
+        if (saved2.emergencyFreezeAuthority) {
+          setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(saved2.emergencyFreezeAuthority, activeStaffQualificationCatalogue));
         }
-        if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
-        if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
-        if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
-        if (saved.coursePercentages && Object.keys(saved.coursePercentages).length) {
-          setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v])));
+        if (Array.isArray(saved2.sctEvents)) setSctEvents(saved2.sctEvents);
+        if (Array.isArray(saved2.formationCallsigns)) setFormationCallsigns(saved2.formationCallsigns);
+        if (saved2.courseColors && Object.keys(saved2.courseColors).length) setCourseColors(saved2.courseColors);
+        if (saved2.coursePercentages && Object.keys(saved2.coursePercentages).length) {
+          setCoursePercentages(new Map(Object.entries(saved2.coursePercentages).map(([k, v]) => [k, v])));
         }
-        if (saved.coursePriorities && saved.coursePriorities.length) {
-          const localityCourses = saved.coursePriorities.filter((course) => {
+        if (saved2.coursePriorities && saved2.coursePriorities.length) {
+          const localityCourses = saved2.coursePriorities.filter((course) => {
             const courseTrainees = allTraineesData.filter((t) => t.course === course);
             return courseTrainees.some((t) => personMatchesConfiguredLocation(loadedPlatformConfigForLocation, t, school));
           });
           setCoursePriorities(localityCourses);
         }
-        if (Array.isArray(saved.fixedCrewTrainingPriorities)) {
-          setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorityWeights(saved.fixedCrewTrainingPriorities));
+        if (Array.isArray(saved2.fixedCrewTrainingPriorities)) {
+          setFixedCrewTrainingPriorities(normaliseFixedCrewTrainingPriorityWeights(saved2.fixedCrewTrainingPriorities));
         }
-        if (saved.fixedCrewTileColourModeByUnit) {
-          setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit(saved.fixedCrewTileColourModeByUnit));
+        if (saved2.fixedCrewTileColourModeByUnit) {
+          setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit(saved2.fixedCrewTileColourModeByUnit));
         }
-        if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
-        if (Array.isArray(saved.cancellationCodes)) setCancellationCodes(saved.cancellationCodes);
+        if (saved2.phraseBank && Object.keys(saved2.phraseBank).length) setPhraseBank(saved2.phraseBank);
+        if (Array.isArray(saved2.cancellationCodes)) setCancellationCodes(saved2.cancellationCodes);
         {
-          const dbReqs = saved.currencyRequirements ?? [];
-          const dbMasters = saved.masterCurrencies ?? [];
+          const dbReqs = saved2.currencyRequirements ?? [];
+          const dbMasters = saved2.masterCurrencies ?? [];
           const merged = mergeWithInitialCurrencies(dbReqs, dbMasters);
           setFallbackMasterCurrencies(merged.masters);
           setFallbackCurrencyRequirements(merged.requirements);
-          const savedUnitDefinitions = saved.unitCurrencyDefinitions || {};
+          const savedUnitDefinitions = saved2.unitCurrencyDefinitions || {};
           const mergedUnitDefinitions = Object.fromEntries(
             Object.entries(savedUnitDefinitions).map(([unitCode, definitions]) => {
               const unitMerged = mergeWithInitialCurrencies(
@@ -109600,29 +109605,29 @@ ${"=".repeat(60)}`);
           setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || merged.masters);
           setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || merged.requirements);
         }
-        if (saved.organisationSettings) {
-          console.log("[App] 🏢 Setting organisationSettings from DB:", JSON.stringify(saved.organisationSettings));
+        if (saved2.organisationSettings) {
+          console.log("[App] 🏢 Setting organisationSettings from DB:", JSON.stringify(saved2.organisationSettings));
           pushContextSelectorDiag("settings:organisation-loaded", {
-            fleetSharingEnabled: saved.organisationSettings.fleetSharingEnabled,
-            selectedUnits: saved.organisationSettings.selectedUnits,
-            resourceSharingGroups: saved.organisationSettings.resourceSharingGroups
+            fleetSharingEnabled: saved2.organisationSettings.fleetSharingEnabled,
+            selectedUnits: saved2.organisationSettings.selectedUnits,
+            resourceSharingGroups: saved2.organisationSettings.resourceSharingGroups
           });
-          setOrganisationSettings(saved.organisationSettings);
+          setOrganisationSettings(saved2.organisationSettings);
         } else {
-          console.warn("[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:", saved.organisationSettings);
+          console.warn("[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:", saved2.organisationSettings);
           pushContextSelectorDiag("settings:organisation-missing");
         }
         console.log("[Settings] ✅ All settings restored from DB");
         pushDfpDataDiag("startup:settings:end", {
           durationMs: Math.round(performance.now() - startedAt),
           foundSettings: true,
-          locations: saved.locations?.length || 0,
-          units: saved.units?.length || 0,
-          coursePriorities: saved.coursePriorities?.length || 0,
-          formationCallsigns: saved.formationCallsigns?.length || 0,
-          cancellationCodes: saved.cancellationCodes?.length || 0,
-          masterCurrencies: saved.masterCurrencies?.length || 0,
-          currencyRequirements: saved.currencyRequirements?.length || 0
+          locations: saved2.locations?.length || 0,
+          units: saved2.units?.length || 0,
+          coursePriorities: saved2.coursePriorities?.length || 0,
+          formationCallsigns: saved2.formationCallsigns?.length || 0,
+          cancellationCodes: saved2.cancellationCodes?.length || 0,
+          masterCurrencies: saved2.masterCurrencies?.length || 0,
+          currencyRequirements: saved2.currencyRequirements?.length || 0
         });
       } catch (error) {
         console.error("[Settings] ❌ Failed to load settings from DB:", error);
@@ -112630,13 +112635,13 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
       throw new Error(errorText || `Failed to persist Individual LMP (${response.status})`);
     }
-    const saved = await response.json();
-    const savedEvents = saved?.lmp?.events;
+    const saved2 = await response.json();
+    const savedEvents = saved2?.lmp?.events;
     pushDfpDataDiag("report-lmp:persist:json", {
       traineeFullName: trainee.fullName,
       traineeDbId,
-      lmpType: saved?.lmp?.lmpType || null,
-      completedEventIds: Array.isArray(saved?.lmp?.completedEventIds) ? saved.lmp.completedEventIds.length : null,
+      lmpType: saved2?.lmp?.lmpType || null,
+      completedEventIds: Array.isArray(saved2?.lmp?.completedEventIds) ? saved2.lmp.completedEventIds.length : null,
       ...summariseTrainingReportLmpItems(savedEvents)
     });
     if (!Array.isArray(savedEvents) || savedEvents.length === 0) {
@@ -114273,16 +114278,16 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
       throw new Error(errorText || `Failed to save PT-051 record (${response.status})`);
     }
-    const saved = await response.json();
+    const saved2 = await response.json();
     pushDfpDataDiag("pt051:persist:response", {
       assessmentId: assessment.id,
       eventId: assessment.eventId,
       flightNumber: assessment.flightNumber,
       traineeFullName: assessment.traineeFullName,
-      responseDpcoFollowUp: saved?.dpcoFollowUp || null,
-      responseDncoFollowUp: saved?.dncoFollowUp || null
+      responseDpcoFollowUp: saved2?.dpcoFollowUp || null,
+      responseDncoFollowUp: saved2?.dncoFollowUp || null
     });
-    return saved;
+    return saved2;
   };
   const handleSaveEvents = async (eventsToSave, isPriority) => {
     console.log("🔵 ========== handleSaveEvents START ==========");
@@ -121957,11 +121962,11 @@ ${error instanceof Error ? error.message : String(error)}`,
                   });
                   console.log("[SCT] POST response status:", res.status);
                   if (res.ok) {
-                    const saved = await res.json();
-                    const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved.id } : r);
+                    const saved2 = await res.json();
+                    const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved2.id } : r);
                     if (type === "flight") setSctFlights(updater);
                     else setSctFtds(updater);
-                    console.log("[SCT] Saved to DB:", saved.id, "userId:", saved.userId);
+                    console.log("[SCT] Saved to DB:", saved2.id, "userId:", saved2.userId);
                   } else {
                     const errData = await res.json().catch(() => ({}));
                     console.error("[SCT] Failed to save to DB:", res.status, errData);
@@ -122731,8 +122736,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                   throw new Error(errorData.error || errorData.details || `Failed to save staff ${data.name}`);
                 }
                 const responseData = await response.json().catch(() => ({}));
-                const saved = responseData.personnel || data;
-                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...normalisedData, ...normalisePersonnelRecord(saved), preferences: saved.preferences || normalisedData.preferences } : instructor));
+                const saved2 = responseData.personnel || data;
+                setInstructorsData((prev) => prev.map((instructor) => instructor.idNumber === data.idNumber ? { ...normalisedData, ...normalisePersonnelRecord(saved2), preferences: saved2.preferences || normalisedData.preferences } : instructor));
               } catch (error) {
                 console.error("❌ Error saving Air Combat training assignment:", error);
                 throw error;
@@ -123359,9 +123364,9 @@ Do you want to replace the existing entry?`,
                       const errorText = await response.text();
                       throw new Error(`${label} flight log save failed (${response.status}): ${errorText}`);
                     }
-                    const saved = await response.json();
-                    console.log(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved.entry?.personName || payload.personName);
-                    return saved;
+                    const saved2 = await response.json();
+                    console.log(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved2.entry?.personName || payload.personName);
+                    return saved2;
                   };
                   const parsedTotal = parseFloat(data.totalTime || "") || void 0;
                   const parsedNight = parseFloat(data.nightTime || "") || void 0;
@@ -124047,8 +124052,8 @@ Do you want to replace the existing entry?`,
                               body: JSON.stringify({ ...request, userId, requestType: type })
                             });
                             if (res.ok) {
-                              const saved = await res.json();
-                              const updater = (prev) => prev.map((item) => item.id === request.id ? { ...item, id: saved.id } : item);
+                              const saved2 = await res.json();
+                              const updater = (prev) => prev.map((item) => item.id === request.id ? { ...item, id: saved2.id } : item);
                               if (type === "flight") setSctFlights(updater);
                               else setSctFtds(updater);
                             }
@@ -124632,12 +124637,12 @@ Do you want to replace the existing entry?`,
                   body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                  const saved = await res.json();
-                  console.log("[SCT] Saved from Flyout:", saved.id, "userId:", saved.userId);
+                  const saved2 = await res.json();
+                  console.log("[SCT] Saved from Flyout:", saved2.id, "userId:", saved2.userId);
                   if (requestWithDefaults.event.includes("FTD")) {
-                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
+                    setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved2.id } : r));
                   } else {
-                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
+                    setSctFlights((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved2.id } : r));
                   }
                 } else {
                   const errData = await res.json().catch(() => ({}));

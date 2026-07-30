@@ -24512,9 +24512,23 @@ const App: React.FC = () => {
                         .map(courseName => courseName.toUpperCase().replace(/\s+/g, ''))
                         .filter(Boolean)
                 );
+                const savedServiceDefinitionsForCourseRecovery = Array.isArray(saved.serviceDefinitions)
+                    ? saved.serviceDefinitions
+                    : [];
                 const getRecoveredFlightSchoolCourse = (courseName: string, fallbackColor: string): Course => {
                     const traineesForCourse = dbTraineesFromLoad.filter((trainee: any) => normaliseCourseName(trainee.course) === courseName);
-                    const countByService = (service: string) => traineesForCourse.filter((trainee: any) => String(trainee.service || '').toUpperCase() === service).length;
+                    const configuredServiceKeys = savedServiceDefinitionsForCourseRecovery
+                        .map((service) => [
+                            String(service?.shortName || '').trim().toUpperCase(),
+                            String(service?.longName || '').trim().toUpperCase(),
+                        ].filter(Boolean))
+                        .filter((serviceKeys) => serviceKeys.length > 0)
+                        .slice(0, 3);
+                    const countByConfiguredService = (serviceKeys: string[] = []) => (
+                        serviceKeys.length > 0
+                            ? traineesForCourse.filter((trainee: any) => serviceKeys.includes(String(trainee.service || '').trim().toUpperCase())).length
+                            : 0
+                    );
                     const recoveredLmpType = String(traineesForCourse.find((trainee: any) => trainee?.lmpType)?.lmpType || '').trim();
                     const recoveredAcademicLmpType = String(traineesForCourse.find((trainee: any) => trainee?.academicLmpType)?.academicLmpType || '').trim();
                     return {
@@ -24522,9 +24536,9 @@ const App: React.FC = () => {
                         color: fallbackColor,
                         startDate: '',
                         gradDate: '',
-                        raafStart: countByService('RAAF'),
-                        navyStart: countByService('RAN'),
-                        armyStart: countByService('ARA'),
+                        raafStart: countByConfiguredService(configuredServiceKeys[0]),
+                        navyStart: countByConfiguredService(configuredServiceKeys[1]),
+                        armyStart: countByConfiguredService(configuredServiceKeys[2]),
                         location: school,
                         unit: activeUnitCode,
                         status: 'ACTIVE',

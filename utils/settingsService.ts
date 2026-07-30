@@ -30,12 +30,12 @@ export interface ServiceDefinition {
 export interface AppSettingsData {
   // Locations & Units
   locations: string[];
-  /** Short codes for each location name, e.g. { "East Sale": "ESL", "Pearce": "PEA" } */
+  /** Short codes for each configured location name. */
   locationAbbreviations: Record<string, string>;
   units: string[];
   unitLocations: Record<string, string>;
-  locationOpAreas: Record<string, string[]>; // Per-location training areas e.g. { "East Sale": ["A","B","C",...] }
-  /** Service definitions: long name and short code, e.g. [{ longName: "Air Force", shortName: "RAAF" }] */
+  locationOpAreas: Record<string, string[]>; // Per-location training areas.
+  /** Organisation-defined service or workforce group names and short codes. */
   serviceDefinitions: ServiceDefinition[];
 
   // Event Limits
