@@ -403,14 +403,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   [qfisByFlight]);
 
   const simIps = useMemo(() => {
-        console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
+        console.log('🔍 [CONTRACTOR STAFF FILTER] instructorsData length:', instructorsData.length);
         const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             const isSimIp = i.role === 'SIM IP';
             if (!isSimIp) return false;
-            console.log(`🔍 [SIM IP FILTER] Found active-context SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
+            console.log(`🔍 [CONTRACTOR STAFF FILTER] Found active-context contractor staff: ${i.name} (${i.rank}) - Location: ${i.location}`);
             return true;
         });
-        console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
+        console.log('🔍 [CONTRACTOR STAFF FILTER] Total contractor staff found:', simIpCandidates.length);
 
         return simIpCandidates.sort((a, b) => {
             // First sort by Unit
@@ -450,7 +450,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         return sorted;
     }, [instructorsData, school, personnelDisplaySettings]);
 
-    // NEW: All other staff members who don't fit into instructor, SIM IP, or OFI categories
+    // NEW: All other staff members who don't fit into instructor, contractor staff, or OFI categories
     const otherStaff = useMemo(() => {
         console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
 
@@ -498,7 +498,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       Object.keys(fixedCrewGroups).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [fixedCrewGroups]);
 
-  // SIM IPs are shown as a single combined section (not split by unit)
+  // Contractor staff are shown as a single combined section (not split by unit)
   // simIps is already sorted by unit → rank → name from the simIps useMemo above
 
   const ofisByUnit = useMemo(() => {
@@ -766,7 +766,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             </div>
         ))}
 
-        {/* Other Staff - All staff who don't fit into instructor, SIM IP, or OFI categories */}
+        {/* Other Staff - All staff who don't fit into instructor, contractor staff, or OFI categories */}
         {sortedOtherStaffUnits.map(unit => (
             <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                 <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">

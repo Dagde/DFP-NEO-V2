@@ -35,7 +35,7 @@ export const getStaffRoleDisplay = (
   role: string | undefined,
   terminology?: CrewPositionTerminology,
   instructorLabel = 'QFI',
-  simIpDisplayLabel = 'SIM IP',
+  simIpDisplayLabel = 'Contractor Staff',
 ): { key: string; label: string; textClassName: string } => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || '').trim();

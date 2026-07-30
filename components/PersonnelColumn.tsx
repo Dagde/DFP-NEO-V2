@@ -68,7 +68,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
   useRoleColors = false,
   crewPositionTerminology,
   instructorLabel = 'QFI',
-  simIpDisplayLabel = 'SIM IP',
+  simIpDisplayLabel = 'Contractor Staff',
 }) => {
   // Group personnel by unit if needed, preserving the incoming sorted unit order.
   const groupedPersonnel = React.useMemo(() => {

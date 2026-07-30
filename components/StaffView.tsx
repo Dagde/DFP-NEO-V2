@@ -114,7 +114,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
         return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, 'staff');
       }
 
-      // First sort by Role - flying staff before SIM IPs
+      // First sort by Role - flying staff before contractor staff
       const roleA = a.isQFI || a.role === 'Pilot' ? 0 : 1;
       const roleB = b.isQFI || b.role === 'Pilot' ? 0 : 1;
       if (roleA !== roleB) {

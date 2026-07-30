@@ -17741,7 +17741,7 @@ const STABLE_ROLE_COLOUR_OVERRIDES = {
   trainee: "text-lime-300"
 };
 const normaliseRoleKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
-const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI", simIpDisplayLabel = "SIM IP") => {
+const getStaffRoleDisplay = (role, terminology, instructorLabel = "QFI", simIpDisplayLabel = "Contractor Staff") => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || "").trim();
   const label = getCrewPositionDisplayLabel(role, terminology, "Unassigned");
@@ -17813,7 +17813,7 @@ const PersonnelColumn = ({
   useRoleColors = false,
   crewPositionTerminology,
   instructorLabel = "QFI",
-  simIpDisplayLabel = "SIM IP"
+  simIpDisplayLabel = "Contractor Staff"
 }) => {
   const groupedPersonnel = React.useMemo(() => {
     if (!showUnits) return personnel;
@@ -17991,7 +17991,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "QFI", simIpDisplayLabel = "SIM IP" }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "QFI", simIpDisplayLabel = "Contractor Staff" }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
   console.log("  - events count:", events?.length);
@@ -53502,14 +53502,14 @@ const InstructorListView = ({
     [qfisByFlight]
   );
   const simIps = reactExports.useMemo(() => {
-    console.log("🔍 [SIM IP FILTER] instructorsData length:", instructorsData.length);
+    console.log("🔍 [CONTRACTOR STAFF FILTER] instructorsData length:", instructorsData.length);
     const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isSimIp = i.role === "SIM IP";
       if (!isSimIp) return false;
-      console.log(`🔍 [SIM IP FILTER] Found active-context SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
+      console.log(`🔍 [CONTRACTOR STAFF FILTER] Found active-context contractor staff: ${i.name} (${i.rank}) - Location: ${i.location}`);
       return true;
     });
-    console.log("🔍 [SIM IP FILTER] Total SIM IPs found:", simIpCandidates.length);
+    console.log("🔍 [CONTRACTOR STAFF FILTER] Total contractor staff found:", simIpCandidates.length);
     return simIpCandidates.sort((a, b) => {
       const unitA = a.unit || "Unassigned";
       const unitB = b.unit || "Unassigned";
@@ -83116,7 +83116,7 @@ const NextDayInstructorScheduleView = ({
   operationalModel,
   crewPositionTerminology,
   instructorLabel = "QFI",
-  simIpDisplayLabel = "SIM IP"
+  simIpDisplayLabel = "Contractor Staff"
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(/* @__PURE__ */ new Date());

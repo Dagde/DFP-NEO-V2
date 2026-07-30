@@ -126,7 +126,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
     operationalModel,
     crewPositionTerminology,
     instructorLabel = 'QFI',
-    simIpDisplayLabel = 'SIM IP',
+    simIpDisplayLabel = 'Contractor Staff',
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
