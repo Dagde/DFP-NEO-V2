@@ -960,6 +960,9 @@ const getResourceRowsForDate = (
   const matches = history.filter((entry: any) => {
     const from = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
     const to = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+    if (from === '0000-01-01' && to !== '9999-12-31') {
+      return targetDate === to && entry?.rows && typeof entry.rows === 'object';
+    }
     return targetDate >= from && targetDate <= to && entry?.rows && typeof entry.rows === 'object';
   });
   const entry = matches[matches.length - 1];

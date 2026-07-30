@@ -1416,32 +1416,6 @@ const UnitSettingsNumberField: React.FC<{
     </label>
 );
 
-const UnitSettingsResourceNumberField: React.FC<{
-    label: string;
-    value: number;
-    onChange: (value: number) => void;
-    disabled?: boolean;
-}> = ({ label, value, onChange, disabled = false }) => (
-    disabled ? (
-        <div className="flex aspect-square min-w-[74px] flex-col items-center justify-center rounded-md border border-white/10 bg-slate-950/45 px-2 text-center">
-            <span className="block max-w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</span>
-            <span className="mt-2 block text-center text-lg font-semibold leading-none text-slate-100">{Number.isFinite(Number(value)) ? value : 0}</span>
-        </div>
-    ) : <label className="flex aspect-square min-w-[74px] flex-col items-center justify-center rounded-md border border-white/10 bg-slate-950/45 px-2 text-center">
-        <span className="block max-w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</span>
-        <input
-            type="number"
-            min={0}
-            className="mt-2 h-8 w-full rounded-lg border border-white/10 bg-slate-950/80 px-1 text-center text-sm font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-            value={Number.isFinite(Number(value)) ? value : 0}
-            disabled={disabled}
-            onKeyDownCapture={stopEditableKeyPropagation}
-            onKeyDown={stopEditableKeyPropagation}
-            onChange={(event) => onChange(Math.max(0, Math.round(Number(event.target.value) || 0)))}
-        />
-    </label>
-);
-
 const UnitSettingsGroup: React.FC<{ title: string; description?: string; children: React.ReactNode; action?: React.ReactNode }> = ({ title, description, children, action }) => (
     <section className={unitSettingsPanelClass}>
         <div className="flex items-start justify-between gap-3 px-4 py-3">
@@ -1792,23 +1766,6 @@ const OrganisationMyUnitSettings: React.FC<{
             )),
         }));
     };
-    const updateResourcePoolSettings = (pool: any, patch: Record<string, number>) => {
-        if (!onUpdatePlatformConfig) return;
-        onUpdatePlatformConfig((current) => ({
-            ...current,
-            resourcePools: (current?.resourcePools || []).map((candidate: any) => (
-                candidate === pool || String(candidate?.id || candidate?.code || '') === String(pool?.id || pool?.code || '')
-                    ? {
-                        ...candidate,
-                        settings: {
-                            ...(candidate.settings || {}),
-                            ...patch,
-                        },
-                    }
-                    : candidate
-            )),
-        }));
-    };
     const updateAircraftType = (aircraft: any, patch: Record<string, any>) => {
         if (!onUpdatePlatformConfig) return;
         onUpdatePlatformConfig((current) => ({
@@ -1974,23 +1931,14 @@ const OrganisationMyUnitSettings: React.FC<{
                         action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} pools</span>{settingsLink('platform-resource-pools', 'Take me there', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
                     >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
-                            const settings = pool.settings || {};
                             return (
                                 <div key={pool.id || pool.code} className="border-t border-white/10 first:border-t-0">
                                     <UnitSettingsField label="Pool name" value={pool.name || pool.code || ''} onChange={(value) => updateResourcePool(pool, { name: value })} disabled={!canEdit} />
                                     <UnitSettingsField label="Aircraft type" value={pool.aircraftTypeCode || ''} onChange={(value) => updateResourcePool(pool, { aircraftTypeCode: value })} disabled={!canEdit} />
                                     <UnitSettingsSelect label="Pool type" value={pool.poolType || 'Dedicated'} options={['Dedicated', 'Shared', 'Combined']} onChange={(value) => updateResourcePool(pool, { poolType: value })} disabled={!canEdit} />
                                     <UnitSettingsSelect label="Location" value={pool.locationCode || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateResourcePool(pool, { locationCode: value })} disabled={!canEdit} />
-                                    <div className={`${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`}>
-                                        <div className="min-w-[390px]">
-                                            <div className="grid grid-cols-5 gap-2 p-2">
-                                                <UnitSettingsResourceNumberField label="Aircraft" value={settings.aircraft ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { aircraft: value })} disabled={!canEdit} />
-                                                <UnitSettingsResourceNumberField label="Sim" value={settings.ftd ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ftd: value })} disabled={!canEdit} />
-                                                <UnitSettingsResourceNumberField label="Trainer" value={settings.cpt ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { cpt: value })} disabled={!canEdit} />
-                                                <UnitSettingsResourceNumberField label="Standby" value={settings.standby ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { standby: value })} disabled={!canEdit} />
-                                                <UnitSettingsResourceNumberField label="Ground" value={settings.ground ?? 0} onChange={(value) => updateResourcePoolSettings(pool, { ground: value })} disabled={!canEdit} />
-                                            </div>
-                                        </div>
+                                    <div className="border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300">
+                                        DFP Resource Rows are managed from the main Aircraft & Resource Pools page so row changes can be applied from the next day forward without altering today or previous days.
                                     </div>
                                 </div>
                             );

@@ -2648,6 +2648,9 @@ const getResourceRowsForDate = (settings, targetDate) => {
   const matches = history.filter((entry2) => {
     const from = String(entry2?.effectiveFrom || "0000-01-01").slice(0, 10);
     const to = String(entry2?.effectiveTo || "9999-12-31").slice(0, 10);
+    if (from === "0000-01-01" && to !== "9999-12-31") {
+      return targetDate === to && entry2?.rows && typeof entry2.rows === "object";
+    }
     return targetDate >= from && targetDate <= to && entry2?.rows && typeof entry2.rows === "object";
   });
   const entry = matches[matches.length - 1];
@@ -10579,7 +10582,6 @@ const unitSettingsInputClass = "w-full rounded-xl border border-white/10 bg-slat
 const unitSettingsSelectClass = `${unitSettingsInputClass} cursor-pointer`;
 const unitSettingsRowClass = "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(150px,0.65fr)_minmax(0,1fr)] md:items-center";
 const unitSettingsMutedPillClass = "rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1 text-[11px] font-semibold text-slate-300";
-const unitSettingsScrollClass = "max-w-full overflow-x-auto";
 const initialSetupWizardStorageKey = "dfp-initial-setup-wizard-step";
 const initialSetupWizardOrganisationDraftStorageKey = "dfp-initial-setup-wizard-organisation-draft";
 const MAX_INITIAL_SETUP_ORGANISATION_LEVELS = 12;
@@ -11108,25 +11110,6 @@ const UnitSettingsNumberField = ({ label, value, onChange, disabled = false }) =
     }
   )
 ] });
-const UnitSettingsResourceNumberField = ({ label, value, onChange, disabled = false }) => disabled ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex aspect-square min-w-[74px] flex-col items-center justify-center rounded-md border border-white/10 bg-slate-950/45 px-2 text-center", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block max-w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block text-center text-lg font-semibold leading-none text-slate-100", children: Number.isFinite(Number(value)) ? value : 0 })
-] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex aspect-square min-w-[74px] flex-col items-center justify-center rounded-md border border-white/10 bg-slate-950/45 px-2 text-center", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block max-w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400", children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      type: "number",
-      min: 0,
-      className: "mt-2 h-8 w-full rounded-lg border border-white/10 bg-slate-950/80 px-1 text-center text-sm font-semibold text-slate-100 outline-none transition focus:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60",
-      value: Number.isFinite(Number(value)) ? value : 0,
-      disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(Math.max(0, Math.round(Number(event.target.value) || 0)))
-    }
-  )
-] });
 const UnitSettingsGroup = ({ title, description, children, action }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: unitSettingsPanelClass, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1 pr-2", children: [
@@ -11343,19 +11326,6 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
       locations: (current?.locations || []).map((candidate) => candidate === targetLocation || String(candidate?.id || candidate?.code || "") === String(targetLocation?.id || targetLocation?.code || "") ? { ...candidate, ...patch } : candidate)
     }));
   };
-  const updateResourcePoolSettings = (pool, patch) => {
-    if (!onUpdatePlatformConfig) return;
-    onUpdatePlatformConfig((current) => ({
-      ...current,
-      resourcePools: (current?.resourcePools || []).map((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "") ? {
-        ...candidate,
-        settings: {
-          ...candidate.settings || {},
-          ...patch
-        }
-      } : candidate)
-    }));
-  };
   const updateAircraftType = (aircraft, patch) => {
     if (!onUpdatePlatformConfig) return;
     onUpdatePlatformConfig((current) => ({
@@ -11453,19 +11423,12 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
               settingsLink("platform-resource-pools", "Take me there", { resourcePoolCode: primaryResourcePoolFocusKey })
             ] }),
             children: resourcePools.length > 0 ? resourcePools.map((pool) => {
-              const settings = pool.settings || {};
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Pool name", value: pool.name || pool.code || "", onChange: (value) => updateResourcePool(pool, { name: value }), disabled: true }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: pool.aircraftTypeCode || "", onChange: (value) => updateResourcePool(pool, { aircraftTypeCode: value }), disabled: true }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Pool type", value: pool.poolType || "Dedicated", options: ["Dedicated", "Shared", "Combined"], onChange: (value) => updateResourcePool(pool, { poolType: value }), disabled: true }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: pool.locationCode || unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateResourcePool(pool, { locationCode: value }), disabled: true }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${unitSettingsScrollClass} border-t border-white/10 bg-slate-950/25`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[390px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-2 p-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Aircraft", value: settings.aircraft ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { aircraft: value }), disabled: true }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Sim", value: settings.ftd ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ftd: value }), disabled: true }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Trainer", value: settings.cpt ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { cpt: value }), disabled: true }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Standby", value: settings.standby ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { standby: value }), disabled: true }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsResourceNumberField, { label: "Ground", value: settings.ground ?? 0, onChange: (value) => updateResourcePoolSettings(pool, { ground: value }), disabled: true })
-                ] }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300", children: "DFP Resource Rows are managed from the main Aircraft & Resource Pools page so row changes can be applied from the next day forward without altering today or previous days." })
               ] }, pool.id || pool.code);
             }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pools", value: "No resource pools are assigned to this unit or location.", muted: true })
           }
@@ -69321,6 +69284,9 @@ This permanently removes the organisation record from platform configuration and
     const matchingEntry = history.filter((entry) => {
       const effectiveFrom = String(entry?.effectiveFrom || "0000-01-01").slice(0, 10);
       const effectiveTo = String(entry?.effectiveTo || "9999-12-31").slice(0, 10);
+      if (effectiveFrom === "0000-01-01" && effectiveTo !== "9999-12-31") {
+        return targetDate === effectiveTo && entry?.rows && typeof entry.rows === "object";
+      }
       return targetDate >= effectiveFrom && targetDate <= effectiveTo && entry?.rows && typeof entry.rows === "object";
     }).pop();
     return normaliseDfpResourceRowsSnapshot(matchingEntry?.rows || settings);
@@ -69373,7 +69339,7 @@ This permanently removes the organisation record from platform configuration and
       const nextHistory = previousPool && !hasTodayHistory ? [
         ...retainedHistory,
         {
-          effectiveFrom: "0000-01-01",
+          effectiveFrom: today,
           effectiveTo: today,
           rows: todayRows
         },

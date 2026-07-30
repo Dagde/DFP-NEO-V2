@@ -4776,6 +4776,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const matchingEntry = history.filter((entry: any) => {
       const effectiveFrom = String(entry?.effectiveFrom || '0000-01-01').slice(0, 10);
       const effectiveTo = String(entry?.effectiveTo || '9999-12-31').slice(0, 10);
+      if (effectiveFrom === '0000-01-01' && effectiveTo !== '9999-12-31') {
+        return targetDate === effectiveTo && entry?.rows && typeof entry.rows === 'object';
+      }
       return targetDate >= effectiveFrom && targetDate <= effectiveTo && entry?.rows && typeof entry.rows === 'object';
     }).pop();
     return normaliseDfpResourceRowsSnapshot(matchingEntry?.rows || settings);
@@ -4847,7 +4850,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ? [
           ...retainedHistory,
           {
-            effectiveFrom: '0000-01-01',
+            effectiveFrom: today,
             effectiveTo: today,
             rows: todayRows,
           },
