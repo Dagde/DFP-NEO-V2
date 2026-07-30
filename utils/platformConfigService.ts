@@ -158,9 +158,9 @@ export const PLATFORM_PERMISSION_CATALOG: PlatformPermissionCatalogGroup[] = [
       ['trainee.roster.view', 'View trainee roster'],
       ['trainee.profile.own', 'View own trainee profile'],
       ['trainee.profile.others', 'View other trainee profiles'],
-      ['trainee.pt051.own', 'View own PT-051'],
-      ['trainee.pt051.others', 'View other trainee PT-051'],
-      ['trainee.pt051.edit', 'Edit PT-051'],
+      ['trainee.pt051.own', 'View own training report'],
+      ['trainee.pt051.others', 'View other trainee training reports'],
+      ['trainee.pt051.edit', 'Edit training reports'],
       ['trainee.lmp.own', 'View own individual LMP'],
       ['trainee.lmp.others', 'View other trainee individual LMP'],
       ['trainee.remedial.add', 'Add remedial package'],
@@ -199,7 +199,7 @@ export const DEFAULT_PLATFORM_PERMISSION_PROFILES: PlatformPermissionProfile[] =
   {
     id: 'instructor',
     name: 'Instructor',
-    description: 'Instructor access to DFP, staff roster, trainee profiles, PT-051 and LMP records.',
+    description: 'Instructor access to DFP, staff roster, trainee profiles, training reports and LMP records.',
     permissions: ['dfp.view', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
   },
   {

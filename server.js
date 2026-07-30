@@ -1446,9 +1446,9 @@ const PLATFORM_PERMISSION_LABELS = {
   'trainee.roster.view': 'View trainee roster',
   'trainee.profile.own': 'View own trainee profile',
   'trainee.profile.others': 'View other trainee profiles',
-  'trainee.pt051.own': 'View own PT-051',
-  'trainee.pt051.others': 'View other trainee PT-051',
-  'trainee.pt051.edit': 'Edit PT-051',
+  'trainee.pt051.own': 'View own training report',
+  'trainee.pt051.others': 'View other trainee training reports',
+  'trainee.pt051.edit': 'Edit training reports',
   'trainee.lmp.own': 'View own individual LMP',
   'trainee.lmp.others': 'View other trainee individual LMP',
   'trainee.remedial.add': 'Add remedial package',
@@ -8954,7 +8954,7 @@ async function seedCommercialConfigIfEmpty(db) {
 
   const modules = [
     ['DFP', 'Daily Flying Program', 'Core schedule, authorisation and publication workflow'],
-    ['TRAINING', 'Training', 'Courses, trainees, syllabus progression and PT-051 records'],
+    ['TRAINING', 'Training', 'Courses, trainees, syllabus progression and training report records'],
     ['NEO_BUILD', 'NEO Build', 'Automated training build algorithm'],
     ['RESOURCE_SCHEDULING', 'Resource Scheduling', 'Aircraft, simulator, procedural trainer and ground resource allocation'],
     ['REPORTING', 'Reporting & Analytics', 'Operational reports, history, audit and analytics'],
