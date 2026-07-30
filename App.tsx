@@ -31487,7 +31487,7 @@ const App: React.FC = () => {
                     });
                     if (!deleteResponse.ok) {
                         const errorText = await deleteResponse.text().catch(() => '');
-                        throw new Error(errorText || `Failed to delete PT-051 record for ${item.code} (${deleteResponse.status})`);
+                        throw new Error(errorText || `Failed to delete ${configuredTrainingReportDisplayName} record for ${item.code} (${deleteResponse.status})`);
                     }
                 }
             }
@@ -32917,7 +32917,7 @@ const App: React.FC = () => {
             assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
         ].filter(Boolean).join(', ');
 
-        logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+        logAudit('Mass Completion', 'Edit', `Updated ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
         await maybeInsertTrainingReportExtraLmpEvent(assessment);
         await maybeExtendTrainingReportNextLmpEvent(assessment);
         await maybePassTrainingReportNotesToNextLmpEvent(assessment);
@@ -33326,7 +33326,7 @@ const App: React.FC = () => {
         const trainee = allTraineesData.find((t: any) => t.fullName === assessment.traineeFullName);
         const traineeId = (trainee as any)?.id;
         if (!traineeId) {
-            throw new Error(`Cannot save PT-051: trainee database record not found for ${assessment.traineeFullName}`);
+            throw new Error(`Cannot save ${configuredTrainingReportDisplayName}: trainee database record not found for ${assessment.traineeFullName}`);
         }
 
         pushDfpDataDiag('pt051:persist:request', {
@@ -33360,7 +33360,7 @@ const App: React.FC = () => {
                 status: response.status,
                 errorText,
             });
-            throw new Error(errorText || `Failed to save PT-051 record (${response.status})`);
+            throw new Error(errorText || `Failed to save ${configuredTrainingReportDisplayName} record (${response.status})`);
         }
 
         const saved = await response.json();
