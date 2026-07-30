@@ -34,6 +34,8 @@ interface AddGroundEventFlyoutProps {
   onUpdatePersistedAcademicLmp?: (lmp: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   operationalModel?: unknown;
+  groundResources?: string[];
+  cptResources?: string[];
 }
 
 type TabKey = 'ground' | 'academics';
@@ -62,6 +64,8 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     onUpdatePersistedAcademicLmp,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     operationalModel,
+    groundResources = [],
+    cptResources = [],
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('ground');
     const crewLabel = useMemo(() => {
@@ -79,7 +83,13 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     const [selectedCourse, setSelectedCourse] = useState(Object.keys(activeCourses)[0] || '');
     const [isEntireCourse, setIsEntireCourse] = useState(false);
     const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);
-    const [selectedGround, setSelectedGround] = useState('Ground 1');
+    const groundResourceOptions = useMemo(() => (
+        groundResources.length > 0 ? groundResources : Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`)
+    ), [groundResources]);
+    const cptResourceOptions = useMemo(() => (
+        cptResources.length > 0 ? cptResources : Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`)
+    ), [cptResources]);
+    const [selectedGround, setSelectedGround] = useState(groundResourceOptions[0] || 'Ground 1');
 
     const [showTraineeSelector, setShowTraineeSelector] = useState(false);
     const [showCourseConfirm, setShowCourseConfirm] = useState(false);
@@ -89,7 +99,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     const activeCourseNames = useMemo(() => Object.keys(activeCourses), [activeCourses]);
 
     const isCptEvent = useMemo(() => flightNumber.includes('CPT'), [flightNumber]);
-    const [selectedCpt, setSelectedCpt] = useState('CPT 1');
+    const [selectedCpt, setSelectedCpt] = useState(cptResourceOptions[0] || 'CPT 1');
     const cptLabel = resourceDisplayNames.cpt;
 
     useEffect(() => {
@@ -106,6 +116,18 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
             setSelectedCourse(activeCourseNames[0]);
         }
     }, [activeCourseNames, selectedCourse]);
+
+    useEffect(() => {
+        if (groundResourceOptions.length > 0 && !groundResourceOptions.includes(selectedGround)) {
+            setSelectedGround(groundResourceOptions[0]);
+        }
+    }, [groundResourceOptions, selectedGround]);
+
+    useEffect(() => {
+        if (cptResourceOptions.length > 0 && !cptResourceOptions.includes(selectedCpt)) {
+            setSelectedCpt(cptResourceOptions[0]);
+        }
+    }, [cptResourceOptions, selectedCpt]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -349,7 +371,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                     <div>
                                         <label htmlFor="cpt-resource" className="block text-sm font-medium text-gray-400">{cptLabel} Resource</label>
                                         <select id="cpt-resource" value={selectedCpt} onChange={e => setSelectedCpt(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm">
-                                            {Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map(c => (
+                                            {cptResourceOptions.map(c => (
                                                 <option key={c} value={c}>{formatConfiguredResourceLabel(c, resourceDisplayNames)}</option>
                                             ))}
                                         </select>
@@ -358,7 +380,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                     <div>
                                         <label htmlFor="ground-resource" className="block text-sm font-medium text-gray-400">Ground Resource</label>
                                         <select id="ground-resource" value={selectedGround} onChange={e => setSelectedGround(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm">
-                                            {Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map(g => <option key={g} value={g}>{g}</option>)}
+                                            {groundResourceOptions.map(g => <option key={g} value={g}>{g}</option>)}
                                         </select>
                                     </div>
                                 )}

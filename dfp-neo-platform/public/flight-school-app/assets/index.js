@@ -35014,7 +35014,9 @@ const AddGroundEventFlyout = ({
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  operationalModel
+  operationalModel,
+  groundResources = [],
+  cptResources = []
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const crewLabel = reactExports.useMemo(() => {
@@ -35029,14 +35031,16 @@ const AddGroundEventFlyout = ({
   const [selectedCourse, setSelectedCourse] = reactExports.useState(Object.keys(activeCourses)[0] || "");
   const [isEntireCourse, setIsEntireCourse] = reactExports.useState(false);
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
-  const [selectedGround, setSelectedGround] = reactExports.useState("Ground 1");
+  const groundResourceOptions = reactExports.useMemo(() => groundResources.length > 0 ? groundResources : Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`), [groundResources]);
+  const cptResourceOptions = reactExports.useMemo(() => cptResources.length > 0 ? cptResources : Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`), [cptResources]);
+  const [selectedGround, setSelectedGround] = reactExports.useState(groundResourceOptions[0] || "Ground 1");
   const [showTraineeSelector, setShowTraineeSelector] = reactExports.useState(false);
   const [showCourseConfirm, setShowCourseConfirm] = reactExports.useState(false);
   const traineeSelectorRef = reactExports.useRef(null);
   const availableTrainees = reactExports.useMemo(() => traineesData.filter((t) => !t.isPaused).map((t) => t.fullName), [traineesData]);
   const activeCourseNames = reactExports.useMemo(() => Object.keys(activeCourses), [activeCourses]);
   const isCptEvent = reactExports.useMemo(() => flightNumber.includes("CPT"), [flightNumber]);
-  const [selectedCpt, setSelectedCpt] = reactExports.useState("CPT 1");
+  const [selectedCpt, setSelectedCpt] = reactExports.useState(cptResourceOptions[0] || "CPT 1");
   const cptLabel = resourceDisplayNames.cpt;
   reactExports.useEffect(() => {
     const selectedSyllabus = groundSyllabus.find((s) => s.code === flightNumber);
@@ -35051,6 +35055,16 @@ const AddGroundEventFlyout = ({
       setSelectedCourse(activeCourseNames[0]);
     }
   }, [activeCourseNames, selectedCourse]);
+  reactExports.useEffect(() => {
+    if (groundResourceOptions.length > 0 && !groundResourceOptions.includes(selectedGround)) {
+      setSelectedGround(groundResourceOptions[0]);
+    }
+  }, [groundResourceOptions, selectedGround]);
+  reactExports.useEffect(() => {
+    if (cptResourceOptions.length > 0 && !cptResourceOptions.includes(selectedCpt)) {
+      setSelectedCpt(cptResourceOptions[0]);
+    }
+  }, [cptResourceOptions, selectedCpt]);
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
       if (traineeSelectorRef.current && !traineeSelectorRef.current.contains(event.target)) {
@@ -35257,10 +35271,10 @@ const AddGroundEventFlyout = ({
                       cptLabel,
                       " Resource"
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames) }, c)) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: cptResourceOptions.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames) }, c)) })
                   ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-resource", className: "block text-sm font-medium text-gray-400", children: "Ground Resource" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-resource", value: selectedGround, onChange: (e) => setSelectedGround(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: g, children: g }, g)) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-resource", value: selectedGround, onChange: (e) => setSelectedGround(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: groundResourceOptions.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: g, children: g }, g)) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-location", className: "block text-sm font-medium text-gray-400", children: isCptEvent ? "Notes" : "Location" }),
@@ -119121,10 +119135,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     return groups;
   }, [activeContextUnitCodeSet, traineesData]);
+  const addGroundTileTrainees = reactExports.useMemo(() => Object.values(addGroundTileTraineesByCourse).flat(), [addGroundTileTraineesByCourse]);
   const addGroundTileCourseColors = reactExports.useMemo(() => {
     const entries = Object.entries(addGroundTileTraineesByCourse).map(([courseName]) => [courseName, courseColors[courseName] || scopedCourseColors[courseName] || "bg-sky-400/80"]);
     return Object.fromEntries(entries);
   }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
+  const addGroundTileGroundResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^Ground\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
+  const addGroundTileCptResources = reactExports.useMemo(() => buildResources.filter((resourceId) => /^CPT\s+\d+$/i.test(String(resourceId || "").trim())), [buildResources]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
     if (!syllabusItem) return;
@@ -119136,6 +119153,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const resourceBase = (resourceMatch?.[1] || requestedResourceId).trim();
     const selectedResourceNumber = Number(resourceMatch?.[2] || 1);
     const resourceLabelForNumber = (resourceNumber) => `${resourceBase} ${resourceNumber}`.trim();
+    const configuredResourceCandidates = /^CPT\s+\d+$/i.test(requestedResourceId) ? addGroundTileCptResources : addGroundTileGroundResources;
     const proposedDuration = data.duration ?? syllabusItem.duration;
     const candidateEventBase = {
       id: v4(),
@@ -119159,7 +119177,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       selectedResourceNumber,
       ...Array.from({ length: 23 }, (_, index) => index + 1).filter((resourceNumber) => resourceNumber !== selectedResourceNumber)
     ];
-    const firstClearResource = selectedResourceNumbers.map(resourceLabelForNumber).find((resourceId) => !existingEventsForDate.some((existingEvent) => String(existingEvent.resourceId || "").trim() === resourceId && checkTimeOverlap(candidateEventBase, existingEvent)));
+    const resourceCandidates = configuredResourceCandidates.length > 0 ? [requestedResourceId, ...configuredResourceCandidates.filter((resourceId) => resourceId !== requestedResourceId)] : selectedResourceNumbers.map(resourceLabelForNumber);
+    const firstClearResource = resourceCandidates.find((resourceId) => !existingEventsForDate.some((existingEvent) => String(existingEvent.resourceId || "").trim() === resourceId && checkTimeOverlap(candidateEventBase, existingEvent)));
     const newEvent = {
       ...candidateEventBase,
       resourceId: firstClearResource || requestedResourceId
@@ -124162,7 +124181,7 @@ Do you want to replace the existing entry?`,
           activeCourses: addGroundTileCourseColors,
           allTraineesByCourse: addGroundTileTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
-          traineesData,
+          traineesData: addGroundTileTrainees,
           syllabusDetails: visibleSyllabusDetails,
           scores,
           traineeLMPs,
@@ -124177,7 +124196,9 @@ Do you want to replace the existing entry?`,
           persistedAcademicLmp,
           onUpdatePersistedAcademicLmp: handleUpdatePersistedAcademicLmp,
           resourceDisplayNames,
-          operationalModel: activeOperationalModel
+          operationalModel: activeOperationalModel,
+          groundResources: addGroundTileGroundResources,
+          cptResources: addGroundTileCptResources
         }
       ),
       showAuthFlyout && eventForAuth && /* @__PURE__ */ jsxRuntimeExports.jsx(

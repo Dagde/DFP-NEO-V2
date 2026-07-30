@@ -39537,11 +39537,23 @@ appliedUpdates.forEach(update => {
         return groups;
     }, [activeContextUnitCodeSet, traineesData]);
 
+    const addGroundTileTrainees = useMemo(() => (
+        Object.values(addGroundTileTraineesByCourse).flat()
+    ), [addGroundTileTraineesByCourse]);
+
     const addGroundTileCourseColors = useMemo(() => {
         const entries = Object.entries(addGroundTileTraineesByCourse)
             .map(([courseName]) => [courseName, courseColors[courseName] || scopedCourseColors[courseName] || 'bg-sky-400/80']);
         return Object.fromEntries(entries);
     }, [addGroundTileTraineesByCourse, courseColors, scopedCourseColors]);
+
+    const addGroundTileGroundResources = useMemo(() => (
+        buildResources.filter(resourceId => /^Ground\s+\d+$/i.test(String(resourceId || '').trim()))
+    ), [buildResources]);
+
+    const addGroundTileCptResources = useMemo(() => (
+        buildResources.filter(resourceId => /^CPT\s+\d+$/i.test(String(resourceId || '').trim()))
+    ), [buildResources]);
 
     const handleSaveGroundEvent = (data: any) => {
         const syllabusItem = syllabusDetails.find(s => s.code === data.flightNumber);
@@ -39557,6 +39569,9 @@ appliedUpdates.forEach(update => {
         const resourceBase = (resourceMatch?.[1] || requestedResourceId).trim();
         const selectedResourceNumber = Number(resourceMatch?.[2] || 1);
         const resourceLabelForNumber = (resourceNumber: number) => `${resourceBase} ${resourceNumber}`.trim();
+        const configuredResourceCandidates = /^CPT\s+\d+$/i.test(requestedResourceId)
+            ? addGroundTileCptResources
+            : addGroundTileGroundResources;
         const proposedDuration = data.duration ?? syllabusItem.duration;
         const candidateEventBase: ScheduleEvent = {
             id: uuidv4(),
@@ -39579,8 +39594,10 @@ appliedUpdates.forEach(update => {
             selectedResourceNumber,
             ...Array.from({ length: 23 }, (_, index) => index + 1).filter(resourceNumber => resourceNumber !== selectedResourceNumber),
         ];
-        const firstClearResource = selectedResourceNumbers
-            .map(resourceLabelForNumber)
+        const resourceCandidates = configuredResourceCandidates.length > 0
+            ? [requestedResourceId, ...configuredResourceCandidates.filter(resourceId => resourceId !== requestedResourceId)]
+            : selectedResourceNumbers.map(resourceLabelForNumber);
+        const firstClearResource = resourceCandidates
             .find(resourceId => !existingEventsForDate.some(existingEvent => (
                 String(existingEvent.resourceId || '').trim() === resourceId &&
                 checkTimeOverlap(candidateEventBase, existingEvent)
@@ -45322,7 +45339,7 @@ appliedUpdates.forEach(update => {
                     activeCourses={addGroundTileCourseColors}
                     allTraineesByCourse={addGroundTileTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
-                    traineesData={traineesData}
+                    traineesData={addGroundTileTrainees}
                     syllabusDetails={visibleSyllabusDetails}
                     scores={scores}
                     traineeLMPs={traineeLMPs}
@@ -45338,6 +45355,8 @@ appliedUpdates.forEach(update => {
                     onUpdatePersistedAcademicLmp={handleUpdatePersistedAcademicLmp}
                     resourceDisplayNames={resourceDisplayNames}
                     operationalModel={activeOperationalModel}
+                    groundResources={addGroundTileGroundResources}
+                    cptResources={addGroundTileCptResources}
                 />
             )}
             {showAuthFlyout && eventForAuth &&
