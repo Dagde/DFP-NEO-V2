@@ -1335,7 +1335,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
       return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
     }
     if (lowerTitle.includes('profiles')) {
-      return { section: 'crew-composition', label: 'Crew Composition' };
+      return { section: 'platform-standard-missions', label: 'Standard Mission Profiles' };
     }
   }
   return null;
@@ -1577,11 +1577,11 @@ const buildConfigurationHealth = (
       'Combined-unit profiles need per-unit copies',
       `${missingCompositeClones} Mission Profile, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Crew Composition, press Edit, then Save. Saving that section creates the missing per-unit copies while preserving the combined-unit profile group.',
-      { section: 'crew-composition', label: 'Crew Composition', focusSubsectionId: 'platform-crew-composition' }
+      'Open Standard Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
+      { section: 'platform-standard-missions', label: 'Standard Mission Profiles', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Combined Mission Profiles, Alternate Crew profiles and Currency Profiles have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Standard Mission Profiles, Alternate Crew profiles and Currency Profiles have per-unit records where needed.', 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -1705,9 +1705,9 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
 };
 
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
-  event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a tasking code.',
+  event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a mission code.',
   training: 'The label for the training stream that owns the event. In Flight School this may be a course or LMP; in Air Combat it may be a course, package or assigned training sequence.',
-  type: 'The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, tasking sortie or other model-specific event type.',
+  type: 'The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, mission sortie or other model-specific event type.',
   timing: 'The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.',
   resource: 'The label for the platform or resource used during the event. This may be an aircraft, simulator, procedural trainer, ground room or another configured resource.',
   callsign: 'The label for the operational callsign recorded against the event. For formation sorties this helps connect the report to the correct formation element.',
@@ -7103,7 +7103,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
-          title="Mission Profiles"
+          title="Standard Mission Profiles"
           subtitle="Define reusable Fixed Crew mission profiles for regular unit flights."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
@@ -7115,7 +7115,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Mission Profiles are currently available for Fixed Crew-style models.
+              Standard Mission Profiles are currently available for Fixed Crew-style models.
             </div>
           ) : (
             <>
@@ -7127,7 +7127,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No Mission Profiles configured for this Fixed Crew unit.
+                  No Standard Mission Profiles configured for this Fixed Crew unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
@@ -7236,7 +7236,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   const modeHint = mode === 'STANDARD'
                                     ? 'Use the aircraft standard crew.'
                                     : mode === 'ALTERNATE'
-                                      ? 'Use one alternate tasking crew.'
+                                      ? 'Use one alternate mission crew.'
                                       : 'Use the manual role list below.';
                                   return (
                                     <button
@@ -7324,7 +7324,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
           title="Crew Composition"
-          subtitle="Aircraft-specific role labels, standard crew and alternate tasking crew makeups for Air Combat, Fixed Crew and Pooled Crew."
+          subtitle="Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew."
           action={canEdit ? (
             <button
               type="button"
@@ -8999,7 +8999,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updateTrainingReportNameDraft('displayName', value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('displayName')}
               onBlur={() => commitTrainingReportNameDraft('displayName')}
-              info="Customer-specific name. Example: PT-051."
+              info="Customer-specific name. Example: Training Report, Grade Form or Assessment."
             />
             <div>
               <FieldLabel
@@ -9605,7 +9605,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               disabled={!canEditRankTerminology}
               maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
               onCommit={(value) => updateTrainingReportTerminology({ name: value })}
-              info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`}
+              info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: Report, Grade Form, Assessment.`}
             />
             <DraftField
               label="Continuation Training Short Label"

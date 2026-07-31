@@ -1060,7 +1060,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                                         <DetailCard label="Date" value={lessonScore.date} />
                                         <DetailCard label="Instructor" value={lessonScore.instructor || '—'} />
                                         <DetailCard label="Result" value={
-                                            <span className="text-green-300 font-bold">DCO ✓</span>
+                                            <span className="text-green-300 font-bold">Complete ✓</span>
                                         } />
                                     </div>
                                     {lessonScore.notes && (

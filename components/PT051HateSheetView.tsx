@@ -11,6 +11,14 @@ interface PT051HateSheetViewProps {
   reportName?: string;
 }
 
+const getMissionStatusDisplayLabel = (status?: string | null): string => {
+  const code = String(status || '').trim().toUpperCase();
+  if (code === 'DCO') return 'Complete';
+  if (code === 'DPCO') return 'Partially Complete';
+  if (code === 'DNCO') return 'Not Complete';
+  return status || '';
+};
+
 const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
   trainee,
   lmpScores,
@@ -61,7 +69,7 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
                     <div><strong>Grade:</strong> {assessment.overallGrade}</div>
                   )}
                   {assessment.dcoResult && (
-                    <div><strong>Mission Status:</strong> {assessment.dcoResult}</div>
+                    <div><strong>Mission Status:</strong> {getMissionStatusDisplayLabel(assessment.dcoResult)}</div>
                   )}
                   {assessment.overallComments && (
                     <div style={{ marginTop: '5px' }}><strong>Comments:</strong> {assessment.overallComments}</div>

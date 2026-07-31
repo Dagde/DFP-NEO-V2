@@ -100,6 +100,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const missionStatusFieldLabel = useMemo(() => (
         normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result
     ), [trainingReportTemplate]);
+    const getMissionStatusAuditLabel = (code: TrainingReportCompletionCode | ''): string => {
+        if (!code) return 'Not selected';
+        return missionStatusOptions.find((option) => option.code === code)?.label || code;
+    };
 
     const [result, setResult] = useState<TrainingReportCompletionCode | ''>('');
     const [aircraftNumber, setAircraftNumber] = useState(scheduledAircraftNumber.number || '001');
@@ -833,8 +837,8 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             debouncedAuditLog(
                 `postflight-${event.id}-result`,
                 'Edit',
-                `Updated post-flight result for ${event.flightNumber}`,
-                `Result: ${oldResult} → ${newResult}`,
+                `Updated post-flight ${missionStatusFieldLabel} for ${event.flightNumber}`,
+                `${missionStatusFieldLabel}: ${getMissionStatusAuditLabel(oldResult)} → ${getMissionStatusAuditLabel(newResult)}`,
                 'Post-Flight'
             );
         }
@@ -894,7 +898,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
             // Log the save action
             const changes: string[] = [];
-            changes.push(`Result: ${result}`);
+            changes.push(`${missionStatusFieldLabel}: ${getMissionStatusAuditLabel(result)}`);
             if (takeoffTime) changes.push(`Takeoff: ${takeoffTime}`);
             if (landTime) changes.push(`Land: ${landTime}`);
             if (totalTime) changes.push(`Total Time: ${totalTime}`);
