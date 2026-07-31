@@ -39930,7 +39930,7 @@ const PrioritiesView = ({
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === tasking.toLowerCase())?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || "Mission";
+    const taskingDisplayLabel = abbreviation || tasking || "Task";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -40711,8 +40711,8 @@ const PrioritiesView = ({
       const taskingName = String(event.taskingName || "").trim();
       const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === taskingName.toLowerCase())?.[1]?.trim();
       if (abbreviation) return abbreviation;
-      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || "Mission").trim();
-      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, "") || "Mission";
+      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || "Task").trim();
+      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, "") || "Task";
     }
     return String(event.flightNumber || event.eventCode || "N/A").trim() || "N/A";
   };
@@ -63013,7 +63013,7 @@ const UserListSection = ({
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
   const fetchUsers = async () => {
-    const configuredUsers = buildConfiguredUsers();
+    const configuredUsers = buildConfiguredUsers(instructorsData, traineesData);
     try {
       setLoading(true);
       setLoadError("");
@@ -63024,8 +63024,9 @@ const UserListSection = ({
         throw new Error("Failed to fetch users");
       }
       const data = await response.json();
-      const apiUsers = Array.isArray(data) ? data : [];
-      const sortedUsers = apiUsers.sort(
+      const apiUsers = Array.isArray(data) ? data : Array.isArray(data?.users) ? data.users : Array.isArray(data?.data) ? data.data : [];
+      const endpointFallbackUsers = apiUsers.length > 0 ? [] : await fetchDirectoryUsers();
+      const sortedUsers = [...apiUsers, ...endpointFallbackUsers].sort(
         (a, b) => a.name.localeCompare(b.name)
       );
       const usersToShow = sortedUsers.length > 0 ? sortedUsers : configuredUsers.sort((a, b) => a.name.localeCompare(b.name));
@@ -63033,7 +63034,8 @@ const UserListSection = ({
       setFilteredUsers(usersToShow);
     } catch (error) {
       console.error("Error fetching users:", error);
-      const sortedConfiguredUsers = configuredUsers.sort((a, b) => a.name.localeCompare(b.name));
+      const endpointFallbackUsers = await fetchDirectoryUsers();
+      const sortedConfiguredUsers = [...endpointFallbackUsers, ...configuredUsers].filter((user, index, allUsers) => allUsers.findIndex((candidate) => candidate.id === user.id) === index).sort((a, b) => a.name.localeCompare(b.name));
       setLoadError(sortedConfiguredUsers.length > 0 ? "" : "The user list could not be loaded.");
       setUsers(sortedConfiguredUsers);
       setFilteredUsers(sortedConfiguredUsers);
@@ -63041,8 +63043,26 @@ const UserListSection = ({
       setLoading(false);
     }
   };
-  const buildConfiguredUsers = () => {
-    const staffUsers = (instructorsData || []).map((person, index) => ({
+  const fetchDirectoryUsers = async () => {
+    try {
+      const [personnelResponse, traineesResponse] = await Promise.all([
+        fetch("/api/personnel", { credentials: "include" }),
+        fetch("/api/trainees", { credentials: "include" })
+      ]);
+      const [personnelData, traineeData] = await Promise.all([
+        personnelResponse.ok ? personnelResponse.json() : [],
+        traineesResponse.ok ? traineesResponse.json() : []
+      ]);
+      const personnel = Array.isArray(personnelData) ? personnelData : Array.isArray(personnelData?.personnel) ? personnelData.personnel : Array.isArray(personnelData?.data) ? personnelData.data : [];
+      const trainees = Array.isArray(traineeData) ? traineeData : Array.isArray(traineeData?.trainees) ? traineeData.trainees : Array.isArray(traineeData?.data) ? traineeData.data : [];
+      return buildConfiguredUsers(personnel, trainees);
+    } catch (error) {
+      console.error("Error fetching directory users:", error);
+      return [];
+    }
+  };
+  const buildConfiguredUsers = (staffSource = [], traineeSource = []) => {
+    const staffUsers = (staffSource || []).map((person, index) => ({
       id: person.id || `staff-${person.idNumber || index}`,
       name: person.name || "",
       email: person.email || "",
@@ -63055,7 +63075,7 @@ const UserListSection = ({
       userType: "STAFF",
       personnelId: person.id
     }));
-    const traineeUsers = (traineesData || []).map((person, index) => ({
+    const traineeUsers = (traineeSource || []).map((person, index) => ({
       id: `trainee-${person.idNumber || index}`,
       name: person.fullName || person.name || "",
       email: person.email || "",
@@ -70975,7 +70995,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               TextAreaField,
               {
-                label: "Mission / Task Names",
+                label: "Task Names",
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
@@ -71429,7 +71449,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Crew Composition",
-          subtitle: "Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
+          subtitle: "Aircraft-specific role labels, standard crew and alternate crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -72039,7 +72059,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       label: "TAS (KTAS)",
                       value: aircraft.defaultTasKtas ?? null,
                       disabled: !canEditResourcePools,
-                      info: "Used for route/time planning when a mission or event does not specify a custom speed.",
+                      info: "Used for route/time planning when a flight, task or event does not specify a custom speed.",
                       onChange: (value) => updateRow("aircraftTypes", index, { defaultTasKtas: value })
                     }
                   ),

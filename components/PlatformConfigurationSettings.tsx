@@ -6874,7 +6874,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </span>
                   </div>
                   <TextAreaField
-                    label="Mission / Task Names"
+                    label="Task Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
@@ -7342,7 +7342,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
           title="Crew Composition"
-          subtitle="Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew."
+          subtitle="Aircraft-specific role labels, standard crew and alternate crew makeups for Air Combat, Fixed Crew and Pooled Crew."
           action={canEdit ? (
             <button
               type="button"
@@ -7957,7 +7957,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         label="TAS (KTAS)"
                         value={aircraft.defaultTasKtas ?? null}
                         disabled={!canEditResourcePools}
-                        info="Used for route/time planning when a mission or event does not specify a custom speed."
+                        info="Used for route/time planning when a flight, task or event does not specify a custom speed."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
                       />
                       <TasField

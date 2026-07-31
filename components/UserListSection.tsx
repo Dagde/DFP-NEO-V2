@@ -59,7 +59,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
     }, [searchTerm, users]);
 
     const fetchUsers = async () => {
-        const configuredUsers = buildConfiguredUsers();
+        const configuredUsers = buildConfiguredUsers(instructorsData, traineesData);
         try {
             setLoading(true);
             setLoadError('');
@@ -73,8 +73,15 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
             
             const data = await response.json();
             // Sort users alphabetically by name
-            const apiUsers = Array.isArray(data) ? data : [];
-            const sortedUsers = apiUsers.sort((a: User, b: User) =>
+            const apiUsers = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.users)
+                    ? data.users
+                    : Array.isArray(data?.data)
+                        ? data.data
+                        : [];
+            const endpointFallbackUsers = apiUsers.length > 0 ? [] : await fetchDirectoryUsers();
+            const sortedUsers = [...apiUsers, ...endpointFallbackUsers].sort((a: User, b: User) =>
                 a.name.localeCompare(b.name)
             );
             const usersToShow = sortedUsers.length > 0 ? sortedUsers : configuredUsers.sort((a: User, b: User) => a.name.localeCompare(b.name));
@@ -82,7 +89,10 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
             setFilteredUsers(usersToShow);
         } catch (error) {
             console.error('Error fetching users:', error);
-            const sortedConfiguredUsers = configuredUsers.sort((a: User, b: User) => a.name.localeCompare(b.name));
+            const endpointFallbackUsers = await fetchDirectoryUsers();
+            const sortedConfiguredUsers = [...endpointFallbackUsers, ...configuredUsers]
+                .filter((user, index, allUsers) => allUsers.findIndex(candidate => candidate.id === user.id) === index)
+                .sort((a: User, b: User) => a.name.localeCompare(b.name));
             setLoadError(sortedConfiguredUsers.length > 0 ? '' : 'The user list could not be loaded.');
             setUsers(sortedConfiguredUsers);
             setFilteredUsers(sortedConfiguredUsers);
@@ -91,8 +101,39 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         }
     };
 
-    const buildConfiguredUsers = (): User[] => {
-        const staffUsers: User[] = (instructorsData || []).map((person, index) => ({
+    const fetchDirectoryUsers = async (): Promise<User[]> => {
+        try {
+            const [personnelResponse, traineesResponse] = await Promise.all([
+                fetch('/api/personnel', { credentials: 'include' }),
+                fetch('/api/trainees', { credentials: 'include' }),
+            ]);
+            const [personnelData, traineeData] = await Promise.all([
+                personnelResponse.ok ? personnelResponse.json() : [],
+                traineesResponse.ok ? traineesResponse.json() : [],
+            ]);
+            const personnel = Array.isArray(personnelData)
+                ? personnelData
+                : Array.isArray(personnelData?.personnel)
+                    ? personnelData.personnel
+                    : Array.isArray(personnelData?.data)
+                        ? personnelData.data
+                        : [];
+            const trainees = Array.isArray(traineeData)
+                ? traineeData
+                : Array.isArray(traineeData?.trainees)
+                    ? traineeData.trainees
+                    : Array.isArray(traineeData?.data)
+                        ? traineeData.data
+                        : [];
+            return buildConfiguredUsers(personnel, trainees);
+        } catch (error) {
+            console.error('Error fetching directory users:', error);
+            return [];
+        }
+    };
+
+    const buildConfiguredUsers = (staffSource: any[] = [], traineeSource: any[] = []): User[] => {
+        const staffUsers: User[] = (staffSource || []).map((person, index) => ({
             id: person.id || `staff-${person.idNumber || index}`,
             name: person.name || '',
             email: person.email || '',
@@ -105,7 +146,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
             userType: 'STAFF',
             personnelId: person.id,
         }));
-        const traineeUsers: User[] = (traineesData || []).map((person, index) => ({
+        const traineeUsers: User[] = (traineeSource || []).map((person, index) => ({
             id: `trainee-${person.idNumber || index}`,
             name: person.fullName || person.name || '',
             email: person.email || '',

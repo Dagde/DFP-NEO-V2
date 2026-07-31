@@ -2604,7 +2604,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => (
       profile.trim().toLowerCase() === tasking.toLowerCase()
     ))?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || 'Mission';
+    const taskingDisplayLabel = abbreviation || tasking || 'Task';
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -3594,8 +3594,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         profile.trim().toLowerCase() === taskingName.toLowerCase()
       ))?.[1]?.trim();
       if (abbreviation) return abbreviation;
-      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || 'Mission').trim();
-      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, '') || 'Mission';
+      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || 'Task').trim();
+      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, '') || 'Task';
     }
     return String(event.flightNumber || event.eventCode || 'N/A').trim() || 'N/A';
   };
