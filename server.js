@@ -335,7 +335,7 @@ async function runPrismaRuntimeMaintenance(db) {
     await ensureAircraftAvailabilityTable(db);
     // Ensure AircraftAvailabilityEvent table exists (create if missing)
     await ensureAircraftAvailabilityEventTable(db);
-    // Ensure CancellationCode table exists and seed defaults
+    // Ensure CancellationCode table exists. Starter cancellation codes are opt-in.
     await ensureCancellationCodesTable(db);
     await seedCancellationCodesIfEmpty(db);
     // Ensure IndividualLMP table exists (create if missing)
@@ -10189,6 +10189,10 @@ async function seedCancellationCodesIfEmpty(db) {
     const count = Number(existing[0].count);
     if (count > 0) {
       console.log(`ℹ️  CancellationCode table already has ${count} codes - skipping seed`);
+      return;
+    }
+    if (process.env.DFP_SEED_STARTER_CANCELLATION_CODES !== 'true') {
+      console.log('ℹ️  CancellationCode table is empty - starter cancellation code seed disabled');
       return;
     }
     const defaults = [
