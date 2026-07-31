@@ -10997,22 +10997,41 @@ const TrainingReportModulePreview = ({
   </div>
 );
 
-const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
-  <label>
-    <FieldLabel label={label} info={info} />
-    <input
-      className={fieldClass}
-      list="platform-iana-timezones"
-      value={value || ''}
-      disabled={disabled}
-      placeholder="Australia/Melbourne"
-      onChange={(event) => onChange(event.target.value)}
-    />
-    <datalist id="platform-iana-timezones">
-      {COMMON_IANA_TIMEZONES.map((timezone) => <option key={timezone} value={timezone} />)}
-    </datalist>
-  </label>
-);
+const TimeZoneField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    if (draftValue !== (value || '')) onChange(draftValue);
+  };
+
+  return (
+    <label>
+      <FieldLabel label={label} info={info} />
+      <input
+        className={fieldClass}
+        list="platform-iana-timezones"
+        value={draftValue}
+        disabled={disabled}
+        placeholder="Australia/Melbourne"
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+        onKeyDown={stopEditableKeyPropagation}
+        onFocus={() => setIsEditing(true)}
+        onBlur={commitDraftValue}
+        onChange={(event) => setDraftValue(event.target.value)}
+      />
+      <datalist id="platform-iana-timezones">
+        {COMMON_IANA_TIMEZONES.map((timezone) => <option key={timezone} value={timezone} />)}
+      </datalist>
+    </label>
+  );
+};
 
 const UserSearchSelect = ({
   label,

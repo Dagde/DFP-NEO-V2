@@ -75024,21 +75024,37 @@ const TrainingReportModulePreview = ({
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children })
 ] });
-const TimeZoneField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: fieldClass,
-      list: "platform-iana-timezones",
-      value: value || "",
-      disabled,
-      placeholder: "Australia/Melbourne",
-      onChange: (event) => onChange(event.target.value)
-    }
-  ),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "platform-iana-timezones", children: COMMON_IANA_TIMEZONES.map((timezone) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: timezone }, timezone)) })
-] });
+const TimeZoneField = ({ label, value, disabled, onChange, info }) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    if (draftValue !== (value || "")) onChange(draftValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        list: "platform-iana-timezones",
+        value: draftValue,
+        disabled,
+        placeholder: "Australia/Melbourne",
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => setIsEditing(true),
+        onBlur: commitDraftValue,
+        onChange: (event) => setDraftValue(event.target.value)
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "platform-iana-timezones", children: COMMON_IANA_TIMEZONES.map((timezone) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: timezone }, timezone)) })
+  ] });
+};
 const UserSearchSelect = ({
   label,
   value,
