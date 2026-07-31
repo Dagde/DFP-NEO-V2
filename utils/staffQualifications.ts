@@ -186,7 +186,7 @@ export const normaliseStaffQualificationCatalogue = (source?: any): StaffQualifi
   const deletedDefaultIds = normaliseStringList(source?.deletedDefaultIds);
   const hasExplicitQualificationList = Array.isArray(source?.qualifications);
   const configured = hasExplicitQualificationList ? source.qualifications : [];
-  const defaultQualifications = hasExplicitQualificationList && configured.length === 0 && deletedDefaultIds.length === 0
+  const defaultQualifications = hasExplicitQualificationList
     ? []
     : DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter(entry => !deletedDefaultIds.includes(entry.id));
   const configuredDefinitions = configured

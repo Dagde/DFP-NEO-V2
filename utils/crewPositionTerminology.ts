@@ -79,12 +79,16 @@ const normaliseEntry = (entry: any, index: number): CrewPositionTerminologyEntry
 
 export const normaliseCrewPositionTerminology = (source?: any): CrewPositionTerminology => {
   let sourcePositions: any[] = [];
+  let hasExplicitPositions = false;
   if (Array.isArray(source)) {
     sourcePositions = source;
+    hasExplicitPositions = true;
   } else if (Array.isArray(source?.positions)) {
     sourcePositions = source.positions;
+    hasExplicitPositions = true;
   } else if (source && typeof source === 'object') {
     sourcePositions = Object.entries(source).map(([genericName, label]) => ({ genericName, label }));
+    hasExplicitPositions = Object.keys(source).some((key) => key !== 'deletedDefaultIds');
   }
 
   const deletedDefaultIds = new Set(
@@ -93,7 +97,7 @@ export const normaliseCrewPositionTerminology = (source?: any): CrewPositionTerm
       : []
   );
   const positions = [
-    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions.filter((entry) => !deletedDefaultIds.has(entry.id)),
+    ...(hasExplicitPositions ? [] : DEFAULT_CREW_POSITION_TERMINOLOGY.positions.filter((entry) => !deletedDefaultIds.has(entry.id))),
     ...sourcePositions,
   ]
     .map(normaliseEntry)

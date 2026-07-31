@@ -35,7 +35,7 @@ import {
     normalisePlatformConfig,
     PlatformConfig,
 } from './utils/platformConfigService';
-import { DEFAULT_TASK_PROFILE_CONFIG, getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from './utils/taskProfiles';
+import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from './utils/taskProfiles';
 import {
     DEFAULT_RESOURCE_DISPLAY_NAMES,
     formatResourceLabel as formatConfiguredResourceLabel,
@@ -7656,10 +7656,8 @@ function generateDfpInternal(
         },
         taskProvenance: {
             watchedLabels: Array.from(new Set([
-                ...(DEFAULT_TASK_PROFILE_CONFIG.air_combat || []),
                 'Task',
                 'Tasking',
-                'Maritime Strike',
             ])),
             preBuild: config.taskProvenancePreBuild || null,
             buildInput: {
@@ -35275,10 +35273,9 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====');
         console.log(`🚀 [NEO-Build] Pre-Build Step 1: Syncing ${continuationShortLabel} and Remedial requests...`);
         const taskTraceLabels = Array.from(new Set([
-            ...(DEFAULT_TASK_PROFILE_CONFIG.air_combat || []),
+            ...(activeTaskProfiles || []),
             'Task',
             'Tasking',
-            'Maritime Strike',
         ]));
         const normaliseTaskTraceText = (value?: any): string => String(value || '').trim().toLowerCase();
         const eventMatchesTaskTrace = (event: Partial<ScheduleEvent> | any): boolean => {

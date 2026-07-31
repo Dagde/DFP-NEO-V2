@@ -3521,9 +3521,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
-  const commitTrainingReportNameDraft = (key: 'genericName' | 'displayName') => {
-    if (!(key in trainingReportNameDrafts)) return;
-    setConfig((previous) => applyTrainingReportNameDraftsToConfig(previous, { [key]: trainingReportNameDrafts[key] ?? '' }));
+  const commitTrainingReportNameDraft = (key: 'genericName' | 'displayName', finalValue?: string) => {
+    if (!(key in trainingReportNameDrafts) && finalValue === undefined) return;
+    const valueToCommit = finalValue !== undefined ? finalValue : trainingReportNameDrafts[key] ?? '';
+    setConfig((previous) => applyTrainingReportNameDraftsToConfig(previous, { [key]: valueToCommit }));
     setTrainingReportNameDrafts((previous) => {
       if (!(key in previous)) return previous;
       const { [key]: _committedDraft, ...remainingDrafts } = previous;
@@ -3545,9 +3546,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
-  const commitTrainingReportTextDraft = (draftKey: string) => {
-    if (!(draftKey in trainingReportTextDrafts)) return;
-    setConfig((previous) => applyTrainingReportTextDraftsToConfig(previous, { [draftKey]: trainingReportTextDrafts[draftKey] ?? '' }));
+  const commitTrainingReportTextDraft = (draftKey: string, finalValue?: string) => {
+    if (!(draftKey in trainingReportTextDrafts) && finalValue === undefined) return;
+    const valueToCommit = finalValue !== undefined ? finalValue : trainingReportTextDrafts[draftKey] ?? '';
+    setConfig((previous) => applyTrainingReportTextDraftsToConfig(previous, { [draftKey]: valueToCommit }));
     setTrainingReportTextDrafts((previous) => {
       if (!(draftKey in previous)) return previous;
       const { [draftKey]: _committedDraft, ...remainingDrafts } = previous;
@@ -3563,7 +3565,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     value: trainingReportTextDrafts[draftKey] ?? value,
     onChange: (nextValue: string) => updateTrainingReportTextDraft(draftKey, nextValue, maxLength),
     onFocus: () => beginTrainingReportTextDraft(draftKey, value),
-    onBlur: () => commitTrainingReportTextDraft(draftKey),
+    onBlur: (finalValue?: string) => commitTrainingReportTextDraft(draftKey, finalValue),
   });
 
   const saveTrainingReportTemplateSettings = async () => {
@@ -9003,7 +9005,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               maxLength={TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportNameDraft('genericName', value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('genericName')}
-              onBlur={() => commitTrainingReportNameDraft('genericName')}
+              onBlur={(finalValue?: string) => commitTrainingReportNameDraft('genericName', finalValue)}
               info="Generic form name used across models. Example: Training Report."
             />
             <Field
@@ -9013,7 +9015,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               maxLength={TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportNameDraft('displayName', value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('displayName')}
-              onBlur={() => commitTrainingReportNameDraft('displayName')}
+              onBlur={(finalValue?: string) => commitTrainingReportNameDraft('displayName', finalValue)}
               info="Customer-specific name. Example: Training Report, Grade Form or Assessment."
             />
             <div>
@@ -9337,7 +9339,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           disabled={!canEditTrainingReportTemplate}
                           maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                           onFocus={() => beginTrainingReportTextDraft(`grade:${option.value}:label`, option.label)}
-                          onBlur={() => commitTrainingReportTextDraft(`grade:${option.value}:label`)}
+                          onBlur={(event) => commitTrainingReportTextDraft(`grade:${option.value}:label`, event.currentTarget.value)}
                           onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateTrainingReportTextDraft(`grade:${option.value}:label`, value), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
                           onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateTrainingReportTextDraft(`grade:${option.value}:label`, value), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)}
                           onKeyDown={stopEditableKeyPropagation}
@@ -10560,7 +10562,7 @@ const Field = ({
   disabled: boolean;
   onChange: (value: string) => void;
   onFocus?: () => void;
-  onBlur?: () => void;
+  onBlur?: (value: string) => void;
   info?: string;
   maxLength?: number;
   commitOnBlur?: boolean;
@@ -10585,7 +10587,7 @@ const Field = ({
     setDraftValue(nextValue);
     setIsEditing(false);
     if (commitOnBlur && nextValue !== normaliseFieldValue(value || '')) onChange(nextValue);
-    onBlur?.();
+    onBlur?.(nextValue);
   };
 
   return (
@@ -10878,7 +10880,7 @@ const TextAreaField = ({
   disabled: boolean;
   onChange: (value: string) => void;
   onFocus?: () => void;
-  onBlur?: () => void;
+  onBlur?: (value: string) => void;
   info?: string;
   className?: string;
   fieldClassName?: string;
@@ -10901,7 +10903,7 @@ const TextAreaField = ({
   const commitDraftValue = () => {
     setIsEditing(false);
     if (commitOnBlur && draftValue !== (value || '')) onChange(draftValue);
-    onBlur?.();
+    onBlur?.(draftValue);
   };
 
   return (

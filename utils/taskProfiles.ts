@@ -128,11 +128,12 @@ export const formatTaskProfileAbbreviationText = (abbreviations: Record<string, 
 );
 
 export const normaliseTaskProfileConfig = (value: unknown): TaskProfileConfig => {
-  const source = (value && typeof value === 'object') ? value as Record<string, unknown> : {};
+  const hasSavedConfig = !!value && typeof value === 'object' && !Array.isArray(value);
+  const source = hasSavedConfig ? value as Record<string, unknown> : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
     const aliases = getTaskProfileSettingAliases(option);
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== undefined);
-    const profiles = raw === undefined
+    const profiles = raw === undefined && !hasSavedConfig
       ? DEFAULT_TASK_PROFILE_CONFIG[option.value]
       : Array.isArray(raw)
         ? uniqueProfiles(raw)
@@ -143,15 +144,16 @@ export const normaliseTaskProfileConfig = (value: unknown): TaskProfileConfig =>
       ...config,
       [option.value]: profiles,
     };
-  }, { ...DEFAULT_TASK_PROFILE_CONFIG });
+  }, hasSavedConfig ? {} as TaskProfileConfig : { ...DEFAULT_TASK_PROFILE_CONFIG });
 };
 
 export const normaliseTaskProfileAbbreviationConfig = (value: unknown): TaskProfileAbbreviationConfig => {
-  const source = (value && typeof value === 'object') ? value as Record<string, unknown> : {};
+  const hasSavedConfig = !!value && typeof value === 'object' && !Array.isArray(value);
+  const source = hasSavedConfig ? value as Record<string, unknown> : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
     const aliases = getTaskProfileSettingAliases(option);
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== undefined);
-    const abbreviations = raw === undefined
+    const abbreviations = raw === undefined && !hasSavedConfig
       ? DEFAULT_TASK_PROFILE_ABBREVIATIONS[option.value]
       : typeof raw === 'string'
         ? parseTaskProfileAbbreviationText(raw)
@@ -166,7 +168,7 @@ export const normaliseTaskProfileAbbreviationConfig = (value: unknown): TaskProf
       ...config,
       [option.value]: abbreviations,
     };
-  }, { ...DEFAULT_TASK_PROFILE_ABBREVIATIONS });
+  }, hasSavedConfig ? {} as TaskProfileAbbreviationConfig : { ...DEFAULT_TASK_PROFILE_ABBREVIATIONS });
 };
 
 export const getTaskProfilesForModel = (

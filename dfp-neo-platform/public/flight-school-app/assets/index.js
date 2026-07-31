@@ -2823,7 +2823,7 @@ const normaliseStaffQualificationCatalogue = (source) => {
   const deletedDefaultIds = normaliseStringList$1(source?.deletedDefaultIds);
   const hasExplicitQualificationList = Array.isArray(source?.qualifications);
   const configured = hasExplicitQualificationList ? source.qualifications : [];
-  const defaultQualifications = hasExplicitQualificationList && configured.length === 0 && deletedDefaultIds.length === 0 ? [] : DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
+  const defaultQualifications = hasExplicitQualificationList ? [] : DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
   const configuredDefinitions = configured.map(normaliseQualification).filter((entry) => Boolean(entry));
   const byKey = /* @__PURE__ */ new Map();
   [...defaultQualifications, ...configuredDefinitions].forEach((entry, index) => {
@@ -3279,16 +3279,17 @@ const formatTaskProfileAbbreviationText = (abbreviations) => Object.entries(abbr
   return cleanAbbreviation ? `${cleanProfile} - ${cleanAbbreviation}` : cleanProfile;
 }).join("\n");
 const normaliseTaskProfileConfig = (value) => {
-  const source = value && typeof value === "object" ? value : {};
+  const hasSavedConfig = !!value && typeof value === "object" && !Array.isArray(value);
+  const source = hasSavedConfig ? value : {};
   return OPERATIONAL_MODEL_OPTIONS.reduce((config, option) => {
     const aliases = getTaskProfileSettingAliases(option);
     const raw = aliases.map((alias) => source[alias]).find((candidate) => candidate !== void 0);
-    const profiles = raw === void 0 ? DEFAULT_TASK_PROFILE_CONFIG[option.value] : Array.isArray(raw) ? uniqueProfiles(raw) : typeof raw === "string" ? parseTaskProfileText(raw) : [];
+    const profiles = raw === void 0 && !hasSavedConfig ? DEFAULT_TASK_PROFILE_CONFIG[option.value] : Array.isArray(raw) ? uniqueProfiles(raw) : typeof raw === "string" ? parseTaskProfileText(raw) : [];
     return {
       ...config,
       [option.value]: profiles
     };
-  }, { ...DEFAULT_TASK_PROFILE_CONFIG });
+  }, hasSavedConfig ? {} : { ...DEFAULT_TASK_PROFILE_CONFIG });
 };
 const getTaskProfilesForModel = (config, model = DEFAULT_OPERATIONAL_MODEL) => {
   const activeModel = normaliseOperationalModel(model);
@@ -3635,18 +3636,22 @@ const normaliseEntry = (entry, index) => {
 };
 const normaliseCrewPositionTerminology = (source) => {
   let sourcePositions = [];
+  let hasExplicitPositions = false;
   if (Array.isArray(source)) {
     sourcePositions = source;
+    hasExplicitPositions = true;
   } else if (Array.isArray(source?.positions)) {
     sourcePositions = source.positions;
+    hasExplicitPositions = true;
   } else if (source && typeof source === "object") {
     sourcePositions = Object.entries(source).map(([genericName, label]) => ({ genericName, label }));
+    hasExplicitPositions = Object.keys(source).some((key) => key !== "deletedDefaultIds");
   }
   const deletedDefaultIds = new Set(
     Array.isArray(source?.deletedDefaultIds) ? source.deletedDefaultIds.map((id) => String(id || "").trim()).filter(Boolean) : []
   );
   const positions = [
-    ...DEFAULT_CREW_POSITION_TERMINOLOGY.positions.filter((entry) => !deletedDefaultIds.has(entry.id)),
+    ...hasExplicitPositions ? [] : DEFAULT_CREW_POSITION_TERMINOLOGY.positions.filter((entry) => !deletedDefaultIds.has(entry.id)),
     ...sourcePositions
   ].map(normaliseEntry).filter((entry) => Boolean(entry));
   const byGenericName = /* @__PURE__ */ new Map();
@@ -11582,7 +11587,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
             ] }, profile))
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No mission profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Mission Profiles", description: "Regular unit flight mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Mission Profiles", description: "Regular unit flight mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
@@ -68444,9 +68449,10 @@ This permanently removes the organisation record from platform configuration and
       [key]: previous[key] ?? trainingReportTemplate[key]
     }));
   };
-  const commitTrainingReportNameDraft = (key) => {
-    if (!(key in trainingReportNameDrafts)) return;
-    setConfig((previous) => applyTrainingReportNameDraftsToConfig(previous, { [key]: trainingReportNameDrafts[key] ?? "" }));
+  const commitTrainingReportNameDraft = (key, finalValue) => {
+    if (!(key in trainingReportNameDrafts) && finalValue === void 0) return;
+    const valueToCommit = finalValue !== void 0 ? finalValue : trainingReportNameDrafts[key] ?? "";
+    setConfig((previous) => applyTrainingReportNameDraftsToConfig(previous, { [key]: valueToCommit }));
     setTrainingReportNameDrafts((previous) => {
       if (!(key in previous)) return previous;
       const { [key]: _committedDraft, ...remainingDrafts } = previous;
@@ -68465,9 +68471,10 @@ This permanently removes the organisation record from platform configuration and
       [draftKey]: value.slice(0, maxLength)
     }));
   };
-  const commitTrainingReportTextDraft = (draftKey) => {
-    if (!(draftKey in trainingReportTextDrafts)) return;
-    setConfig((previous) => applyTrainingReportTextDraftsToConfig(previous, { [draftKey]: trainingReportTextDrafts[draftKey] ?? "" }));
+  const commitTrainingReportTextDraft = (draftKey, finalValue) => {
+    if (!(draftKey in trainingReportTextDrafts) && finalValue === void 0) return;
+    const valueToCommit = finalValue !== void 0 ? finalValue : trainingReportTextDrafts[draftKey] ?? "";
+    setConfig((previous) => applyTrainingReportTextDraftsToConfig(previous, { [draftKey]: valueToCommit }));
     setTrainingReportTextDrafts((previous) => {
       if (!(draftKey in previous)) return previous;
       const { [draftKey]: _committedDraft, ...remainingDrafts } = previous;
@@ -68478,7 +68485,7 @@ This permanently removes the organisation record from platform configuration and
     value: trainingReportTextDrafts[draftKey] ?? value,
     onChange: (nextValue) => updateTrainingReportTextDraft(draftKey, nextValue, maxLength),
     onFocus: () => beginTrainingReportTextDraft(draftKey, value),
-    onBlur: () => commitTrainingReportTextDraft(draftKey)
+    onBlur: (finalValue) => commitTrainingReportTextDraft(draftKey, finalValue)
   });
   const saveTrainingReportTemplateSettings = async () => {
     const configWithNameDrafts = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
@@ -73249,7 +73256,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               maxLength: TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH,
               onChange: (value) => updateTrainingReportNameDraft("genericName", value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
               onFocus: () => beginTrainingReportNameDraft("genericName"),
-              onBlur: () => commitTrainingReportNameDraft("genericName"),
+              onBlur: (finalValue) => commitTrainingReportNameDraft("genericName", finalValue),
               info: "Generic form name used across models. Example: Training Report."
             }
           ),
@@ -73262,7 +73269,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               maxLength: TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
               onChange: (value) => updateTrainingReportNameDraft("displayName", value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
               onFocus: () => beginTrainingReportNameDraft("displayName"),
-              onBlur: () => commitTrainingReportNameDraft("displayName"),
+              onBlur: (finalValue) => commitTrainingReportNameDraft("displayName", finalValue),
               info: "Customer-specific name. Example: Training Report, Grade Form or Assessment."
             }
           ),
@@ -73594,7 +73601,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   disabled: !canEditTrainingReportTemplate,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   onFocus: () => beginTrainingReportTextDraft(`grade:${option.value}:label`, option.label),
-                  onBlur: () => commitTrainingReportTextDraft(`grade:${option.value}:label`),
+                  onBlur: (event) => commitTrainingReportTextDraft(`grade:${option.value}:label`, event.currentTarget.value),
                   onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateTrainingReportTextDraft(`grade:${option.value}:label`, value), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
                   onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateTrainingReportTextDraft(`grade:${option.value}:label`, value), TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
                   onKeyDown: stopEditableKeyPropagation,
@@ -74773,7 +74780,7 @@ const Field = ({
     setDraftValue(nextValue);
     setIsEditing(false);
     if (commitOnBlur && nextValue !== normaliseFieldValue(value || "")) onChange(nextValue);
-    onBlur?.();
+    onBlur?.(nextValue);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
@@ -75039,7 +75046,7 @@ const TextAreaField = ({
   const commitDraftValue = () => {
     setIsEditing(false);
     if (commitOnBlur && draftValue !== (value || "")) onChange(draftValue);
-    onBlur?.();
+    onBlur?.(draftValue);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
@@ -93194,10 +93201,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     },
     taskProvenance: {
       watchedLabels: Array.from(/* @__PURE__ */ new Set([
-        ...DEFAULT_TASK_PROFILE_CONFIG.air_combat || [],
         "Task",
-        "Tasking",
-        "Maritime Strike"
+        "Tasking"
       ])),
       preBuild: config.taskProvenancePreBuild || null,
       buildInput: {
@@ -116096,10 +116101,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     console.log("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
     console.log(`🚀 [NEO-Build] Pre-Build Step 1: Syncing ${continuationShortLabel} and Remedial requests...`);
     const taskTraceLabels = Array.from(/* @__PURE__ */ new Set([
-      ...DEFAULT_TASK_PROFILE_CONFIG.air_combat || [],
+      ...activeTaskProfiles || [],
       "Task",
-      "Tasking",
-      "Maritime Strike"
+      "Tasking"
     ]));
     const normaliseTaskTraceText = (value) => String(value || "").trim().toLowerCase();
     const eventMatchesTaskTrace = (event) => {
