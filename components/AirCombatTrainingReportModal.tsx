@@ -164,7 +164,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   syllabusDetails = [],
   initialReport,
   startInEditMode = false,
-  reportName = 'PT-051',
+  reportName = 'Training Report',
   trainingReportTemplate = null,
   currentUserName = '',
   locationCode = '',

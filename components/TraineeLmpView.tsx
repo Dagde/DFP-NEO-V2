@@ -819,7 +819,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
     onOpenPt051ForLesson,
     canOpenPt051 = true,
     onAccessDenied,
-    trainingReportDisplayName = 'PT-051',
+    trainingReportDisplayName = 'Training Report',
 }) => {
     const [selectedLesson, setSelectedLesson] = useState<SyllabusItemDetail | null>(null);
 
@@ -1160,7 +1160,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     insertEventTypes = [],
     onInsertCustomEvent,
     onUpdateLmpItem,
-    trainingReportDisplayName = 'PT-051',
+    trainingReportDisplayName = 'Training Report',
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);

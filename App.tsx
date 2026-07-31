@@ -25959,7 +25959,13 @@ const App: React.FC = () => {
         () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
         [activeTrainingReportUnitCode, platformConfig]
     );
-    const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || 'PT-051';
+    const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || 'Training Report';
+    const getTrainingReportDisplayNameForUnit = useCallback((unitCode?: string | null) => {
+        const reportUnitCode = unitCode || activeTrainingReportUnitCode;
+        const unitTemplate = getUnitTrainingReportTemplate(platformConfig, reportUnitCode);
+        const unitTerminology = getUnitTrainingReportTerminology(platformConfig, reportUnitCode);
+        return unitTemplate.displayName || unitTerminology.name || configuredTrainingReportDisplayName || 'Training Report';
+    }, [activeTrainingReportUnitCode, configuredTrainingReportDisplayName, platformConfig]);
     const getConfiguredMissionStatusLabel = useCallback((code?: string | null) => {
         const cleanCode = String(code || '').trim().toUpperCase();
         if (!cleanCode) return '';
@@ -43690,7 +43696,7 @@ appliedUpdates.forEach(update => {
 
                 if (eventForPt051 && selectedTraineeForHateSheet) {
                     const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
-                    const selectedTrainingReportName = configuredTrainingReportDisplayName || selectedTrainingReportTemplate.displayName || 'PT-051';
+                    const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || getTrainingReportDisplayNameForUnit(selectedTraineeForHateSheet.unit || activeUnitCode);
                     if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
                         return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
                             <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
@@ -45241,7 +45247,12 @@ appliedUpdates.forEach(update => {
 
                         handleNavigation('PT051');
                     }}
-                    trainingReportDisplayName={configuredTrainingReportDisplayName}
+                    trainingReportDisplayName={getTrainingReportDisplayNameForUnit(
+                        (selectedEvent as any).unit ||
+                        (selectedEvent as any).unitCode ||
+                        allTraineesData.find(trainee => trainee.fullName === selectedEvent.student || trainee.name === selectedEvent.student)?.unit ||
+                        activeUnitCode
+                    )}
                     onOpenTrainingReport={(normaliseOperationalModel(activeOperationalModel) === 'air_combat' || isFixedCrewLikeOperationalModel(activeOperationalModel))
                         ? handleOpenAirCombatTrainingReportFromFlightDetails
                         : undefined}

@@ -5387,7 +5387,7 @@ const normaliseAirCombatTrainingReports = (preferences) => {
   };
   const normalisedReports = raw.map((report) => ({
     id: String(report.id || ""),
-    reportName: String(report.reportName || "PT-051"),
+    reportName: String(report.reportName || "Training Report"),
     staffIdNumber: Number(report.staffIdNumber || 0),
     staffName: String(report.staffName || ""),
     locationCode: report.locationCode ? String(report.locationCode) : void 0,
@@ -21150,7 +21150,7 @@ const AcademicLmpTab = ({
   onOpenPt051ForLesson,
   canOpenPt051 = true,
   onAccessDenied,
-  trainingReportDisplayName = "PT-051"
+  trainingReportDisplayName = "Training Report"
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
   const academicSyllabus = reactExports.useMemo(() => {
@@ -21431,7 +21431,7 @@ const TraineeLmpView = ({
   insertEventTypes = [],
   onInsertCustomEvent,
   onUpdateLmpItem,
-  trainingReportDisplayName = "PT-051"
+  trainingReportDisplayName = "Training Report"
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -28079,7 +28079,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "PT-051", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -58333,7 +58333,7 @@ const AirCombatTrainingReportModal = ({
   syllabusDetails = [],
   initialReport,
   startInEditMode = false,
-  reportName = "PT-051",
+  reportName = "Training Report",
   trainingReportTemplate = null,
   currentUserName = "",
   locationCode = "",
@@ -75515,7 +75515,7 @@ const sectionDescriptions = {
   "scoring-matrix": "Configure report elements, grades and performance text",
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
-  "sct-events": "Event scoring rules and triggers",
+  "sct-events": "Continuation and currency event defaults",
   "people-profile": "Select courses that NEO Build should leave out of schedule generation",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
@@ -75530,7 +75530,7 @@ const sectionDescriptions = {
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
   "standard-missions": "Fixed Crew mission profiles for regular unit flights",
-  "currency-profiles": "Currency profile presets for specific currency requests",
+  "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
@@ -108533,7 +108533,13 @@ const App = () => {
     () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
     [activeTrainingReportUnitCode, platformConfig]
   );
-  const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || "PT-051";
+  const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || "Training Report";
+  const getTrainingReportDisplayNameForUnit = reactExports.useCallback((unitCode) => {
+    const reportUnitCode = unitCode || activeTrainingReportUnitCode;
+    const unitTemplate = getUnitTrainingReportTemplate(platformConfig, reportUnitCode);
+    const unitTerminology = getUnitTrainingReportTerminology(platformConfig, reportUnitCode);
+    return unitTemplate.displayName || unitTerminology.name || configuredTrainingReportDisplayName;
+  }, [activeTrainingReportUnitCode, configuredTrainingReportDisplayName, platformConfig]);
   const getConfiguredMissionStatusLabel = reactExports.useCallback((code) => {
     const cleanCode = String(code || "").trim().toUpperCase();
     if (!cleanCode) return "";
@@ -123196,7 +123202,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.log("selectedTraineeForHateSheet:", selectedTraineeForHateSheet);
         if (eventForPt051 && selectedTraineeForHateSheet) {
           const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
-          const selectedTrainingReportName = configuredTrainingReportDisplayName;
+          const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || getTrainingReportDisplayNameForUnit(selectedTraineeForHateSheet.unit || activeUnitCode);
           if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
@@ -124606,7 +124612,9 @@ Do you want to replace the existing entry?`,
             logAudit("Flight Detail", "View", `Viewed ${configuredTrainingReportDisplayName} for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
             handleNavigation("PT051");
           },
-          trainingReportDisplayName: configuredTrainingReportDisplayName,
+          trainingReportDisplayName: getTrainingReportDisplayNameForUnit(
+            selectedEvent.unit || selectedEvent.unitCode || allTraineesData.find((trainee) => trainee.fullName === selectedEvent.student || trainee.name === selectedEvent.student)?.unit || activeUnitCode
+          ),
           onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
             const latestEvent = events.find((ev) => ev.id === e.id) || e;

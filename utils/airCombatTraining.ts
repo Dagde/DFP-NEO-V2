@@ -221,7 +221,7 @@ export const normaliseAirCombatTrainingReports = (preferences?: PersonnelPrefere
   const normalisedReports = raw
     .map((report: any) => ({
       id: String(report.id || ''),
-      reportName: String(report.reportName || 'PT-051'),
+      reportName: String(report.reportName || 'Training Report'),
       staffIdNumber: Number(report.staffIdNumber || 0),
       staffName: String(report.staffName || ''),
       locationCode: report.locationCode ? String(report.locationCode) : undefined,
