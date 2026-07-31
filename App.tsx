@@ -33663,7 +33663,7 @@ const App: React.FC = () => {
 
                        // Check for pilot/instructor changes
                        if (event.instructor !== originalEvent.instructor) {
-                           changesList.push(`Instructor: ${originalEvent.instructor || 'None'} → ${event.instructor || 'None'}`);
+                           changesList.push(`${instructorLabel}: ${originalEvent.instructor || 'None'} → ${event.instructor || 'None'}`);
                        }
                        if (event.pilot !== originalEvent.pilot) {
                            changesList.push(`Pilot: ${originalEvent.pilot || 'None'} → ${event.pilot || 'None'}`);

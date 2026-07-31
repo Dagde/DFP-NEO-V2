@@ -38330,7 +38330,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Mission / task profile",
+        placeholder: "Task profile",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -75626,7 +75626,7 @@ const sectionDescriptions = {
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Mission / task profile lists by operational model",
+  "platform-task-profiles": "Task profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -81421,7 +81421,8 @@ const TrainingRecordsExportView = ({
           instructorLabel2,
           exportAssessorLabel,
           "Report Instructor",
-          "Assessor"
+          "Assessor",
+          "QFI"
         )
       },
       { key: "weather", labels: makeLabels(exportCommentFieldLabels.weather, "Weather") },
@@ -114703,7 +114704,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         if (originalEvent) {
           const changesList = [];
           if (event.instructor !== originalEvent.instructor) {
-            changesList.push(`Instructor: ${originalEvent.instructor || "None"} → ${event.instructor || "None"}`);
+            changesList.push(`${instructorLabel2}: ${originalEvent.instructor || "None"} → ${event.instructor || "None"}`);
           }
           if (event.pilot !== originalEvent.pilot) {
             changesList.push(`Pilot: ${originalEvent.pilot || "None"} → ${event.pilot || "None"}`);

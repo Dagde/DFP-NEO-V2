@@ -617,7 +617,7 @@ const TaskingProfileInput: React.FC<{
           onChange(event.target.value);
           setIsOpen(true);
         }}
-        placeholder="Mission / task profile"
+        placeholder="Task profile"
         className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       />
       {showSuggestions && (

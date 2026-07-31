@@ -895,6 +895,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     exportAssessorLabel,
                     'Report Instructor',
                     'Assessor',
+                    'QFI',
                 ),
             },
             { key: 'weather', labels: makeLabels(exportCommentFieldLabels.weather, 'Weather') },
