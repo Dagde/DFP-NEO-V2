@@ -6661,10 +6661,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     }`}
                   >
                 <div>
-                  <Field label="Unit" value={unit.code} disabled={!isUnitEditing} onChange={(value) => updateUnitCode(index, value)} />
+                  <DraftField label="Unit" value={unit.code} disabled={!isUnitEditing} onCommit={(value) => updateUnitCode(index, value)} />
                 </div>
                 <div>
-                  <Field label="Unit Name" value={unit.name} disabled={!isUnitEditing} onChange={(value) => updateRow('units', index, { name: value })} />
+                  <DraftField label="Unit Name" value={unit.name} disabled={!isUnitEditing} onCommit={(value) => updateRow('units', index, { name: value })} />
                 </div>
                 <label>
                   <FieldLabel label="Parent Org." info="Select each organisation level in order. The saved path is stored against this unit." />

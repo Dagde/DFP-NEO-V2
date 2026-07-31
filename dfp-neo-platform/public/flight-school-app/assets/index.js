@@ -70876,8 +70876,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               onClick: () => setSelectedUnitIndex(index),
               className: `relative grid cursor-pointer grid-cols-[minmax(78px,0.65fr)_minmax(150px,1.2fr)_minmax(138px,1.14fr)_minmax(100px,0.7fr)_minmax(130px,0.95fr)_minmax(105px,0.7fr)_minmax(190px,1.45fr)] gap-3 rounded border-2 p-3 transition-colors ${isSelectedUnit ? "border-cyan-300 bg-cyan-500/10 shadow-[0_0_0_3px_rgba(34,211,238,0.28),0_0_22px_rgba(34,211,238,0.16)] ring-1 ring-cyan-200/40" : "border-gray-700 bg-gray-900 hover:border-gray-500"}`,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit", value: unit.code, disabled: !isUnitEditing, onChange: (value) => updateUnitCode(index, value) }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !isUnitEditing, onChange: (value) => updateRow("units", index, { name: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Unit", value: unit.code, disabled: !isUnitEditing, onCommit: (value) => updateUnitCode(index, value) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Unit Name", value: unit.name, disabled: !isUnitEditing, onCommit: (value) => updateRow("units", index, { name: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: "Parent Org.", info: "Select each organisation level in order. The saved path is stored against this unit." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
