@@ -2589,7 +2589,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const rawLevelNumber = Math.round(Number(rawLevel));
       const levelNumber = usesZeroBasedLevels ? rawLevelNumber : rawLevelNumber - 1;
       if (!Number.isFinite(levelNumber) || levelNumber < 0 || levelNumber > 11) return;
-      const levelName = String(row['Level Name'] ?? row.levelName ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
+      const levelName = String(row['Level Type'] ?? row.levelType ?? row['Level Name'] ?? row.levelName ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
       const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? row.Name ?? row.name ?? '').trim();
       const parent = String(row.Parent ?? row.parent ?? row['Parent Organisation'] ?? row.parentOrganisation ?? '').trim();
       const current = grouped.get(levelNumber) || { name: levelName, options: [] };

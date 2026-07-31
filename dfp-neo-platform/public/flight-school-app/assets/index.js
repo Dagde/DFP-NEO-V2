@@ -9992,15 +9992,15 @@ const VisualAdjustGuide = ({
 };
 const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
-  const headers = ["Level", "Name", "Parent", "Notes"];
+  const headers = ["Level", "Level Type", "Name", "Parent", "Notes"];
   const rows = [
-    ["0", "Your Organisation", "", "Top level organisation"],
-    ["1", "Division A", "Your Organisation", "First organisation layer below the top level"],
-    ["2", "Group A", "Division A", "Second organisation layer"],
-    ["3", "Department A", "Group A", "Add as many levels as needed before units"],
-    ["4", "Team A", "Department A", "Optional deeper level"],
-    ["5", "Section A", "Team A", "Optional deeper level"],
-    ["6", "Element A", "Section A", "Optional deeper level"]
+    ["0", "Organisation", "Your Organisation", "", "Top level organisation"],
+    ["1", "Division", "Division A", "Your Organisation", "First organisation layer below the top level"],
+    ["2", "Group", "Group A", "Division A", "Second organisation layer"],
+    ["3", "Department", "Department A", "Group A", "Add as many levels as needed before units"],
+    ["4", "Team", "Team A", "Department A", "Optional deeper level"],
+    ["5", "Section", "Section A", "Team A", "Optional deeper level"],
+    ["6", "Element", "Element A", "Section A", "Optional deeper level"]
   ];
   const tableRows = [
     `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join("")}</tr>`,
@@ -10014,9 +10014,10 @@ const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisat
 body { font-family: Arial, Helvetica, sans-serif; color: #162033; }
 table { border-collapse: collapse; width: 100%; table-layout: fixed; }
 col.level { width: 90px; }
-col.name { width: 260px; }
-col.parent { width: 260px; }
-col.notes { width: 420px; }
+col.type { width: 180px; }
+col.name { width: 250px; }
+col.parent { width: 250px; }
+col.notes { width: 390px; }
 .title { background: #143142; color: #ffffff; font-size: 20px; font-weight: 700; height: 34px; }
 .subtitle { background: #dbeafe; color: #143142; font-size: 12px; font-weight: 600; height: 28px; }
 .guide { background: #eef2f7; color: #334155; font-size: 11px; height: 24px; }
@@ -10027,10 +10028,10 @@ tr:nth-child(even) td { background: #f8fafc; }
 </head>
 <body>
 <table>
-<colgroup><col class="level" /><col class="name" /><col class="parent" /><col class="notes" /></colgroup>
+<colgroup><col class="level" /><col class="type" /><col class="name" /><col class="parent" /><col class="notes" /></colgroup>
 <tr><td class="title" colspan="${headers.length}">DFP NEO Organisation Structure Template</td></tr>
 <tr><td class="subtitle" colspan="${headers.length}">Use this single table for all organisation levels before units. Add one row per organisation item.</td></tr>
-<tr><td class="guide" colspan="${headers.length}">Level 0 is the top organisation. Each lower level names its immediate parent in the Parent column.</td></tr>
+<tr><td class="guide" colspan="${headers.length}">Level 0 is the top organisation. Level Type is the plain-English name for that layer. Each lower level names its immediate parent in the Parent column.</td></tr>
 <tr><td colspan="${headers.length}"></td></tr>
 ${tableRows}
 </table>
@@ -67516,7 +67517,7 @@ const PlatformConfigurationSettings = ({
       const rawLevelNumber = Math.round(Number(rawLevel));
       const levelNumber = usesZeroBasedLevels ? rawLevelNumber : rawLevelNumber - 1;
       if (!Number.isFinite(levelNumber) || levelNumber < 0 || levelNumber > 11) return;
-      const levelName = String(row["Level Name"] ?? row.levelName ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
+      const levelName = String(row["Level Type"] ?? row.levelType ?? row["Level Name"] ?? row.levelName ?? DEFAULT_ORGANISATION_STRUCTURE_LEVELS[levelNumber] ?? `Level ${levelNumber}`).trim();
       const option = String(row.Option ?? row.option ?? row.Value ?? row.value ?? row.Name ?? row.name ?? "").trim();
       const parent = String(row.Parent ?? row.parent ?? row["Parent Organisation"] ?? row.parentOrganisation ?? "").trim();
       const current = grouped.get(levelNumber) || { name: levelName, options: [] };
