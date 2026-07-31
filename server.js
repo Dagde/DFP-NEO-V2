@@ -5703,7 +5703,9 @@ app.post('/api/schedule', async (req, res) => {
 // GET /api/users-with-personnel - Check user-personnel linking status
 app.get('/api/users-with-personnel', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { search } = req.query;
     
     // Build where clause for user search
@@ -5810,151 +5812,22 @@ app.get('/api/users-with-personnel', async (req, res) => {
   }
 });
 
-// POST /api/cleanup-duplicate-personnel - Remove specific duplicate personnel records
-// This endpoint safely deletes only the confirmed duplicate Burns records
+// POST /api/cleanup-duplicate-personnel - legacy one-off maintenance endpoint
 app.post('/api/cleanup-duplicate-personnel', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { confirmToken } = req.body;
-
-    // Safety check - require a confirmation token
-    if (confirmToken !== 'CONFIRM_DELETE_BURNS_DUPLICATES') {
-      return res.status(400).json({ error: 'Invalid confirmation token. Send { confirmToken: "CONFIRM_DELETE_BURNS_DUPLICATES" }' });
-    }
-
-    // These are the confirmed duplicate Personnel IDs to delete
-    // Keeping: cmkivhycv0001k30fbih64ptl (FLTLT, linked to active user cmkdynoqv0000o30fwtqqwkzw)
-    const personnelToDelete = [
-      'cmkdj92gx0001p10ffa85av90',  // FLTLT, no user
-      'cmkdj9co60003p10flx1glphw',  // SQNLDR, no user
-      'cmkdhs9cv0003pn0frh9ql1yj',  // FLTLT, no user
-      'cmkdhghjs0001pn0fwek3zkx2',  // SQNLDR, no user
-      'cmkdkjq610001mq0f5v72mj56',  // SQNLDR, linked to duplicate user cmk3m3d8w0000kymjmsdlxsy9
-    ];
-
-    // The duplicate User account linked to the SQNLDR personnel record
-    const duplicateUserId = 'cmk3m3d8w0000kymjmsdlxsy9';
-
-    const results = [];
-
-    // First unlink the SQNLDR personnel from the duplicate user account
-    await db.personnel.update({
-      where: { id: 'cmkdkjq610001mq0f5v72mj56' },
-      data: { userId: null }
-    });
-    results.push('Unlinked SQNLDR personnel from duplicate user account');
-
-    // Delete all duplicate personnel records
-    for (const id of personnelToDelete) {
-      try {
-        await db.personnel.delete({ where: { id } });
-        results.push(`Deleted personnel: ${id}`);
-      } catch (e) {
-        results.push(`Failed to delete personnel ${id}: ${e.message}`);
-      }
-    }
-
-    // Delete the duplicate user account
-    try {
-      await db.user.delete({ where: { id: duplicateUserId } });
-      results.push(`Deleted duplicate user account: ${duplicateUserId}`);
-    } catch (e) {
-      results.push(`Failed to delete duplicate user ${duplicateUserId}: ${e.message}`);
-    }
-
-    // Verify the cleanup
-    const remaining = await db.personnel.findMany({
-      where: { name: { contains: 'Burns', mode: 'insensitive' } },
-      select: { id: true, name: true, rank: true, userId: true }
-    });
-    const remainingUsers = await db.user.findMany({
-      where: { OR: [
-        { firstName: { contains: 'Burns', mode: 'insensitive' } },
-        { lastName: { contains: 'Burns', mode: 'insensitive' } },
-        { username: { contains: 'burns', mode: 'insensitive' } }
-      ]},
-      select: { id: true, username: true, firstName: true, lastName: true, role: true }
-    });
-
-    res.json({ success: true, actions: results, remainingPersonnel: remaining, remainingUsers: remainingUsers });
-  } catch (error) {
-    console.error('Cleanup error:', error);
-    res.status(500).json({ error: 'Cleanup failed', details: error.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Legacy maintenance endpoint disabled',
+    message: 'Use the authenticated user and personnel management tools instead.',
+  });
 });
 
-// POST /api/merge-burns-accounts - Consolidate Burns user accounts
-// Links Personnel to alexander.burns, deletes 8201112 user, sets role to INSTRUCTOR + ADMIN
+// POST /api/merge-burns-accounts - legacy one-off maintenance endpoint
 app.post('/api/merge-burns-accounts', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { confirmToken } = req.body;
-
-    if (confirmToken !== 'CONFIRM_MERGE_BURNS_ACCOUNTS') {
-      return res.status(400).json({ error: 'Invalid confirmation token. Send { confirmToken: "CONFIRM_MERGE_BURNS_ACCOUNTS" }' });
-    }
-
-    const results = [];
-
-    // Target user account (alexander.burns) - will be the primary account
-    const targetUserId = 'cmlw89air0001ml3apfk5l1sz';
-    // Source user account (8201112) - will be deleted
-    const sourceUserId = 'cmkdynoqv0000o30fwtqqwkzw';
-    // Personnel record to re-link
-    const personnelId = 'cmkivhycv0001k30fbih64ptl';
-
-    // Step 1: Update Personnel to link to alexander.burns account
-    await db.personnel.update({
-      where: { id: personnelId },
-      data: { userId: targetUserId }
-    });
-    results.push(`Linked Personnel ${personnelId} to User ${targetUserId} (alexander.burns)`);
-
-    // Step 2: Update alexander.burns user to have both INSTRUCTOR and ADMIN roles
-    // Check if there's a single role field or if we need to handle multiple roles
-    await db.user.update({
-      where: { id: targetUserId },
-      data: { role: 'ADMIN' } // Keep ADMIN as primary, INSTRUCTOR implied by Personnel link
-    });
-    results.push(`Updated User ${targetUserId} role to ADMIN (INSTRUCTOR via Personnel link)`);
-
-    // Step 3: Delete the 8201112 user account
-    try {
-      await db.user.delete({ where: { id: sourceUserId } });
-      results.push(`Deleted User ${sourceUserId} (8201112)`);
-    } catch (e) {
-      results.push(`Failed to delete User ${sourceUserId}: ${e.message}`);
-    }
-
-    // Verify the merge
-    const personnel = await db.personnel.findUnique({
-      where: { id: personnelId },
-      select: { id: true, name: true, rank: true, userId: true }
-    });
-    const user = await db.user.findUnique({
-      where: { id: targetUserId },
-      select: { id: true, username: true, firstName: true, lastName: true, role: true }
-    });
-    const remainingUsers = await db.user.findMany({
-      where: { OR: [
-        { firstName: { contains: 'Burns', mode: 'insensitive' } },
-        { lastName: { contains: 'Burns', mode: 'insensitive' } },
-        { username: { contains: 'burns', mode: 'insensitive' } }
-      ]},
-      select: { id: true, username: true, firstName: true, lastName: true, role: true }
-    });
-
-    res.json({
-      success: true,
-      actions: results,
-      linkedPersonnel: personnel,
-      primaryUser: user,
-      allBurnsUsers: remainingUsers
-    });
-  } catch (error) {
-    console.error('Merge error:', error);
-    res.status(500).json({ error: 'Merge failed', details: error.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Legacy maintenance endpoint disabled',
+    message: 'Use the authenticated user and personnel management tools instead.',
+  });
 });
 
 app.get('/api/health', (req, res) => {
@@ -7570,7 +7443,7 @@ app.post('/api/admin/direct-delete-user', async (req, res) => {
 app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   try {
     const db = await getPrisma();
-    const jwtUserId = req.userId; // This is the human-readable userId (e.g. "alexander.burns")
+      const jwtUserId = req.userId; // Human-readable user ID from the mobile token.
     const { date, startDate, endDate } = req.query;
 
     console.log("📅 Fetching schedule for jwtUserId=" + jwtUserId + ", params: " + JSON.stringify(req.query));
@@ -7893,7 +7766,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       const dbFirstName = userRows && userRows.length > 0 ? (userRows[0].firstName || '') : '';
       const dbLastName  = userRows && userRows.length > 0 ? (userRows[0].lastName  || '') : '';
 
-      // Build name variants from userId (e.g. "alexander.burns" -> "Burns, Alexander" / "Alexander Burns")
+      // Build name variants from a dotted user ID for staff profile matching.
       const parts = humanUserId.split('.');
       const firstFromId = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
       const lastFromId  = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
@@ -8063,7 +7936,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       const dbFirstName = userRows && userRows.length > 0 ? (userRows[0].firstName || '') : '';
       const dbLastName  = userRows && userRows.length > 0 ? (userRows[0].lastName  || '') : '';
 
-      // Build name variants from userId (e.g. "alexander.burns" -> "Burns, Alexander" / "Alexander Burns")
+      // Build name variants from a dotted user ID for trainee profile matching.
       const parts = humanUserId.split('.');
       const firstFromId = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
       const lastFromId  = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
@@ -8222,7 +8095,7 @@ app.post('/api/admin/set-user-password', async (req, res) => {
     let sql, params;
     
     if (fullName) {
-      // fullName might be like "SQNLDR Alexander Burns" - parse for first/last name
+      // Parse rank/name strings by treating the final word as the surname.
       // Split by space, take last word as lastName, first word as firstName (skip title like SQNLDR)
       const parts = fullName.trim().split(/\s+/);
       const lastName = parts.pop(); // Last word is lastName
