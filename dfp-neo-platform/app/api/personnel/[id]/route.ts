@@ -7,6 +7,40 @@ const prisma = new PrismaClient();
 const asJsonObject = (value: any): Record<string, any> =>
   value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 
+const addStaffQualificationToPreferences = (preferences: any = {}, qualificationId = ''): Record<string, any> => {
+  const source = asJsonObject(preferences);
+  const existing = Array.isArray(source.qualifications) ? source.qualifications : [];
+  const key = String(qualificationId || '').trim();
+  if (!key) return source;
+  const hasQualification = existing.some((value: any) => String(value || '').trim().toLowerCase() === key.toLowerCase());
+  return {
+    ...source,
+    qualifications: hasQualification ? existing : [...existing, key],
+  };
+};
+
+const normalisePersonnelPayload = (body: any = {}): any => {
+  const roleCode = String(body.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ');
+  if (roleCode === 'QFI' || roleCode === 'INSTRUCTOR') {
+    return {
+      ...body,
+      role: 'Pilot',
+      isQFI: body.isQFI ?? true,
+      preferences: addStaffQualificationToPreferences(body.preferences, 'qfi'),
+    };
+  }
+  if (roleCode === 'SIM IP' || roleCode === 'CONTRACTOR STAFF') {
+    return {
+      ...body,
+      role: 'Pilot',
+      isQFI: false,
+      isContractor: true,
+      preferences: addStaffQualificationToPreferences(body.preferences, 'contractor'),
+    };
+  }
+  return body;
+};
+
 const PERSONNEL_UPDATE_FIELDS = [
   'name',
   'rank',
@@ -168,7 +202,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const body = normalisePersonnelPayload(await request.json());
 
     console.log(`📝 [PATCH] Updating personnel with ID: ${id}`, body);
 

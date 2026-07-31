@@ -447,6 +447,7 @@ async function runPrismaRuntimeMaintenance(db) {
     // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
     await ensureCommercialConfigTables(db);
     await migrateLegacyQfiPersonnelRoles(db);
+    await migrateLegacyContractorPersonnelRoles(db);
     await migrateMissingPersonnelIdNumbers(db);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(db);
@@ -520,6 +521,42 @@ async function migrateLegacyQfiPersonnelRoles(db) {
   }
 
   console.log(`✅ migrateLegacyQfiPersonnelRoles: updated ${updatedCount} personnel record(s)`);
+}
+
+async function migrateLegacyContractorPersonnelRoles(db) {
+  const personnel = await db.personnel.findMany({
+    select: {
+      id: true,
+      role: true,
+      isContractor: true,
+      preferences: true,
+    },
+  });
+
+  let updatedCount = 0;
+  for (const person of personnel) {
+    const roleCode = String(person.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' ');
+    const hasLegacyContractorRole = roleCode === 'SIM IP' || roleCode === 'CONTRACTOR STAFF';
+    const existingQualifications = Array.isArray(person.preferences?.qualifications) ? person.preferences.qualifications : [];
+    const hasContractorQualification = existingQualifications.some((value) => String(value || '').trim().toLowerCase() === 'contractor');
+    const data = {};
+
+    if (hasLegacyContractorRole) {
+      data.role = 'Pilot';
+      data.isContractor = true;
+    } else if (person.isContractor && !hasContractorQualification) {
+      data.isContractor = true;
+    }
+    if ((hasLegacyContractorRole || person.isContractor) && !hasContractorQualification) {
+      data.preferences = addStaffQualificationToPreferences(person.preferences, 'contractor');
+    }
+
+    if (Object.keys(data).length === 0) continue;
+    await db.personnel.update({ where: { id: person.id }, data });
+    updatedCount++;
+  }
+
+  console.log(`✅ migrateLegacyContractorPersonnelRoles: updated ${updatedCount} personnel record(s)`);
 }
 
 const GENERATED_PERSONNEL_ID_MIN = 4000000;
@@ -635,6 +672,15 @@ function normalisePersonnelPayloadForUnit(body = {}) {
       role: 'Pilot',
       isQFI: body.isQFI ?? true,
       preferences: addStaffQualificationToPreferences(body.preferences, 'qfi'),
+    };
+  }
+  if (roleCode === 'SIM IP' || roleCode === 'CONTRACTOR STAFF') {
+    return {
+      ...body,
+      role: 'Pilot',
+      isQFI: false,
+      isContractor: true,
+      preferences: addStaffQualificationToPreferences(body.preferences, 'contractor'),
     };
   }
   if (
