@@ -2140,7 +2140,7 @@ const OrganisationMyUnitSettings: React.FC<{
                         {taskTileLabelProfiles.length > 0 ? (
                             <div className="mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20">
                                 <div className="grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]">
-                                    <span>Task profile</span>
+                                    <span>Mission profile</span>
                                     <span>Tile label</span>
                                 </div>
                                 {taskTileLabelProfiles.map((profile) => (

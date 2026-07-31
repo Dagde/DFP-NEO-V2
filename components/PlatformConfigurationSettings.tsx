@@ -6847,7 +6847,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model tasking.'
+                          ? 'Use this for Fighter / Strike model missions.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
@@ -7115,7 +7115,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Mission Profiles are currently available for the Fixed Crew model only.
+              Mission Profiles are currently available for Fixed Crew-style models.
             </div>
           ) : (
             <>
