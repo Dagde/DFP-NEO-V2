@@ -41265,7 +41265,7 @@ const PrioritiesView = ({
       remedial: events.filter((event) => getPriorityEventGroup(event) === "remedial")
     };
     const groups = [
-      { key: "tasking", label: "Tasks", events: groupedEvents.tasking },
+      { key: "tasking", label: "Missions", events: groupedEvents.tasking },
       { key: "currency", label: "Currency", events: groupedEvents.currency },
       { key: "remedial", label: "Remedial", events: groupedEvents.remedial }
     ];
@@ -42023,7 +42023,7 @@ const PrioritiesView = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Tasking" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Missions" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "+ Add",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -42599,7 +42599,7 @@ const PrioritiesViewWithMenu = (props) => {
   const fixedCrewPlannerSections = {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
-      { label: "Tasking Section", target: ".tasking-events-card" },
+      { label: "Mission Section", target: ".tasking-events-card" },
       { label: "Specific Currency Requests", target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
@@ -88652,7 +88652,7 @@ const DfpSidePanelTimeline = ({
     { id: "flying", label: "Flying Window" },
     { id: "resources", label: "Resources Available" },
     { id: "training", label: "Training Priority" },
-    { id: "taskings", label: "Taskings" },
+    { id: "taskings", label: "Missions" },
     { id: "currency", label: "Currency events" },
     { id: "crew", label: "Crew" },
     { id: "course", label: "Course events" },
@@ -89580,8 +89580,8 @@ const DfpSidePanelTimeline = ({
     }
     if (wizardStep === 8) {
       return questionShell(
-        "Which saved taskings must be scheduled?",
-        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select taskings from Highest Priority Events and the Tasking section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved taskings are waiting in NEO Assist." }),
+        "Which saved missions must be scheduled?",
+        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select missions from Highest Priority Events and the Mission section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved missions are waiting in NEO Assist." }),
         wizardTaskRows.length ? wizardTaskRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -90434,7 +90434,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-              ["01", "Mandatory taskings", `${scheduledTaskCount} scheduled`],
+              ["01", "Mandatory missions", `${scheduledTaskCount} scheduled`],
               ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
               ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
               ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
@@ -90526,7 +90526,7 @@ const DfpSidePanelTimeline = ({
       const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, ignored: false, source: "remote" }))];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No taskings entered." }),
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No missions entered." }),
           rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
@@ -90604,19 +90604,19 @@ const DfpSidePanelTimeline = ({
             type: "button",
             onClick: () => setShowAssistTaskForm((value) => !value),
             className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
-            children: showAssistTaskForm ? "Hide Tasking Details" : "+ Add Tasking"
+            children: showAssistTaskForm ? "Hide Mission Details" : "+ Add Mission"
           }
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Tasking",
+            "Mission Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select tasking type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual tasking name",
+            "Manual mission profile",
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [

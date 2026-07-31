@@ -165,7 +165,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const fixedCrewPlannerSections = {
         'events-builder': [
             { label: 'Highest Priority Table', target: '.highest-priority-events-card' },
-            { label: 'Tasking Section', target: '.tasking-events-card' },
+            { label: 'Mission Section', target: '.tasking-events-card' },
             { label: 'Specific Currency Requests', target: '.specific-currency-card' },
             { label: 'Saved Special Events', target: '.saved-special-events-card' },
         ],

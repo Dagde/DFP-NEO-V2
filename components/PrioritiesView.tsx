@@ -3940,7 +3940,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       remedial: events.filter(event => getPriorityEventGroup(event) === 'remedial'),
     };
     const groups: Array<{ key: 'tasking' | 'currency' | 'remedial'; label: string; events: ScheduleEvent[] }> = [
-      { key: 'tasking', label: 'Tasks', events: groupedEvents.tasking },
+      { key: 'tasking', label: 'Missions', events: groupedEvents.tasking },
       { key: 'currency', label: 'Currency', events: groupedEvents.currency },
       { key: 'remedial', label: 'Remedial', events: groupedEvents.remedial },
     ];
@@ -4749,7 +4749,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
         <div className="tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-sky-400">Tasking</h2>
+              <h2 className="text-xl font-semibold text-sky-400">Missions</h2>
               <button onClick={addTaskingRequest} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
                 <span>+ Add<br />Request</span>
               </button>

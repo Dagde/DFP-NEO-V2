@@ -1862,7 +1862,7 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'flying', label: 'Flying Window' },
         { id: 'resources', label: 'Resources Available' },
         { id: 'training', label: 'Training Priority' },
-        { id: 'taskings', label: 'Taskings' },
+        { id: 'taskings', label: 'Missions' },
         { id: 'currency', label: 'Currency events' },
         { id: 'crew', label: 'Crew' },
         { id: 'course', label: 'Course events' },
@@ -2951,10 +2951,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (wizardStep === 8) {
             return questionShell(
-                'Which saved taskings must be scheduled?',
+                'Which saved missions must be scheduled?',
                 wizardTaskRows.length
-                    ? <p>Select taskings from Highest Priority Events and the Tasking section, then continue.</p>
-                    : <p>No saved taskings are waiting in NEO Assist.</p>,
+                    ? <p>Select missions from Highest Priority Events and the Mission section, then continue.</p>
+                    : <p>No saved missions are waiting in NEO Assist.</p>,
                 wizardTaskRows.length ? wizardTaskRows.map(request => (
                     <button
                         key={request.selectionId}
@@ -3836,7 +3836,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <p className="mb-2 font-semibold text-cyan-100">Priority order</p>
                                 <div className="space-y-1">
                                     {[
-                                        ['01', 'Mandatory taskings', `${scheduledTaskCount} scheduled`],
+                                        ['01', 'Mandatory missions', `${scheduledTaskCount} scheduled`],
                                         ['02', 'Directed currency', `${scheduledCurrencyCount} scheduled`],
                                         ['03', 'Training packages', `${airCombatSchedulingWeights.trainingPackages}% training share`],
                                         ['04', 'Course events', `${airCombatSchedulingWeights.courses}% training share`],
@@ -3923,7 +3923,7 @@ const DfpSidePanelTimeline: React.FC<{
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
-                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No taskings entered.</p>}
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No missions entered.</p>}
                         {rows.map(row => (
                             <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
                                 <span className="min-w-0 truncate">
@@ -3995,18 +3995,18 @@ const DfpSidePanelTimeline: React.FC<{
                         onClick={() => setShowAssistTaskForm(value => !value)}
                         className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
                     >
-                        {showAssistTaskForm ? 'Hide Tasking Details' : '+ Add Tasking'}
+                        {showAssistTaskForm ? 'Hide Mission Details' : '+ Add Mission'}
                     </button>
                     {showAssistTaskForm && (
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Tasking
+                                Mission Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
-                                    <option value="">Select tasking type</option>
+                                    <option value="">Select mission profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
-                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual tasking name
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission profile
                                 <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
