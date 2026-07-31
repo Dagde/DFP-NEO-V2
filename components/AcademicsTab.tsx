@@ -813,7 +813,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                     <div style={{ padding: '4px 2px' }}>
                       {moduleItems.map(item => {
                         // Course-level completion: from courseAcademicProgress prop
-                        // This is separate from individual PT-051 scores
+                        // This is separate from individual training report scores
                         const courseProgress = courseAcademicProgress?.get(selectedCourse);
                         const isCourseDone = courseProgress?.has(item.code) ?? false;
                         const isSelected = selectedLessons.has(item.code);

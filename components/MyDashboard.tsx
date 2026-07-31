@@ -692,7 +692,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     
     const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));
     
-    // Get incomplete PT-051 assessments assigned to current user (not yet edited/saved)
+    // Get incomplete training report assessments assigned to current user.
     const incompletePt051s = React.useMemo(() => {
         const fullUserName = `${userName.split(' ').reverse().join(', ')}`; // Convert "Joe Bloggs" to "Bloggs, Joe"
         return Array.from(pt051Assessments.values())

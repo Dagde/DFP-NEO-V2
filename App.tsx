@@ -5004,7 +5004,7 @@ import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
-// --- PT-051 STRUCTURE ---
+// --- TRAINING REPORT STRUCTURE ---
 const PT051_STRUCTURE = [
   { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
   { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
@@ -5041,13 +5041,13 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
         if (event.crew) addPersonnel(event.crew);
         if (event.instructor) addPersonnel(event.instructor);
     } else if (isSctEvent) {
-        // For SCT events: pilot (PIC) + crew (second pilot)
+        // For continuation events: pilot (PIC) + crew (second pilot)
         if (event.pilot) addPersonnel(event.pilot);
         if (event.crew) addPersonnel(event.crew);
     } else if (event.flightType === 'Solo') {
         if (event.pilot) addPersonnel(event.pilot);
     } else {
-        // For non-SCT Dual training events, the instructor field is authoritative.
+        // For non-continuation Dual training events, the instructor field is authoritative.
         // The pilot field is a legacy mirror of instructor and may be stale after crew swaps.
         if (event.instructor) addPersonnel(event.instructor);
         else if (event.pilot) addPersonnel(event.pilot);
@@ -6071,11 +6071,11 @@ const findAvailableArea = (
  * Get Effective Last Completed Event (ELCE) from yesterday's DFP
  *
  * ELCE Logic: A trainee may have flown an event yesterday that finished successfully,
- * but the paperwork (PT-051) has not been entered yet. When building tomorrow's program,
+ * but the training report has not been entered yet. When building tomorrow's program,
  * the scheduler looks at yesterday's DFP and treats completed events as the trainee's
  * "Effective Last Completed Event" to ensure correct Next Event determination.
  *
- * Example: Trainee flew BGF2 yesterday at 1100. PT-051 not entered yet, so system
+ * Example: Trainee flew BGF2 yesterday at 1100. Training report not entered yet, so system
  * shows last completed as BGF1. ELCE logic finds BGF2 in yesterday's DFP (finished,
  * not cancelled, not unsuccessful) and uses it to determine Next Event = BGF3.
  */
@@ -6223,7 +6223,7 @@ const computeNextEventsForTrainee = (
 
     // The Individual LMP is now composed from the Master LMP plus overlay rows.
     // Use its completion flags directly so NEO Build does not depend on stale
-    // score-map timing or legacy PT-051 tables.
+    // score-map timing or legacy training report tables.
     individualLMP.forEach(item => {
         const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
         if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed) {
@@ -6234,7 +6234,7 @@ const computeNextEventsForTrainee = (
     });
 
     // ── Source 1: DB-backed ELCE from EventCompletion table (preferred) ──────
-    // This is written the moment the post-flight form is saved, before PT-051
+    // This is written the moment the post-flight form is saved, before the training report
     // paperwork is entered.  Only DCO and DPCO count; DNCO must NOT advance
     // the next-event pointer.
     const dbElce = dbElceMap?.get(trainee.fullName);
@@ -6254,7 +6254,7 @@ const computeNextEventsForTrainee = (
     // ── Source 2: Legacy DFP schedule scan (fallback) ────────────────────────
     // Used when no DB ELCE exists yet (first day of use, or post-flight form
     // has not been submitted). Scans yesterday's published DFP for events that
-    // finished but are not yet in PT-051.
+    // finished but are not yet in a training report.
     if (!dbElce && publishedSchedules && buildDate) {
         const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
         if (elce) {
@@ -27875,7 +27875,7 @@ const App: React.FC = () => {
         init();
     }, []);
 
-    // Sync PT-051s when navigating to MyDashboard (ensures dashboard is up to date)
+    // Sync training reports when navigating to MyDashboard so the dashboard is up to date.
     useEffect(() => {
         if (activeView === 'MyDashboard') {
             syncPt051WithActiveDfp(publishedSchedules, pt051Assessments);
@@ -30366,12 +30366,12 @@ const App: React.FC = () => {
                     updated.set(`pt051-${assessment!.eventId}-${assessment!.traineeFullName}`, assessment!);
                     return updated;
                 });
-                console.log(`[PT051] Loaded authoritative PT-051 for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
+                console.log(`[Training Report] Loaded authoritative report for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
             }
 
             return assessment;
         } catch (error) {
-            console.warn(`[PT051] Could not load authoritative PT-051 for ${trainee.fullName} ${event.flightNumber}:`, error);
+            console.warn(`[Training Report] Could not load authoritative report for ${trainee.fullName} ${event.flightNumber}:`, error);
             return null;
         } finally {
             setLoadedPt051Keys(prev => {
@@ -30507,7 +30507,7 @@ const App: React.FC = () => {
             });
             logAudit('Individual LMP', 'Generate', `Generated ${reportDisplayName} for ${trainee.fullName} - Event: ${item.code} (${eventForAssessment.date})`);
         } catch (error) {
-            console.warn('[PT051] Failed to persist generated Individual LMP PT-051:', error);
+            console.warn('[Training Report] Failed to persist generated Individual LMP report:', error);
             await showDarkAlert(
                 `${reportDisplayName} was generated locally, but could not be saved to the database.\n\n${error instanceof Error ? error.message : String(error)}`,
                 `${reportDisplayName} Save Failed`,
@@ -34848,14 +34848,14 @@ const App: React.FC = () => {
         return newPriorityEvents;
 
     };
-    // NEW PT-051 SYNC SYSTEM
-    // Syncs PT-051 assessments with Active DFP events
+    // Training report sync system.
+    // Syncs training report assessments with Active DFP events.
     const syncPt051WithActiveDfp = (currentPublishedSchedules?: Record<string, ScheduleEvent[]>, currentPt051Assessments?: Map<string, Pt051Assessment>) => {
         // Use provided parameters or fall back to current state
         const schedules = currentPublishedSchedules || publishedSchedules;
         const assessments = currentPt051Assessments || pt051Assessments;
 
-        console.log('🔄 Starting PT-051 sync with Active DFP...');
+        console.log('🔄 Starting training report sync with Active DFP...');
         console.log('Published schedules keys:', Object.keys(schedules));
 
         // Get all events from Active DFP (published schedules only)
@@ -34865,7 +34865,7 @@ const App: React.FC = () => {
         });
 
         console.log('Total events on Active DFP:', activeDfpEvents.length);
-        console.log('Current PT-051 count:', assessments.size);
+        console.log('Current training report count:', assessments.size);
         console.log('Sample events:', activeDfpEvents.slice(0, 3).map(e => ({
             id: e.id,
             flightNumber: e.flightNumber,
@@ -34880,7 +34880,7 @@ const App: React.FC = () => {
         let deleted = 0;
         const processedPt051LogicalKeys = new Set<string>();
 
-        // FORWARD CHECK: Create PT-051s for events that don't have them
+        // FORWARD CHECK: Create training reports for events that don't have them.
         activeDfpEvents.forEach(event => {
             // Skip DUTY SUP events
             const isDutySup = event?.flightNumber?.includes('Duty Sup');
@@ -34893,7 +34893,7 @@ const App: React.FC = () => {
             // Skip deployment events
             const isDeployment = event?.type === 'deployment';
 
-            // Include flight, FTD, ground, and CPT events for PT-051 creation
+            // Include flight, FTD, ground, and CPT events for training report creation.
             const isValidEventType = event?.type === 'flight' ||
                                     event?.type === 'ftd' ||
                                     event?.type === 'ground' ||
@@ -34920,9 +34920,9 @@ const App: React.FC = () => {
                 trainees.push(...event.attendees);
             }
 
-            // Log event types being processed for PT-051 creation
+            // Log event types being processed for training report creation.
             if (trainees.length > 0) {
-                console.log(`📋 Processing ${event.type} event for PT-051:`, {
+                console.log(`📋 Processing ${event.type} event for training report:`, {
                     flightNumber: event.flightNumber,
                     type: event.type,
                     date: event.date,
@@ -34930,7 +34930,7 @@ const App: React.FC = () => {
                 });
             }
 
-            // For each trainee, check if PT-051 exists
+            // For each trainee, check if a training report exists.
             trainees.forEach(traineeFullName => {
                 const logicalAssessmentKey = `${event.date}|||${event.flightNumber}|||${traineeFullName}`;
                 if (processedPt051LogicalKeys.has(logicalAssessmentKey)) {
@@ -34939,13 +34939,13 @@ const App: React.FC = () => {
                 processedPt051LogicalKeys.add(logicalAssessmentKey);
                 const assessmentKey = `${event.id}-${traineeFullName}`;
 
-                // Check if PT-051 already exists for this event-trainee combination
+                // Check if a training report already exists for this event-trainee combination.
                 const existingAssessment = Array.from(newAssessments.values()).find(
                     a => a.eventId === event.id && a.traineeFullName === traineeFullName
                 );
 
                 if (!existingAssessment) {
-                    // DEDUP CHECK: If same date + flightNumber + trainee already has an unassessed PT-051
+                    // DEDUP CHECK: If same date + flightNumber + trainee already has an unassessed report.
                     // (none of DCO/DNCO/DPCO result checked, i.e. overallResult is null/empty)
                     // → remove the old placeholder and replace with new event details
                     // Historical events can legitimately repeat the same flightNumber for the same trainee
@@ -34958,10 +34958,10 @@ const App: React.FC = () => {
                     );
                     if (existingUnassessedForFlight) {
                         newAssessments.delete(existingUnassessedForFlight.id);
-                        console.log('🔄 Replacing unassessed PT-051 for', traineeFullName, 'on', event.flightNumber, '- overwriting with rescheduled event details');
+                        console.log('🔄 Replacing unassessed training report for', traineeFullName, 'on', event.flightNumber, '- overwriting with rescheduled event details');
                     }
 
-                    // Create new PT-051 (either fresh or replacing the old unassessed one)
+                    // Create new report, either fresh or replacing the old unassessed one.
                     const newAssessment: Pt051Assessment = {
                         id: `pt051-${assessmentKey}`,
                         traineeFullName: traineeFullName,
@@ -34983,12 +34983,12 @@ const App: React.FC = () => {
 
                     newAssessments.set(newAssessment.id, newAssessment);
                     created++;
-                    console.log('✅ Created PT-051 for', traineeFullName, 'on', event.flightNumber, event.date);
+                    console.log('✅ Created training report for', traineeFullName, 'on', event.flightNumber, event.date);
                 }
             });
         });
 
-        // UPDATE CHECK: Update existing PT-051s when event details change
+        // UPDATE CHECK: Update existing training reports when event details change.
         let updated = 0;
         newAssessments.forEach((assessment, assessmentId) => {
             // Find the corresponding event for this assessment
@@ -35020,19 +35020,19 @@ const App: React.FC = () => {
                 if (needsUpdate) {
                     newAssessments.set(assessmentId, { ...assessment, ...updates });
                     updated++;
-                    console.log('✏️ Updated PT-051 for', assessment.traineeFullName, 'on', assessment.flightNumber);
+                    console.log('✏️ Updated training report for', assessment.traineeFullName, 'on', assessment.flightNumber);
                 }
             }
         });
 
-        // REVERSE CHECK: Delete PT-051s whose events no longer exist on Active DFP
+        // REVERSE CHECK: Delete reports whose events no longer exist on Active DFP.
         const activeDfpEventIds = new Set(activeDfpEvents.map(e => e.id));
         const assessmentsToDelete: string[] = [];
 
         newAssessments.forEach((assessment, assessmentId) => {
             if (!activeDfpEventIds.has(assessment.eventId)) {
                 assessmentsToDelete.push(assessmentId);
-                console.log('🗑️ Deleting PT-051 for', assessment.traineeFullName, 'on', assessment.flightNumber, assessment.date, '(event no longer on Active DFP)');
+                console.log('🗑️ Deleting training report for', assessment.traineeFullName, 'on', assessment.flightNumber, assessment.date, '(event no longer on Active DFP)');
             }
         });
 
@@ -35041,7 +35041,7 @@ const App: React.FC = () => {
             deleted++;
         });
 
-        // DUPLICATE CLEANUP: Remove duplicate unassessed PT-051s for same date + flightNumber + trainee,
+        // DUPLICATE CLEANUP: Remove duplicate unassessed reports for same date + flightNumber + trainee,
         // while preserving legitimate repeats of the same event code on different dates.
         // Handles existing duplicates from
         // rescheduled events created before the dedup logic was added.
@@ -35062,7 +35062,7 @@ const App: React.FC = () => {
                 dupes.slice(1).forEach(old => {
                     newAssessments.delete(old.id);
                     dupDeleted++;
-                    console.log('🧹 Removed duplicate unassessed PT-051 for', old.traineeFullName, 'on', old.flightNumber, old.date);
+                    console.log('🧹 Removed duplicate unassessed training report for', old.traineeFullName, 'on', old.flightNumber, old.date);
                 });
             }
         });
@@ -35070,9 +35070,9 @@ const App: React.FC = () => {
         // Update state if changes were made
         if (created > 0 || deleted > 0 || updated > 0 || dupDeleted > 0) {
             setPt051Assessments(newAssessments);
-            console.log(`📊 PT-051 Sync Complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
+            console.log(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
         } else {
-            console.log('✅ PT-051s already in sync with Active DFP');
+            console.log('✅ Training reports already in sync with Active DFP');
         }
     };
 

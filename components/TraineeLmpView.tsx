@@ -31,7 +31,7 @@ interface TraineeLmpViewProps {
   // Optional: full syllabus + all trainees for Academic LMP tab
   syllabusDetails?: SyllabusItemDetail[];
   allTraineesData?: Trainee[];
-  // Optional: open PT-051 for a specific lesson
+  // Optional: open a training report for a specific lesson
   onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
   canOpenPt051?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
@@ -1072,7 +1072,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                             );
                         })()}
 
-                        {/* Open PT-051 button */}
+                        {/* Open training report button */}
                         {onOpenPt051ForLesson && (
                             <div className="flex items-center gap-px pt-2">
                                 <button

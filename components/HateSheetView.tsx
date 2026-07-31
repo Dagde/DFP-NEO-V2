@@ -74,7 +74,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     };
        const combinedHistory = React.useMemo(() => {
            // FIX: Add 'as const' to create a discriminated union for type-safe property access.
-           // Filter out placeholder/empty PT-051 records - only show records with actual assessment data OR date+instructor
+           // Filter out placeholder/empty report records - only show records with actual assessment data OR date+instructor
               // NOTE: isCompleted alone is NOT sufficient - historical seed records have isCompleted=true with no actual data
               // Events like mass briefs, CUT, TUT have no grade but DO have date+instructor - these should be shown
               const completedAssessments = assessments.filter(assessment => {
@@ -85,10 +85,10 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                   return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
               });
 
-              // DISPLAY DEDUP: keep one PT-051 row per trainee/event/date. Older
-              // builds could create synthetic score/mock PT-051 records when the
+              // DISPLAY DEDUP: keep one report row per trainee/event/date. Older
+              // builds could create synthetic score/mock report records when the
               // user clicked a blue LMP score row; those should not surface as a
-              // second PT-051 when a real assessment row exists.
+              // second report when a real assessment row exists.
               const canonicalAssessments = new Map<string, typeof completedAssessments[0]>();
               completedAssessments.forEach(assessment => {
                   const key = `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ''}`;
@@ -115,7 +115,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
               });
               const dedupedAssessments = Array.from(canonicalAssessments.values());
 
-              // DISPLAY DEDUP: For unassessed PT-051s (no overallResult/DCO/DNCO/DPCO checked),
+              // DISPLAY DEDUP: For unassessed reports with no mission status checked,
               // keep only the most recently dated one per flightNumber+trainee combination.
               // This handles existing duplicates from rescheduled events already in the DB.
               const seenUnassessed = new Map<string, typeof completedAssessments[0]>();
@@ -142,7 +142,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
            const visiblePt051EventKeys = new Set(finalAssessments.map(assessment =>
                `${assessment.traineeFullName}|||${assessment.flightNumber}`
            ));
-           // Filter out LMP Score placeholder records when a PT-051 row exists for
+           // Filter out LMP Score placeholder records when a report row exists for
            // the same trainee/event. The score record is still used by the app,
            // but the empty duplicate does not need to be shown in Performance History.
            const lmpItems = lmpScores
@@ -156,8 +156,8 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
            
            console.log('=== Building combinedHistory ===');
            console.log('LMP Scores:', lmpScores.length, lmpScores);
-           console.log('All PT-051 Assessments:', assessments.length, assessments);
-           console.log('Completed PT-051 Assessments (filtered):', completedAssessments.length, completedAssessments);
+           console.log('All training report assessments:', assessments.length, assessments);
+           console.log('Completed training report assessments (filtered):', completedAssessments.length, completedAssessments);
            
            const normaliseEventCode = (value?: string | null) => String(value || '').replace(/\s+/g, '').toUpperCase();
            const lmpOrder = new Map<string, number>();
@@ -172,7 +172,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
            // Combine and sort by Individual LMP order when available. Records that
            // are not in the current Individual LMP are kept behind the LMP timeline
-           // as a legacy fallback, but cleanup should remove those PT-051 rows.
+           // as a legacy fallback, but cleanup should remove those report rows.
            const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
                const aOrder = getLmpOrder(a);
                const bOrder = getLmpOrder(b);
@@ -297,7 +297,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     };
 
     const handleRowClick = (item: (typeof combinedHistory)[0]) => {
-        // Always navigate to PT-051 for all events (including ground events)
+        // Always navigate to a training report for all events (including ground events)
         if (item.type === 'LMP Score') {
             const existingAssessment = assessments.find(assessment =>
                 assessment.traineeFullName === trainee.fullName &&
@@ -317,7 +317,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                 return;
             }
 
-            // Create a mock PT-051 assessment for the LMP Score
+            // Create a mock training report assessment for the LMP Score
             const mockAssessment: Pt051Assessment = {
                 id: `mock-${item.event}`,
                 traineeFullName: trainee.fullName,
@@ -374,9 +374,9 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         if (!confirmed) return;
 
         try {
-            console.log('🗑️ Starting PT-051 deletion process for:', assessmentToDelete.id);
+            console.log('🗑️ Starting training report deletion process for:', assessmentToDelete.id);
             
-            // Delete from the authoritative PT-051 performance table first.
+            // Delete from the authoritative trainee performance table first.
             const response = await fetch(`/api/trainee-performance/${encodeURIComponent(assessmentToDelete.eventId)}`, {
                 method: 'DELETE',
                 headers: {
@@ -404,7 +404,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             });
             
             logAudit('Performance History', 'Delete', `Deleted ${trainingReportName} assessment for ${traineeName}`, auditDetails);
-            console.log('✅ PT-051 deletion recorded in audit log');
+            console.log('✅ Training report deletion recorded in audit log');
 
             // Remove from local state after database deletion and audit logging
             setLocalPt051Events(prev => prev.filter(assessment => assessment.id !== eventId));
@@ -416,10 +416,10 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                 }, 500);
             }
             
-            console.log('PT-051 deleted successfully:', assessmentToDelete.id);
+            console.log('Training report deleted successfully:', assessmentToDelete.id);
             
         } catch (error) {
-            console.error('Error deleting PT-051:', error);
+            console.error('Error deleting training report:', error);
             alert(`Failed to delete ${trainingReportName}. Please try again.`);
         }
     };

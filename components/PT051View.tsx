@@ -1323,7 +1323,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
                             // Enable editing mode - you could add state to track this
-                            console.log('Editing mode enabled for PT-051:', initialAssessment.id);
+                            console.log('Editing mode enabled for training report:', initialAssessment.id);
                         }} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
                             Edit
                         </button>
@@ -1500,7 +1500,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     <div className="lg:col-span-2 flex h-full flex-col space-y-4">
                         <div className="relative flex-1 p-4 border border-gray-600 rounded-lg lg:-ml-[44px] lg:w-[calc(100%+44px)]">
                             <div className="absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300">{reportTemplate.modules.overallAssessment.title}</div>
-                            {/* DCO/DPCO/DNCO Radio Buttons - Always available for PT-051 assessments */}
+                            {/* Mission status options are always available for training report assessments. */}
                             <div className="mt-2 mb-3">
                                 <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
                                     <div>

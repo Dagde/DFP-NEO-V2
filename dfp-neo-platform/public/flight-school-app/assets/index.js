@@ -20357,8 +20357,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     }).map((score) => ({ ...score, type: "LMP Score" }));
     console.log("=== Building combinedHistory ===");
     console.log("LMP Scores:", lmpScores.length, lmpScores);
-    console.log("All PT-051 Assessments:", assessments.length, assessments);
-    console.log("Completed PT-051 Assessments (filtered):", completedAssessments.length, completedAssessments);
+    console.log("All training report assessments:", assessments.length, assessments);
+    console.log("Completed training report assessments (filtered):", completedAssessments.length, completedAssessments);
     const normaliseEventCode = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
     const lmpOrder = /* @__PURE__ */ new Map();
     traineeLmp.forEach((item, index) => {
@@ -22683,7 +22683,7 @@ This action cannot be undone.`;
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePrint, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Print" }),
             initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-              console.log("Editing mode enabled for PT-051:", initialAssessment.id);
+              console.log("Editing mode enabled for training report:", initialAssessment.id);
             }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : `Your permission profile does not allow ${trainingReportName} editing`, className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
             assessment.id && onDeleteAssessment && canEditPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -38595,7 +38595,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission profile" : "No mission profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission profile manually." : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission profile manually." : `${operationalModelLabel} has no saved directed mission profiles yet. Add them in Settings > Platform & Deployment > Directed Mission Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -65409,13 +65409,13 @@ const AppearanceSettings = ({
         {
           value: "event_type",
           label: "Event Type",
-          description: "Courses, packages, taskings, currency, and other event types each use their own colour.",
+          description: "Courses, packages, missions, currency, and other event types each use their own colour.",
           swatches: ["bg-cyan-500/70", "bg-violet-500/70", "bg-sky-500/70", "bg-green-500/70"]
         },
         {
           value: "crew",
           label: "Crew Group",
-          description: "Each crew group uses a different colour so whole-crew tasking is easier to scan.",
+          description: "Each crew group uses a different colour so whole-crew missions are easier to scan.",
           swatches: ["bg-sky-500/70", "bg-green-500/70", "bg-violet-500/70", "bg-amber-500/70"]
         }
       ].map((option) => {
@@ -71073,7 +71073,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Mission Profiles",
+          title: "Directed Mission Profiles",
           subtitle: "Model-specific mission profile lists used by Directed Events. Users can still type a mission profile manually if the assigned profile is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -71094,7 +71094,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
@@ -71458,7 +71458,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Standard Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -75459,7 +75459,7 @@ const sectionLabels = {
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Mission Profiles",
+  "platform-task-profiles": "Directed Mission Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -75604,7 +75604,7 @@ const sectionDescriptions = {
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Model-specific mission profile lists for Directed Events",
+  "platform-task-profiles": "Model-specific directed mission profile lists",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -112095,11 +112095,11 @@ ${"=".repeat(60)}`);
           updated.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
           return updated;
         });
-        console.log(`[PT051] Loaded authoritative PT-051 for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
+        console.log(`[Training Report] Loaded authoritative report for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
       }
       return assessment;
     } catch (error) {
-      console.warn(`[PT051] Could not load authoritative PT-051 for ${trainee.fullName} ${event.flightNumber}:`, error);
+      console.warn(`[Training Report] Could not load authoritative report for ${trainee.fullName} ${event.flightNumber}:`, error);
       return null;
     } finally {
       setLoadedPt051Keys((prev) => {
@@ -112216,7 +112216,7 @@ Please wait while NEO redirects you to the existing ${reportDisplayName}.`,
       });
       logAudit("Individual LMP", "Generate", `Generated ${reportDisplayName} for ${trainee.fullName} - Event: ${item.code} (${eventForAssessment.date})`);
     } catch (error) {
-      console.warn("[PT051] Failed to persist generated Individual LMP PT-051:", error);
+      console.warn("[Training Report] Failed to persist generated Individual LMP report:", error);
       await showDarkAlert2(
         `${reportDisplayName} was generated locally, but could not be saved to the database.
 
@@ -115845,14 +115845,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   const syncPt051WithActiveDfp = (currentPublishedSchedules, currentPt051Assessments) => {
     const schedules = currentPublishedSchedules || publishedSchedules;
     const assessments = currentPt051Assessments || pt051Assessments;
-    console.log("🔄 Starting PT-051 sync with Active DFP...");
+    console.log("🔄 Starting training report sync with Active DFP...");
     console.log("Published schedules keys:", Object.keys(schedules));
     const activeDfpEvents = [];
     Object.values(schedules).forEach((scheduleEvents) => {
       activeDfpEvents.push(...scheduleEvents);
     });
     console.log("Total events on Active DFP:", activeDfpEvents.length);
-    console.log("Current PT-051 count:", assessments.size);
+    console.log("Current training report count:", assessments.size);
     console.log("Sample events:", activeDfpEvents.slice(0, 3).map((e) => ({
       id: e.id,
       flightNumber: e.flightNumber,
@@ -115888,7 +115888,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         trainees.push(...event.attendees);
       }
       if (trainees.length > 0) {
-        console.log(`📋 Processing ${event.type} event for PT-051:`, {
+        console.log(`📋 Processing ${event.type} event for training report:`, {
           flightNumber: event.flightNumber,
           type: event.type,
           date: event.date,
@@ -115911,7 +115911,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           );
           if (existingUnassessedForFlight) {
             newAssessments.delete(existingUnassessedForFlight.id);
-            console.log("🔄 Replacing unassessed PT-051 for", traineeFullName, "on", event.flightNumber, "- overwriting with rescheduled event details");
+            console.log("🔄 Replacing unassessed training report for", traineeFullName, "on", event.flightNumber, "- overwriting with rescheduled event details");
           }
           const newAssessment = {
             id: `pt051-${assessmentKey}`,
@@ -115933,7 +115933,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           };
           newAssessments.set(newAssessment.id, newAssessment);
           created++;
-          console.log("✅ Created PT-051 for", traineeFullName, "on", event.flightNumber, event.date);
+          console.log("✅ Created training report for", traineeFullName, "on", event.flightNumber, event.date);
         }
       });
     });
@@ -115961,7 +115961,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         if (needsUpdate) {
           newAssessments.set(assessmentId, { ...assessment, ...updates });
           updated++;
-          console.log("✏️ Updated PT-051 for", assessment.traineeFullName, "on", assessment.flightNumber);
+          console.log("✏️ Updated training report for", assessment.traineeFullName, "on", assessment.flightNumber);
         }
       }
     });
@@ -115970,7 +115970,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     newAssessments.forEach((assessment, assessmentId) => {
       if (!activeDfpEventIds.has(assessment.eventId)) {
         assessmentsToDelete.push(assessmentId);
-        console.log("🗑️ Deleting PT-051 for", assessment.traineeFullName, "on", assessment.flightNumber, assessment.date, "(event no longer on Active DFP)");
+        console.log("🗑️ Deleting training report for", assessment.traineeFullName, "on", assessment.flightNumber, assessment.date, "(event no longer on Active DFP)");
       }
     });
     assessmentsToDelete.forEach((id) => {
@@ -115994,15 +115994,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         dupes.slice(1).forEach((old) => {
           newAssessments.delete(old.id);
           dupDeleted++;
-          console.log("🧹 Removed duplicate unassessed PT-051 for", old.traineeFullName, "on", old.flightNumber, old.date);
+          console.log("🧹 Removed duplicate unassessed training report for", old.traineeFullName, "on", old.flightNumber, old.date);
         });
       }
     });
     if (created > 0 || deleted > 0 || updated > 0 || dupDeleted > 0) {
       setPt051Assessments(newAssessments);
-      console.log(`📊 PT-051 Sync Complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
+      console.log(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
     } else {
-      console.log("✅ PT-051s already in sync with Active DFP");
+      console.log("✅ Training reports already in sync with Active DFP");
     }
   };
   const handleUpdatePriorityEvent = (eventId, updates) => {

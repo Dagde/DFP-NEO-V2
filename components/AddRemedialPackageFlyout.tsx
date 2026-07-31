@@ -254,7 +254,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
     return `${event.code || event.id}${suffix}`;
   };
 
-  // Find the last completed event (based on PT-051 flight history - last event actually flown)
+  // Find the last completed event from training report history.
   const lastCompletedEvent = useMemo(() => {
     // Get all events that have been flown (any score >= 0) with actual flight dates
     // Even Fail (0) or Marginal (1) scores count as "completed" for progression purposes
