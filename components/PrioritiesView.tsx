@@ -632,7 +632,7 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} task profile
+                  {operationalModelLabel} mission profile
                 </span>
               </button>
             ))
@@ -643,7 +643,7 @@ const TaskingProfileInput: React.FC<{
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? 'Keep typing to enter this tasking manually.'
+                  ? 'Keep typing to enter this mission profile manually.'
                   : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.`}
               </span>
             </div>

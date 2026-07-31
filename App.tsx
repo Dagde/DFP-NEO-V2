@@ -4007,7 +4007,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 </select>
                             </label>
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual tasking name
-                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type tasking manually" />
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />

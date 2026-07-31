@@ -11573,7 +11573,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Task Tile Labels", description: "Short display names for task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Mission Tile Labels", description: "Short display names for mission tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
             Object.keys(taskAbbreviations || {}).length,
             " configured"
@@ -11581,8 +11581,8 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           settingsLink("platform-task-profiles", "Take me there", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task profile, training requirement, or event data." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full mission profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission profile, training requirement, or event data." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Mission - CAS." })
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
@@ -11593,7 +11593,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No mission profiles are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Mission Profiles", description: "Regular unit mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
@@ -38588,14 +38588,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " task profile"
+            " mission profile"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission profile" : "No mission profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this tasking manually." : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission profile manually." : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -71115,7 +71115,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One mission profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
@@ -90617,7 +90617,7 @@ const DfpSidePanelTimeline = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Manual tasking name",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type tasking manually" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",

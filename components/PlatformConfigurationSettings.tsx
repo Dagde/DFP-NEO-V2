@@ -6860,7 +6860,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One mission profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
