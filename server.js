@@ -10235,7 +10235,7 @@ async function seedCancellationCodesIfEmpty(db) {
       return;
     }
     if (process.env.DFP_SEED_STARTER_CANCELLATION_CODES !== 'true') {
-      console.log('ℹ️  CancellationCode table is empty - starter cancellation code seed disabled');
+      console.log('ℹ️  CancellationCode table is empty - setup cancellation code seed disabled');
       return;
     }
     const defaults = [

@@ -867,9 +867,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             page: 'Settings - Template Downloads',
             action: 'update',
             description: `Reset ${template.label} download template`,
-            changes: 'Restored built-in template download.',
+            changes: 'Restored system template download.',
         });
-        onShowSuccess(`${template.label} template reset to built-in default.`);
+        onShowSuccess(`${template.label} template reset to system template.`);
     };
 
     const handleEditBusinessRules = () => {
