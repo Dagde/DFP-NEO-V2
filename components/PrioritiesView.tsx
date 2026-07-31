@@ -1818,7 +1818,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         nextPercentages.set(course, stream?.enabled ? stream.weight : 0);
       });
       onUpdatePercentages(nextPercentages);
-      logAudit('Priorities', 'Edit', 'Updated Flight School course priorities', `${sorted.length} courses`);
+      logAudit('Priorities', 'Edit', `Updated ${operationalModelLabel.replace(/\s+Model$/i, '')} course priorities`, `${sorted.length} courses`);
       return;
     }
 
@@ -4138,14 +4138,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             ? 'Air Combat Course & Package Priority'
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Fixed Crew Course & Package Priority'
-                                                : 'Flight School Course Priority'}
+                                                : `${operationalModelLabel.replace(/\s+Model$/i, '')} Course Priority`}
                                     </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
                                         {priorityAllocationModel === 'air_combat'
                                             ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted."
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
-                                                : 'Set how Flight School training capacity is shared across active courses for this locality.'}
+                                                : `Set how ${operationalModelLabel.replace(/\s+Model$/i, '')} training capacity is shared across active courses for this locality.`}
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">

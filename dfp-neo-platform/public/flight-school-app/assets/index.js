@@ -39322,7 +39322,7 @@ const PrioritiesView = ({
         nextPercentages.set(course, stream?.enabled ? stream.weight : 0);
       });
       onUpdatePercentages(nextPercentages);
-      logAudit("Priorities", "Edit", "Updated Flight School course priorities", `${sorted.length} courses`);
+      logAudit("Priorities", "Edit", `Updated ${operationalModelLabel.replace(/\s+Model$/i, "")} course priorities`, `${sorted.length} courses`);
       return;
     }
     if (priorityAllocationModel === "air_combat") {
@@ -41151,8 +41151,8 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed-crew-course-package-priority-card mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : "Flight School Course Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : `${operationalModelLabel.replace(/\s+Model$/i, "")} Course Priority` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -66788,7 +66788,7 @@ const downloadTextFile = (filename, content, mimeType) => {
 };
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   event: "The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a mission code.",
-  training: "The label for the training stream that owns the event. In Flight School this may be a course or LMP; in Air Combat it may be a course, package or assigned training sequence.",
+  training: "The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, mission stream or assigned training sequence.",
   type: "The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, mission sortie or other model-specific event type.",
   timing: "The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.",
   resource: "The label for the platform or resource used during the event. This may be an aircraft, simulator, procedural trainer, ground room or another configured resource.",
@@ -71259,14 +71259,14 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Reusable Flight / Mission Profiles",
-          subtitle: "Define reusable flight templates for regular Fixed Crew-style unit flights.",
+          subtitle: "Define reusable flight templates for unit models that support recurring mission or task profiles.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Profile" })
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight / Mission Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight / Mission Profiles are available when the selected unit model supports recurring mission or task profiles." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
@@ -71274,7 +71274,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New reusable flight profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No reusable flight profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No reusable flight profiles configured for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);

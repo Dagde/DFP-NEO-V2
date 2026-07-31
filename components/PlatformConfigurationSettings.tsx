@@ -1715,7 +1715,7 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
 
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
   event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a mission code.',
-  training: 'The label for the training stream that owns the event. In Flight School this may be a course or LMP; in Air Combat it may be a course, package or assigned training sequence.',
+  training: 'The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, mission stream or assigned training sequence.',
   type: 'The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, mission sortie or other model-specific event type.',
   timing: 'The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.',
   resource: 'The label for the platform or resource used during the event. This may be an aircraft, simulator, procedural trainer, ground room or another configured resource.',
@@ -7122,7 +7122,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
           title="Reusable Flight / Mission Profiles"
-          subtitle="Define reusable flight templates for regular Fixed Crew-style unit flights."
+          subtitle="Define reusable flight templates for unit models that support recurring mission or task profiles."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
@@ -7133,7 +7133,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Reusable Flight / Mission Profiles are currently available for Fixed Crew-style models.
+              Reusable Flight / Mission Profiles are available when the selected unit model supports recurring mission or task profiles.
             </div>
           ) : (
             <>
@@ -7145,7 +7145,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No reusable flight profiles configured for this Fixed Crew unit.
+                  No reusable flight profiles configured for this unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">

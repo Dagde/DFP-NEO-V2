@@ -4,7 +4,7 @@ export default function FlightSchoolPage() {
       <iframe
         src="/flight-school-app/index-v2.html"
         className="w-full h-screen border-0"
-        title="DFP-NEO Flight School"
+        title="DFP-NEO Scheduling Platform"
       />
     </div>
   );

@@ -9,8 +9,8 @@ const apps = [
   {
     id: 'flight-school',
     name: 'DFP-NEO',
-    subtitle: 'Flight School Edition',
-    description: 'Comprehensive Flight Training Scheduling and Training Management System (TMS)',
+    subtitle: 'Scheduling Platform',
+    description: 'Configurable defence aviation scheduling and training management',
     image: '/images/trainer-aircraft.jpg',
     status: 'active',
     href: '/flight-school',

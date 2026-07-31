@@ -19,19 +19,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    // Get all personnel (staff/instructors)
+    // Get all active personnel and trainees without legacy role or unit assumptions.
     const personnelWhere: any = {
       isActive: true,
-      OR: [
-        { role: 'INSTRUCTOR' },
-        { role: 'OFI' },
-        { role: 'QFI' },
-      ],
     };
 
     if (search) {
       personnelWhere.OR = [
-        ...personnelWhere.OR,
         { name: { contains: search, mode: 'insensitive' } },
         { idNumber: { equals: parseInt(search) } },
         { rank: { contains: search, mode: 'insensitive' } },
@@ -64,24 +58,7 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    // Transform personnel data
     const transformedPersonnel = personnel.map(p => {
-      // Map category to service
-      const serviceMap: Record<string, string> = {
-        'A': 'RAAF',
-        'B': 'RAAF',
-        'D': 'RAAF',
-        'UnCat': 'N/A',
-      };
-      
-      // Map flight to unit
-      const unitMap: Record<string, string> = {
-        'A': '1FTS',
-        'B': '1FTS',
-        'C': '1FTS',
-        'D': '1FTS',
-      };
-      
       return {
         id: p.id,
         name: p.name,
@@ -89,8 +66,8 @@ export async function GET(request: NextRequest) {
         role: p.role || 'STAFF',
         createdAt: p.createdAt.toISOString().split('T')[0],
         rank: p.rank,
-        service: serviceMap[p.category || ''] || p.category || 'RAAF',
-        unit: unitMap[p.flight || ''] || p.flight || 'N/A',
+        service: p.service || p.category || 'N/A',
+        unit: p.unit || p.flight || 'N/A',
         userType: 'STAFF' as const,
         personnelId: p.id,
         email: p.email || 'N/A',
@@ -106,8 +83,8 @@ export async function GET(request: NextRequest) {
         role: 'TRAINEE',
         createdAt: t.createdAt ? t.createdAt.toISOString().split('T')[0] : 'N/A',
         rank: t.rank,
-        service: t.service || 'RAAF',
-        unit: t.course || 'N/A',
+        service: t.service || 'N/A',
+        unit: t.unit || t.course || 'N/A',
         userType: 'TRAINEE' as const,
         personnelId: t.id,
         email: 'N/A',
