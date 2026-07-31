@@ -8804,7 +8804,7 @@ async function seedCommercialLicenseIfEmpty(db) {
             THEN regexp_replace("licenseKey", '-EVAL$', '-STARTER')
           ELSE "licenseKey"
         END,
-        "licenseName" = regexp_replace("licenseName", ' Evaluation Licence$', ' Starter Licence'),
+        "licenseName" = regexp_replace(regexp_replace("licenseName", ' Evaluation Licence$', ' Starter Licence'), ' Evaluation License$', ' Starter Licence'),
         "features" = COALESCE("features", '{}'::jsonb) - 'developmentOnly' || '{"seededBy":"Starter licensing foundation"}'::jsonb,
         "notes" = CASE
           WHEN "notes" ILIKE 'Development licensing foundation record.%'
@@ -8815,6 +8815,7 @@ async function seedCommercialLicenseIfEmpty(db) {
       WHERE
         ("features"->>'seededBy' = 'Development licensing foundation'
           OR "licenseName" ILIKE '% Evaluation Licence'
+          OR "licenseName" ILIKE '% Evaluation License'
           OR "licenseKey" LIKE '%-EVAL')
     `);
     return;

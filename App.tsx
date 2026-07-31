@@ -3994,19 +3994,19 @@ const DfpSidePanelTimeline: React.FC<{
                         onClick={() => setShowAssistTaskForm(value => !value)}
                         className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
                     >
-                        {showAssistTaskForm ? 'Hide Mission Details' : '+ Add Mission'}
+                        {showAssistTaskForm ? 'Hide Task Details' : '+ Add Task'}
                     </button>
                     {showAssistTaskForm && (
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Mission Profile
+                                Task Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
-                                    <option value="">Select mission profile</option>
+                                    <option value="">Select task profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
-                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission profile
-                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission profile manually" />
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual task profile
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type task profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
@@ -22643,7 +22643,7 @@ const App: React.FC = () => {
                 compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
                 compositeProfileId: String(row?.compositeProfileId || '').trim(),
                 aircraftTypeCode: String(row?.aircraftTypeCode || '').trim().toUpperCase(),
-                missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
+                missionName: String(row?.missionName || row?.name || `Task Profile ${index + 1}`).trim(),
                 shortTitle: String(row?.shortTitle || '').trim().slice(0, 8),
                 description: String(row?.description || '').trim(),
                 resourceType: (['Flight', 'FTD', 'CPT', 'Ground'].includes(String(row?.resourceType || row?.type || 'Flight')) ? String(row?.resourceType || row?.type || 'Flight') : 'Flight') as StandardMissionProfile['resourceType'],

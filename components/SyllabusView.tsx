@@ -172,7 +172,7 @@ const AssessedElementsWindow: React.FC<{
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-2">
                         <div>
                             <div className="text-xs font-bold uppercase tracking-wide text-amber-100">Assessment required</div>
-                            <div className="mt-0.5 text-[11px] text-gray-400">Creates a draft training report after DCO post-flight completion.</div>
+                            <div className="mt-0.5 text-[11px] text-gray-400">Creates a draft training report after completed post-flight entry.</div>
                         </div>
                         {isEditing ? (
                             <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-amber-100">

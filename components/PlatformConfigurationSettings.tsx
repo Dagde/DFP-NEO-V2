@@ -443,7 +443,7 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
       compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Task Profile ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
       description: String(row?.description || ''),
       resourceType,
@@ -1335,7 +1335,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
       return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
     }
     if (lowerTitle.includes('profiles')) {
-      return { section: 'platform-standard-missions', label: 'Reusable Mission Profiles' };
+      return { section: 'platform-standard-missions', label: 'Reusable Task Profiles' };
     }
   }
   return null;
@@ -1577,11 +1577,11 @@ const buildConfigurationHealth = (
       'Combined-unit profiles need per-unit copies',
       `${missingCompositeClones} unit-scoped mission, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Reusable Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
-      { section: 'platform-standard-missions', label: 'Reusable Mission Profiles', focusSubsectionId: 'platform-standard-missions' }
+      'Open Reusable Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
+      { section: 'platform-standard-missions', label: 'Reusable Task Profiles', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Mission profiles, alternate crew profiles and currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Task profiles, alternate crew profiles and currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -5427,7 +5427,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode,
-      missionName: `Mission Profile ${missionIndex}`,
+      missionName: `Task Profile ${missionIndex}`,
       shortTitle: `MISSION${missionIndex}`.slice(0, 8),
       description: '',
       resourceType: 'Flight',
@@ -6812,8 +6812,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Directed Mission Profiles"
-          subtitle="Model-specific mission profile lists used by Directed Events. Users can still type a mission profile manually if the assigned profile is not listed."
+          title="Directed Task Profiles"
+          subtitle="Model-specific task profile lists used by Directed Events. Users can still type a task profile manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6835,7 +6835,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the directed mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
+            Set the directed task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6860,14 +6860,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One mission profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
             })}
           </div>
           <div id="platform-task-tile-abbreviations" className="mt-5">
-            <h4 className="mb-2 text-sm font-bold text-white">Unit Mission Tile Abbreviations</h4>
+            <h4 className="mb-2 text-sm font-bold text-white">Unit Task Tile Abbreviations</h4>
             <div className="grid gap-4 lg:grid-cols-2">
               {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
@@ -7103,31 +7103,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
-          title="Reusable Mission Profiles"
-          subtitle="Define reusable mission profiles for regular Fixed Crew-style unit flights."
+          title="Reusable Task Profiles"
+          subtitle="Define reusable task profiles for regular Fixed Crew-style unit flights."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Mission</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Task</button>
             </div>
           ) : null}
         />
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Reusable Mission Profiles are currently available for Fixed Crew-style models.
+              Reusable Task Profiles are currently available for Fixed Crew-style models.
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission.
+                  New task profiles default to the unit home location and unit default callsign. Values can be manually edited per task.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No Reusable Mission Profiles configured for this Fixed Crew unit.
+                  No Reusable Task Profiles configured for this Fixed Crew unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
@@ -7188,7 +7188,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={activeStandardMissionUnitLabel}
                                 disabled
                                 onChange={() => undefined}
-                                info="Reusable Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                                info="Reusable Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
                               <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
@@ -9214,17 +9214,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </div>
                     <Field
                       label={{
-                        DCO: 'Mission Completed Text',
-                        DPCO: 'Mission Partially Completed Text',
-                        DNCO: 'Mission Not Completed Text',
+                        DCO: 'Completed Status Label',
+                        DPCO: 'Partially Completed Status Label',
+                        DNCO: 'Not Completed Status Label',
                       }[option.code]}
                       {...getTrainingReportTextDraftProps(`completion:${option.code}:label`, optionEnabled ? option.label : '')}
                       disabled={!canEditTrainingReportTemplate || !optionEnabled}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       info={{
-                        DCO: 'Text displayed when the mission or training event was completed. The wording can change, but the outcome remains the completed-mission result.',
-                        DPCO: 'Text displayed when the mission was partially completed. Use this when an event occurred but did not fully satisfy the planned mission or training requirement.',
-                        DNCO: 'Text displayed when the mission was not completed. The wording can change, but the outcome remains the not-completed-mission result.',
+                        DCO: 'The visible status label for a completed event. The wording can change, while the system keeps the completed-event function intact.',
+                        DPCO: 'The visible status label for a partially completed event. Use this when the event occurred but did not fully satisfy the planned requirement.',
+                        DNCO: 'The visible status label for an event that was not completed. The wording can change, while the system keeps the not-completed function intact.',
                       }[option.code]}
                     />
                   </div>
