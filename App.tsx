@@ -21434,7 +21434,7 @@ const App: React.FC = () => {
 
     React.useEffect(() => {
         const appTitle = localStorage.getItem('dfp_app_title');
-        document.title = appTitle || 'Flight School Scheduler - v2024-12-08-2';
+        document.title = appTitle || 'DFP NEO';
     }, []);
 
     // Wrap String.prototype.split to catch errors

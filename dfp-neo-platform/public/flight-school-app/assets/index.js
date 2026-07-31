@@ -104799,7 +104799,7 @@ const App = () => {
   React.useEffect(() => initialiseLiveChangeBus(), []);
   React.useEffect(() => {
     const appTitle = localStorage.getItem("dfp_app_title");
-    document.title = appTitle || "Flight School Scheduler - v2024-12-08-2";
+    document.title = appTitle || "DFP NEO";
   }, []);
   React.useEffect(() => {
     const originalSplit = String.prototype.split;
