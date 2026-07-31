@@ -527,7 +527,6 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT = 'dfp-platform-config-updated';
-const DEFAULT_UNIT_TYPES = ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'];
 const SETTINGS_VISIBILITY_FILTERS: Array<{ value: SettingsVisibilityFilter; label: string; description: string }> = [
   {
     value: 'unit',
@@ -573,7 +572,7 @@ const normaliseSettingsVisibilityPolicy = (value?: Partial<SettingsVisibilityPol
 const getDefaultHasTraineesForUnit = (_unitCode: unknown): boolean => false;
 
 const normaliseUnitTypes = (values: unknown, units: any[] = []): string[] => {
-  const sourceValues = Array.isArray(values) ? values : DEFAULT_UNIT_TYPES;
+  const sourceValues = Array.isArray(values) ? values : [];
   const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
   const seen = new Set<string>();
   return [...sourceValues, ...usedValues]
@@ -4316,7 +4315,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           name: 'New Unit',
           organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || 'DEFAULT',
           locationCode: defaultLocation,
-          unitType: contextUnit?.unitType || unitTypeOptions[0] || 'Training',
+          unitType: contextUnit?.unitType || '',
           status: 'ACTIVE',
           settings: {
             parentOrganisationPath: Array.isArray(contextUnitSettings.parentOrganisationPath) ? contextUnitSettings.parentOrganisationPath : undefined,
@@ -6773,7 +6772,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
                 <div>
-                  <SelectField label="Unit Type" value={unit.unitType || unitTypeOptions[0] || ''} disabled={!isUnitEditing} options={unitTypeOptions} onChange={(value) => updateRow('units', index, { unitType: value })} />
+                  <SelectField label="Unit Type" value={unit.unitType || ''} disabled={!isUnitEditing} options={unitTypeOptions} onChange={(value) => updateRow('units', index, { unitType: value })} />
                 </div>
                 <label>
                   <FieldLabel

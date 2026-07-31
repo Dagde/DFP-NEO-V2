@@ -395,7 +395,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             // Record deletion in AUDIT before removing from local state
             console.log('\ud83d\udccb Assessment object structure:', Object.keys(assessmentToDelete), assessmentToDelete);
             const auditDetails = `Assessment: ${assessmentToDelete.id || 'Unknown'}, Event: ${assessmentToDelete.eventId || 'Unknown'}, Date: ${assessmentToDelete.date || 'Unknown'}, Grade: ${assessmentToDelete.overallGrade || 'N/A'}, Instructor: ${assessmentToDelete.instructorName || assessmentToDelete.instructor || 'Unknown'}`;
-            const traineeName = trainee.name || trainee.fullName || 'Unknown Trainee';
+            const traineeName = trainee.name || trainee.fullName || 'Trainee not recorded';
             console.log('📋 About to log audit entry:', {
                 page: 'Performance History',
                 action: 'Delete',

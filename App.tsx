@@ -5000,7 +5000,7 @@ import { loadSyllabusFromDB, clearSyllabusCache, createSyllabusItem, updateSylla
 // --- DEFAULT PHRASE BANK (configuration data - not mock data) ---
 import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
 import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
-import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
+import { mergeWithInitialCurrencies } from './data/currencies';
 
 // --- TRAINING REPORT STRUCTURE ---
 const PT051_STRUCTURE = [
@@ -27198,10 +27198,10 @@ const App: React.FC = () => {
     const [eventForPostFlight, setEventForPostFlight] = useState<ScheduleEvent | null>(null);
 
     // Currency setup state
-    const [masterCurrencies, setMasterCurrencies] = useState<MasterCurrency[]>(INITIAL_MASTER_CURRENCIES);
-    const [currencyRequirements, setCurrencyRequirements] = useState<CurrencyRequirement[]>(INITIAL_CURRENCY_REQUIREMENTS);
-    const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = useState<MasterCurrency[]>(INITIAL_MASTER_CURRENCIES);
-    const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = useState<CurrencyRequirement[]>(INITIAL_CURRENCY_REQUIREMENTS);
+    const [masterCurrencies, setMasterCurrencies] = useState<MasterCurrency[]>([]);
+    const [currencyRequirements, setCurrencyRequirements] = useState<CurrencyRequirement[]>([]);
+    const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = useState<MasterCurrency[]>([]);
+    const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = useState<CurrencyRequirement[]>([]);
     const [unitCurrencyDefinitions, setUnitCurrencyDefinitions] = useState<Record<string, {
         masterCurrencies: MasterCurrency[];
         currencyRequirements: CurrencyRequirement[];
@@ -27359,7 +27359,7 @@ const App: React.FC = () => {
                 const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
                 const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes)
                     ? platformConfig.unitTypes
-                    : ['Training'];
+                    : [];
                 const resolveLegacyLocationCode = (locationValue: string): string => {
                     const raw = String(locationValue || '').trim();
                     if (!raw) return '';
@@ -27537,7 +27537,7 @@ const App: React.FC = () => {
                 }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (Array.isArray(saved.cancellationCodes)) setCancellationCodes(saved.cancellationCodes);
-                // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
+                // Normalise saved currencies without restoring deleted starter/default currency records.
                 {
                     const dbReqs = saved.currencyRequirements ?? [];
                     const dbMasters = saved.masterCurrencies ?? [];

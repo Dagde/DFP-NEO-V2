@@ -107,7 +107,7 @@ const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
                 rank: trainee.rank,
                 idNumber: trainee.idNumber
               });
-              const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || 'Unknown Trainee';
+              const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || 'Trainee not recorded';
               return (
                 <div key={trainee.fullName || trainee.idNumber || trainee.id} className="flex items-center space-x-3">
                   <input

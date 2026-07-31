@@ -217,10 +217,14 @@ function getConfiguredSecret(name, aliases = []) {
 }
 
 function requireSeedEndpointSecret() {
+  const allowDevelopmentSeed = String(process.env.ALLOW_DEMO_SEEDING || '').trim().toLowerCase() === 'true';
+  if (!allowDevelopmentSeed) {
+    throw new Error('Demo and historical seed endpoints require ALLOW_DEMO_SEEDING=true.');
+  }
+
   const configuredSecret = getConfiguredSecret('SEED_SECRET');
   if (configuredSecret) return configuredSecret;
 
-  const allowDevelopmentSeed = String(process.env.ALLOW_DEMO_SEEDING || '').trim().toLowerCase() === 'true';
   if (process.env.NODE_ENV !== 'production' && allowDevelopmentSeed) {
     console.warn('⚠️ SEED_SECRET is not configured; ALLOW_DEMO_SEEDING=true enables the development seed secret.');
     return 'dfp-seed-development-only';
@@ -1298,11 +1302,9 @@ const normaliseAuditDateOnly = (value) => {
   return String(value).slice(0, 10);
 };
 
-const DEFAULT_COMMERCIAL_UNIT_TYPES = ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'];
-
 const normaliseCommercialUnitTypes = (values, units = []) => {
   const seen = new Set();
-  const sourceValues = Array.isArray(values) ? values : DEFAULT_COMMERCIAL_UNIT_TYPES;
+  const sourceValues = Array.isArray(values) ? values : [];
   const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
   return [...sourceValues, ...usedValues]
     .map((value) => String(value || '').trim())
@@ -1364,7 +1366,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
       locationCode: row.locationCode || '',
       code: row.code || '',
       name: row.name || '',
-      unitType: row.unitType || 'Training',
+      unitType: row.unitType || '',
       status: row.status || 'ACTIVE',
       settings: row.settings || {},
     }),
@@ -2881,7 +2883,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $6,
           "settings" = $7::jsonb,
           "updatedAt" = $8::timestamp
-      `, unit.organisationCode || 'DEFAULT', unit.locationCode || '', unit.code, unit.name, unit.unitType || unitTypes[0] || 'Training', unit.status || 'ACTIVE', toJson(unit.settings), now);
+      `, unit.organisationCode || 'DEFAULT', unit.locationCode || '', unit.code, unit.name, unit.unitType || '', unit.status || 'ACTIVE', toJson(unit.settings), now);
     }
 
     for (const aircraftType of aircraftTypes) {
@@ -8344,7 +8346,7 @@ async function ensureCommercialConfigTables(db) {
         "locationCode" TEXT NOT NULL,
         "code" TEXT NOT NULL,
         "name" TEXT NOT NULL,
-        "unitType" TEXT NOT NULL DEFAULT 'Training',
+        "unitType" TEXT NOT NULL DEFAULT '',
         "status" TEXT NOT NULL DEFAULT 'ACTIVE',
         "settings" JSONB NOT NULL DEFAULT '{}',
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -204,11 +204,9 @@ const getLocalDateString = (date: Date = new Date()): string => {
     return `${year}-${month}-${day}`;
 };
 
-const DEFAULT_UNIT_TYPES = ['Training', 'Fighter', 'Airlift', 'Maritime', 'HQ', 'Operational'];
-
 const normaliseUnitTypeOptions = (platformConfig?: any): string[] => {
     const seen = new Set<string>();
-    const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : DEFAULT_UNIT_TYPES;
+    const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : [];
     const usedValues = Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit: any) => unit?.unitType) : [];
     return [...sourceValues, ...usedValues]
         .map((value) => String(value || '').trim())
@@ -2289,7 +2287,7 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsField label="Unit code" value={unit.code || ''} onChange={() => {}} disabled />
                     <UnitSettingsField label="Unit name" value={unit.name || ''} onChange={(value) => updateUnit({ name: value })} disabled={!canEdit} />
                     <UnitSettingsSelect label="Location" value={unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateUnit({ locationCode: value })} disabled={!canEdit} />
-                    <UnitSettingsSelect label="Unit type" value={unit.unitType || unitTypeOptions[0] || ''} options={unitTypeOptions} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
+                    <UnitSettingsSelect label="Unit type" value={unit.unitType || ''} options={unitTypeOptions} onChange={(value) => updateUnit({ unitType: value })} disabled={!canEdit} />
                     <UnitSettingsField label="Trainees" value={unitHasTrainees ? 'On' : 'Off'} onChange={() => {}} disabled />
                     <UnitSettingsSelect label="Operating model" value={operationalModel} options={OPERATIONAL_MODEL_OPTIONS.map((option) => option.value)} optionLabels={modelOptionLabels} onChange={(value) => updateUnitSettings({ operationalModel: value })} disabled={!canEdit} />
                 </UnitSettingsGroup>
@@ -2822,7 +2820,7 @@ const InitialSetupWizard: React.FC<{
         code: String(currentUnit?.code || unitCode || 'UNIT-A'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit A'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
-        unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
+        unitType: String(currentUnit?.unitType || ''),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
@@ -3194,7 +3192,7 @@ const InitialSetupWizard: React.FC<{
             code: String(currentUnit?.code || unitCode || 'UNIT-A'),
             name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit A'),
             locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
-            unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ''),
+            unitType: String(currentUnit?.unitType || ''),
             operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
             hasTrainees: currentUnit?.settings?.hasTrainees !== false,
         });
@@ -3425,7 +3423,7 @@ const InitialSetupWizard: React.FC<{
                 code: cleanCode,
                 name: unitDraft.name || cleanCode,
                 locationCode: unitDraft.locationCode,
-                unitType: unitDraft.unitType || unitTypeOptions[0] || '',
+                unitType: unitDraft.unitType || '',
                 status: 'ACTIVE',
                 settings: {
                     ...(currentUnit?.settings || {}),
@@ -5602,7 +5600,7 @@ const InitialSetupWizard: React.FC<{
                 code: row.code || `UNIT${index + 1}`,
                 name: row.name || row.code || `Unit ${index + 1}`,
                 locationCode: index === 0 ? (effectiveUnitDraft.locationCode || primaryLocationCode) : primaryLocationCode,
-                unitType: index === 0 ? effectiveUnitDraft.unitType || unitTypeOptions[0] || '' : unitTypeOptions[0] || '',
+                unitType: index === 0 ? effectiveUnitDraft.unitType || '' : '',
                 status: 'ACTIVE',
                 settings: {
                     operationalModel: effectiveUnitDraft.operationalModel,

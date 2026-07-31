@@ -108,11 +108,9 @@ export const INITIAL_MASTER_CURRENCIES: MasterCurrency[] = [
 ];
 
 /**
- * Merges DB currencies with the initial defaults.
- * - Any currency in the DB retains its DB values (user edits preserved).
- * - Any initial currency NOT in the DB is added (ensures new defaults are always available).
- * - Any currency in the DB that isn't in the initial list is kept (user-created currencies).
- * - New fields (showInPostFlight, showInPostFlightRecency, postFlightInputType) are back-filled onto existing DB records that lack them.
+ * Normalises saved currency records without restoring deleted starter values.
+ * Existing records keep their user-edited values, while older records receive
+ * compatibility fields added after the original currency schema.
  */
 export const mergeWithInitialCurrencies = (
     dbRequirements: CurrencyRequirement[],
@@ -165,15 +163,8 @@ export const mergeWithInitialCurrencies = (
         } as MasterCurrency;
     });
 
-    // Add any initial requirements not present in the DB
-    const dbReqIds = new Set(enrichedReqs.map(c => c.id));
-    const missingReqs = INITIAL_CURRENCY_REQUIREMENTS.filter(i => !dbReqIds.has(i.id));
-
-    const dbMasterIds = new Set(enrichedMasters.map(c => c.id));
-    const missingMasters = INITIAL_MASTER_CURRENCIES.filter(i => !dbMasterIds.has(i.id));
-
     return {
-        requirements: [...enrichedReqs, ...missingReqs],
-        masters: [...enrichedMasters, ...missingMasters],
+        requirements: enrichedReqs,
+        masters: enrichedMasters,
     };
 };

@@ -10248,10 +10248,9 @@ const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
-const DEFAULT_UNIT_TYPES$1 = ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"];
 const normaliseUnitTypeOptions = (platformConfig2) => {
   const seen = /* @__PURE__ */ new Set();
-  const sourceValues = Array.isArray(platformConfig2?.unitTypes) ? platformConfig2.unitTypes : DEFAULT_UNIT_TYPES$1;
+  const sourceValues = Array.isArray(platformConfig2?.unitTypes) ? platformConfig2.unitTypes : [];
   const usedValues = Array.isArray(platformConfig2?.units) ? platformConfig2.units.map((unit) => unit?.unitType) : [];
   return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
     if (!value) return false;
@@ -11686,7 +11685,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
         }, disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit name", value: unit.name || "", onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateUnit(), disabled: true }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || unitTypeOptions[0] || "", options: unitTypeOptions, onChange: (value) => updateUnit(), disabled: true }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Unit type", value: unit.unitType || "", options: unitTypeOptions, onChange: (value) => updateUnit(), disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Trainees", value: unitHasTrainees ? "On" : "Off", onChange: () => {
         }, disabled: true }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Operating model", value: operationalModel, options: OPERATIONAL_MODEL_OPTIONS.map((option) => option.value), optionLabels: modelOptionLabels, onChange: (value) => updateUnitSettings2({ operationalModel: value }), disabled: true })
@@ -12145,7 +12144,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     code: String(currentUnit?.code || unitCode || "UNIT-A"),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit A"),
     locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-    unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
+    unitType: String(currentUnit?.unitType || ""),
     operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
   });
@@ -12464,7 +12463,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       code: String(currentUnit?.code || unitCode || "UNIT-A"),
       name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit A"),
       locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
-      unitType: String(currentUnit?.unitType || unitTypeOptions[0] || ""),
+      unitType: String(currentUnit?.unitType || ""),
       operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
       hasTrainees: currentUnit?.settings?.hasTrainees !== false
     });
@@ -12671,7 +12670,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         code: cleanCode,
         name: unitDraft.name || cleanCode,
         locationCode: unitDraft.locationCode,
-        unitType: unitDraft.unitType || unitTypeOptions[0] || "",
+        unitType: unitDraft.unitType || "",
         status: "ACTIVE",
         settings: {
           ...currentUnit?.settings || {},
@@ -14534,7 +14533,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         code: row.code || `UNIT${index + 1}`,
         name: row.name || row.code || `Unit ${index + 1}`,
         locationCode: index === 0 ? effectiveUnitDraft.locationCode || primaryLocationCode : primaryLocationCode,
-        unitType: index === 0 ? effectiveUnitDraft.unitType || unitTypeOptions[0] || "" : unitTypeOptions[0] || "",
+        unitType: index === 0 ? effectiveUnitDraft.unitType || "" : "",
         status: "ACTIVE",
         settings: {
           operationalModel: effectiveUnitDraft.operationalModel,
@@ -27554,7 +27553,7 @@ const MassBriefCompleteFlyout = ({
         rank: trainee.rank,
         idNumber: trainee.idNumber
       });
-      const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || "Unknown Trainee";
+      const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || "Trainee not recorded";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
@@ -66052,7 +66051,6 @@ const COMMON_IANA_TIMEZONES = [
 const AIRFIELD_CATALOGUE_FILE = "airfield-location-catalog.json";
 const MAX_AIRFIELD_SUGGESTIONS = 6;
 const PLATFORM_CONFIG_UPDATED_EVENT$1 = "dfp-platform-config-updated";
-const DEFAULT_UNIT_TYPES = ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"];
 const SETTINGS_VISIBILITY_FILTERS = [
   {
     value: "unit",
@@ -66087,7 +66085,7 @@ const normaliseSettingsVisibilityPolicy = (value) => {
 };
 const getDefaultHasTraineesForUnit$1 = (_unitCode) => false;
 const normaliseUnitTypes = (values, units = []) => {
-  const sourceValues = Array.isArray(values) ? values : DEFAULT_UNIT_TYPES;
+  const sourceValues = Array.isArray(values) ? values : [];
   const usedValues = Array.isArray(units) ? units.map((unit) => unit?.unitType) : [];
   const seen = /* @__PURE__ */ new Set();
   return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
@@ -69067,7 +69065,7 @@ This permanently removes the organisation record from platform configuration and
           name: "New Unit",
           organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || "DEFAULT",
           locationCode: defaultLocation,
-          unitType: contextUnit?.unitType || unitTypeOptions[0] || "Training",
+          unitType: contextUnit?.unitType || "",
           status: "ACTIVE",
           settings: {
             parentOrganisationPath: Array.isArray(contextUnitSettings.parentOrganisationPath) ? contextUnitSettings.parentOrganisationPath : void 0,
@@ -71081,7 +71079,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || unitTypeOptions[0] || "", disabled: !isUnitEditing, options: unitTypeOptions, onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "", disabled: !isUnitEditing, options: unitTypeOptions, onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     FieldLabel,
@@ -87563,13 +87561,9 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
       ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
     };
   });
-  const dbReqIds = new Set(enrichedReqs.map((c) => c.id));
-  const missingReqs = INITIAL_CURRENCY_REQUIREMENTS.filter((i) => !dbReqIds.has(i.id));
-  const dbMasterIds = new Set(enrichedMasters.map((c) => c.id));
-  const missingMasters = INITIAL_MASTER_CURRENCIES.filter((i) => !dbMasterIds.has(i.id));
   return {
-    requirements: [...enrichedReqs, ...missingReqs],
-    masters: [...enrichedMasters, ...missingMasters]
+    requirements: enrichedReqs,
+    masters: enrichedMasters
   };
 };
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
@@ -109695,10 +109689,10 @@ ${"=".repeat(60)}`);
   const [eventForAuth, setEventForAuth] = reactExports.useState(null);
   const [showPostFlightView, setShowPostFlightView] = reactExports.useState(false);
   const [eventForPostFlight, setEventForPostFlight] = reactExports.useState(null);
-  const [masterCurrencies, setMasterCurrencies] = reactExports.useState(INITIAL_MASTER_CURRENCIES);
-  const [currencyRequirements, setCurrencyRequirements] = reactExports.useState(INITIAL_CURRENCY_REQUIREMENTS);
-  const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = reactExports.useState(INITIAL_MASTER_CURRENCIES);
-  const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = reactExports.useState(INITIAL_CURRENCY_REQUIREMENTS);
+  const [masterCurrencies, setMasterCurrencies] = reactExports.useState([]);
+  const [currencyRequirements, setCurrencyRequirements] = reactExports.useState([]);
+  const [fallbackMasterCurrencies, setFallbackMasterCurrencies] = reactExports.useState([]);
+  const [fallbackCurrencyRequirements, setFallbackCurrencyRequirements] = reactExports.useState([]);
   const [unitCurrencyDefinitions, setUnitCurrencyDefinitions] = reactExports.useState({});
   const [showCurrencySetup, setShowCurrencySetup] = reactExports.useState(false);
   const activeCurrencyUnitKey = reactExports.useMemo(() => {
@@ -109809,7 +109803,7 @@ ${"=".repeat(60)}`);
         const savedUnits = saved2.units?.length ? saved2.units : units;
         const savedUnitLocations = saved2.unitLocations || unitLocations;
         const savedLocationOpAreas = saved2.locationOpAreas || locationOpAreas;
-        const configuredUnitTypes = Array.isArray(platformConfig2?.unitTypes) ? platformConfig2.unitTypes : ["Training"];
+        const configuredUnitTypes = Array.isArray(platformConfig2?.unitTypes) ? platformConfig2.unitTypes : [];
         const resolveLegacyLocationCode = (locationValue) => {
           const raw = String(locationValue || "").trim();
           if (!raw) return "";
