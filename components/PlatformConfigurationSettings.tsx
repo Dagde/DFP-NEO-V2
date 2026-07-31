@@ -6938,24 +6938,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || '').trim().toUpperCase()) || 0;
                   return (
                     <div key={entry.id || `master-lmp-catalogue-${index}`} className="grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3">
-                      <Field
+                      <DraftField
                         label="Code"
                         value={entry.code}
                         disabled={!canEditSection('platform-master-lmp-access')}
-                        onChange={(value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value })}
+                        onCommit={(value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value })}
                         info="Stable selectable value used by Master LMP Access and trainee/course assignment."
                       />
-                      <Field
+                      <DraftField
                         label="Name"
                         value={entry.name || entry.code}
                         disabled={!canEditSection('platform-master-lmp-access')}
-                        onChange={(value) => updateMasterLmpCatalogueEntry(index, { name: value })}
+                        onCommit={(value) => updateMasterLmpCatalogueEntry(index, { name: value })}
                       />
-                      <Field
+                      <DraftField
                         label="Description"
                         value={entry.description || ''}
                         disabled={!canEditSection('platform-master-lmp-access')}
-                        onChange={(value) => updateMasterLmpCatalogueEntry(index, { description: value })}
+                        onCommit={(value) => updateMasterLmpCatalogueEntry(index, { description: value })}
                       />
                       <div>
                         <label className={labelClass}>Syllabus Content</label>
@@ -7171,7 +7171,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               <DraftField label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onCommit={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
-                              <TextAreaField label="Description" value={profile.description} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { description: value })} />
+                              <DraftTextAreaField label="Description" value={profile.description} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { description: value })} />
                             </div>
                           </div>
 
@@ -8763,18 +8763,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-3">
-                  <Field label="Licence Name" value={license.licenseName || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { licenseName: value })} />
-                  <Field label="Licence Key" value={license.licenseKey || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { licenseKey: value })} />
+                  <DraftField label="Licence Name" value={license.licenseName || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { licenseName: value })} />
+                  <DraftField label="Licence Key" value={license.licenseKey || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { licenseKey: value })} />
                   <SelectField label="Organisation" value={license.organisationCode || config.organisations[0]?.code || 'DEFAULT'} disabled={!canEditSection('platform-licensing')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
                   <SelectField label="Deployment Model" value={license.deploymentMode || 'Online SaaS'} disabled={!canEditSection('platform-licensing')} options={['Online SaaS', 'Private Defence Network', 'Fully Offline', 'Hybrid Offline Sync']} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
                   <SelectField label="Status" value={license.status || 'ACTIVE'} disabled={!canEditSection('platform-licensing')} options={['ACTIVE', 'SUSPENDED', 'EXPIRED', 'INACTIVE']} onChange={(value) => updateRow('licenses', index, { status: value })} />
-                  <Field label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
+                  <DraftField label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
                   <DateField label="Valid From" value={license.validFrom || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { validFrom: value })} />
                   <DateField label="Valid Until" value={license.validUntil || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { validUntil: value })} />
                   <OptionalNumberField label="Max Users" value={license.maxUsers ?? null} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { maxUsers: value })} />
                   <OptionalNumberField label="Max Units" value={license.maxUnits ?? null} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { maxUnits: value })} />
                   <OptionalNumberField label="Max Aircraft Types" value={license.maxAircraftTypes ?? null} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { maxAircraftTypes: value })} />
-                  <TextAreaField label="Notes" value={license.notes || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { notes: value })} />
+                  <DraftTextAreaField label="Notes" value={license.notes || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { notes: value })} />
                 </div>
 
                 <div className="mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3">
@@ -8873,8 +8873,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           {selectedPermissionProfile && (
             <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
-                <Field label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
+                <DraftField label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
+                <DraftField label="Description" value={selectedPermissionProfile.description} disabled={!canEditSection('platform-permission-profiles')} onCommit={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 {PERMISSION_CATALOG.map((group) => (
@@ -10338,12 +10338,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="space-y-3">
               {insertEventTypes.map((eventType, eventTypeIndex) => (
                 <div key={`${eventType.label}-${eventTypeIndex}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6">
-                  <Field
+                  <DraftField
                     label="Label"
                     value={eventType.label}
                     disabled={!canEditSection('platform-scheduling-rule-sets')}
                     maxLength={INSERT_EVENT_LABEL_MAX_LENGTH}
-                    onChange={(value) => updateInsertEventType(eventTypeIndex, { label: value })}
+                    onCommit={(value) => updateInsertEventType(eventTypeIndex, { label: value })}
                   />
                   <SelectField
                     label="Build Type"
@@ -10395,7 +10395,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="space-y-3">
               {visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => (
                 <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5">
-                  <Field label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
+                  <DraftField label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onCommit={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
                   <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
                   <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
                   <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />

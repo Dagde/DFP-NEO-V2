@@ -71129,31 +71129,31 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Field,
+                  DraftField,
                   {
                     label: "Code",
                     value: entry.code,
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
+                    onCommit: (value) => updateMasterLmpCatalogueEntry(index, { code: value, name: entry.name || value }),
                     info: "Stable selectable value used by Master LMP Access and trainee/course assignment."
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Field,
+                  DraftField,
                   {
                     label: "Name",
                     value: entry.name || entry.code,
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
+                    onCommit: (value) => updateMasterLmpCatalogueEntry(index, { name: value })
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Field,
+                  DraftField,
                   {
                     label: "Description",
                     value: entry.description || "",
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    onChange: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
+                    onCommit: (value) => updateMasterLmpCatalogueEntry(index, { description: value })
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -71383,7 +71383,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Mission Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onCommit: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftTextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -72903,18 +72903,18 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Name", value: license.licenseName || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { licenseName: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Key", value: license.licenseKey || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { licenseKey: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Licence Name", value: license.licenseName || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { licenseName: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Licence Key", value: license.licenseKey || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { licenseKey: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: license.organisationCode || config.organisations[0]?.code || "DEFAULT", disabled: !canEditSection("platform-licensing"), options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("licenses", index, { organisationCode: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Deployment Model", value: license.deploymentMode || "Online SaaS", disabled: !canEditSection("platform-licensing"), options: ["Online SaaS", "Private Defence Network", "Fully Offline", "Hybrid Offline Sync"], onChange: (value) => updateRow("licenses", index, { deploymentMode: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: license.status || "ACTIVE", disabled: !canEditSection("platform-licensing"), options: ["ACTIVE", "SUSPENDED", "EXPIRED", "INACTIVE"], onChange: (value) => updateRow("licenses", index, { status: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Offline Fingerprint", value: license.offlineFingerprint || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { offlineFingerprint: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Offline Fingerprint", value: license.offlineFingerprint || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { offlineFingerprint: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid From", value: license.validFrom || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { validFrom: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid Until", value: license.validUntil || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { validUntil: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Users", value: license.maxUsers ?? null, disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { maxUsers: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Units", value: license.maxUnits ?? null, disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { maxUnits: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Aircraft Types", value: license.maxAircraftTypes ?? null, disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { maxAircraftTypes: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Notes", value: license.notes || "", disabled: !canEditSection("platform-licensing"), onChange: (value) => updateRow("licenses", index, { notes: value }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DraftTextAreaField, { label: "Notes", value: license.notes || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { notes: value }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center gap-2", children: [
@@ -73027,8 +73027,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         )) }),
         selectedPermissionProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-4 lg:grid-cols-2", children: PERMISSION_CATALOG.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: group.group }),
@@ -74449,13 +74449,13 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
+                DraftField,
                 {
                   label: "Label",
                   value: eventType.label,
                   disabled: !canEditSection("platform-scheduling-rule-sets"),
                   maxLength: INSERT_EVENT_LABEL_MAX_LENGTH,
-                  onChange: (value) => updateInsertEventType(eventTypeIndex, { label: value })
+                  onCommit: (value) => updateInsertEventType(eventTypeIndex, { label: value })
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -74505,7 +74505,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-amber-50/60", children: "Use these records to apply named scheduling rules to selected units, aircraft types or operating scopes." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onCommit: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
