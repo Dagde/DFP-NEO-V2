@@ -73601,7 +73601,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               value: personnelDisplaySettings.instructorLabel,
               disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-              info: "The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
+              info: "The duty label shown on schedules, reports and event details. It does not rename a qualification held by a person."
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -73621,6 +73621,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               info: "Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             }
           )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-400/25 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-50/80", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "The instructor display term is the duty label users see on schedules and reports. A qualification is something a person holds in their profile." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1", children: "Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. Rename the qualification below if your organisation wants the profile tag to use a different label too." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
@@ -73831,7 +73835,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Personnel Qualifications" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "If you want the profile tag to match the instructor duty wording above, rename the relevant qualification here as well." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               renderRankTerminologySectionAction(),
