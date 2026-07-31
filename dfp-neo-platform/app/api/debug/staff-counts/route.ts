@@ -13,14 +13,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Count staff by unit and role
+    const { searchParams } = new URL(request.url);
+    const unitFilter = searchParams
+      .getAll('unit')
+      .flatMap(value => value.split(','))
+      .map(value => value.trim())
+      .filter(Boolean);
+
+    const where = unitFilter.length > 0
+      ? { unit: { in: unitFilter } }
+      : {};
+
+    // Count staff by configured unit and role
     const staffCounts = await prisma.personnel.groupBy({
       by: ['unit', 'role'],
-      where: {
-        unit: {
-          in: ['1FTS', 'CFS', '2FTS']
-        }
-      },
+      where,
       _count: {
         id: true
       },
@@ -33,11 +40,7 @@ export async function GET(request: NextRequest) {
     // Count total by unit
     const unitTotals = await prisma.personnel.groupBy({
       by: ['unit'],
-      where: {
-        unit: {
-          in: ['1FTS', 'CFS', '2FTS']
-        }
-      },
+      where,
       _count: {
         id: true
       }

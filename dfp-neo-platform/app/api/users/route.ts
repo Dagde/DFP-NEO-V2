@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
+    const search = (searchParams.get('search') || '').trim();
+    const numericSearch = /^\d+$/.test(search) ? Number(search) : null;
 
     // Get all active personnel and trainees without legacy role or unit assumptions.
     const personnelWhere: any = {
@@ -27,8 +28,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       personnelWhere.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { idNumber: { equals: parseInt(search) } },
         { rank: { contains: search, mode: 'insensitive' } },
+        ...(numericSearch !== null ? [{ idNumber: { equals: numericSearch } }] : []),
       ];
     }
 
@@ -45,9 +46,9 @@ export async function GET(request: NextRequest) {
     if (search) {
       traineeWhere.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { idNumber: { equals: parseInt(search) } },
         { fullName: { contains: search, mode: 'insensitive' } },
         { rank: { contains: search, mode: 'insensitive' } },
+        ...(numericSearch !== null ? [{ idNumber: { equals: numericSearch } }] : []),
       ];
     }
 

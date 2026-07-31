@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
 // Syncs PT-051 Score records → IndividualLMP completedEventIds for ALL trainees.
 // For each trainee: reads their Score.event values, marks those events complete in LMP.
 // Body: { syllabusData: Record<string, SyllabusItemDetail[]> }
-//   syllabusData is keyed by lmpType (e.g. "BPC+IPC", "FIC") and contains the master syllabus items.
+//   syllabusData is keyed by the configured LMP/catalogue name and contains the master syllabus items.
 //   The frontend sends this because the backend has no knowledge of the syllabus structure.
 export async function POST(request: NextRequest) {
   try {
@@ -286,24 +286,20 @@ export async function POST(request: NextRequest) {
     }[] = [];
 
     for (const trainee of trainees) {
-      // Determine LMP type - check lmpType field, fall back to detecting from course
-      let lmpType = (trainee as any).lmpType || 'BPC+IPC';
-      if (lmpType === 'BPC+IPC' && trainee.course) {
-        if (trainee.course.toUpperCase().startsWith('FIC')) {
-          lmpType = 'FIC';
-        }
-      }
+      const syllabusKeys = Object.keys(syllabusData).filter(key => Array.isArray(syllabusData[key]) && syllabusData[key].length > 0);
+      const existing = (trainee as any).individualLMP;
+      const configuredLmpType = String((trainee as any).lmpType || existing?.lmpType || '').trim();
+      const courseKey = String((trainee as any).course || '').trim();
+      const lmpType = configuredLmpType
+        || (courseKey && syllabusData[courseKey] ? courseKey : '')
+        || (syllabusKeys.length === 1 ? syllabusKeys[0] : '');
 
       // Get the master syllabus for this LMP type
-      let masterSyllabus = syllabusData[lmpType];
-      if (!masterSyllabus || masterSyllabus.length === 0) {
-        // Try BPC+IPC as fallback
-        masterSyllabus = syllabusData['BPC+IPC'] || [];
-      }
+      const masterSyllabus = lmpType ? syllabusData[lmpType] : [];
       if (!masterSyllabus || masterSyllabus.length === 0) {
         results.push({
           traineeFullName: trainee.fullName,
-          lmpType,
+          lmpType: lmpType || 'Unassigned',
           totalEvents: 0,
           completedCount: 0,
           newlyMarked: [],
@@ -320,7 +316,6 @@ export async function POST(request: NextRequest) {
       const completedEventIds = Array.from(completedFromScores);
 
       // Check if LMP already exists and what it contains
-      const existing = (trainee as any).individualLMP;
       const existingEvents = Array.isArray(existing?.events) ? existing.events as any[] : [];
       const existingCompleted = existing
         ? (existing.completedEventIds as string[])

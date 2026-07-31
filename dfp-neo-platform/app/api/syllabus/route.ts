@@ -65,16 +65,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let phase = body.phase || 'BGF';
-    if (!body.phase) {
-      if (body.code.startsWith('BIF')) phase = 'BIF';
-      else if (body.code.startsWith('BNF')) phase = 'BNF';
-      else if (body.code.startsWith('BNAV')) phase = 'BNAV';
-      else if (body.code.startsWith('FIC')) phase = 'FIC';
-      else if (body.code.startsWith('AIT')) phase = 'FIC';
-      else if (body.code.startsWith('WSO')) phase = 'WSO';
-      else if (body.code.startsWith('OFI')) phase = 'OFI';
-    }
+    const phase = body.phase || body.module || '';
+    const courses = Array.isArray(body.courses)
+      ? body.courses
+      : (body.lmpType ? [body.lmpType] : []);
+    const resourcesHuman = Array.isArray(body.resourcesHuman) ? body.resourcesHuman : [];
 
     const maxOrder = await db.syllabusItem.aggregate({ _max: { sortOrder: true } });
     const nextSortOrder = (maxOrder._max.sortOrder ?? 0) + 1;
@@ -88,11 +83,11 @@ export async function POST(request: NextRequest) {
         type: body.type,
         sortieType: body.sortieType ?? null,
         dayNight: body.dayNight || 'Day',
-        courses: body.courses || ['BPC+IPC'],
+        courses,
         methodOfDelivery: body.methodOfDelivery || [],
         methodOfAssessment: body.methodOfAssessment || ['Practical Assessment', 'Debrief'],
         resourcesPhysical: body.resourcesPhysical || [],
-        resourcesHuman: body.resourcesHuman || ['Qualified Flying Instructor', 'Trainee'],
+        resourcesHuman,
         eventDetailsCommon: body.eventDetailsCommon || [],
         eventDetailsSortie: body.eventDetailsSortie || [],
         flightOrSimHours: body.flightOrSimHours || 0,
