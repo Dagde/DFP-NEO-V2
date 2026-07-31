@@ -177,6 +177,54 @@ function requireConfiguredSecret(name, developmentFallback, aliases = []) {
   return developmentFallback;
 }
 
+function getConfiguredSecret(name, aliases = []) {
+  const candidates = [name, ...aliases];
+  for (const candidate of candidates) {
+    const value = process.env[candidate];
+    if (value && value.trim()) return value.trim();
+  }
+  return '';
+}
+
+function requireSeedEndpointSecret() {
+  const configuredSecret = getConfiguredSecret('SEED_SECRET');
+  if (configuredSecret) return configuredSecret;
+
+  const allowDevelopmentSeed = String(process.env.ALLOW_DEMO_SEEDING || '').trim().toLowerCase() === 'true';
+  if (process.env.NODE_ENV !== 'production' && allowDevelopmentSeed) {
+    console.warn('⚠️ SEED_SECRET is not configured; ALLOW_DEMO_SEEDING=true enables the development seed secret.');
+    return 'dfp-seed-development-only';
+  }
+
+  throw new Error('SEED_SECRET must be configured before demo or historical seed endpoints can run.');
+}
+
+function validateSeedEndpointSecret(req, res) {
+  let expectedSecret = '';
+  try {
+    expectedSecret = requireSeedEndpointSecret();
+  } catch (error) {
+    res.status(403).json({
+      success: false,
+      error: 'Seed endpoint disabled',
+      message: error.message,
+    });
+    return false;
+  }
+
+  const suppliedSecret = String(req.query?.secret || req.body?.secret || req.headers['x-seed-secret'] || '').trim();
+  if (!suppliedSecret || suppliedSecret !== expectedSecret) {
+    res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+      message: 'A valid seed secret is required.',
+    });
+    return false;
+  }
+
+  return true;
+}
+
 // JWT Configuration
 const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret', ['NEXTAUTH_SECRET', 'AUTH_SECRET']);
 const JWT_ACCESS_EXPIRY = '1h';
@@ -8305,12 +8353,8 @@ app.delete('/api/admin/purge-inactive', async (req, res) => {
 });
 
 app.get('/api/admin/seed-syllabus', async (req, res) => {
-  const SEED_SECRET = requireConfiguredSecret('SEED_SECRET', 'dfp-seed-development-only');
-  const { secret, force } = req.query;
-
-  if (secret !== SEED_SECRET) {
-    return res.status(401).json({ error: 'Unauthorized. Provide ?secret=YOUR_SECRET' });
-  }
+  if (!validateSeedEndpointSecret(req, res)) return;
+  const { force } = req.query;
 
   try {
     const db = await getPrisma();
@@ -10422,6 +10466,7 @@ app.post('/api/historical-data/save', async (req, res) => {
 // from course start dates up to current progress point for each trainee.
 app.post('/api/historical-data/seed', async (req, res) => {
   try {
+    if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
 
     // Check if seeding has already been done
@@ -11211,6 +11256,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
 // This is the ongoing refresh feature to keep historical data current-looking
 app.post('/api/historical-data/refresh-dates', async (req, res) => {
   try {
+    if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
 
     // Load current historical data
@@ -11333,6 +11379,7 @@ app.post('/api/historical-data/refresh-dates', async (req, res) => {
 // DELETE /api/historical-data - Clear all seeded historical data
 app.delete('/api/historical-data', async (req, res) => {
   try {
+    if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
 
     await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
