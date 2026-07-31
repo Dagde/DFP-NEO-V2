@@ -4237,28 +4237,14 @@ app.delete('/api/trainees/:id', async (req, res) => {
   }
 });
 
-// PATCH /api/trainees/fix-location - Fix location for all trainees in a course
+// PATCH /api/trainees/fix-location - legacy course-wide maintenance endpoint
 // NOTE: Must be defined BEFORE /api/trainees/:id to avoid route conflict
 app.patch('/api/trainees/fix-location', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { course, correctLocation } = req.body;
-
-    if (!course || !correctLocation) {
-      return res.status(400).json({ error: 'course and correctLocation are required' });
-    }
-
-    const result = await db.trainee.updateMany({
-      where: { course: course },
-      data: { location: correctLocation }
-    });
-
-    console.log(`✅ Fixed location for ${result.count} trainees in course "${course}" to "${correctLocation}"`);
-    res.json({ success: true, updated: result.count, course, correctLocation });
-  } catch (error) {
-    console.error('❌ Error fixing trainee locations:', error);
-    res.status(500).json({ error: 'Failed to fix trainee locations', details: error.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Legacy maintenance endpoint disabled',
+    message: 'Use the authenticated trainee management tools instead.',
+  });
 });
 
 // PATCH /api/trainees/bulk-unit - Bulk update unit for trainees in a course
@@ -4286,45 +4272,14 @@ app.patch('/api/trainees/bulk-unit', async (req, res) => {
   }
 });
 
-// PATCH /api/trainees/fix-lmp-type - Fix lmpType for FIC course trainees
+// PATCH /api/trainees/fix-lmp-type - legacy course-name maintenance endpoint
 // NOTE: Must be defined BEFORE /api/trainees/:id to avoid route conflict
 app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
-  try {
-    const db = await getPrisma();
-
-    // Find all trainees whose course starts with 'FIC' but lmpType is not 'FIC'
-    const ficTrainees = await db.trainee.findMany({
-      where: {
-        AND: [
-          { course: { startsWith: 'FIC' } },
-          { NOT: { lmpType: 'FIC' } }
-        ]
-      },
-      select: { id: true, name: true, course: true, lmpType: true }
-    });
-
-    if (ficTrainees.length === 0) {
-      console.log('✅ PATCH /api/trainees/fix-lmp-type - No FIC trainees need updating');
-      return res.json({ success: true, count: 0, message: 'All FIC trainees already have correct lmpType' });
-    }
-
-    // Update all FIC trainees to have lmpType: 'FIC'
-    const result = await db.trainee.updateMany({
-      where: {
-        AND: [
-          { course: { startsWith: 'FIC' } },
-          { NOT: { lmpType: 'FIC' } }
-        ]
-      },
-      data: { lmpType: 'FIC' }
-    });
-
-    console.log(`✅ PATCH /api/trainees/fix-lmp-type - Updated ${result.count} FIC trainees: ${ficTrainees.map(t => t.name).join(', ')}`);
-    res.json({ success: true, count: result.count, updated: ficTrainees.map(t => ({ name: t.name, course: t.course })) });
-  } catch (error) {
-    console.error('❌ PATCH /api/trainees/fix-lmp-type error:', error);
-    res.status(500).json({ error: 'Failed to fix lmpType for FIC trainees', details: error.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Legacy maintenance endpoint disabled',
+    message: 'Use configured Master LMP access and trainee management tools instead.',
+  });
 });
 
 // ============================================================
@@ -12206,7 +12161,9 @@ app.get('/api/bli/metrics', async (req, res) => {
 // DELETE /api/daily-snapshot/seed-cleanup - Delete all seed DataBackup records
 app.delete('/api/daily-snapshot/seed-cleanup', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     // Delete all historical seed DataBackup records
     const deletedSchedules = await db.dataBackup.deleteMany({
       where: { type: 'historical_published_schedules' }
@@ -13850,7 +13807,9 @@ app.get('/api/trainee-performance/stats', async (req, res) => {
 // IMPORTANT: This must come BEFORE /:eventId to avoid Express matching 'migrate-legacy' as an eventId.
 app.post('/api/trainee-performance/migrate-legacy', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const result = await migrateLegacyPerformanceIntoTraineePerformance(db, { force: req.body?.force === true });
     res.json(result);
   } catch (error) {
