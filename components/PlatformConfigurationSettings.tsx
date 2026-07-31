@@ -2304,6 +2304,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const linkedInstructorQualificationLabel = linkedInstructorQualification
     ? (linkedInstructorQualification.code || linkedInstructorQualification.name)
     : 'No linked instructor qualification configured';
+  const linkedInstructorQualificationInputId = linkedInstructorQualification
+    ? `qualification-name-${String(linkedInstructorQualification.id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`
+    : '';
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     primaryOrganisationSettings.unitCallsignSettings || null,
   );
@@ -3001,6 +3004,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...settings,
       staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds }),
     }));
+  };
+
+  const focusLinkedInstructorQualification = () => {
+    const target = linkedInstructorQualificationInputId
+      ? document.getElementById(linkedInstructorQualificationInputId) as HTMLInputElement | null
+      : null;
+    const fallback = document.getElementById('platform-staff-qualifications');
+    const scrollTarget = target || fallback;
+    if (!scrollTarget) return;
+    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (!target || target.disabled) return;
+    window.setTimeout(() => {
+      target.focus({ preventScroll: true });
+      target.select();
+    }, 350);
   };
 
   const updateStaffQualificationEntry = (
@@ -9496,7 +9514,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
               />
               <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
-                Linked qualification label: <span className="font-semibold text-cyan-50">{linkedInstructorQualificationLabel}</span>. Rename this in Personnel Qualifications if it should match the instructor display term.
+                Linked qualification label: <span className="font-semibold text-cyan-50">{linkedInstructorQualificationLabel}</span>. Rename this in{' '}
+                <button
+                  type="button"
+                  onClick={focusLinkedInstructorQualification}
+                  className="font-semibold text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-50"
+                >
+                  Personnel Qualifications
+                </button>{' '}
+                if it should match the instructor display term.
               </p>
             </div>
             <SelectField
@@ -9741,6 +9767,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 .map((entry) => (
                 <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]">
                   <Field
+                    inputId={`qualification-name-${String(entry.id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`}
                     label="Qualification"
                     value={entry.name}
                     disabled={!canEditRankTerminology}
@@ -10589,10 +10616,11 @@ const handleEditableTextBeforeInput = (
   insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
 };
 
-const Field = ({ label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }: { label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; info?: string; maxLength?: number }) => (
+const Field = ({ inputId, label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; info?: string; maxLength?: number }) => (
   <label>
     <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
     <input
+      id={inputId}
       className={fieldClass}
       value={value || ''}
       disabled={disabled}

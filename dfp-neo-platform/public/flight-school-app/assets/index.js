@@ -67328,6 +67328,7 @@ const PlatformConfigurationSettings = ({
     return String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (tokens.includes("qfi") || tokens.includes("instructor"));
   });
   const linkedInstructorQualificationLabel = linkedInstructorQualification ? linkedInstructorQualification.code || linkedInstructorQualification.name : "No linked instructor qualification configured";
+  const linkedInstructorQualificationInputId = linkedInstructorQualification ? `qualification-name-${String(linkedInstructorQualification.id || "").replace(/[^a-zA-Z0-9_-]/g, "-")}` : "";
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     primaryOrganisationSettings.unitCallsignSettings || null
   );
@@ -67891,6 +67892,18 @@ This permanently removes the organisation record from platform configuration and
       ...settings,
       staffQualificationCatalogue: normaliseStaffQualificationCatalogue({ qualifications, deletedDefaultIds })
     }));
+  };
+  const focusLinkedInstructorQualification = () => {
+    const target = linkedInstructorQualificationInputId ? document.getElementById(linkedInstructorQualificationInputId) : null;
+    const fallback = document.getElementById("platform-staff-qualifications");
+    const scrollTarget2 = target || fallback;
+    if (!scrollTarget2) return;
+    scrollTarget2.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!target || target.disabled) return;
+    window.setTimeout(() => {
+      target.focus({ preventScroll: true });
+      target.select();
+    }, 350);
   };
   const updateStaffQualificationEntry = (entryId, changes) => {
     const nextQualifications = staffQualificationCatalogue.qualifications.map((entry) => entry.id === entryId ? { ...entry, ...changes } : entry);
@@ -73617,7 +73630,19 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
               "Linked qualification label: ",
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-cyan-50", children: linkedInstructorQualificationLabel }),
-              ". Rename this in Personnel Qualifications if it should match the instructor display term."
+              ". Rename this in",
+              " ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: focusLinkedInstructorQualification,
+                  className: "font-semibold text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-50",
+                  children: "Personnel Qualifications"
+                }
+              ),
+              " ",
+              "if it should match the instructor display term."
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -73867,6 +73892,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Field,
               {
+                inputId: `qualification-name-${String(entry.id || "").replace(/[^a-zA-Z0-9_-]/g, "-")}`,
                 label: "Qualification",
                 value: entry.name,
                 disabled: !canEditRankTerminology,
@@ -74621,11 +74647,12 @@ const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
   event.stopPropagation();
   insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
 };
-const Field = ({ label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const Field = ({ inputId, label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
     {
+      id: inputId,
       className: fieldClass,
       value: value || "",
       disabled,
