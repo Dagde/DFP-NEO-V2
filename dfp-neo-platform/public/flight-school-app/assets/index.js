@@ -1698,7 +1698,7 @@ const writeTileStatusSettingsToLocalStorage = (settings) => {
 };
 const DEFAULT_FIXED_CREW_TILE_COLOUR_MODE = "event_type";
 const EVENT_TYPE_COLOURS = {
-  task: { key: "task", label: "Task", color: "bg-cyan-500/70" },
+  task: { key: "task", label: "Mission", color: "bg-cyan-500/70" },
   currency: { key: "currency", label: "Currency", color: "bg-violet-500/70" },
   course: { key: "course", label: "Course", color: "bg-sky-500/70" },
   package: { key: "package", label: "Package", color: "bg-green-500/70" },
@@ -40972,8 +40972,8 @@ const PrioritiesView = ({
       const taskingName = String(event.taskingName || "").trim();
       const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === taskingName.toLowerCase())?.[1]?.trim();
       if (abbreviation) return abbreviation;
-      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || "Task").trim();
-      return displayLabel.replace(/^Task\s*-\s*/i, "") || "Task";
+      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || "Mission").trim();
+      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, "") || "Mission";
     }
     return String(event.flightNumber || event.eventCode || "N/A").trim() || "N/A";
   };
@@ -88198,8 +88198,8 @@ const DfpSidePanelTimeline = ({
     if (selectedResourceKind === "deployment") return "DEPLOYMENT";
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
-      if (isAirCombatTileMode) return abbreviation ? `Task - ${abbreviation}` : `Task - ${selectedTaskProfile}`;
-      return abbreviation ? `Task - ${abbreviation}` : "Task";
+      if (isAirCombatTileMode) return abbreviation ? `Mission - ${abbreviation}` : `Mission - ${selectedTaskProfile}`;
+      return abbreviation ? `Mission - ${abbreviation}` : "Mission";
     }
     if (activeAssistSection === "currency" && selectedCurrencyName) {
       return selectedCurrencyName;
@@ -89153,7 +89153,7 @@ const DfpSidePanelTimeline = ({
       return {
         id,
         events,
-        tasking: first.taskingName || first.flightNumber || "Task",
+        tasking: first.taskingName || first.flightNumber || "Mission",
         date: first.date || date,
         takeoff: first.startTime,
         scheduled: true
@@ -89177,7 +89177,7 @@ const DfpSidePanelTimeline = ({
       seen.add(identity);
       rows.push({
         selectionId: `highest::${identity}`,
-        tasking: row.tasking || "Task",
+        tasking: row.tasking || "Mission",
         date: row.date || date,
         takeoff: row.takeoff,
         alreadyInHighest: true
@@ -89189,7 +89189,7 @@ const DfpSidePanelTimeline = ({
       seen.add(identity);
       rows.push({
         selectionId: `tasking::${request.id}`,
-        tasking: request.tasking || "Task",
+        tasking: request.tasking || "Mission",
         date: request.date || date,
         takeoff: request.takeoff,
         alreadyInHighest: isAssistTaskRequestInHighestPriority(request.id)
@@ -89590,7 +89590,7 @@ const DfpSidePanelTimeline = ({
             onClick: () => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds),
             children: [
               request.alreadyInHighest ? "Confirm " : "Schedule ",
-              request.tasking || "Task",
+              request.tasking || "Mission",
               " at ",
               formatCompactTime(request.takeoff)
             ]
@@ -90508,7 +90508,7 @@ const DfpSidePanelTimeline = ({
     if (activeAssistSection === "taskings") {
       const localRows = visibleAssistTaskRequests.map((request) => ({
         id: request.id,
-        tasking: request.tasking || "Task",
+        tasking: request.tasking || "Mission",
         date: request.date,
         takeoff: request.takeoff,
         duration: request.duration,

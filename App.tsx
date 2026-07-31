@@ -1291,8 +1291,8 @@ const DfpSidePanelTimeline: React.FC<{
         if (selectedResourceKind === 'deployment') return 'DEPLOYMENT';
         if (activeAssistSection === 'taskings' && selectedTaskProfile) {
             const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || '';
-            if (isAirCombatTileMode) return abbreviation ? `Task - ${abbreviation}` : `Task - ${selectedTaskProfile}`;
-            return abbreviation ? `Task - ${abbreviation}` : 'Task';
+            if (isAirCombatTileMode) return abbreviation ? `Mission - ${abbreviation}` : `Mission - ${selectedTaskProfile}`;
+            return abbreviation ? `Mission - ${abbreviation}` : 'Mission';
         }
         if (activeAssistSection === 'currency' && selectedCurrencyName) {
             return selectedCurrencyName;
@@ -2485,7 +2485,7 @@ const DfpSidePanelTimeline: React.FC<{
             return {
                 id,
                 events,
-                tasking: first.taskingName || first.flightNumber || 'Task',
+                tasking: first.taskingName || first.flightNumber || 'Mission',
                 date: first.date || date,
                 takeoff: first.startTime,
                 scheduled: true,
@@ -2519,7 +2519,7 @@ const DfpSidePanelTimeline: React.FC<{
             seen.add(identity);
             rows.push({
                 selectionId: `highest::${identity}`,
-                tasking: row.tasking || 'Task',
+                tasking: row.tasking || 'Mission',
                 date: row.date || date,
                 takeoff: row.takeoff,
                 alreadyInHighest: true,
@@ -2533,7 +2533,7 @@ const DfpSidePanelTimeline: React.FC<{
                 seen.add(identity);
                 rows.push({
                     selectionId: `tasking::${request.id}`,
-                    tasking: request.tasking || 'Task',
+                    tasking: request.tasking || 'Mission',
                     date: request.date || date,
                     takeoff: request.takeoff,
                     alreadyInHighest: isAssistTaskRequestInHighestPriority(request.id),
@@ -2962,7 +2962,7 @@ const DfpSidePanelTimeline: React.FC<{
                         className={wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.selectionId))}
                         onClick={() => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds)}
                     >
-                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Task'} at {formatCompactTime(request.takeoff)}
+                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Mission'} at {formatCompactTime(request.takeoff)}
                     </button>
                 )).concat(
                     <button
@@ -3904,7 +3904,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (activeAssistSection === 'taskings') {
             const localRows = visibleAssistTaskRequests.map(request => ({
                 id: request.id,
-                tasking: request.tasking || 'Task',
+                tasking: request.tasking || 'Mission',
                 date: request.date,
                 takeoff: request.takeoff,
                 duration: request.duration,

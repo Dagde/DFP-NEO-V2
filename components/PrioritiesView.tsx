@@ -3592,8 +3592,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         profile.trim().toLowerCase() === taskingName.toLowerCase()
       ))?.[1]?.trim();
       if (abbreviation) return abbreviation;
-      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || 'Task').trim();
-      return displayLabel.replace(/^Task\s*-\s*/i, '') || 'Task';
+      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || 'Mission').trim();
+      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, '') || 'Mission';
     }
     return String(event.flightNumber || event.eventCode || 'N/A').trim() || 'N/A';
   };
