@@ -8192,7 +8192,9 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
 // POST /api/admin/set-user-password - Set or update a user's password (for initial setup/reset)
 app.post('/api/admin/set-user-password', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { fullName, password, userId, email } = req.body;
 
     if (!password || password.length < 8) {
@@ -8278,7 +8280,9 @@ app.post('/api/admin/set-user-password', async (req, res) => {
 // GET /api/admin/list-users - List all users (for debugging/user ID lookup)
 app.get('/api/admin/list-users', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const users = await db.$queryRawUnsafe(`
       SELECT id, userId, username, email, firstName, lastName, isActive, role 
       FROM "User" 
@@ -8299,7 +8303,9 @@ app.get('/api/admin/list-users', async (req, res) => {
 // POST /api/admin/set-user-password-by-id - Set password using direct userId
 app.post('/api/admin/set-user-password-by-id', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { userId, password } = req.body;
 
     if (!userId || !password || password.length < 8) {
@@ -8340,7 +8346,9 @@ app.post('/api/admin/set-user-password-by-id', async (req, res) => {
 // DELETE /api/admin/purge-inactive - Hard delete all soft-deleted (isActive=false) syllabus items
 app.delete('/api/admin/purge-inactive', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     await db.$executeRawUnsafe(
       `DELETE FROM "SyllabusItem" WHERE "isActive" = false`
     );
