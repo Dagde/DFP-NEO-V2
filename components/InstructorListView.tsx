@@ -45,13 +45,15 @@ const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
     instructor.isQFI === true ||
     String(instructor.role || '').trim().toUpperCase() === 'INSTRUCTOR';
+const isContractorStaffRole = (instructor: Instructor): boolean =>
+    String(instructor.role || '').trim().toUpperCase() === 'SIM IP';
 const isConfiguredCrewPositionRole = (
     instructor: Instructor,
     terminology?: CrewPositionTerminology,
 ): boolean => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const isSupportStaffRole = (instructor: Instructor): boolean => {
     const role = String(instructor.role || '').trim().toUpperCase();
-    return role === 'SIM IP' || role === 'OFI' || instructor.isOFI === true;
+    return isContractorStaffRole(instructor) || role === 'OFI' || instructor.isOFI === true;
 };
 const isActiveStaffListRole = (
     instructor: Instructor,
@@ -405,8 +407,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const simIps = useMemo(() => {
         console.log('🔍 [CONTRACTOR STAFF FILTER] instructorsData length:', instructorsData.length);
         const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
-            const isSimIp = i.role === 'SIM IP';
-            if (!isSimIp) return false;
+            if (!isContractorStaffRole(i)) return false;
             console.log(`🔍 [CONTRACTOR STAFF FILTER] Found active-context contractor staff: ${i.name} (${i.rank}) - Location: ${i.location}`);
             return true;
         });
@@ -457,7 +458,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             // Keep recognised active flying/crew staff in the main staff list.
             const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
-            const isSimIp = i.role === 'SIM IP';
+            const isSimIp = isContractorStaffRole(i);
             const isOfi = i.role === 'OFI' || i.isOFI === true;
 
             // Include everyone else

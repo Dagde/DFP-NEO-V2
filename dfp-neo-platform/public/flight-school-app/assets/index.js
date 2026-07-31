@@ -53308,10 +53308,11 @@ const getStaffArchiveIdentifier = (instructor) => {
   return dbId || instructor.idNumber || null;
 };
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
+const isContractorStaffRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "SIM IP";
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const isSupportStaffRole = (instructor) => {
   const role = String(instructor.role || "").trim().toUpperCase();
-  return role === "SIM IP" || role === "OFI" || instructor.isOFI === true;
+  return isContractorStaffRole(instructor) || role === "OFI" || instructor.isOFI === true;
 };
 const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel) => {
   if (instructor.isAdminStaff || isSupportStaffRole(instructor)) return false;
@@ -53549,8 +53550,7 @@ const InstructorListView = ({
   const simIps = reactExports.useMemo(() => {
     console.log("🔍 [CONTRACTOR STAFF FILTER] instructorsData length:", instructorsData.length);
     const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
-      const isSimIp = i.role === "SIM IP";
-      if (!isSimIp) return false;
+      if (!isContractorStaffRole(i)) return false;
       console.log(`🔍 [CONTRACTOR STAFF FILTER] Found active-context contractor staff: ${i.name} (${i.rank}) - Location: ${i.location}`);
       return true;
     });
@@ -53590,7 +53590,7 @@ const InstructorListView = ({
     console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
-      const isSimIp = i.role === "SIM IP";
+      const isSimIp = isContractorStaffRole(i);
       const isOfi = i.role === "OFI" || i.isOFI === true;
       const isOther = !isMainStaff && !isSimIp && !isOfi;
       if (!isOther) return false;
@@ -92879,7 +92879,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
   );
   const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
-  const isContractorStaffRole = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
   const canContractorStaffWorkEventType = (eventType) => {
     if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
@@ -92889,9 +92889,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (key === "ground" || key === "academic") return Boolean(buildContractorStaffEventEligibility.ground);
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
-    if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
+    if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
     return true;
   };
@@ -98018,7 +98018,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       } else {
         if (type === "ftd") {
           const simIps = instructors.filter(
-            (i) => isContractorStaffRole(i) && canContractorStaffWorkEventType("ftd")
+            (i) => isContractorStaffRole2(i) && canContractorStaffWorkEventType("ftd")
           );
           const availableQfis = instructors.filter(
             (i) => isQfiBuildInstructor(i)
@@ -98233,7 +98233,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _dRej.eventLimit++;
             continue;
           }
-        } else if (!remedialInstructorOverride && isContractorStaffRole(ip)) {
+        } else if (!remedialInstructorOverride && isContractorStaffRole2(ip)) {
           if ((eventTypeForCheck === "flight" || eventTypeForCheck === "ftd") && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) {
             _dRej.eventLimit++;
             continue;
@@ -103227,7 +103227,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       let candidates = [];
       const locationFilteredInstructors = instructors.filter((i) => personMatchesConfiguredLocation(config.platformConfig, i, config.school));
       if (type === "ftd") {
-        const simIps = locationFilteredInstructors.filter((i) => isContractorStaffRole(i) && canContractorStaffWorkEventType("ftd"));
+        const simIps = locationFilteredInstructors.filter((i) => isContractorStaffRole2(i) && canContractorStaffWorkEventType("ftd"));
         const qfis = locationFilteredInstructors.filter((i) => isQfiBuildInstructor(i));
         candidates = [...simIps, ...qfis];
       } else {
@@ -108836,7 +108836,7 @@ const App = () => {
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
-  const isContractorStaffRole = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
   const canContractorStaffWorkEventType = (eventType) => {
     if (!personnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
@@ -108846,9 +108846,9 @@ const App = () => {
     if (key === "ground" || key === "academic") return contractorStaffEventEligibility.ground;
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
-    if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
+    if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
     return true;
   };
