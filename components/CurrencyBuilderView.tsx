@@ -6,7 +6,7 @@ import CrewRequirementEditor from './CrewRequirementEditor';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
-import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 
 interface CurrencyBuilderViewProps {
     onBack: () => void;
@@ -112,7 +112,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
         setIsDirty(true);
     };
 
-    const handleDeleteCurrency = () => {
+    const handleDeleteCurrency = async () => {
         if (!isEditUnlocked || !selectedCurrencyId) return;
 
         // Check for dependencies
@@ -132,11 +132,11 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
         });
 
         if (isInUse) {
-            alert("This currency cannot be deleted because it is used as a dependency in another composite currency.");
+            await showDarkAlert('This currency cannot be deleted because it is used as a dependency in another composite currency.', 'Currency In Use', 'warning');
             return;
         }
 
-        if (window.confirm(`Are you sure you want to delete "${selectedCurrency?.name}"? This action cannot be undone.`)) {
+        if (await showDarkConfirm(`Are you sure you want to delete "${selectedCurrency?.name}"? This action cannot be undone.`, 'Delete Currency', 'warning')) {
             onDelete(selectedCurrencyId);
             setSelectedCurrencyId(null);
         }
@@ -150,11 +150,11 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
         setIsEditUnlocked(false);
     };
 
-    const handleImportFromUnit = () => {
+    const handleImportFromUnit = async () => {
         if (!isEditUnlocked || !importSourceUnit || !onImportFromUnit) return;
         const sourceLabel = importUnitOptions.find(option => option.unitCode === importSourceUnit)?.label || importSourceUnit;
         const targetLabel = activeUnitCode || 'this unit';
-        if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?\n\nThis replaces the current ${targetLabel} currency/recency list.`)) return;
+        if (!await showDarkConfirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?\n\nThis replaces the current ${targetLabel} currency/recency list.`, 'Import Currency Definitions', 'warning')) return;
         onImportFromUnit(importSourceUnit);
         setSelectedCurrencyId(null);
         setIsDirty(false);

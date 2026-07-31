@@ -6736,7 +6736,7 @@ const CurrencyBuilderView = ({
     setSelectedCurrencyId(newCurrency.id);
     setIsDirty(true);
   };
-  const handleDeleteCurrency = () => {
+  const handleDeleteCurrency = async () => {
     if (!isEditUnlocked || !selectedCurrencyId) return;
     const isInUse = allCurrencies.some((c) => {
       if (c.type === "composite") {
@@ -6753,10 +6753,10 @@ const CurrencyBuilderView = ({
       return false;
     });
     if (isInUse) {
-      alert("This currency cannot be deleted because it is used as a dependency in another composite currency.");
+      await showDarkAlert("This currency cannot be deleted because it is used as a dependency in another composite currency.", "Currency In Use", "warning");
       return;
     }
-    if (window.confirm(`Are you sure you want to delete "${selectedCurrency?.name}"? This action cannot be undone.`)) {
+    if (await showDarkConfirm(`Are you sure you want to delete "${selectedCurrency?.name}"? This action cannot be undone.`, "Delete Currency", "warning")) {
       onDelete(selectedCurrencyId);
       setSelectedCurrencyId(null);
     }
@@ -6768,13 +6768,13 @@ const CurrencyBuilderView = ({
     setIsDirty(false);
     setIsEditUnlocked(false);
   };
-  const handleImportFromUnit = () => {
+  const handleImportFromUnit = async () => {
     if (!isEditUnlocked || !importSourceUnit || !onImportFromUnit) return;
     const sourceLabel = importUnitOptions.find((option) => option.unitCode === importSourceUnit)?.label || importSourceUnit;
     const targetLabel = activeUnitCode2 || "this unit";
-    if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
+    if (!await showDarkConfirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
 
-This replaces the current ${targetLabel} currency/recency list.`)) return;
+This replaces the current ${targetLabel} currency/recency list.`, "Import Currency Definitions", "warning")) return;
     onImportFromUnit(importSourceUnit);
     setSelectedCurrencyId(null);
     setIsDirty(false);
@@ -7425,22 +7425,22 @@ const AddCourseFlyout = ({
   }, [existingCourses]);
   const totalStart = reactExports.useMemo(() => raafStart + navyStart + armyStart, [raafStart, navyStart, armyStart]);
   const studentNumberOptions = reactExports.useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
-  const handleSave = () => {
+  const handleSave = async () => {
     const finalCourseName = courseName.trim();
     if (!finalCourseName) {
-      alert("Please enter a course name.");
+      await showDarkAlert("Please enter a course name.", "Add Course", "warning");
       return;
     }
     if (Object.keys(existingCourses).includes(finalCourseName)) {
-      alert(`Course "${finalCourseName}" already exists.`);
+      await showDarkAlert(`Course "${finalCourseName}" already exists.`, "Add Course", "warning");
       return;
     }
     if (!startDate || !gradDate) {
-      alert("Please fill in all required date fields.");
+      await showDarkAlert("Please fill in all required date fields.", "Add Course", "warning");
       return;
     }
     if (new Date(gradDate) <= new Date(startDate)) {
-      alert("Graduation date must be after the start date.");
+      await showDarkAlert("Graduation date must be after the start date.", "Add Course", "warning");
       return;
     }
     onSave({
@@ -11583,7 +11583,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
             ] }, profile))
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Task Profiles", description: "Regular unit task profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Task Profiles", description: "Regular unit flight task profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Task name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
@@ -24304,7 +24304,7 @@ const TraineeProfileFlyout = ({
       await Promise.resolve(onUpdateTrainee(updatedTrainee));
     } catch (error) {
       console.error("Failed to update trainee pause state:", error);
-      alert("The trainee status could not be saved. Please try again.");
+      await showDarkAlert("The trainee status could not be saved. Please try again.", "Save Failed", "error");
       return;
     }
     setIsPaused(updatedTrainee.isPaused);
@@ -24358,7 +24358,7 @@ const TraineeProfileFlyout = ({
   };
   const handleSave = async () => {
     if (!name || !course) {
-      alert("Name and Course are required.");
+      await showDarkAlert("Name and Course are required.", "Missing Trainee Details", "warning");
       return;
     }
     const fullName = `${name} – ${course}`;
@@ -24428,7 +24428,7 @@ const TraineeProfileFlyout = ({
       await Promise.resolve(onUpdateTrainee(updatedTrainee));
     } catch (error) {
       console.error("Failed to save trainee profile:", error);
-      alert("The trainee could not be saved. Please check the details and try again.");
+      await showDarkAlert("The trainee could not be saved. Please check the details and try again.", "Save Failed", "error");
       return;
     }
     setIsEditing(false);
@@ -24552,7 +24552,7 @@ const TraineeProfileFlyout = ({
     const traineeId = trainee.id;
     if (!traineeId) {
       if (!isAutoSave) {
-        alert(`Training Report could not be saved: trainee database record not found for ${trainee.fullName}.`);
+        await showDarkAlert(`Training Report could not be saved: trainee database record not found for ${trainee.fullName}.`, "Save Failed", "error");
       }
       return;
     }
@@ -24568,9 +24568,9 @@ const TraineeProfileFlyout = ({
     });
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
-      if (!isAutoSave) alert(`Training Report could not be saved to the database.
+      if (!isAutoSave) await showDarkAlert(`Training Report could not be saved to the database.
 
-${errorText || `HTTP ${response.status}`}`);
+${errorText || `HTTP ${response.status}`}`, "Save Failed", "error");
       throw new Error(errorText || `Failed to save Training Report (${response.status})`);
     }
   };
@@ -24585,9 +24585,9 @@ ${errorText || `HTTP ${response.status}`}`);
     });
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
-      alert(`Training Report could not be deleted from the database.
+      await showDarkAlert(`Training Report could not be deleted from the database.
 
-${errorText || `HTTP ${response.status}`}`);
+${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       throw new Error(errorText || `Failed to delete Training Report (${response.status})`);
     }
     onDeletePt051Assessment?.(assessmentId, eventId, trainee.fullName);
@@ -29708,9 +29708,9 @@ ${swapNote}` : swapNote
       setShowMassBriefComplete(true);
     } else {
       if (traineeObject) {
-        alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
+        void showDarkAlert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}.`, "Ground Event Complete", "success");
       } else {
-        alert(`Ground event "${event.flightNumber}" marked as complete`);
+        void showDarkAlert(`Ground event "${event.flightNumber}" marked as complete.`, "Ground Event Complete", "success");
       }
       onClose();
     }
@@ -34312,7 +34312,7 @@ const AcademicsTab = ({
       courseTrainees.filter((t) => traineeStatuses[t.fullName]?.status === "available").map((t) => t.fullName)
     );
   }, [courseTrainees, traineeStatuses]);
-  const toggleTrainee = (name) => {
+  const toggleTrainee = async (name) => {
     const isCurrentlySelected = selectedTrainees.includes(name);
     if (isCurrentlySelected) {
       setSelectedTrainees((prev) => prev.filter((n) => n !== name));
@@ -34322,12 +34322,14 @@ const AcademicsTab = ({
     if (st && st.status !== "available") {
       const statusLabel = st.status === "paused" ? "PAUSED" : "UNAVAILABLE";
       const reason = st.reason || (st.status === "paused" ? "This trainee is currently paused." : "This trainee has a scheduling conflict or unavailability.");
-      const confirmed = window.confirm(
-        `⚠️ ${stripCourse(name)} is ${statusLabel}
+      const confirmed = await showDarkConfirm(
+        `${stripCourse(name)} is ${statusLabel}
 
 ${reason}
 
-Do you still want to include them in this academic session?`
+Do you still want to include them in this academic session?`,
+        "Trainee Availability Warning",
+        "warning"
       );
       if (!confirmed) return;
     }
@@ -34474,7 +34476,7 @@ Do you still want to include them in this academic session?`
       (t) => t.id !== tile.id && tile.startTime < t.startTime + t.duration && tile.startTime + tile.duration > t.startTime
     );
   };
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log("🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====");
     console.log("🎓 [AcademicsTab.handleSave] selectedCourse:", selectedCourse);
     console.log("🎓 [AcademicsTab.handleSave] selectedTrainees:", selectedTrainees, "(count:", selectedTrainees.length, ")");
@@ -34484,17 +34486,17 @@ Do you still want to include them in this academic session?`
     console.log("🎓 [AcademicsTab.handleSave] resourceId:", resourceId);
     if (!selectedCourse) {
       console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse");
-      alert("Please select a course.");
+      await showDarkAlert("Please select a course.", "Academic Event", "warning");
       return;
     }
     if (selectedTrainees.length === 0) {
       console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedTrainees");
-      alert("Please select at least one trainee.");
+      await showDarkAlert("Please select at least one trainee.", "Academic Event", "warning");
       return;
     }
     if (tiles.length === 0) {
       console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no tiles in timeline");
-      alert("Please add at least one lesson to the timeline.");
+      await showDarkAlert("Please add at least one lesson to the timeline.", "Academic Event", "warning");
       return;
     }
     const lessons = tiles.filter((t) => !t.isStandard).map((t) => {
@@ -35166,9 +35168,9 @@ const AddGroundEventFlyout = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  const handleSaveGround = () => {
+  const handleSaveGround = async () => {
     if (!flightNumber || !instructor) {
-      alert("Please select an event and an instructor.");
+      await showDarkAlert("Please select an event and an instructor.", "Add Ground Event", "warning");
       return;
     }
     let selectionType = "single";
@@ -35181,7 +35183,7 @@ const AddGroundEventFlyout = ({
       attendees = selectedTrainees;
     }
     if (attendees.length === 0) {
-      alert("Please select at least one trainee or an entire course.");
+      await showDarkAlert("Please select at least one trainee or an entire course.", "Add Ground Event", "warning");
       return;
     }
     const location = isCptEvent ? `${selectedCpt}: ${notes}`.trim() : notes;
@@ -36222,7 +36224,11 @@ const MyDashboard = ({
     setMessageView("compose");
   };
   const deleteDashboardConversation = async (contact) => {
-    const confirmed = window.confirm(`Delete the conversation with ${contact.displayName}?`);
+    const confirmed = await showDarkConfirm(
+      `Delete the conversation with ${contact.displayName}?`,
+      "Delete Conversation",
+      "warning"
+    );
     if (!confirmed) return;
     const contactKey = normaliseDashboardContactName(contact.name);
     persistDashboardMessages((messages) => messages.filter((message) => {
@@ -40479,7 +40485,7 @@ const PrioritiesView = ({
     const selectedRows = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey));
     const missingPicRows = selectedRows.filter((row) => !(staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor)));
     if (missingPicRows.length > 0) {
-      window.alert(`Select a PIC for ${missingPicRows.map((row) => row.instructor.name).join(", ")} before adding to the consolidated list.`);
+      void showDarkAlert(`Select a PIC for ${missingPicRows.map((row) => row.instructor.name).join(", ")} before adding to the consolidated list.`, "PIC Required", "warning");
       return;
     }
     const selectedPeople = selectedRows.map((row) => {
@@ -51334,7 +51340,7 @@ const InstructorProfileFlyout = ({
   };
   const handleSave = async () => {
     if (!name) {
-      alert("Name is required.");
+      await showDarkAlert("Name is required.", "Missing Staff Name", "warning");
       return;
     }
     const savedRole = role;
@@ -56101,7 +56107,7 @@ const SyllabusView = ({
         }
         return next;
       });
-      alert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`);
+      void showDarkAlert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`, "Save Failed", "error");
     }
   };
   reactExports.useEffect(() => {
@@ -56231,7 +56237,7 @@ const SyllabusView = ({
       setEditedItem(null);
       setEditingCourseTitle("");
     } catch (err) {
-      alert(`Save failed: ${err.message}`);
+      await showDarkAlert(`Save failed: ${err.message}`, "Save Failed", "error");
     } finally {
       setIsSaving(false);
     }
@@ -56297,22 +56303,22 @@ const SyllabusView = ({
   };
   const handleBulkUpload = async () => {
     if (!uploadFile) {
-      alert("Please select a file first.");
+      await showDarkAlert("Please select a file first.", "No File Selected", "warning");
       return;
     }
     const packageName = newUploadPackageName.trim();
     const destinationCode = isTrainingPackagesTab && uploadMode === "create" ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit) : selectedCourseType;
     const destinationName = isTrainingPackagesTab && uploadMode === "create" ? packageName : getCourseTitle(selectedCourseType);
     if (isTrainingPackagesTab && uploadMode === "create" && !packageName) {
-      alert("Please enter a new package name.");
+      await showDarkAlert("Please enter a new package name.", "Package Name Required", "warning");
       return;
     }
     if (!destinationCode) {
-      alert(`Please select or add a ${activeCollectionNoun} first.`);
+      await showDarkAlert(`Please select or add a ${activeCollectionNoun} first.`, "Selection Required", "warning");
       return;
     }
     if (isTrainingPackagesTab && uploadMode === "create" && courseLMPs.includes(destinationCode)) {
-      alert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`);
+      await showDarkAlert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`, "Package Already Exists", "warning");
       return;
     }
     setIsUploading(true);
@@ -56354,7 +56360,7 @@ const SyllabusView = ({
         setTimeout(() => window.location.reload(), 2e3);
       }
     } catch (err) {
-      alert(`Upload failed: ${err.message}`);
+      await showDarkAlert(`Upload failed: ${err.message}`, "Upload Failed", "error");
     } finally {
       setIsUploading(false);
     }
@@ -56450,7 +56456,7 @@ const SyllabusView = ({
       });
       setTimeout(() => window.location.reload(), 1600);
     } catch (err) {
-      alert(`Cross-load failed: ${err.message}`);
+      await showDarkAlert(`Cross-load failed: ${err.message}`, "Cross-load Failed", "error");
     } finally {
       setIsCrossLoadingDuplicateCourse(false);
     }
@@ -56520,11 +56526,11 @@ const SyllabusView = ({
   const handleCopyPackageSave = async () => {
     const source = packageCopyOptions.find((option) => option.key === copyPackageSourceKey);
     if (!source) {
-      alert("Please select a package to copy.");
+      await showDarkAlert("Please select a package to copy.", "Package Required", "warning");
       return;
     }
     if (!activeUnitNormalised) {
-      alert("Please select a unit before copying a training package.");
+      await showDarkAlert("Please select a unit before copying a training package.", "Unit Required", "warning");
       return;
     }
     const targetPackageCodeBase = `${activeUnitNormalised}-${source.code}`.replace(/[^A-Z0-9-]/g, "").slice(0, 24);
@@ -56599,7 +56605,7 @@ const SyllabusView = ({
         page: "LMP/Event Details"
       });
     } catch (err) {
-      alert(`❌ Failed to copy package: ${err.message}`);
+      await showDarkAlert(`Failed to copy package: ${err.message}`, "Copy Failed", "error");
     } finally {
       setIsCopyingPackage(false);
     }
@@ -56610,7 +56616,7 @@ const SyllabusView = ({
       return;
     }
     if (!newLMPName.trim()) {
-      alert(`Please enter a ${activeCollectionNoun} title.`);
+      await showDarkAlert(`Please enter a ${activeCollectionNoun} title.`, "Title Required", "warning");
       return;
     }
     const words = newLMPName.trim().split(/\s+/);
@@ -56661,12 +56667,12 @@ const SyllabusView = ({
       setIsEditing(false);
       logAudit({ action: "Create", description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: "LMP/Event Details" });
     } catch (err) {
-      alert(`❌ Failed to create ${activeCollectionNoun}: ${err.message}`);
+      await showDarkAlert(`Failed to create ${activeCollectionNoun}: ${err.message}`, "Create Failed", "error");
     }
   };
   const handleAddEvent = () => {
     if (!selectedCourseType) {
-      alert(`Please select a ${activeCollectionNoun} before adding an event.`);
+      void showDarkAlert(`Please select a ${activeCollectionNoun} before adding an event.`, "Selection Required", "warning");
       return;
     }
     const existingOrders = filteredSyllabusDetails.map((item) => Number(item.sortOrder)).filter((order) => Number.isFinite(order));
@@ -56743,7 +56749,7 @@ const SyllabusView = ({
       });
     } catch (error) {
       console.error("[LMP/Event Details] Failed to reorder events:", error);
-      alert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`);
+      await showDarkAlert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`, "Reorder Failed", "error");
     } finally {
       setDraggedEventId(null);
       setEventDropIndicator(null);
@@ -60135,9 +60141,9 @@ const DeleteElementFlyout = ({ onClose, onDelete, flightElements }) => {
     }
     setSelectedToDelete(newSet);
   };
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedToDelete.size === 0) {
-      alert("Please select at least one element to delete.");
+      await showDarkAlert("Please select at least one element to delete.", "Delete Elements", "warning");
       return;
     }
     onDelete(selectedToDelete);
@@ -60259,7 +60265,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   };
   const handleSaveNewElement = (newElementName) => {
     if (flightElements.includes(newElementName)) {
-      alert("An element with this name already exists.");
+      void showDarkAlert("An element with this name already exists.", "Add Element", "warning");
       return;
     }
     const nextElements = [...flightElements, newElementName];
@@ -60960,7 +60966,7 @@ const ACHistoryPage = ({
   }, [cancellationRecords]);
   const handleAddCode = async (newCode) => {
     if (cancellationCodes.some((c) => c.code === newCode.code)) {
-      alert("A code with this identifier already exists.");
+      await showDarkAlert("A code with this identifier already exists.", "Cancellation Code Exists", "warning");
       return;
     }
     try {
@@ -60972,7 +60978,7 @@ const ACHistoryPage = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to save code: ${err.error || "Unknown error"}`);
+        await showDarkAlert(`Failed to save code: ${err.error || "Unknown error"}`, "Cancellation Code Save Failed", "error");
         return;
       }
       const data = await res.json();
@@ -60981,7 +60987,7 @@ const ACHistoryPage = ({
       }
     } catch (err) {
       console.error("Failed to add cancellation code:", err);
-      alert("Failed to save code. Please try again.");
+      await showDarkAlert("Failed to save code. Please try again.", "Cancellation Code Save Failed", "error");
     }
   };
   const handleEditCode = async (oldCode, newCode) => {
@@ -61000,13 +61006,13 @@ const ACHistoryPage = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to update code: ${err.error || "Unknown error"}`);
+        await showDarkAlert(`Failed to update code: ${err.error || "Unknown error"}`, "Cancellation Code Update Failed", "error");
         return;
       }
       await loadCodesFromDB();
     } catch (err) {
       console.error("Failed to edit cancellation code:", err);
-      alert("Failed to update code. Please try again.");
+      await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");
     }
   };
   const handleToggleActive = async (code) => {
@@ -61017,7 +61023,7 @@ const ACHistoryPage = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to toggle code: ${err.error || "Unknown error"}`);
+        await showDarkAlert(`Failed to toggle code: ${err.error || "Unknown error"}`, "Cancellation Code Update Failed", "error");
         return;
       }
       setCancellationCodes(
@@ -61025,7 +61031,7 @@ const ACHistoryPage = ({
       );
     } catch (err) {
       console.error("Failed to toggle cancellation code:", err);
-      alert("Failed to update code. Please try again.");
+      await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");
     }
   };
   const handleDeleteCode = async (code) => {
@@ -61036,13 +61042,13 @@ const ACHistoryPage = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to delete code: ${err.error || "Unknown error"}`);
+        await showDarkAlert(`Failed to delete code: ${err.error || "Unknown error"}`, "Cancellation Code Delete Failed", "error");
         return;
       }
       setCancellationCodes((prev) => prev.filter((c) => c.code !== code));
     } catch (err) {
       console.error("Failed to delete cancellation code:", err);
-      alert("Failed to delete code. Please try again.");
+      await showDarkAlert("Failed to delete code. Please try again.", "Cancellation Code Delete Failed", "error");
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
@@ -61859,11 +61865,11 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     const gradePhrases = currentPhrases[grade] || [];
     onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: gradePhrases.filter((_, i) => i !== index) } });
   };
-  const handleSaveNewElement = () => {
+  const handleSaveNewElement = async () => {
     const name = newElementName.trim();
     if (!name) return;
     if (flightElements.includes(name)) {
-      alert("An element with this name already exists.");
+      await showDarkAlert("An element with this name already exists.", "Duplicate Element", "warning");
       return;
     }
     const nextElements = [...flightElements, name];
@@ -61882,9 +61888,9 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     setShowAddElementFlyout(false);
     onElementAdded?.(name);
   };
-  const handleDeleteElements = () => {
+  const handleDeleteElements = async () => {
     if (selectedToDelete.size === 0) {
-      alert("Please select at least one element to delete.");
+      await showDarkAlert("Please select at least one element to delete.", "No Element Selected", "warning");
       return;
     }
     const newFlightElements = flightElements.filter((el) => !selectedToDelete.has(el));
@@ -66657,7 +66663,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
       return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
     }
     if (lowerTitle.includes("profiles")) {
-      return { section: "platform-standard-missions", label: "Reusable Task Profiles" };
+      return { section: "platform-standard-missions", label: "Reusable Flight Task Profiles" };
     }
   }
   return null;
@@ -66858,8 +66864,8 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit profiles need per-unit copies",
       `${missingCompositeClones} unit-scoped task profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Reusable Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
-      { section: "platform-standard-missions", label: "Reusable Task Profiles", focusSubsectionId: "platform-standard-missions" }
+      "Open Reusable Flight Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
+      { section: "platform-standard-missions", label: "Reusable Flight Task Profiles", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
     add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Task profiles, alternate crew profiles and currency events have per-unit records where needed.", "unit-separation-profiles-ok");
@@ -71442,7 +71448,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Reusable Task Profiles",
+          title: "Reusable Flight Task Profiles",
           subtitle: "Define reusable task profiles for regular Fixed Crew-style unit flights.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
@@ -71450,7 +71456,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Task Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight Task Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
@@ -71458,7 +71464,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New task profiles default to the unit home location and unit default callsign. Values can be manually edited per task." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Reusable Task Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Reusable Flight Task Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -71506,7 +71512,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Reusable Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Reusable Flight Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -75483,7 +75489,7 @@ const sectionLabels = {
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
-  "standard-missions": "Reusable Task Profiles",
+  "standard-missions": "Reusable Flight Task Profiles",
   "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
@@ -75628,7 +75634,7 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Reusable task profiles for regular unit flights",
+  "standard-missions": "Reusable flight task profiles for regular unit tasking",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
@@ -76010,6 +76016,9 @@ const SettingsViewWithMenu = (props) => {
             type: "search",
             value: settingsSearch,
             onChange: (event) => setSettingsSearch(event.target.value),
+            onBeforeInput: (event) => handleEditableTextBeforeInput(event, setSettingsSearch),
+            onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setSettingsSearch),
+            onKeyDown: stopEditableKeyPropagation,
             placeholder: "Search settings...",
             className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
           }
@@ -76096,6 +76105,9 @@ const SettingsViewWithMenu = (props) => {
                 type: "search",
                 value: settingsSearch,
                 onChange: (event) => setSettingsSearch(event.target.value),
+                onBeforeInput: (event) => handleEditableTextBeforeInput(event, setSettingsSearch),
+                onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setSettingsSearch),
+                onKeyDown: stopEditableKeyPropagation,
                 placeholder: "Search settings...",
                 className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               }
@@ -80244,9 +80256,9 @@ const EditCourseFlyout = ({
     setLmpType(initialLmpType || "");
     setAcademicLmpType(initialAcademicLmpType || "");
   }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType, initialAcademicLmpType]);
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!startDate || !gradDate) {
-      alert("Please fill in both Start Date and Graduation Date.");
+      await showDarkAlert("Please fill in both Start Date and Graduation Date.", "Edit Course", "warning");
       return;
     }
     onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });
@@ -81699,9 +81711,9 @@ const TrainingRecordsExportView = ({
       });
     });
   };
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      alert("Please enter a template name");
+      await showDarkAlert("Please enter a template name.", "Save Export Template", "warning");
       return;
     }
     const template = {
@@ -81723,7 +81735,7 @@ const TrainingRecordsExportView = ({
     };
     setSavedTemplates([...savedTemplates, template]);
     setTemplateName("");
-    alert(`Template "${template.name}" saved successfully!`);
+    await showDarkAlert(`Template "${template.name}" saved successfully.`, "Export Template Saved", "success");
   };
   const handleLoadTemplate = (template) => {
     setRecordType(template.recordType);
@@ -81749,7 +81761,7 @@ const TrainingRecordsExportView = ({
   };
   const processMassCompletion = async () => {
     if (selectedForCompletion.length === 0) {
-      alert("Please select at least one trainee for completion.");
+      await showDarkAlert("Please select at least one trainee for completion.", "Mass Completion", "warning");
       return;
     }
     setIsCompleting(true);
@@ -83247,9 +83259,9 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     }
     return times;
   }, []);
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!event || !currency || !currencyExpire) {
-      alert("Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.");
+      await showDarkAlert("Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.", "Missing Request Details", "warning");
       return;
     }
     const profile = findContinuationProfile(event);

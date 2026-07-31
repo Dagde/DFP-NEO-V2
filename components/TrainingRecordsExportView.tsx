@@ -9,6 +9,7 @@ import {
     normaliseTrainingReportTemplate,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { showDarkAlert } from './DarkMessageModal';
 
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
@@ -1320,9 +1321,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     
 
     // Handle save template
-    const handleSaveTemplate = () => {
+    const handleSaveTemplate = async () => {
         if (!templateName.trim()) {
-            alert('Please enter a template name');
+            await showDarkAlert('Please enter a template name.', 'Save Export Template', 'warning');
             return;
         }
 
@@ -1346,7 +1347,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
         setSavedTemplates([...savedTemplates, template]);
         setTemplateName('');
-        alert(`Template "${template.name}" saved successfully!`);
+        await showDarkAlert(`Template "${template.name}" saved successfully.`, 'Export Template Saved', 'success');
     };
 
     // Handle load template
@@ -1378,7 +1379,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Process mass completion
     const processMassCompletion = async () => {
         if (selectedForCompletion.length === 0) {
-            alert('Please select at least one trainee for completion.');
+            await showDarkAlert('Please select at least one trainee for completion.', 'Mass Completion', 'warning');
             return;
         }
 

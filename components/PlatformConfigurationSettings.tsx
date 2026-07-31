@@ -1335,7 +1335,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
       return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
     }
     if (lowerTitle.includes('profiles')) {
-      return { section: 'platform-standard-missions', label: 'Reusable Task Profiles' };
+      return { section: 'platform-standard-missions', label: 'Reusable Flight Task Profiles' };
     }
   }
   return null;
@@ -1577,8 +1577,8 @@ const buildConfigurationHealth = (
       'Combined-unit profiles need per-unit copies',
       `${missingCompositeClones} unit-scoped task profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Reusable Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
-      { section: 'platform-standard-missions', label: 'Reusable Task Profiles', focusSubsectionId: 'platform-standard-missions' }
+      'Open Reusable Flight Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
+      { section: 'platform-standard-missions', label: 'Reusable Flight Task Profiles', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
     add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Task profiles, alternate crew profiles and currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
@@ -7109,7 +7109,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
-          title="Reusable Task Profiles"
+          title="Reusable Flight Task Profiles"
           subtitle="Define reusable task profiles for regular Fixed Crew-style unit flights."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
@@ -7121,7 +7121,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Reusable Task Profiles are currently available for Fixed Crew-style models.
+              Reusable Flight Task Profiles are currently available for Fixed Crew-style models.
             </div>
           ) : (
             <>
@@ -7133,7 +7133,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No Reusable Task Profiles configured for this Fixed Crew unit.
+                  No Reusable Flight Task Profiles configured for this Fixed Crew unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
@@ -7194,7 +7194,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={activeStandardMissionUnitLabel}
                                 disabled
                                 onChange={() => undefined}
-                                info="Reusable Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                                info="Reusable Flight Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
                               <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />

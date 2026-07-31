@@ -800,7 +800,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleSave = async () => {
-    if (!name) { alert("Name is required."); return; }
+    if (!name) { await showDarkAlert('Name is required.', 'Missing Staff Name', 'warning'); return; }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
     const savedQualifications = savedAsContractorStaff

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { PhraseBank } from '../types';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { showDarkAlert } from './DarkMessageModal';
 
 interface ScoringMatrixFlyoutProps {
   onClose: () => void;
@@ -134,9 +135,9 @@ const DeleteElementFlyout: React.FC<{
         setSelectedToDelete(newSet);
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (selectedToDelete.size === 0) {
-            alert("Please select at least one element to delete.");
+            await showDarkAlert('Please select at least one element to delete.', 'Delete Elements', 'warning');
             return;
         }
         onDelete(selectedToDelete);
@@ -298,7 +299,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
 
     const handleSaveNewElement = (newElementName: string) => {
         if (flightElements.includes(newElementName)) {
-            alert("An element with this name already exists.");
+            void showDarkAlert('An element with this name already exists.', 'Add Element', 'warning');
             return;
         }
         

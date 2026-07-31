@@ -59,6 +59,7 @@ import {
   type FixedCrewAvailabilityWindow,
 } from '../utils/fixedCrewAvailability';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
+import { showDarkAlert } from './DarkMessageModal';
 
 type FixedCrewTrainingStreamDisplay = FixedCrewTrainingStreamPriority & { eventCount?: number };
 type PriorityAllocationModel = 'flight_school' | 'air_combat' | 'fixed_crew';
@@ -2699,11 +2700,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     logAudit('Priorities', 'Save', 'Saved directed task request', `${request.tasking || 'Untitled directed task'} on ${request.date || 'any build date'}`);
   };
 
-  const submitTaskingRequest = (id: string) => {
+  const submitTaskingRequest = async (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
     if (isTaskingRequestInHighestPriority(id)) {
-      window.alert('Already added to Highest Priority Events list');
+      await showDarkAlert('Already added to Highest Priority Events list.', 'Already Added', 'info');
       return;
     }
     const priorityEvents = buildTaskingPriorityEvents(request);
@@ -2904,7 +2905,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const selectedRows = staffCurrencyRows.filter(row => staffCurrencySelection.has(row.personKey));
     const missingPicRows = selectedRows.filter(row => !(staffCurrencyPicSelections[row.personKey] || getDefaultStaffCurrencyPicName(row.instructor)));
     if (missingPicRows.length > 0) {
-      window.alert(`Select a PIC for ${missingPicRows.map(row => row.instructor.name).join(', ')} before adding to the consolidated list.`);
+      void showDarkAlert(`Select a PIC for ${missingPicRows.map(row => row.instructor.name).join(', ')} before adding to the consolidated list.`, 'PIC Required', 'warning');
       return;
     }
     const selectedPeople = selectedRows

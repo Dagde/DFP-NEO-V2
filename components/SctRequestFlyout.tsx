@@ -4,6 +4,7 @@ import { Instructor, SctRequest } from '../types';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getContinuationEventCurrencyProfiles } from '../utils/continuationEvents';
+import { showDarkAlert } from './DarkMessageModal';
 
 interface SctRequestFlyoutProps {
   instructor: Instructor;
@@ -140,9 +141,9 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
     return times;
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!event || !currency || !currencyExpire) {
-      alert('Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.');
+      await showDarkAlert('Please fill out all required fields: Event, Flight Type, Currency, and Expiry Date.', 'Missing Request Details', 'warning');
       return;
     }
     const profile = findContinuationProfile(event);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import CancellationCodesTable from './CancellationCodesTable';
 import { CancellationCode, CancellationRecord } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { showDarkAlert } from './DarkMessageModal';
 
 interface ACHistoryPageProps {
   currentUserRole: string;
@@ -70,7 +71,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   const handleAddCode = async (newCode: CancellationCode) => {
     // Check for duplicate locally first
     if (cancellationCodes.some(c => c.code === newCode.code)) {
-      alert('A code with this identifier already exists.');
+      await showDarkAlert('A code with this identifier already exists.', 'Cancellation Code Exists', 'warning');
       return;
     }
     try {
@@ -82,7 +83,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to save code: ${err.error || 'Unknown error'}`);
+        await showDarkAlert(`Failed to save code: ${err.error || 'Unknown error'}`, 'Cancellation Code Save Failed', 'error');
         return;
       }
       const data = await res.json();
@@ -92,7 +93,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       }
     } catch (err: any) {
       console.error('Failed to add cancellation code:', err);
-      alert('Failed to save code. Please try again.');
+      await showDarkAlert('Failed to save code. Please try again.', 'Cancellation Code Save Failed', 'error');
     }
   };
 
@@ -113,13 +114,13 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to update code: ${err.error || 'Unknown error'}`);
+        await showDarkAlert(`Failed to update code: ${err.error || 'Unknown error'}`, 'Cancellation Code Update Failed', 'error');
         return;
       }
       await loadCodesFromDB();
     } catch (err: any) {
       console.error('Failed to edit cancellation code:', err);
-      alert('Failed to update code. Please try again.');
+      await showDarkAlert('Failed to update code. Please try again.', 'Cancellation Code Update Failed', 'error');
     }
   };
 
@@ -131,7 +132,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to toggle code: ${err.error || 'Unknown error'}`);
+        await showDarkAlert(`Failed to toggle code: ${err.error || 'Unknown error'}`, 'Cancellation Code Update Failed', 'error');
         return;
       }
       // Optimistic update: flip locally while waiting for DB refresh
@@ -140,7 +141,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       );
     } catch (err: any) {
       console.error('Failed to toggle cancellation code:', err);
-      alert('Failed to update code. Please try again.');
+      await showDarkAlert('Failed to update code. Please try again.', 'Cancellation Code Update Failed', 'error');
     }
   };
 
@@ -152,13 +153,13 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(`Failed to delete code: ${err.error || 'Unknown error'}`);
+        await showDarkAlert(`Failed to delete code: ${err.error || 'Unknown error'}`, 'Cancellation Code Delete Failed', 'error');
         return;
       }
       setCancellationCodes(prev => prev.filter(c => c.code !== code));
     } catch (err: any) {
       console.error('Failed to delete cancellation code:', err);
-      alert('Failed to delete code. Please try again.');
+      await showDarkAlert('Failed to delete code. Please try again.', 'Cancellation Code Delete Failed', 'error');
     }
   };
 

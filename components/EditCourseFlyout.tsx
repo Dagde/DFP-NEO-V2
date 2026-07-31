@@ -4,6 +4,7 @@ import {
     filterMasterLmpCodesForAccess,
     type PlatformConfig,
 } from '../utils/platformConfigService';
+import { showDarkAlert } from './DarkMessageModal';
 
 const normaliseLmpCode = (value: unknown): string => String(value || '').trim();
 
@@ -122,9 +123,9 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
         setAcademicLmpType(initialAcademicLmpType || '');
     }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType, initialAcademicLmpType]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!startDate || !gradDate) {
-            alert('Please fill in both Start Date and Graduation Date.');
+            await showDarkAlert('Please fill in both Start Date and Graduation Date.', 'Edit Course', 'warning');
             return;
         }
         onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });

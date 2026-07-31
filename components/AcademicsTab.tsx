@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -390,7 +391,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     );
   }, [courseTrainees, traineeStatuses]);
 
-  const toggleTrainee = (name: string) => {
+  const toggleTrainee = async (name: string) => {
     const isCurrentlySelected = selectedTrainees.includes(name);
     if (isCurrentlySelected) {
       // Deselecting — always allowed
@@ -402,8 +403,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     if (st && st.status !== 'available') {
       const statusLabel = st.status === 'paused' ? 'PAUSED' : 'UNAVAILABLE';
       const reason = st.reason || (st.status === 'paused' ? 'This trainee is currently paused.' : 'This trainee has a scheduling conflict or unavailability.');
-      const confirmed = window.confirm(
-        `⚠️ ${stripCourse(name)} is ${statusLabel}\n\n${reason}\n\nDo you still want to include them in this academic session?`
+      const confirmed = await showDarkConfirm(
+        `${stripCourse(name)} is ${statusLabel}\n\n${reason}\n\nDo you still want to include them in this academic session?`,
+        'Trainee Availability Warning',
+        'warning'
       );
       if (!confirmed) return;
     }
@@ -588,7 +591,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   };
 
   // ── Save ──
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====');
     console.log('🎓 [AcademicsTab.handleSave] selectedCourse:', selectedCourse);
     console.log('🎓 [AcademicsTab.handleSave] selectedTrainees:', selectedTrainees, '(count:', selectedTrainees.length, ')');
@@ -599,17 +602,17 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
     if (!selectedCourse) {
       console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse');
-      alert('Please select a course.');
+      await showDarkAlert('Please select a course.', 'Academic Event', 'warning');
       return;
     }
     if (selectedTrainees.length === 0) {
       console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedTrainees');
-      alert('Please select at least one trainee.');
+      await showDarkAlert('Please select at least one trainee.', 'Academic Event', 'warning');
       return;
     }
     if (tiles.length === 0) {
       console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no tiles in timeline');
-      alert('Please add at least one lesson to the timeline.');
+      await showDarkAlert('Please add at least one lesson to the timeline.', 'Academic Event', 'warning');
       return;
     }
 

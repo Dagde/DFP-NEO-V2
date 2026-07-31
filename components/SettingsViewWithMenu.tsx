@@ -11,7 +11,12 @@ import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import PeopleProfilePage from './PeopleProfilePage';
 import CurrencyBuilderView from './CurrencyBuilderView';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
-import { isEditableElement, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import {
+    handleEditableTextBeforeInput,
+    handleEditableTextKeyDownCapture,
+    isEditableElement,
+    stopEditableKeyPropagation,
+} from '../utils/editableKeyEvents';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TileStatusSettings } from '../utils/tileStatusSettings';
@@ -280,7 +285,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'validation': 'Cancellation Codes',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
-    'standard-missions': 'Reusable Task Profiles',
+    'standard-missions': 'Reusable Flight Task Profiles',
     'currency-profiles': 'Continuation & Currency Events',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
@@ -480,7 +485,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles and composition profiles',
-  'standard-missions': 'Reusable task profiles for regular unit flights',
+  'standard-missions': 'Reusable flight task profiles for regular unit tasking',
   'currency-profiles': 'Continuation and currency event defaults',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
@@ -962,6 +967,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         type="search"
                         value={settingsSearch}
                         onChange={(event) => setSettingsSearch(event.target.value)}
+                        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setSettingsSearch)}
+                        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setSettingsSearch)}
+                        onKeyDown={stopEditableKeyPropagation}
                         placeholder="Search settings..."
                         className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                     />
@@ -1071,6 +1079,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                             type="search"
                                             value={settingsSearch}
                                             onChange={(event) => setSettingsSearch(event.target.value)}
+                                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setSettingsSearch)}
+                                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setSettingsSearch)}
+                                            onKeyDown={stopEditableKeyPropagation}
                                             placeholder="Search settings..."
                                             className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                         />

@@ -2722,9 +2722,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             // For regular ground events, mark as complete and close
             // This would typically update the event status in the system
             if (traineeObject) {
-                alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
+                void showDarkAlert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}.`, 'Ground Event Complete', 'success');
             } else {
-                alert(`Ground event "${event.flightNumber}" marked as complete`);
+                void showDarkAlert(`Ground event "${event.flightNumber}" marked as complete.`, 'Ground Event Complete', 'success');
             }
             onClose();
         }

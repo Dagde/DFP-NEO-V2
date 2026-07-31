@@ -52,6 +52,7 @@ import {
   type StaffQualificationCatalogue,
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
+import { showDarkAlert } from './DarkMessageModal';
 import type { OperationalModelCode } from '../utils/platformConfigService';
 import {
   getCrewPositionDisplayLabel,
@@ -1282,7 +1283,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             await Promise.resolve(onUpdateTrainee(updatedTrainee));
         } catch (error) {
             console.error('Failed to update trainee pause state:', error);
-            alert('The trainee status could not be saved. Please try again.');
+            await showDarkAlert('The trainee status could not be saved. Please try again.', 'Save Failed', 'error');
             return;
         }
         setIsPaused(updatedTrainee.isPaused);
@@ -1390,7 +1391,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const handleSave = async () => {
         if (!name || !course) {
-            alert("Name and Course are required.");
+            await showDarkAlert('Name and Course are required.', 'Missing Trainee Details', 'warning');
             return;
         }
         const fullName = `${name} – ${course}`;
@@ -1469,7 +1470,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             await Promise.resolve(onUpdateTrainee(updatedTrainee));
         } catch (error) {
             console.error('Failed to save trainee profile:', error);
-            alert('The trainee could not be saved. Please check the details and try again.');
+            await showDarkAlert('The trainee could not be saved. Please check the details and try again.', 'Save Failed', 'error');
             return;
         }
 
@@ -1617,7 +1618,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         const traineeId = (trainee as any).id;
         if (!traineeId) {
             if (!isAutoSave) {
-                alert(`Training Report could not be saved: trainee database record not found for ${trainee.fullName}.`);
+                await showDarkAlert(`Training Report could not be saved: trainee database record not found for ${trainee.fullName}.`, 'Save Failed', 'error');
             }
             return;
         }
@@ -1634,7 +1635,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         });
         if (!response.ok) {
             const errorText = await response.text().catch(() => '');
-            if (!isAutoSave) alert(`Training Report could not be saved to the database.\n\n${errorText || `HTTP ${response.status}`}`);
+            if (!isAutoSave) await showDarkAlert(`Training Report could not be saved to the database.\n\n${errorText || `HTTP ${response.status}`}`, 'Save Failed', 'error');
             throw new Error(errorText || `Failed to save Training Report (${response.status})`);
         }
     };
@@ -1650,7 +1651,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         });
         if (!response.ok) {
             const errorText = await response.text().catch(() => '');
-            alert(`Training Report could not be deleted from the database.\n\n${errorText || `HTTP ${response.status}`}`);
+            await showDarkAlert(`Training Report could not be deleted from the database.\n\n${errorText || `HTTP ${response.status}`}`, 'Delete Failed', 'error');
             throw new Error(errorText || `Failed to delete Training Report (${response.status})`);
         }
         onDeletePt051Assessment?.(assessmentId, eventId, trainee.fullName);

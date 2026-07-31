@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Trainee, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
-import { showDarkConfirm } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import {
     DEFAULT_TRAINING_REPORT_TERMINOLOGY,
@@ -355,7 +355,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         
         if (!assessmentToDelete) {
             console.log('❌ Assessment not found with ID:', eventId);
-            alert(`${trainingReportName} assessment not found.`);
+            await showDarkAlert(`${trainingReportName} assessment not found.`, `${trainingReportName} Not Found`, 'warning');
             return;
         }
 
@@ -420,7 +420,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             
         } catch (error) {
             console.error('Error deleting training report:', error);
-            alert(`Failed to delete ${trainingReportName}. Please try again.`);
+            await showDarkAlert(`Failed to delete ${trainingReportName}. Please try again.`, `${trainingReportName} Delete Failed`, 'error');
         }
     };
     

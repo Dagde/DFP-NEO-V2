@@ -8,6 +8,7 @@ import {
   ResourceDisplayNames,
   formatResourceLabel as formatConfiguredResourceLabel,
 } from '../utils/resourceDisplayNames';
+import { showDarkAlert } from './DarkMessageModal';
 
 interface AddGroundEventFlyoutProps {
   onClose: () => void;
@@ -139,9 +140,9 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleSaveGround = () => {
+    const handleSaveGround = async () => {
         if (!flightNumber || !instructor) {
-            alert('Please select an event and an instructor.');
+            await showDarkAlert('Please select an event and an instructor.', 'Add Ground Event', 'warning');
             return;
         }
         let selectionType: 'course' | 'multiple' | 'single' = 'single';
@@ -154,7 +155,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
             attendees = selectedTrainees;
         }
         if (attendees.length === 0) {
-            alert('Please select at least one trainee or an entire course.');
+            await showDarkAlert('Please select at least one trainee or an entire course.', 'Add Ground Event', 'warning');
             return;
         }
         const location = isCptEvent ? `${selectedCpt}: ${notes}`.trim() : notes;

@@ -37,6 +37,7 @@ import {
 import { SYLLABUS_COURSE_SHELL_NOTE, isSyllabusCourseShell } from '../utils/syllabusCourseShell';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { PlatformMasterLmpCatalogueEntry } from '../utils/platformConfigService';
+import { showDarkAlert } from './DarkMessageModal';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -1459,7 +1460,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               }
               return next;
           });
-          alert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`);
+          void showDarkAlert(`Linked event was not saved: ${error instanceof Error ? error.message : String(error)}`, 'Save Failed', 'error');
       }
   };
 
@@ -1611,7 +1612,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setEditedItem(null);
           setEditingCourseTitle('');
       } catch (err: any) {
-          alert(`Save failed: ${err.message}`);
+          await showDarkAlert(`Save failed: ${err.message}`, 'Save Failed', 'error');
       } finally {
           setIsSaving(false);
       }
@@ -1684,7 +1685,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   };
 
   const handleBulkUpload = async () => {
-      if (!uploadFile) { alert('Please select a file first.'); return; }
+      if (!uploadFile) { await showDarkAlert('Please select a file first.', 'No File Selected', 'warning'); return; }
       const packageName = newUploadPackageName.trim();
       const destinationCode = isTrainingPackagesTab && uploadMode === 'create'
           ? getUnitScopedCollectionCode(getPackageCodeFromTitle(packageName), activeUnitNormalised, shouldScopeCreatedItemsToActiveUnit)
@@ -1693,12 +1694,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           ? packageName
           : getCourseTitle(selectedCourseType);
       if (isTrainingPackagesTab && uploadMode === 'create' && !packageName) {
-          alert('Please enter a new package name.');
+          await showDarkAlert('Please enter a new package name.', 'Package Name Required', 'warning');
           return;
       }
-      if (!destinationCode) { alert(`Please select or add a ${activeCollectionNoun} first.`); return; }
+      if (!destinationCode) { await showDarkAlert(`Please select or add a ${activeCollectionNoun} first.`, 'Selection Required', 'warning'); return; }
       if (isTrainingPackagesTab && uploadMode === 'create' && courseLMPs.includes(destinationCode)) {
-          alert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`);
+          await showDarkAlert(`A package with code ${destinationCode} already exists. Select it and use Replace Package or Update Package instead.`, 'Package Already Exists', 'warning');
           return;
       }
       setIsUploading(true);
@@ -1741,7 +1742,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               setTimeout(() => window.location.reload(), 2000);
           }
       } catch (err: any) {
-          alert(`Upload failed: ${err.message}`);
+          await showDarkAlert(`Upload failed: ${err.message}`, 'Upload Failed', 'error');
       } finally {
           setIsUploading(false);
       }
@@ -1851,7 +1852,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           });
           setTimeout(() => window.location.reload(), 1600);
       } catch (err: any) {
-          alert(`Cross-load failed: ${err.message}`);
+          await showDarkAlert(`Cross-load failed: ${err.message}`, 'Cross-load Failed', 'error');
       } finally {
           setIsCrossLoadingDuplicateCourse(false);
       }
@@ -1925,11 +1926,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
   const handleCopyPackageSave = async () => {
       const source = packageCopyOptions.find(option => option.key === copyPackageSourceKey);
       if (!source) {
-          alert('Please select a package to copy.');
+          await showDarkAlert('Please select a package to copy.', 'Package Required', 'warning');
           return;
       }
       if (!activeUnitNormalised) {
-          alert('Please select a unit before copying a training package.');
+          await showDarkAlert('Please select a unit before copying a training package.', 'Unit Required', 'warning');
           return;
       }
       const targetPackageCodeBase = `${activeUnitNormalised}-${source.code}`.replace(/[^A-Z0-9-]/g, '').slice(0, 24);
@@ -2009,7 +2010,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               page: 'LMP/Event Details',
           });
       } catch (err: any) {
-          alert(`❌ Failed to copy package: ${err.message}`);
+          await showDarkAlert(`Failed to copy package: ${err.message}`, 'Copy Failed', 'error');
       } finally {
           setIsCopyingPackage(false);
       }
@@ -2020,7 +2021,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           await handleCopyPackageSave();
           return;
       }
-      if (!newLMPName.trim()) { alert(`Please enter a ${activeCollectionNoun} title.`); return; }
+      if (!newLMPName.trim()) { await showDarkAlert(`Please enter a ${activeCollectionNoun} title.`, 'Title Required', 'warning'); return; }
       // For Academic Training courses, use the full name as the course code/identifier.
       // This is critical: the academicLmpType field on trainees/courses stores the FULL NAME
       // and syllabus items are filtered by courses.includes(academicLmpType).
@@ -2080,13 +2081,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setIsEditing(false);
           logAudit({ action: 'Create', description: `Created new ${activeCollectionNoun}: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: 'LMP/Event Details' });
       } catch (err: any) {
-          alert(`❌ Failed to create ${activeCollectionNoun}: ${err.message}`);
+          await showDarkAlert(`Failed to create ${activeCollectionNoun}: ${err.message}`, 'Create Failed', 'error');
       }
   };
 
   const handleAddEvent = () => {
       if (!selectedCourseType) {
-          alert(`Please select a ${activeCollectionNoun} before adding an event.`);
+          void showDarkAlert(`Please select a ${activeCollectionNoun} before adding an event.`, 'Selection Required', 'warning');
           return;
       }
       const existingOrders = filteredSyllabusDetails
@@ -2170,7 +2171,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           });
       } catch (error) {
           console.error('[LMP/Event Details] Failed to reorder events:', error);
-          alert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`);
+          await showDarkAlert(`Event order was not saved: ${error instanceof Error ? error.message : String(error)}`, 'Reorder Failed', 'error');
       } finally {
           setDraggedEventId(null);
           setEventDropIndicator(null);

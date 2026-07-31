@@ -259,10 +259,10 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: gradePhrases.filter((_, i) => i !== index) } });
     };
 
-    const handleSaveNewElement = () => {
+    const handleSaveNewElement = async () => {
         const name = newElementName.trim();
         if (!name) return;
-        if (flightElements.includes(name)) { alert('An element with this name already exists.'); return; }
+        if (flightElements.includes(name)) { await showDarkAlert('An element with this name already exists.', 'Duplicate Element', 'warning'); return; }
         const nextElements = [...flightElements, name];
         setFlightElements(nextElements);
         onUpdatePhraseBank({
@@ -280,8 +280,8 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         onElementAdded?.(name);
     };
 
-    const handleDeleteElements = () => {
-        if (selectedToDelete.size === 0) { alert('Please select at least one element to delete.'); return; }
+    const handleDeleteElements = async () => {
+        if (selectedToDelete.size === 0) { await showDarkAlert('Please select at least one element to delete.', 'No Element Selected', 'warning'); return; }
         const newFlightElements = flightElements.filter(el => !selectedToDelete.has(el));
         setFlightElements(newFlightElements);
         const newPhraseBank = { ...phraseBank };

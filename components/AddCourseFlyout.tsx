@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { PlatformConfig } from '../utils/platformConfigService';
+import { showDarkAlert } from './DarkMessageModal';
 
 export interface NewCourseData {
     number: string;
@@ -148,24 +149,24 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
 
     const studentNumberOptions = useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const finalCourseName = courseName.trim();
         if (!finalCourseName) {
-            alert('Please enter a course name.');
+            await showDarkAlert('Please enter a course name.', 'Add Course', 'warning');
             return;
         }
 
         if (Object.keys(existingCourses).includes(finalCourseName)) {
-            alert(`Course "${finalCourseName}" already exists.`);
+            await showDarkAlert(`Course "${finalCourseName}" already exists.`, 'Add Course', 'warning');
             return;
         }
 
         if (!startDate || !gradDate) {
-            alert('Please fill in all required date fields.');
+            await showDarkAlert('Please fill in all required date fields.', 'Add Course', 'warning');
             return;
         }
         if (new Date(gradDate) <= new Date(startDate)) {
-            alert('Graduation date must be after the start date.');
+            await showDarkAlert('Graduation date must be after the start date.', 'Add Course', 'warning');
             return;
         }
         onSave({

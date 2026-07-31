@@ -3,6 +3,7 @@ import { AirCombatTrainingReport, Instructor, ScheduleEvent, SctRequest, Pt051As
 import TafWeatherWidget from './TafWeatherWidget';
 import { normaliseFixedCrewStaffRole } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
+import { showDarkConfirm } from './DarkMessageModal';
 
 interface MyDashboardProps {
     userName: string;
@@ -607,7 +608,11 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         setMessageView('compose');
     };
     const deleteDashboardConversation = async (contact: DashboardMessageContact) => {
-        const confirmed = window.confirm(`Delete the conversation with ${contact.displayName}?`);
+        const confirmed = await showDarkConfirm(
+            `Delete the conversation with ${contact.displayName}?`,
+            'Delete Conversation',
+            'warning'
+        );
         if (!confirmed) return;
         const contactKey = normaliseDashboardContactName(contact.name);
         persistDashboardMessages(messages => messages.filter(message => {
