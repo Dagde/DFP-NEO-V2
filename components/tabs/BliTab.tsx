@@ -10,8 +10,7 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { showDarkAlert, showDarkPrompt } from '../DarkMessageModal';
-import { initialCancellationCodes } from '../../data/cancellationCodes';
-import type { Instructor, ScheduleEvent } from '../../types';
+import type { CancellationCode, Instructor, ScheduleEvent } from '../../types';
 import { verifyCurrentUserPassword } from '../../utils/passwordVerification';
 
 type TimelineKey = '7d' | '1m' | '6m' | '12m' | '2y' | '3y' | '5y' | 'lastCY' | 'lastFY' | 'thisCY' | 'thisFY';
@@ -95,6 +94,7 @@ interface BliTabProps {
   currentAircraftAvailable?: number;
   totalAircraft?: number;
   operationalContext?: BliOperationalContext;
+  cancellationCodes?: CancellationCode[];
 }
 
 interface ChartPoint {
@@ -821,8 +821,8 @@ const cancellationColumnColor = (category: string): string => {
   return 'bg-rose-400';
 };
 
-const CancellationColumnChart: React.FC<{ categories: CancellationCategory[] }> = ({ categories }) => {
-  const cancellationLegendByCode = new Map(initialCancellationCodes.map(code => [code.code.toUpperCase(), code]));
+const CancellationColumnChart: React.FC<{ categories: CancellationCategory[]; cancellationCodes?: CancellationCode[] }> = ({ categories, cancellationCodes = [] }) => {
+  const cancellationLegendByCode = new Map(cancellationCodes.map(code => [code.code.toUpperCase(), code]));
   const columns = categories
     .flatMap(category => category.codes.map(code => ({
       category: category.category,
@@ -1166,7 +1166,8 @@ const MetricModal: React.FC<{
   selectedUnitScopeKey: string;
   onUnitScopeChange: (key: string) => void;
   operationalContext?: BliOperationalContext;
-}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange, operationalContext }) => {
+  cancellationCodes?: CancellationCode[];
+}> = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange, operationalContext, cancellationCodes = [] }) => {
   const [timeline, setTimeline] = useState<TimelineKey>('7d');
   const [modalMetrics, setModalMetrics] = useState<BliMetricsResponse>(initialMetrics);
   const [selectedStaff, setSelectedStaff] = useState(initialStaff);
@@ -1285,7 +1286,7 @@ const MetricModal: React.FC<{
         </div>
 
         {activeMetric.key === 'cancellations' ? (
-          <CancellationColumnChart categories={modalMetrics.cancellationsByCategory} />
+          <CancellationColumnChart categories={modalMetrics.cancellationsByCategory} cancellationCodes={cancellationCodes} />
         ) : (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <FullLineChart
@@ -1307,7 +1308,7 @@ const MetricModal: React.FC<{
   );
 };
 
-const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
+const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
   const [metrics, setMetrics] = useState<BliMetricsResponse>(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1465,6 +1466,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
           selectedUnitScopeKey={selectedUnitScopeKey}
           onUnitScopeChange={setSelectedUnitScopeKey}
           operationalContext={operationalContext}
+          cancellationCodes={cancellationCodes}
         />
       )}
 

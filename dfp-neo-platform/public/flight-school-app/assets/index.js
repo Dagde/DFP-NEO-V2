@@ -47262,88 +47262,6 @@ const AirCombatTrainingAnalyticsTab = ({
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-slate-400", children: "No Air Combat courses or training packages are assigned to staff in this unit." }) })
   ] }) });
 };
-const initialCancellationCodes = [
-  {
-    code: "AD",
-    category: "Aircraft",
-    description: "On deployment",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "AT",
-    category: "Aircraft",
-    description: "Time constraint",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "AU",
-    category: "Aircraft",
-    description: "Unavailable",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CI",
-    category: "Crew",
-    description: "Instructor",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CO",
-    category: "Crew",
-    description: "Other crew",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CP",
-    category: "Crew",
-    description: "Pilot",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "CS",
-    category: "Crew",
-    description: "Student",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "PC",
-    category: "Program",
-    description: "Change",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "PE",
-    category: "Program",
-    description: "Error",
-    appliesTo: "Both",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  },
-  {
-    code: "WX",
-    category: "Weather",
-    description: "Weather",
-    appliesTo: "Flight",
-    isActive: true,
-    createdAt: (/* @__PURE__ */ new Date()).toISOString()
-  }
-];
 const isStaffMetricKey = (key) => key === "staffFlight" || key === "staffSimulator" || key === "staffTotal";
 const isUnitScopedMetricKey = (key) => key === "availability" || key === "flight" || key === "flightHours" || key === "simulator" || key === "simulatorHours" || key === "total";
 const metricStrokeColor = (color) => {
@@ -47883,8 +47801,8 @@ const cancellationColumnColor = (category) => {
   if (key.includes("deployment")) return "bg-fuchsia-400";
   return "bg-rose-400";
 };
-const CancellationColumnChart = ({ categories }) => {
-  const cancellationLegendByCode = new Map(initialCancellationCodes.map((code) => [code.code.toUpperCase(), code]));
+const CancellationColumnChart = ({ categories, cancellationCodes = [] }) => {
+  const cancellationLegendByCode = new Map(cancellationCodes.map((code) => [code.code.toUpperCase(), code]));
   const columns = categories.flatMap((category) => category.codes.map((code) => ({
     category: category.category,
     code: code.code,
@@ -48173,7 +48091,7 @@ const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraft
     ] })
   ] })
 ] });
-const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange, operationalContext }) => {
+const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, totalAircraft, initialMetrics, staffGroups, initialStaff, periodSettings, unitScopeOptions, selectedUnitScopeKey, onUnitScopeChange, operationalContext, cancellationCodes = [] }) => {
   const [timeline, setTimeline] = reactExports.useState("7d");
   const [modalMetrics, setModalMetrics] = reactExports.useState(initialMetrics);
   const [selectedStaff, setSelectedStaff] = reactExports.useState(initialStaff);
@@ -48278,7 +48196,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: loading ? "Loading this graph..." : metricStatusText }),
           error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
         ] }),
-        activeMetric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancellationColumnChart, { categories: modalMetrics.cancellationsByCategory }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]", children: [
+        activeMetric.key === "cancellations" ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancellationColumnChart, { categories: modalMetrics.cancellationsByCategory, cancellationCodes }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             FullLineChart,
             {
@@ -48302,7 +48220,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     }
   ) });
 };
-const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext }) => {
+const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
   const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
@@ -48437,7 +48355,8 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         unitScopeOptions,
         selectedUnitScopeKey,
         onUnitScopeChange: setSelectedUnitScopeKey,
-        operationalContext
+        operationalContext,
+        cancellationCodes
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
@@ -50444,7 +50363,8 @@ const BuildIntelligenceView = (props) => {
           courseColors: props.courseColors,
           resourceDisplayNames,
           operationalModel: props.operationalModel,
-          operationalContext: props.operationalContext
+          operationalContext: props.operationalContext,
+          cancellationCodes: props.cancellationCodes
         }
       ),
       activeTab === "air-combat" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -109158,12 +109078,16 @@ const App = () => {
     }
   };
   const [cancellationCodes, setCancellationCodes] = reactExports.useState(() => {
-    const stored = localStorage.getItem("cancellationCodes");
-    if (stored) {
-      return JSON.parse(stored);
+    try {
+      const stored = localStorage.getItem("cancellationCodes");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (error) {
+      console.warn("[CancellationCodes] Ignoring invalid browser cancellation-code cache:", error);
     }
-    localStorage.setItem("cancellationCodes", JSON.stringify(initialCancellationCodes));
-    return initialCancellationCodes;
+    return [];
   });
   const [showNightFlyingInfo, setShowNightFlyingInfo] = reactExports.useState(false);
   const [nightFlyingTraineeCount, setNightFlyingTraineeCount] = reactExports.useState(0);
@@ -118298,7 +118222,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     } else if (hasSeedData) {
       console.log(`⚠️ [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
       await showDarkAlert2(
-        "This DFP contains seed/demo events, so it was not saved as a real published DFP.",
+        "This DFP contains starter/sample events, so it was not saved as a real published DFP.",
         "Publish Save Blocked",
         "error"
       );
@@ -122513,6 +122437,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserRole: currentUserPermission,
             currentUserId: getCurrentUserId() ?? void 0,
             cancellationRecords: buildIntelligenceCancellationRecords,
+            cancellationCodes,
             currentAircraftAvailable: availableAircraftCount,
             totalAircraft: configuredAirframeCount,
             timezoneOffset,

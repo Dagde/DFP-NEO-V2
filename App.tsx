@@ -5001,7 +5001,6 @@ import { loadSyllabusFromDB, clearSyllabusCache, createSyllabusItem, updateSylla
 import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
 import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
-import { initialCancellationCodes } from './data/cancellationCodes';
 
 // --- TRAINING REPORT STRUCTURE ---
 const PT051_STRUCTURE = [
@@ -26661,13 +26660,16 @@ const App: React.FC = () => {
 
     // Cancellation Codes State
     const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>(() => {
-        const stored = localStorage.getItem('cancellationCodes');
-        if (stored) {
-            return JSON.parse(stored);
+        try {
+            const stored = localStorage.getItem('cancellationCodes');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+        } catch (error) {
+            console.warn('[CancellationCodes] Ignoring invalid browser cancellation-code cache:', error);
         }
-        // Initialize with default codes if not found
-        localStorage.setItem('cancellationCodes', JSON.stringify(initialCancellationCodes));
-        return initialCancellationCodes;
+        return [];
     });
     const [showNightFlyingInfo, setShowNightFlyingInfo] = useState(false);
     const [nightFlyingTraineeCount, setNightFlyingTraineeCount] = useState(0);
@@ -26684,7 +26686,7 @@ const App: React.FC = () => {
     const [oracleContext, setOracleContext] = useState<'program' | 'nextDayBuild'>('program');
 
 
-    // SCT & Remedial State
+    // Continuation and remedial state.
     const [sctFlights, setSctFlights] = useState<SctRequest[]>([]);
     const [sctFtds, setSctFtds] = useState<SctRequest[]>([]);
 
@@ -33014,7 +33016,7 @@ const App: React.FC = () => {
                     break;
             }
         } else {
-            // Fallback logic for events not found in the syllabus (e.g., 'Duty Sup', 'SCT FORM')
+            // Fallback logic for events not found in the syllabus, including duty and continuation events.
             switch (eventToPlace.type) {
                 case 'flight':
                     resourcePrefix = aircraftResourcePrefix;
@@ -37912,7 +37914,7 @@ const App: React.FC = () => {
         } else if (hasSeedData) {
             console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
             await showDarkAlert(
-                'This DFP contains seed/demo events, so it was not saved as a real published DFP.',
+                'This DFP contains starter/sample events, so it was not saved as a real published DFP.',
                 'Publish Save Blocked',
                 'error'
             );
@@ -42961,6 +42963,7 @@ appliedUpdates.forEach(update => {
                             currentUserRole={currentUserPermission}
                             currentUserId={getCurrentUserId() ?? undefined}
                             cancellationRecords={buildIntelligenceCancellationRecords}
+                            cancellationCodes={cancellationCodes}
                             currentAircraftAvailable={availableAircraftCount}
                             totalAircraft={configuredAirframeCount}
                             timezoneOffset={timezoneOffset}

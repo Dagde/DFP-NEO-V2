@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail, CancellationRecord } from '../types';
+import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail, CancellationRecord, CancellationCode } from '../types';
 import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
@@ -85,6 +85,7 @@ interface BuildIntelligenceViewProps {
   currentUserRole: string;
   currentUserId?: string;
   cancellationRecords: CancellationRecord[];
+  cancellationCodes?: CancellationCode[];
   currentAircraftAvailable?: number;
   totalAircraft?: number;
   timezoneOffset?: number;
@@ -201,6 +202,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 resourceDisplayNames={resourceDisplayNames}
                 operationalModel={props.operationalModel}
                 operationalContext={props.operationalContext}
+                cancellationCodes={props.cancellationCodes}
               />
             )}
 

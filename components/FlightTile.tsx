@@ -367,7 +367,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   // Ensure within bounds
   scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
 
-  // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
+  // For continuation events, pilot field contains PIC and student field contains crew when dual.
   const isSctEvent = event.eventCategory === 'sct';
   const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
   const isAirCombatCrewEvent = (event as any)._source === 'air-combat-priority-formation'
@@ -520,7 +520,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             );
         }
         
-        // Special case: SCT events with no student/crew are Solo flights (even if flightType is incorrectly set to Dual)
+        // Continuation events with no student/crew are solo flights even if older data says Dual.
         if (isSctEvent && !event.student && event.pilot) {
             return (
                 <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
@@ -529,7 +529,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             );
         }
 
-      // For SCT Dual events, show crew name from student field
+      // For dual continuation events, show crew name from student field.
       if (isSctEvent && event.flightType === 'Dual' && event.student) {
           return event.student.split(' – ')[0];
       }
