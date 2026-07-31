@@ -14,50 +14,10 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     onDeleteCourse,
     onNavigateBack
 }) => {
-    // Group archived courses by type
-    const groupedArchivedCourses = useMemo(() => {
-        const groups: { [key: string]: string[] } = {
-            'ADF': [],
-            'FIC': [],
-            'WSO': [],
-            'IFIC': [],
-            'OFI': [],
-            'Pilot Conversion': [],
-            'Other': []
-        };
-
-        Object.keys(archivedCourses).forEach(courseName => {
-            if (courseName.startsWith('ADF')) {
-                groups['ADF'].push(courseName);
-            } else if (courseName.startsWith('FIC')) {
-                groups['FIC'].push(courseName);
-            } else if (courseName.startsWith('WSO')) {
-                groups['WSO'].push(courseName);
-            } else if (courseName.startsWith('IFIC')) {
-                groups['IFIC'].push(courseName);
-            } else if (courseName.startsWith('OFI')) {
-                groups['OFI'].push(courseName);
-            } else if (courseName.toLowerCase().includes('conversion')) {
-                groups['Pilot Conversion'].push(courseName);
-            } else {
-                groups['Other'].push(courseName);
-            }
-        });
-
-        // Remove empty groups
-        Object.keys(groups).forEach(key => {
-            if (groups[key].length === 0) {
-                delete groups[key];
-            }
-        });
-
-        // Sort courses within each group
-        Object.keys(groups).forEach(key => {
-            groups[key].sort((a, b) => a.localeCompare(b));
-        });
-
-        return groups;
-    }, [archivedCourses]);
+    const archivedCourseNames = useMemo(
+        () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
+        [archivedCourses]
+    );
 
     const handleUnarchive = async (courseName: string) => {
         const confirmed = await showDarkConfirm(
@@ -174,23 +134,13 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-8">
-                        {Object.entries(groupedArchivedCourses).map(([type, coursesInGroup]) => (
-                            <div key={type}>
-                                <h3 className="text-xl font-semibold text-gray-300 mb-4 flex items-center gap-2">
-                                    <span className="text-gray-500">{type}</span>
-                                    <span className="text-sm text-gray-500">({coursesInGroup.length})</span>
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                    {coursesInGroup.map(courseName => (
-                                        <ArchivedCourseCard 
-                                            key={courseName} 
-                                            courseName={courseName} 
-                                            color={archivedCourses[courseName]} 
-                                        />
-                                    ))}
-                                </div>
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {archivedCourseNames.map(courseName => (
+                            <ArchivedCourseCard
+                                key={courseName}
+                                courseName={courseName}
+                                color={archivedCourses[courseName]}
+                            />
                         ))}
                     </div>
                 )}

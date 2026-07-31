@@ -296,11 +296,7 @@ export interface MasterLmpAccessContext {
 
 export const DEFAULT_MASTER_LMP_ACCESS_RULES: PlatformMasterLmpAccessRule[] = [];
 
-export const DEFAULT_MASTER_LMP_CATALOGUE: PlatformMasterLmpCatalogueEntry[] = [
-  { id: 'master-lmp-catalogue-bpc-ipc', code: 'BPC+IPC', name: 'BPC+IPC', description: 'Default Flight School basic and instrument progression Master LMP.', status: 'ACTIVE' },
-  { id: 'master-lmp-catalogue-fic', code: 'FIC', name: 'FIC', description: 'Default Flight Instructor Course Master LMP.', status: 'ACTIVE' },
-  { id: 'master-lmp-catalogue-pc21-ground-school', code: 'PC-21 Ground School', name: 'PC-21 Ground School', description: 'Default Flight School PC-21 ground school Master LMP.', status: 'ACTIVE' },
-];
+export const DEFAULT_MASTER_LMP_CATALOGUE: PlatformMasterLmpCatalogueEntry[] = [];
 
 const emptyPlatformConfig: PlatformConfig = {
   organisations: [],
@@ -497,7 +493,7 @@ export const normaliseMasterLmpCatalogue = (config: PlatformConfig | null): Plat
   const configured = config?.organisations?.[0]?.settings?.masterLmpCatalogue;
   const configuredEntries = Array.isArray(configured) ? configured : [];
   const accessRuleCodes = normaliseMasterLmpAccessRules(config).map((rule) => rule.lmpCode);
-  const source = Array.isArray(configured) ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
+  const source = configuredEntries;
   const entriesByCode = new Map<string, PlatformMasterLmpCatalogueEntry>();
 
   source.forEach((entry: any, index: number) => {

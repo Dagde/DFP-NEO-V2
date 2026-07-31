@@ -6931,7 +6931,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="min-w-[900px] space-y-3">
                 {visibleMasterLmpCatalogueRows.length === 0 && (
                   <div className="rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300">
-                    No Master LMPs assigned to this unit.
+                    {masterLmpCatalogue.length === 0 ? 'No Master LMPs configured.' : 'No Master LMPs visible for this unit.'}
                   </div>
                 )}
                 {visibleMasterLmpCatalogueRows.map(({ entry, index }) => {

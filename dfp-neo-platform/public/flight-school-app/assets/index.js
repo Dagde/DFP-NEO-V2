@@ -2191,11 +2191,6 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     permissions: ALL_PLATFORM_PERMISSION_IDS
   }
 ];
-const DEFAULT_MASTER_LMP_CATALOGUE = [
-  { id: "master-lmp-catalogue-bpc-ipc", code: "BPC+IPC", name: "BPC+IPC", description: "Default Flight School basic and instrument progression Master LMP.", status: "ACTIVE" },
-  { id: "master-lmp-catalogue-fic", code: "FIC", name: "FIC", description: "Default Flight Instructor Course Master LMP.", status: "ACTIVE" },
-  { id: "master-lmp-catalogue-pc21-ground-school", code: "PC-21 Ground School", name: "PC-21 Ground School", description: "Default Flight School PC-21 ground school Master LMP.", status: "ACTIVE" }
-];
 const emptyPlatformConfig = {
   organisations: [],
   locations: [],
@@ -2346,7 +2341,7 @@ const normaliseMasterLmpCatalogue = (config) => {
   const configured = config?.organisations?.[0]?.settings?.masterLmpCatalogue;
   const configuredEntries = Array.isArray(configured) ? configured : [];
   const accessRuleCodes = normaliseMasterLmpAccessRules(config).map((rule) => rule.lmpCode);
-  const source = Array.isArray(configured) ? configuredEntries : DEFAULT_MASTER_LMP_CATALOGUE;
+  const source = configuredEntries;
   const entriesByCode = /* @__PURE__ */ new Map();
   source.forEach((entry, index) => {
     const rawCode = String(entry?.code || entry?.lmpCode || entry?.name || "");
@@ -23516,8 +23511,8 @@ const reviewUniqueByEventCode = (items) => {
 };
 const reviewItemBelongsToLmpType = (item, lmpType) => {
   const courses = Array.isArray(item.courses) ? item.courses.map(reviewEventCode) : [];
-  const normalisedLmpType = reviewEventCode(lmpType || "BPC+IPC");
-  if (normalisedLmpType === "BPC+IPC") return courses.length === 0 || courses.includes("BPC+IPC");
+  const normalisedLmpType = reviewEventCode(lmpType);
+  if (!normalisedLmpType) return courses.length === 0;
   return courses.includes(normalisedLmpType);
 };
 const reviewFormatHours = (value) => reviewNumber(value).toFixed(1);
@@ -23715,7 +23710,7 @@ const TraineeProfileFlyout = ({
       return refs;
     };
     const isMarkedCompleteInLmp = (item) => Boolean(item.completedAt);
-    const activeLmpType = String(trainee.lmpType || "BPC+IPC");
+    const activeLmpType = String(trainee.lmpType || "");
     const masterCourseProgressItems = reviewUniqueByEventCode(
       syllabusDetails.filter(reviewIsCourseProgressLmpEvent).filter((item) => reviewItemBelongsToLmpType(item, activeLmpType))
     );
@@ -71189,7 +71184,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[900px] space-y-3", children: [
-            visibleMasterLmpCatalogueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300", children: "No Master LMPs assigned to this unit." }),
+            visibleMasterLmpCatalogueRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950 px-3 py-4 text-sm font-semibold text-gray-300", children: masterLmpCatalogue.length === 0 ? "No Master LMPs configured." : "No Master LMPs visible for this unit." }),
             visibleMasterLmpCatalogueRows.map(({ entry, index }) => {
               const linkedSyllabusCount = masterLmpSyllabusCounts.get(String(entry.code || "").trim().toUpperCase()) || 0;
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[minmax(150px,0.75fr)_minmax(180px,1fr)_minmax(220px,1.25fr)_minmax(130px,0.7fr)_120px_42px] gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
@@ -82601,43 +82596,10 @@ const ArchivedCoursesView = ({
   onDeleteCourse,
   onNavigateBack
 }) => {
-  const groupedArchivedCourses = reactExports.useMemo(() => {
-    const groups = {
-      "ADF": [],
-      "FIC": [],
-      "WSO": [],
-      "IFIC": [],
-      "OFI": [],
-      "Pilot Conversion": [],
-      "Other": []
-    };
-    Object.keys(archivedCourses).forEach((courseName) => {
-      if (courseName.startsWith("ADF")) {
-        groups["ADF"].push(courseName);
-      } else if (courseName.startsWith("FIC")) {
-        groups["FIC"].push(courseName);
-      } else if (courseName.startsWith("WSO")) {
-        groups["WSO"].push(courseName);
-      } else if (courseName.startsWith("IFIC")) {
-        groups["IFIC"].push(courseName);
-      } else if (courseName.startsWith("OFI")) {
-        groups["OFI"].push(courseName);
-      } else if (courseName.toLowerCase().includes("conversion")) {
-        groups["Pilot Conversion"].push(courseName);
-      } else {
-        groups["Other"].push(courseName);
-      }
-    });
-    Object.keys(groups).forEach((key) => {
-      if (groups[key].length === 0) {
-        delete groups[key];
-      }
-    });
-    Object.keys(groups).forEach((key) => {
-      groups[key].sort((a, b) => a.localeCompare(b));
-    });
-    return groups;
-  }, [archivedCourses]);
+  const archivedCourseNames = reactExports.useMemo(
+    () => Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b)),
+    [archivedCourses]
+  );
   const handleUnarchive = async (courseName) => {
     const confirmed = await showDarkConfirm(
       "Unarchive Course",
@@ -82728,24 +82690,14 @@ const ArchivedCoursesView = ({
           children: "Back to Courses Management"
         }
       )
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8", children: Object.entries(groupedArchivedCourses).map(([type, coursesInGroup]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-xl font-semibold text-gray-300 mb-4 flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: type }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-500", children: [
-          "(",
-          coursesInGroup.length,
-          ")"
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: coursesInGroup.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ArchivedCourseCard,
-        {
-          courseName,
-          color: archivedCourses[courseName]
-        },
-        courseName
-      )) })
-    ] }, type)) }) })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: archivedCourseNames.map((courseName) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ArchivedCourseCard,
+      {
+        courseName,
+        color: archivedCourses[courseName]
+      },
+      courseName
+    )) }) })
   ] });
 };
 const NightFlyingInfoFlyout = ({ traineeCount }) => {

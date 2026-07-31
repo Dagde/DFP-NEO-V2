@@ -399,8 +399,8 @@ const reviewUniqueByEventCode = (items: SyllabusItemDetail[]): SyllabusItemDetai
 
 const reviewItemBelongsToLmpType = (item: SyllabusItemDetail, lmpType: string): boolean => {
     const courses = Array.isArray(item.courses) ? item.courses.map(reviewEventCode) : [];
-    const normalisedLmpType = reviewEventCode(lmpType || 'BPC+IPC');
-    if (normalisedLmpType === 'BPC+IPC') return courses.length === 0 || courses.includes('BPC+IPC');
+    const normalisedLmpType = reviewEventCode(lmpType);
+    if (!normalisedLmpType) return courses.length === 0;
     return courses.includes(normalisedLmpType);
 };
 
@@ -651,7 +651,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             return refs;
         };
         const isMarkedCompleteInLmp = (item: SyllabusItemDetail): boolean => Boolean((item as any).completedAt);
-        const activeLmpType = String((trainee as any).lmpType || 'BPC+IPC');
+        const activeLmpType = String((trainee as any).lmpType || '');
         const masterCourseProgressItems = reviewUniqueByEventCode(
             syllabusDetails
                 .filter(reviewIsCourseProgressLmpEvent)
