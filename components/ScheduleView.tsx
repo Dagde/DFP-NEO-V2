@@ -6573,7 +6573,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'build-rules') {
             return promptShell(
-                <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the default values and refine them later in Settings.</p>,
+                <p>Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings.</p>,
                 <div className="space-y-4">
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Business rules</p>

@@ -4597,9 +4597,9 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     }
   },
   completionResults: [
-    { code: "DCO", label: "DCO", enabled: true },
-    { code: "DPCO", label: "DPCO", enabled: true },
-    { code: "DNCO", label: "DNCO", enabled: true }
+    { code: "DCO", label: "Complete", enabled: true },
+    { code: "DPCO", label: "Partially Complete", enabled: true },
+    { code: "DNCO", label: "Not Complete", enabled: true }
   ],
   overallResults: {
     passLabel: "Satisfactory",
@@ -15458,7 +15458,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     }
     if (visibleStep.id === "build-rules") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the default values and refine them later in Settings." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the main limits NEO must follow when it builds this unit schedule. If you are unsure, leave the current values and refine them later in Settings." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-300 bg-white p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Business rules" }),
@@ -38532,7 +38532,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Mission profile",
+        placeholder: "Task profile",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -38556,7 +38556,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task profile manually." : `${operationalModelLabel} has no saved directed task profiles yet. Add them in Settings > Platform & Deployment > Directed Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task profile manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -38602,7 +38602,7 @@ const TaskingRequestTable = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
-    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No mission requests configured." }),
+    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -38611,7 +38611,7 @@ const TaskingRequestTable = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || "New mission request";
+      const taskingHeaderTitle = request.tasking.trim() || "New directed task request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
@@ -38625,7 +38625,7 @@ const TaskingRequestTable = ({
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Mission" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Task" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
@@ -40108,7 +40108,7 @@ const PrioritiesView = ({
       ignored: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
-    logAudit("Priorities", "Add", "Added mission request row", `Mission request ${nextRequest.id}`);
+    logAudit("Priorities", "Add", "Added directed task request row", `Directed task request ${nextRequest.id}`);
   };
   const isTaskingPriorityEventForRequest = (event, requestId) => event.taskingRequestId === requestId || String(event.id || "").startsWith(`tasking-${requestId}-`);
   const taskingPriorityEventMatchesActiveScope = (event) => {
@@ -40152,7 +40152,7 @@ const PrioritiesView = ({
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === tasking.toLowerCase())?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || "Mission";
+    const taskingDisplayLabel = abbreviation || tasking || "Task";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -40164,7 +40164,7 @@ const PrioritiesView = ({
     const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
     const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
     const notes = [
-      `Mission request: ${tasking}`,
+      `Directed task request: ${tasking}`,
       `Date: ${request.date || "Any build date"}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
@@ -40181,7 +40181,7 @@ const PrioritiesView = ({
       instructor: "",
       student: "",
       pilot: "",
-      group: aircraftCount > 1 ? `Mission ${index + 1} of ${aircraftCount}` : "Mission",
+      group: aircraftCount > 1 ? `Task ${index + 1} of ${aircraftCount}` : "Task",
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
@@ -40230,13 +40230,13 @@ const PrioritiesView = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests((prev) => prev.map((item) => item.id === id ? nextRequest : item));
-    logAudit("Priorities", "Edit", "Set mission scheduler priority", `${request.tasking || "Untitled mission"}: ${schedulerPriority}`);
+    logAudit("Priorities", "Edit", "Set directed task scheduler priority", `${request.tasking || "Untitled directed task"}: ${schedulerPriority}`);
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
-    logAudit("Priorities", "Delete", "Removed mission request", removed?.tasking || id);
+    logAudit("Priorities", "Delete", "Removed directed task request", removed?.tasking || id);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -41984,7 +41984,7 @@ const PrioritiesView = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Missions" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Directed Tasks" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "+ Add",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -48640,7 +48640,7 @@ const AirCombatIntelligenceTab = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Missions", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked mission requests", accent: "text-orange-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Directed Tasks", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked directed task requests", accent: "text-orange-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Currency", value: numberLabel(analysis.currencyEvents.length), subtext: "Currency marked events", accent: "text-fuchsia-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Assessment events" : "Night", value: numberLabel(isFixedCrewLike ? analysis.assessmentEvents.length : analysis.nightEvents.length), subtext: isFixedCrewLike ? "Events requiring a training report/assessment" : "Night-coded events on this DFP", accent: "text-indigo-200" })
         ] })
@@ -66644,7 +66644,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const matchingPools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode || !toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode);
     if (matchingPools.length === 0) {
-      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource counts may use default values until a matching pool is configured.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
+      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource counts may use fallback row counts until a matching pool is configured.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
     }
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
@@ -69148,7 +69148,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const updatePermissionProfiles = (profiles) => {
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0 ? prev.organisations : [{ code: "DEFAULT", name: "Default Organisation", status: "ACTIVE", settings: {} }];
+      const organisations = prev.organisations.length > 0 ? prev.organisations : [{ code: "DEFAULT", name: "Organisation", status: "ACTIVE", settings: {} }];
       return {
         ...prev,
         organisations: organisations.map((org, index) => index === 0 ? { ...org, settings: { ...org.settings || {}, permissionProfiles: profiles } } : org)
@@ -70959,8 +70959,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Directed Task Profiles",
-          subtitle: "Model-specific task profile lists used by Directed Events. Users can still type a task profile manually if the assigned task is not listed.",
+          title: "Task Profiles",
+          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71322,19 +71322,19 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Identity" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and mission notes." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Task Identity" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and task notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Mission Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Task Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onCommit: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftTextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Timing & Route" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Default route and timing values can be changed when a mission is scheduled." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Task Timing & Route" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Default route and timing values can be changed when a task is scheduled." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -89000,7 +89000,7 @@ const DfpSidePanelTimeline = ({
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
-      notes: `NEO Assist mission request: ${tasking}`,
+      notes: `NEO Assist directed task request: ${tasking}`,
       priority: "High",
       aircraftConfigId: request.aircraftConfigId,
       acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -89547,8 +89547,8 @@ const DfpSidePanelTimeline = ({
     }
     if (wizardStep === 8) {
       return questionShell(
-        "Which saved missions must be scheduled?",
-        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select missions from Highest Priority Events and the Mission section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved missions are waiting in NEO Assist." }),
+        "Which saved directed tasks must be scheduled?",
+        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select tasks from Highest Priority Events and the Directed Events section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved directed tasks are waiting in NEO Assist." }),
         wizardTaskRows.length ? wizardTaskRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -89557,7 +89557,7 @@ const DfpSidePanelTimeline = ({
             onClick: () => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds),
             children: [
               request.alreadyInHighest ? "Confirm " : "Schedule ",
-              request.tasking || "Mission",
+              request.tasking || "Task",
               " at ",
               formatCompactTime(request.takeoff)
             ]
@@ -90268,7 +90268,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-cyan-50", children: "Operational build priority" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Missions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Directed Tasks" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-cyan-100/60", children: [
               scheduledTaskCount,
@@ -118225,7 +118225,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     } else if (hasSeedData) {
       console.log(`⚠️ [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
       await showDarkAlert2(
-        "This DFP contains starter/sample events, so it was not saved as a real published DFP.",
+        "This DFP contains setup-only events, so it was not saved as a real published DFP.",
         "Publish Save Blocked",
         "error"
       );
@@ -123889,14 +123889,14 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          console.log(`[PostFlight] Mission request cleared after ${data.result}:`, completedTaskingRequestId);
+                          console.log(`[PostFlight] Directed task request cleared after ${data.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
                         (prev) => prev.filter((event) => event.taskingRequestId !== completedTaskingRequestId)
                       );
                     } catch (taskingCleanupErr) {
-                      console.warn("[PostFlight] Failed to clear completed mission request after post-flight result:", taskingCleanupErr);
+                      console.warn("[PostFlight] Failed to clear completed directed task request after post-flight result:", taskingCleanupErr);
                     }
                   }
                 }

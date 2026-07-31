@@ -156,9 +156,9 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
     },
   },
   completionResults: [
-    { code: 'DCO', label: 'DCO', enabled: true },
-    { code: 'DPCO', label: 'DPCO', enabled: true },
-    { code: 'DNCO', label: 'DNCO', enabled: true },
+    { code: 'DCO', label: 'Complete', enabled: true },
+    { code: 'DPCO', label: 'Partially Complete', enabled: true },
+    { code: 'DNCO', label: 'Not Complete', enabled: true },
   ],
   overallResults: {
     passLabel: 'Satisfactory',

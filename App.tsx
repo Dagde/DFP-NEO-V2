@@ -2300,7 +2300,7 @@ const DfpSidePanelTimeline: React.FC<{
             taskingAircraftIndex: index + 1,
             taskingAircraftCount: aircraftCount,
             dateCreated: new Date().toISOString(),
-            notes: `NEO Assist mission request: ${tasking}`,
+            notes: `NEO Assist directed task request: ${tasking}`,
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -2950,10 +2950,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (wizardStep === 8) {
             return questionShell(
-                'Which saved missions must be scheduled?',
+                'Which saved directed tasks must be scheduled?',
                 wizardTaskRows.length
-                    ? <p>Select missions from Highest Priority Events and the Mission section, then continue.</p>
-                    : <p>No saved missions are waiting in NEO Assist.</p>,
+                    ? <p>Select tasks from Highest Priority Events and the Directed Events section, then continue.</p>
+                    : <p>No saved directed tasks are waiting in NEO Assist.</p>,
                 wizardTaskRows.length ? wizardTaskRows.map(request => (
                     <button
                         key={request.selectionId}
@@ -2961,7 +2961,7 @@ const DfpSidePanelTimeline: React.FC<{
                         className={wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.selectionId))}
                         onClick={() => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds)}
                     >
-                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Mission'} at {formatCompactTime(request.takeoff)}
+                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Task'} at {formatCompactTime(request.takeoff)}
                     </button>
                 )).concat(
                     <button
@@ -3707,7 +3707,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Missions</p>
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Directed Tasks</p>
                             <p className="mt-2 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
                             <p className="mt-0.5 text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
@@ -37914,7 +37914,7 @@ const App: React.FC = () => {
         } else if (hasSeedData) {
             console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
             await showDarkAlert(
-                'This DFP contains starter/sample events, so it was not saved as a real published DFP.',
+                'This DFP contains setup-only events, so it was not saved as a real published DFP.',
                 'Publish Save Blocked',
                 'error'
             );
@@ -44597,14 +44597,14 @@ appliedUpdates.forEach(update => {
                                                     if (nextTaskingRequests.length !== taskingRequests.length) {
                                                         localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                                                         window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                                                        console.log(`[PostFlight] Mission request cleared after ${data.result}:`, completedTaskingRequestId);
+                                                        console.log(`[PostFlight] Directed task request cleared after ${data.result}:`, completedTaskingRequestId);
                                                     }
                                                 }
                                                 setHighestPriorityEvents(prev =>
                                                     prev.filter(event => event.taskingRequestId !== completedTaskingRequestId)
                                                 );
                                             } catch (taskingCleanupErr) {
-                                                console.warn('[PostFlight] Failed to clear completed mission request after post-flight result:', taskingCleanupErr);
+                                                console.warn('[PostFlight] Failed to clear completed directed task request after post-flight result:', taskingCleanupErr);
                                             }
                                         }
                                     }

@@ -1508,7 +1508,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may use default values until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may use fallback row counts until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -4604,7 +4604,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setConfig((prev) => {
       const organisations = prev.organisations.length > 0
         ? prev.organisations
-        : [{ code: 'DEFAULT', name: 'Default Organisation', status: 'ACTIVE', settings: {} }];
+        : [{ code: 'DEFAULT', name: 'Organisation', status: 'ACTIVE', settings: {} }];
       return {
         ...prev,
         organisations: organisations.map((org, index) => (
@@ -6812,8 +6812,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Directed Task Profiles"
-          subtitle="Model-specific task profile lists used by Directed Events. Users can still type a task profile manually if the assigned task is not listed."
+          title="Task Profiles"
+          subtitle="Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -7162,12 +7162,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Mission Identity</div>
-                                <div className={resourceSectionPanelHintClass}>Name, short tile title and mission notes.</div>
+                                <div className={resourceSectionPanelTitleClass}>Task Identity</div>
+                                <div className={resourceSectionPanelHintClass}>Name, short tile title and task notes.</div>
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-[1fr_150px]">
-                              <DraftField label="Mission Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <DraftField label="Task Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
                               <DraftField label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onCommit={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
@@ -7178,8 +7178,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Mission Timing & Route</div>
-                                <div className={resourceSectionPanelHintClass}>Default route and timing values can be changed when a mission is scheduled.</div>
+                                <div className={resourceSectionPanelTitleClass}>Task Timing & Route</div>
+                                <div className={resourceSectionPanelHintClass}>Default route and timing values can be changed when a task is scheduled.</div>
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start">

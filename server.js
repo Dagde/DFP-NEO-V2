@@ -8828,7 +8828,7 @@ async function seedCommercialLicenseIfEmpty(db) {
     ORDER BY "createdAt" ASC
     LIMIT 1
   `);
-  const organisation = organisations?.[0] || { code: 'DEFAULT', name: 'Default Organisation' };
+  const organisation = organisations?.[0] || { code: 'DEFAULT', name: 'Organisation' };
   const modules = await db.$queryRawUnsafe(`
     SELECT "code"
     FROM "CommercialModule"
@@ -8929,7 +8929,7 @@ async function seedCommercialConfigIfEmpty(db) {
 
   await db.$executeRawUnsafe(`
     INSERT INTO "CommercialOrganisation" ("id", "code", "name", "status", "settings", "createdAt", "updatedAt")
-    VALUES (gen_random_uuid()::text, 'DEFAULT', 'Default Organisation', 'ACTIVE', $1::jsonb, $2::timestamp, $2::timestamp)
+    VALUES (gen_random_uuid()::text, 'DEFAULT', 'Organisation', 'ACTIVE', $1::jsonb, $2::timestamp, $2::timestamp)
     ON CONFLICT ("code") DO NOTHING
   `, JSON.stringify({ source: 'V2 stage-one seed' }), now);
 
