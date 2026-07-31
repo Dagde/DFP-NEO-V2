@@ -121639,9 +121639,13 @@ ${error instanceof Error ? error.message : String(error)}`,
                 return updated;
               });
               try {
+                const sessionToken = localStorage.getItem("dfp_session_token") || "";
                 const response = await fetch("/api/trainees/bulk-unit", {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+                  },
                   body: JSON.stringify({ courseNumber, newUnit })
                 });
                 if (response.ok) {
@@ -121788,9 +121792,13 @@ ${error instanceof Error ? error.message : String(error)}`,
                 return updated;
               });
               try {
+                const sessionToken = localStorage.getItem("dfp_session_token") || "";
                 const response = await fetch("/api/trainees/bulk-unit", {
                   method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
+                  headers: {
+                    "Content-Type": "application/json",
+                    ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+                  },
                   body: JSON.stringify({ courseNumber, newUnit })
                 });
                 if (response.ok) {

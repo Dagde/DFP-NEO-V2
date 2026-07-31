@@ -3638,7 +3638,9 @@ app.patch('/api/personnel/:id', async (req, res) => {
 // from all personnel and trainees in the DB. One-time fix for stuck "Deployed" conflicts.
 app.post('/api/cleanup-deploy-unavailability', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     let personnelFixed = 0;
     let traineesFixed = 0;
 
@@ -4340,7 +4342,9 @@ app.patch('/api/trainees/fix-location', async (req, res) => {
 // NOTE: This must be defined BEFORE /api/trainees/:id to avoid route conflict
 app.patch('/api/trainees/bulk-unit', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { courseNumber, newUnit } = req.body;
 
     if (!courseNumber || !newUnit) {
@@ -10192,6 +10196,7 @@ app.delete('/api/cancellation-codes/:code', async (req, res) => {
 // GET /api/historical-data - Load persisted publishedSchedules + pt051Assessments
 app.get('/api/historical-data', async (req, res) => {
   try {
+    if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
 
     // Load publishedSchedules backup
@@ -10226,6 +10231,7 @@ app.get('/api/historical-data', async (req, res) => {
 // POST /api/historical-data/save - Save publishedSchedules + pt051Assessments
 app.post('/api/historical-data/save', async (req, res) => {
   try {
+    if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
     const { publishedSchedules, pt051Assessments, metadata } = req.body;
 
@@ -14313,7 +14319,9 @@ function mapAssessmentToRow(data) {
   };
 }
 
-app.get('/api/diagnostics/training-report-notes', (req, res) => {
+app.get('/api/diagnostics/training-report-notes', async (req, res) => {
+  const context = await requireDirectAdmin(req, res);
+  if (!context) return;
   const entries = Array.isArray(global.__trainingReportNotesDiag) ? global.__trainingReportNotesDiag : [];
   res.json({ entries, count: entries.length });
 });

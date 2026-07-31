@@ -42199,9 +42199,13 @@ appliedUpdates.forEach(update => {
 
                                 // Persist to database
                                 try {
+                                    const sessionToken = localStorage.getItem('dfp_session_token') || '';
                                     const response = await fetch('/api/trainees/bulk-unit', {
                                         method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                                        },
                                         body: JSON.stringify({ courseNumber, newUnit })
                                     });
                                     if (response.ok) {
@@ -42357,9 +42361,13 @@ appliedUpdates.forEach(update => {
 
                                 // Persist to database
                                 try {
+                                    const sessionToken = localStorage.getItem('dfp_session_token') || '';
                                     const response = await fetch('/api/trainees/bulk-unit', {
                                         method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                                        },
                                         body: JSON.stringify({ courseNumber, newUnit })
                                     });
                                     if (response.ok) {
