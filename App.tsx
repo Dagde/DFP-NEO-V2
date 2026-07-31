@@ -4883,7 +4883,7 @@ import { savedCurrencyCache } from './components/CurrencyPanel';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
-import PT051View from './components/PT051View';
+import TrainingReportView from './components/PT051View';
 import AirCombatTrainingReportModal from './components/AirCombatTrainingReportModal';
 import AuthorisationFlyout from './components/AuthorisationFlyout';
 // FIX: Corrected import to be a named import as per module export.
@@ -24820,7 +24820,7 @@ const App: React.FC = () => {
                             contentType: perfRes.headers.get('content-type') || '',
                         });
                         if (!perfRes.ok) {
-                            console.warn('[PT051] Could not load persisted trainee performance records:', await perfRes.text());
+                            console.warn('[Training Report] Could not load persisted trainee performance records:', await perfRes.text());
                             break;
                         }
 
@@ -24838,7 +24838,7 @@ const App: React.FC = () => {
                     });
 
                     if (!cancelled && persistedAssessments.length > 0) {
-                        console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
+                        console.log(`[Training Report] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
                         setPt051Assessments(prev => {
                             if (cancelled) return prev;
                             const merged = new Map(prev);
@@ -24850,7 +24850,7 @@ const App: React.FC = () => {
                         });
                     }
                 } catch (perfErr) {
-                    console.warn('[PT051] Could not load persisted trainee performance records:', perfErr);
+                    console.warn('[Training Report] Could not load persisted trainee performance records:', perfErr);
                     pushDfpDataDiag('history:trainee-performance:error', {
                         durationMs: Math.round(performance.now() - startedAt),
                         error: String(perfErr),
@@ -33326,7 +33326,7 @@ const App: React.FC = () => {
         targetDate: string,
         assessmentsMap: Map<string, Pt051Assessment>
     ) => {
-        console.log(`[PT051] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
+        console.log(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
     };
 
     const persistPt051AssessmentRecord = async (assessment: Pt051Assessment) => {
@@ -43748,7 +43748,7 @@ appliedUpdates.forEach(update => {
                             </div>
                         </div>;
                     }
-                    return <PT051View
+                    return <TrainingReportView
                         key={`${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${existingAssessment?.overallGrade ?? 'none'}`}
                         trainee={selectedTraineeForHateSheet}
                         event={eventForPt051}
@@ -43852,12 +43852,12 @@ appliedUpdates.forEach(update => {
                             setPt051Assessments(updatedAssessments);
                             void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments)
                                 .catch(err => {
-                                    console.warn('[PT051] Failed to persist assessment snapshot:', err);
+                                    console.warn('[Training Report] Failed to persist assessment snapshot:', err);
                                 });
                             const performanceSave = persistPt051AssessmentRecord(normalizedAssessment)
-                                .then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`))
+                                .then(() => console.log(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`))
                                 .catch(err => {
-                                    console.warn('[PT051] Failed to persist trainee performance record:', err);
+                                    console.warn('[Training Report] Failed to persist trainee performance record:', err);
                                     if (!isAutoSave) {
                                         void showDarkAlert(`${selectedTrainingReportName} could not be saved to the database.\n\n${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportName} Save Failed`, 'error');
                                         throw err;
@@ -43906,7 +43906,7 @@ appliedUpdates.forEach(update => {
                                     .then(res => res.json())
                                     .then(data => {
                                         if (data.success) {
-                                            console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                                            console.log(`[Training Report -> Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                                             // Update in-memory scores state so Course Progress and NEO Build
                                             // scheduling immediately reflect the completed event.
                                             setScores(prev => {
@@ -43925,14 +43925,14 @@ appliedUpdates.forEach(update => {
                                                     ? existing.map((score, index) => index === scoreIndex ? { ...score, ...newScore } : score)
                                                     : [...existing, newScore];
                                                 updated.set(assessment.traineeFullName, updatedScores);
-                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
+                                                console.log(`[Training Report -> Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
                                                 return updated;
                                             });
                                         } else {
-                                            console.warn(`[PT051->Score] Failed to persist score:`, data);
+                                            console.warn(`[Training Report -> Score] Failed to persist score:`, data);
                                         }
                                     })
-                                    .catch(err => console.warn(`[PT051->Score] Error persisting score:`, err));
+                                    .catch(err => console.warn(`[Training Report -> Score] Error persisting score:`, err));
                                 }
                             }
                         }}

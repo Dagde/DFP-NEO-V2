@@ -21852,7 +21852,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
+const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -22339,7 +22339,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       duration: currentEvent?.duration,
       endTime: currentEvent ? (currentEvent.startTime || 0) + (currentEvent.duration || 0) : void 0
     };
-    pushTrainingReportNotesDiag$1("pt051:save-payload", {
+    pushTrainingReportNotesDiag$1("training-report:save-payload", {
       traineeFullName: trainee.fullName,
       eventId: finalAssessment.eventId,
       flightNumber: finalAssessment.flightNumber,
@@ -22360,7 +22360,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       setSaveStatus("Saved");
       return true;
     } catch (error) {
-      console.error("[PT051] Save failed:", error);
+      console.error("[Training Report] Save failed:", error);
       setSaveStatus("Unsaved");
       return false;
     }
@@ -22546,7 +22546,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       ].join("-").replace(/[^a-z0-9_-]+/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
       doc.save(`${safeName}.pdf`);
     } catch (error) {
-      console.error("[PT051] PDF export failed:", error);
+      console.error("[Training Report] PDF export failed:", error);
       await showDarkAlert("The training report PDF could not be created. Please try again or check the console for details.", "PDF Export Failed", "error");
     }
   };
@@ -22565,18 +22565,18 @@ Date: ${formatTrainingReportDisplayDate(assessment.date) || "N/A"}
 Grade: ${assessment.overallGrade || "N/A"}
 
 This action cannot be undone.`;
-    console.log("🗑️ PT051View: Delete button clicked");
+    console.log("🗑️ TrainingReportView: Delete button clicked");
     if (await showDarkConfirm(confirmMessage)) {
-      console.log("✅ PT051View: User confirmed deletion");
+      console.log("✅ TrainingReportView: User confirmed deletion");
       if (onDeleteAssessment && assessment.id) {
-        console.log("🗑️ PT051View: Calling onDeleteAssessment with ID:", assessment.id);
+        console.log("🗑️ TrainingReportView: Calling onDeleteAssessment with ID:", assessment.id);
         await onDeleteAssessment(assessment.id);
         onBack();
       } else {
-        console.log("❌ PT051View: onDeleteAssessment or assessment.id is missing");
+        console.log("❌ TrainingReportView: onDeleteAssessment or assessment.id is missing");
       }
     } else {
-      console.log("❌ PT051View: User cancelled deletion");
+      console.log("❌ TrainingReportView: User cancelled deletion");
     }
   };
   reactExports.useEffect(() => {
@@ -25186,7 +25186,7 @@ ${errorText || `HTTP ${response.status}`}`);
                   (assessment) => assessment.traineeFullName === trainee.fullName && (assessment.eventId === inlinePt051Assessment.eventId || assessment.flightNumber === inlinePt051Assessment.flightNumber && (!inlinePt051Assessment.date || !assessment.date || assessment.date === inlinePt051Assessment.date))
                 ) || inlinePt051Assessment;
                 return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  PT051View,
+                  TrainingReportView,
                   {
                     trainee,
                     event: inlinePt051Event,
@@ -107621,7 +107621,7 @@ const App = () => {
               contentType: perfRes.headers.get("content-type") || ""
             });
             if (!perfRes.ok) {
-              console.warn("[PT051] Could not load persisted trainee performance records:", await perfRes.text());
+              console.warn("[Training Report] Could not load persisted trainee performance records:", await perfRes.text());
               break;
             }
             const page = await perfRes.json();
@@ -107636,7 +107636,7 @@ const App = () => {
             pages: Math.floor(offset / pageSize) + 1
           });
           if (!cancelled && persistedAssessments.length > 0) {
-            console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
+            console.log(`[Training Report] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
             setPt051Assessments((prev) => {
               if (cancelled) return prev;
               const merged = new Map(prev);
@@ -107648,7 +107648,7 @@ const App = () => {
             });
           }
         } catch (perfErr) {
-          console.warn("[PT051] Could not load persisted trainee performance records:", perfErr);
+          console.warn("[Training Report] Could not load persisted trainee performance records:", perfErr);
           pushDfpDataDiag("history:trainee-performance:error", {
             durationMs: Math.round(performance.now() - startedAt),
             error: String(perfErr)
@@ -114571,7 +114571,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
   };
   const persistPt051AssessmentsForDate = async (targetDate, assessmentsMap) => {
-    console.log(`[PT051] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
+    console.log(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
   };
   const persistPt051AssessmentRecord = async (assessment) => {
     const apiBase = getApiBaseUrl();
@@ -123281,7 +123281,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             ] }) });
           }
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PT051View,
+            TrainingReportView,
             {
               trainee: selectedTraineeForHateSheet,
               event: eventForPt051,
@@ -123371,10 +123371,10 @@ ${errorText || `HTTP ${response.status}`}`,
                 const updatedAssessments = new Map(pt051Assessments).set(saveKey, normalizedAssessment);
                 setPt051Assessments(updatedAssessments);
                 void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
-                  console.warn("[PT051] Failed to persist assessment snapshot:", err);
+                  console.warn("[Training Report] Failed to persist assessment snapshot:", err);
                 });
-                const performanceSave = persistPt051AssessmentRecord(normalizedAssessment).then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
-                  console.warn("[PT051] Failed to persist trainee performance record:", err);
+                const performanceSave = persistPt051AssessmentRecord(normalizedAssessment).then(() => console.log(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
+                  console.warn("[Training Report] Failed to persist trainee performance record:", err);
                   if (!isAutoSave) {
                     void showDarkAlert2(`${selectedTrainingReportName} could not be saved to the database.
 
@@ -123413,7 +123413,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                       })
                     }).then((res) => res.json()).then((data) => {
                       if (data.success) {
-                        console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                        console.log(`[Training Report -> Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                         setScores((prev) => {
                           const existing = prev.get(assessment.traineeFullName) || [];
                           const newScore = {
@@ -123428,13 +123428,13 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                           const scoreIndex = existing.findIndex((s) => s.event === eventId);
                           const updatedScores = scoreIndex >= 0 ? existing.map((score, index) => index === scoreIndex ? { ...score, ...newScore } : score) : [...existing, newScore];
                           updated.set(assessment.traineeFullName, updatedScores);
-                          console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
+                          console.log(`[Training Report -> Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
                           return updated;
                         });
                       } else {
-                        console.warn(`[PT051->Score] Failed to persist score:`, data);
+                        console.warn(`[Training Report -> Score] Failed to persist score:`, data);
                       }
-                    }).catch((err) => console.warn(`[PT051->Score] Error persisting score:`, err));
+                    }).catch((err) => console.warn(`[Training Report -> Score] Error persisting score:`, err));
                   }
                 }
               },

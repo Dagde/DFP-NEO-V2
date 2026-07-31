@@ -17,7 +17,7 @@ import {
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { loadPlatformConfigFromDB } from '../utils/platformConfigService';
 
-interface PT051ViewProps {
+interface TrainingReportViewProps {
     trainee: Trainee;
     event: ScheduleEvent;
     onBack: () => void;
@@ -351,7 +351,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'Instructor', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false }) => {
+const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'Instructor', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false }) => {
     const reportTemplate = useMemo(() => {
         const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
         const terminologyName = String(trainingReportTerminology?.name || '').trim();
@@ -949,7 +949,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             duration: currentEvent?.duration,
             endTime: currentEvent ? (currentEvent.startTime || 0) + (currentEvent.duration || 0) : undefined
         };
-        pushTrainingReportNotesDiag('pt051:save-payload', {
+        pushTrainingReportNotesDiag('training-report:save-payload', {
             traineeFullName: trainee.fullName,
             eventId: finalAssessment.eventId,
             flightNumber: finalAssessment.flightNumber,
@@ -973,7 +973,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             setSaveStatus('Saved');
             return true;
         } catch (error) {
-            console.error('[PT051] Save failed:', error);
+            console.error('[Training Report] Save failed:', error);
             setSaveStatus('Unsaved');
             return false;
         }
@@ -1192,7 +1192,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 .replace(/^-|-$/g, '');
             doc.save(`${safeName}.pdf`);
         } catch (error) {
-            console.error('[PT051] PDF export failed:', error);
+            console.error('[Training Report] PDF export failed:', error);
             await showDarkAlert('The training report PDF could not be created. Please try again or check the console for details.', 'PDF Export Failed', 'error');
         }
     };
@@ -1209,19 +1209,19 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         // Simple confirmation - no PIN required
         const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${formatTrainingReportDisplayDate(assessment.date) || 'N/A'}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
         
-        console.log('🗑️ PT051View: Delete button clicked');
+        console.log('🗑️ TrainingReportView: Delete button clicked');
         // Use custom dark confirm modal instead of browser default
         if (await showDarkConfirm(confirmMessage)) {
-            console.log('✅ PT051View: User confirmed deletion');
+            console.log('✅ TrainingReportView: User confirmed deletion');
             if (onDeleteAssessment && assessment.id) {
-                console.log('🗑️ PT051View: Calling onDeleteAssessment with ID:', assessment.id);
+                console.log('🗑️ TrainingReportView: Calling onDeleteAssessment with ID:', assessment.id);
                 await onDeleteAssessment(assessment.id);
                 onBack();
             } else {
-                console.log('❌ PT051View: onDeleteAssessment or assessment.id is missing');
+                console.log('❌ TrainingReportView: onDeleteAssessment or assessment.id is missing');
             }
         } else {
-            console.log('❌ PT051View: User cancelled deletion');
+            console.log('❌ TrainingReportView: User cancelled deletion');
         }
     };
 
@@ -2033,4 +2033,4 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     );
 };
 
-export default PT051View;
+export default TrainingReportView;

@@ -10543,7 +10543,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
     // Key: trainee.id, Value: { traineeFullName, lmpType, completedEventIds: string[] }
     const traineeCompletedEvents = {}; // { traineeId: Set<string> }
 
-    // Training report ALL_ELEMENTS - exact 22 elements matching PT051_STRUCTURE in PT051View.tsx
+    // Training report ALL_ELEMENTS - exact 22 elements matching the shared report structure.
     // This must match exactly: PT051_STRUCTURE.flatMap(cat => cat.elements)
     const ALL_ELEMENTS = [
       // Core Dimensions

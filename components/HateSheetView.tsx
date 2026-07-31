@@ -13,7 +13,7 @@ import {
     type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 
-// Define ALL_ELEMENTS to match PT051View
+// Define ALL_ELEMENTS to match TrainingReportView
 const PT051_STRUCTURE = [
     { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
     { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
