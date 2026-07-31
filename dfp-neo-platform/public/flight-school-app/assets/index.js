@@ -80642,6 +80642,7 @@ const CoursesManagementView = ({
     ] }) })
   ] });
 };
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normaliseCourseFilterValue = (value) => String(value || "").trim().toLowerCase();
 const ALL_COURSES_FILTER_VALUE = "__all_courses__";
 const normalisePersonFilterValue = (value) => String(value || "").replace(/\s+[–-]\s+.+$/, "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -81286,31 +81287,69 @@ const TrainingRecordsExportView = ({
     }
   };
   const parseComments2 = (raw) => {
-    const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "" };
+    const defaults = {
+      assessor: "",
+      weather: "",
+      profile: "",
+      overall: "",
+      nest: ""
+    };
     if (!raw) return defaults;
-    const result = { ...defaults };
-    const sections = ["QFI", "Weather", "Profile", "Overall", "NEST"];
-    sections.forEach((section, index) => {
-      const nextSection = sections[index + 1];
-      const startMarker = `${section}:`;
-      const startIndex = raw.indexOf(startMarker);
-      if (startIndex !== -1) {
-        let contentStart = startIndex + startMarker.length;
-        let endIndex = -1;
-        if (nextSection) {
-          const nextMarker = `${nextSection}:`;
-          endIndex = raw.indexOf(nextMarker, contentStart);
-        }
-        let content = "";
-        if (endIndex !== -1) {
-          content = raw.substring(contentStart, endIndex);
-        } else {
-          content = raw.substring(contentStart);
-        }
-        result[section] = content.trim();
-      }
+    const makeLabels = (...labels) => {
+      const seen = /* @__PURE__ */ new Set();
+      return labels.map((label) => String(label || "").trim()).filter(Boolean).filter((label) => {
+        const key = label.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    const sectionConfigs = [
+      {
+        key: "assessor",
+        labels: makeLabels(
+          exportCommentFieldLabels.assessor,
+          exportAssessorLabel,
+          instructorLabel,
+          "QFI",
+          "Instructor",
+          "Report Instructor",
+          "Assessor"
+        )
+      },
+      { key: "weather", labels: makeLabels(exportCommentFieldLabels.weather, "Weather") },
+      { key: "profile", labels: makeLabels(exportCommentFieldLabels.profile, "Profile") },
+      { key: "overall", labels: makeLabels(exportCommentFieldLabels.overall, "Overall") },
+      { key: "nest", labels: makeLabels(exportCommentFieldLabels.nest, "NEST") }
+    ];
+    const labelToKey = /* @__PURE__ */ new Map();
+    sectionConfigs.forEach((section) => {
+      section.labels.forEach((label) => labelToKey.set(label.toLowerCase(), section.key));
     });
-    return result;
+    const allLabels = sectionConfigs.flatMap((section) => section.labels);
+    if (allLabels.length === 0) return { ...defaults, overall: raw.trim() };
+    const markerRegex = new RegExp(`(^|\\n)\\s*(${allLabels.map(escapeRegExp).join("|")})\\s*:`, "gi");
+    const markers = [];
+    let match;
+    while ((match = markerRegex.exec(raw)) !== null) {
+      const label = String(match[2] || "").toLowerCase();
+      const key = labelToKey.get(label);
+      if (!key) continue;
+      markers.push({
+        key,
+        start: match.index,
+        contentStart: match.index + match[0].length
+      });
+    }
+    if (markers.length === 0) return { ...defaults, overall: raw.trim() };
+    return markers.reduce((result, marker, index) => {
+      const nextMarker = markers[index + 1];
+      const content = raw.slice(marker.contentStart, nextMarker ? nextMarker.start : raw.length).trim();
+      return {
+        ...result,
+        [marker.key]: content
+      };
+    }, { ...defaults });
   };
   const renderPT051ToPDF = (pdf, event) => {
     const trainee = allTrainees.find((t) => t.fullName === event.student || t.fullName === event.pilot);
@@ -81406,7 +81445,7 @@ const TrainingRecordsExportView = ({
     pdf.setTextColor(0, 0, 0);
     pdf.text(`${exportCommentFieldLabels.weather || "Weather"}:`, margin + 2, boxY + 4);
     pdf.setFont("helvetica", "normal");
-    const weatherText = pdf.splitTextToSize(commentSections.Weather || "N/A", weatherProfileWidth - 6);
+    const weatherText = pdf.splitTextToSize(commentSections.weather || "N/A", weatherProfileWidth - 6);
     pdf.text(weatherText, margin + 2, boxY + 8);
     pdf.setFillColor(243, 244, 246);
     pdf.rect(margin + weatherProfileWidth, boxY, weatherProfileWidth - 2, boxHeight, "F");
@@ -81415,7 +81454,7 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "bold");
     pdf.text(`${exportCommentFieldLabels.profile || "Profile"}:`, margin + weatherProfileWidth + 2, boxY + 4);
     pdf.setFont("helvetica", "normal");
-    const profileText = pdf.splitTextToSize(commentSections.Profile || "N/A", weatherProfileWidth - 6);
+    const profileText = pdf.splitTextToSize(commentSections.profile || "N/A", weatherProfileWidth - 6);
     pdf.text(profileText, margin + weatherProfileWidth + 2, boxY + 8);
     const nestWidth = contentWidth * 0.2;
     pdf.setFillColor(243, 244, 246);
@@ -81425,7 +81464,7 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "bold");
     pdf.text(`${exportCommentFieldLabels.nest || "NEST"}:`, margin + weatherProfileWidth * 2 + 2, boxY + 4);
     pdf.setFont("helvetica", "normal");
-    pdf.text(commentSections.NEST || "N/A", margin + weatherProfileWidth * 2 + 2, boxY + 8);
+    pdf.text(commentSections.nest || "N/A", margin + weatherProfileWidth * 2 + 2, boxY + 8);
     y += boxHeight + 4;
     const overallBoxHeight = 16;
     pdf.setFillColor(243, 244, 246);
@@ -81433,9 +81472,9 @@ const TrainingRecordsExportView = ({
     pdf.setDrawColor(0);
     pdf.rect(margin, y, contentWidth, overallBoxHeight, "S");
     pdf.setFont("helvetica", "bold");
-    pdf.text("Overall:", margin + 2, y + 4);
+    pdf.text(`${exportCommentFieldLabels.overall || "Overall"}:`, margin + 2, y + 4);
     pdf.setFont("helvetica", "normal");
-    const overallText = pdf.splitTextToSize(commentSections.Overall || "N/A", contentWidth - 4);
+    const overallText = pdf.splitTextToSize(commentSections.overall || "N/A", contentWidth - 4);
     pdf.text(overallText, margin + 2, y + 8);
     y += overallBoxHeight + 4;
     pdf.setFillColor(31, 41, 55);
