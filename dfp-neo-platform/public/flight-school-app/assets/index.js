@@ -58391,7 +58391,7 @@ const AirCombatTrainingReportModal = ({
     ] }) : eventCode2 || "N/A" })
   ] });
   const assessmentElements = reactExports.useMemo(() => {
-    const source = Array.isArray(matchedItem?.assessedElements) && matchedItem.assessedElements.length > 0 ? matchedItem.assessedElements : ["Airmanship", "Preparation", "Technique"];
+    const source = Array.isArray(matchedItem?.assessedElements) ? matchedItem.assessedElements : ["Airmanship", "Preparation", "Technique"];
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
   }, [matchedItem?.assessedElements]);
   const selectRecentEvent = (event) => {
@@ -75485,7 +75485,7 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Fixed Crew standard mission profiles for regular unit flights",
+  "standard-missions": "Reusable mission profiles for regular unit flights",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",

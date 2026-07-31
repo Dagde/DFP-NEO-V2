@@ -408,7 +408,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     </div>
   );
   const assessmentElements = useMemo(() => {
-    const source = Array.isArray(matchedItem?.assessedElements) && matchedItem.assessedElements.length > 0
+    const source = Array.isArray(matchedItem?.assessedElements)
       ? matchedItem.assessedElements
       : ['Airmanship', 'Preparation', 'Technique'];
     return Array.from(new Set(source.map(element => String(element || '').trim()).filter(Boolean)));
