@@ -11541,7 +11541,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Mission Tile Labels", description: "Short display names for mission tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Schedule Tile Labels", description: "Short display names for task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
             Object.keys(taskAbbreviations || {}).length,
             " configured"
@@ -11550,7 +11550,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task is Close Air Support and the tile label is CAS, the schedule tile can show Mission - CAS." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
@@ -70806,34 +70806,34 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the task names available for each operational model. Unit tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model task profiles." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model task names." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
-                " profiles"
+                " tasks"
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               TextAreaField,
               {
-                label: "Profiles",
+                label: "Task Names",
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One task name per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
         }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-task-tile-abbreviations", className: "mt-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Mission Tile Labels" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Schedule Tile Labels" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
             const unitIndex = config.units.findIndex((candidate) => candidate === unit);
             const abbreviations = unit.settings?.taskProfileAbbreviations || {};
@@ -104630,13 +104630,11 @@ const App = () => {
       details
     };
     try {
-      console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry);
       const existing = JSON.parse(localStorage.getItem("dfp_setup_test_personnel_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-80);
       localStorage.setItem("dfp_setup_test_personnel_diag", JSON.stringify(next));
       window.neoSetupTestPersonnelDiag = next;
     } catch (error) {
-      console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry, error);
     }
   }, [activeUnitCode2, dataSourceSettings, school, setupTestProfile]);
   const [platformConfig2, setPlatformConfig] = reactExports.useState(null);
@@ -104668,13 +104666,11 @@ const App = () => {
       details
     };
     try {
-      console.log(`[CTX-DIAG] ${stage}`, entry);
       const existing = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-80);
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY, JSON.stringify(next));
       window.neoContextSelectorDiag = next;
     } catch (error) {
-      console.log(`[CTX-DIAG] ${stage}`, entry, error);
       try {
         localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY);
         window.neoContextSelectorDiag = [entry];
@@ -104729,14 +104725,6 @@ const App = () => {
           resourcePools: config?.resourcePools?.length || 0,
           aircraftTypes: config?.aircraftTypes?.length || 0
         });
-        if (config) {
-          console.log("[PlatformConfig] Loaded stage-two read context:", {
-            setupTestProfile: setupTestProfile || null,
-            locations: config.locations.length,
-            units: config.units.length,
-            resourcePools: config.resourcePools.length
-          });
-        }
       } catch (error) {
         if (!cancelled) {
           pushDfpDataDiag("startup:platform-config:error", {
@@ -104793,13 +104781,11 @@ const App = () => {
           }
         };
         try {
-          console.log("[SETUP-TEST-LMP:APP] app:platform-config-event-received", entry);
           const existing = JSON.parse(localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
           const next = [...Array.isArray(existing) ? existing : [], entry].slice(-180);
           localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
           window.neoSetupTestLmpDiag = next;
         } catch (error) {
-          console.log("[SETUP-TEST-LMP:APP] app:platform-config-event-received", entry, error);
         }
       }
     };
@@ -105083,13 +105069,11 @@ const App = () => {
       details
     };
     try {
-      console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry);
       const existing = JSON.parse(localStorage.getItem("dfp_setup_test_context_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-120);
       localStorage.setItem("dfp_setup_test_context_diag", JSON.stringify(next));
       window.neoSetupTestContextDiag = next;
     } catch (error) {
-      console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry, error);
     }
   }, [activeUnitCode2, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
   const activeUnitContext = reactExports.useMemo(
@@ -105431,24 +105415,6 @@ const App = () => {
     if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
     return !personLocation;
   }, [isActiveLocationAlias, platformConfig2]);
-  reactExports.useEffect(() => {
-    if (!platformConfigLoaded) return;
-    if (activePlatformResourcePool) {
-      console.log("[PlatformConfig] Active location resource context:", {
-        school,
-        unit: activeUnitCode2,
-        operationalModel: activeOperationalModel,
-        pool: activePlatformResourcePool.code,
-        poolType: activePlatformResourcePool.poolType,
-        aircraftType: activePlatformResourcePool.aircraftTypeCode,
-        runtimeAircraftType: activeRuntimeAircraftTypeCode,
-        controlsDfpResourceRows: true,
-        settings: activePlatformResourcePool.settings
-      });
-    } else {
-      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode2, operationalModel: activeOperationalModel });
-    }
-  }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode2, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const activeInstructors = allInstructorsData.filter(isRecordActive);
@@ -105567,7 +105533,6 @@ const App = () => {
     }
     const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
     setCurrentUser(auditUserString);
-    console.log("[AUDIT] setCurrentUser ->", auditUserString);
     pushDfpDataDiag("startup:audit-user-rank:end", {
       durationMs: Math.round(performance.now() - startedAt),
       formattedName,
@@ -105576,7 +105541,6 @@ const App = () => {
     });
     if (rank) {
       setSessionUser((prev) => prev ? { ...prev, militaryRank: rank } : prev);
-      console.log("[RANK] Updated sessionUser.militaryRank ->", rank);
     }
   };
   reactExports.useEffect(() => {
@@ -105627,7 +105591,6 @@ const App = () => {
         try {
           const ssoUser = JSON.parse(ssoUserData);
           if (ssoUser && ssoUser.userId && ssoUser.username) {
-            console.log("[SSO] Using SSO user from Next.js wrapper:", ssoUser.userId);
             setAuthUser({
               userId: ssoUser.userId,
               username: ssoUser.username,
@@ -106175,13 +106138,11 @@ const App = () => {
       details
     };
     try {
-      console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry);
       const existing = JSON.parse(localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-500);
       localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
       window.neoSetupTestLmpDiag = next;
     } catch (error) {
-      console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry, error);
     }
   }, [activeUnitCode2, school, setupTestProfile]);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
@@ -106379,7 +106340,6 @@ const App = () => {
           });
           setSyllabusDetails(setupSyllabus);
           setSyllabusError(null);
-          console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
           pushDfpDataDiag("startup:syllabus:end", {
             durationMs: Math.round(performance.now() - startedAt),
             source: "setup-test",
@@ -106393,8 +106353,6 @@ const App = () => {
           if (result.source === "expired-cache") {
             console.warn("⚠️ [Syllabus] Using expired cache:", result.error);
             setSyllabusError(result.error || null);
-          } else {
-            console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
           }
         } else {
           console.warn("⚠️ [Syllabus] No syllabus items found in DB");
@@ -106434,7 +106392,6 @@ const App = () => {
           parsed._mockDataMigrated = true;
           localStorage.setItem("dataSourceSettings", JSON.stringify(parsed));
           setDataSourceSettings((prev) => ({ ...prev, staff: false, trainee: false }));
-          console.log("🔧 Migrated dataSourceSettings: mock data toggles reset to OFF");
         }
       }
     } catch (e) {
@@ -106534,8 +106491,6 @@ const App = () => {
             const failed = results.filter((result) => result.status === "rejected").length;
             if (failed > 0) {
               console.warn(`[StaffRole] ${failed}/${legacyFixedCrewRoles.length} legacy AEA role migrations failed.`);
-            } else {
-              console.log(`[StaffRole] Migrated ${legacyFixedCrewRoles.length} fixed crew AEA role(s) to AWO.`);
             }
           });
         }
@@ -106547,7 +106502,6 @@ const App = () => {
         setEvents(data.events);
         setScores(new Map(Object.entries(data.scores || {})));
         if (data.courses && data.courses.length > 0) {
-          console.log("🎓 Loading", data.courses.length, "courses from DB");
           setCourses(data.courses);
           const colors = {};
           data.courses.forEach((c) => {
@@ -106557,7 +106511,6 @@ const App = () => {
           setIsCoursesLoaded(true);
         } else {
           setIsCoursesLoaded(true);
-          console.log("🎓 No courses in DB yet - keeping existing course state");
         }
         pushDfpDataDiag("startup:initial-data:state-seeded", {
           durationMs: Math.round(performance.now() - stateSeedStartedAt),
@@ -106895,7 +106848,6 @@ const App = () => {
               });
               if (response.ok) {
                 recoveredCourses.push(recoveredCourse);
-                console.log(`[Initial Load] Restored missing Flight School course row "${courseName}" from active DB trainees`);
               } else {
                 console.warn(`[Initial Load] Could not restore missing course "${courseName}": ${response.status}`);
               }
@@ -106927,13 +106879,11 @@ const App = () => {
                 const recovered = getRecoveredFlightSchoolCourse(course, defaultColors[colorIndex % defaultColors.length]);
                 updated[course] = recovered.color;
                 colorIndex++;
-                console.log(`[Initial Load] Added missing courseColor for "${course}"`);
               }
             });
             return updated;
           });
         }
-        console.log("✅ State updated successfully");
         pushDfpDataDiag("startup:initial-data:end", {
           durationMs: Math.round(performance.now() - startedAt),
           source: "database",
@@ -106955,35 +106905,29 @@ const App = () => {
   }, [platformConfigLoaded, setupTestProfile, pushSetupTestPersonnelDiag]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
-    console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
     setTraineeLMPs((prev) => {
       const newLMPs = new Map(prev);
       allTraineesData.forEach((trainee) => {
         const lmpType = getConfiguredLmpTypeForTrainee(trainee);
         if (!lmpType) {
           newLMPs.delete(trainee.fullName);
-          console.log(`[LMP Re-init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
           return;
         }
         const alreadySet = newLMPs.has(trainee.fullName);
         const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
         if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
           newLMPs.delete(trainee.fullName);
-          console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
           return;
         }
         if (!alreadySet) {
           const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
           if (masterLMP.length > 0) {
             newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
-            console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
           } else {
             newLMPs.delete(trainee.fullName);
-            console.log(`[LMP Re-init] No authorised ${lmpType} Master LMP found for ${trainee.fullName}; Individual LMP cleared`);
           }
         }
       });
-      console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
       return newLMPs;
     });
   }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
@@ -109443,7 +109387,6 @@ ${"=".repeat(60)}`);
           setCurrencyRequirements(activeUnitDefinitions?.currencyRequirements || merged.requirements);
         }
         if (saved2.organisationSettings) {
-          console.log("[App] 🏢 Setting organisationSettings from DB:", JSON.stringify(saved2.organisationSettings));
           pushContextSelectorDiag("settings:organisation-loaded", {
             fleetSharingEnabled: saved2.organisationSettings.fleetSharingEnabled,
             selectedUnits: saved2.organisationSettings.selectedUnits,
@@ -109454,7 +109397,6 @@ ${"=".repeat(60)}`);
           console.warn("[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:", saved2.organisationSettings);
           pushContextSelectorDiag("settings:organisation-missing");
         }
-        console.log("[Settings] ✅ All settings restored from DB");
         pushDfpDataDiag("startup:settings:end", {
           durationMs: Math.round(performance.now() - startedAt),
           foundSettings: true,
@@ -109474,7 +109416,6 @@ ${"=".repeat(60)}`);
           error: String(error)
         });
       } finally {
-        console.log("[App] 🏁 Setting settingsLoaded = true");
         pushContextSelectorDiag("settings:loaded-flag-true");
         pushDfpDataDiag("startup:settings:loaded-flag-true", {
           durationMs: Math.round(performance.now() - startedAt)
@@ -109498,10 +109439,8 @@ ${"=".repeat(60)}`);
   }, [activeNeoAircraftCapacityUnitKey, neoAircraftCapacityByUnit]);
   reactExports.useEffect(() => {
     if (!settingsLoaded) {
-      console.log("[App] ⏭️ Auto-save skipped — settingsLoaded is false");
       return;
     }
-    console.log("[App] 💾 Auto-save triggered — organisationSettings:", JSON.stringify(organisationSettings));
     const flyingWindowExclusionsByUnitForSave = {
       ...flyingWindowExclusionsByUnit,
       [activeFlyingWindowExclusionUnitKey]: flyingWindowExclusions
@@ -109631,7 +109570,6 @@ ${"=".repeat(60)}`);
     }
     const aircraftRowCount = configuredAirframeCount;
     let deploymentCount = 0;
-    console.log("buildResources - Current view:", activeView, "Current date:", date);
     if (activeView === "Program Schedule" || activeView === "DailyFlyingProgram" || activeView === "InstructorSchedule" || activeView === "TraineeSchedule") {
       const currentDateEvents = publishedSchedules[date] || [];
       const deploymentIds = /* @__PURE__ */ new Set();
@@ -109690,7 +109628,6 @@ ${"=".repeat(60)}`);
       ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
       ...Array.from({ length: configuredGroundCount }, (_, i) => `Ground ${i + 1}`)
     ];
-    console.log("Built all resources:", allResources, "STBY lines:", stbyLineCount);
     return allResources;
   }, [
     configuredAirframeCount,
@@ -109708,7 +109645,6 @@ ${"=".repeat(60)}`);
   ]);
   reactExports.useCallback((events2, allResources) => {
     if (!events2 || events2.length === 0) {
-      console.log("No events, returning empty resources");
       return [];
     }
     const resourceLabels = [];
@@ -109722,7 +109658,6 @@ ${"=".repeat(60)}`);
       const category = configuredCategory === "Other" ? resourceId : configuredCategory;
       resourceLabels.push(category);
     }
-    console.log("Resource labels (one per event):", resourceLabels.slice(0, 30));
     return resourceLabels;
   }, []);
   reactExports.useEffect(() => {
@@ -109742,12 +109677,8 @@ ${"=".repeat(60)}`);
     }
   }, [sctFlights, sctFtds, activeView]);
   reactExports.useEffect(() => {
-    console.log("🔄 useEffect triggered - activeView:", activeView, "remedialRequests count:", remedialRequests.filter((r) => r.forceSchedule).length);
     if (activeView === "Priorities" || activeView === "ProgramData") {
-      console.log("✅ Active view matches, calling sync...");
       syncPriorityEventsWithSctAndRemedial();
-    } else {
-      console.log("⏸️ Not syncing - activeView is:", activeView);
     }
   }, [remedialRequests, activeView]);
   reactExports.useEffect(() => {
@@ -109772,7 +109703,6 @@ ${"=".repeat(60)}`);
       const tomorrowStr = getLocalDateString2(tomorrow);
       const todayStr = getLocalDateString2();
       if (buildDfpDate <= todayStr) {
-        console.log("Advancing build DFP date from", buildDfpDate, "to", tomorrowStr, "(was past/today)");
         setBuildDfpDate(tomorrowStr);
       }
     };
@@ -109783,11 +109713,7 @@ ${"=".repeat(60)}`);
     return () => clearInterval(checkInterval);
   }, [timezoneOffset]);
   const eventsForDate = reactExports.useMemo(() => {
-    console.log("🟡 eventsForDate memo recalculating");
-    console.log("🟡 date:", date);
-    console.log("🟡 publishedSchedules keys:", Object.keys(publishedSchedules));
     const events2 = publishedSchedules[date] || [];
-    console.log("🟡 eventsForDate count:", events2.length);
     if (shouldRecordDfpRenderDiagnostics()) {
       pushDfpDataDiag("render:events-for-date", {
         renderedDate: date,
@@ -109808,17 +109734,8 @@ ${"=".repeat(60)}`);
         }))
       });
     }
-    const continuationFormationEvents = events2.filter(isConfiguredContinuationFormationEvent);
-    if (continuationFormationEvents.length > 0) {
-      console.log("🟡 Continuation formation events in eventsForDate:", continuationFormationEvents.map((e) => ({
-        id: e.id,
-        flightNumber: e.flightNumber,
-        instructor: e.instructor,
-        pilot: e.pilot
-      })));
-    }
     return events2;
-  }, [date, isConfiguredContinuationFormationEvent, publishedSchedules, snapshotDates]);
+  }, [date, publishedSchedules, snapshotDates]);
   const decorateEventWithForwardedPreFlightNotes = reactExports.useCallback((event) => {
     const tileEligible = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
     if (!tileEligible || traineeLMPs.size === 0) return event;

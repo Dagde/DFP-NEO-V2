@@ -6853,7 +6853,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the task names available for each operational model. Unit tile labels are optional and only change the short text shown on schedule tiles.
+            Set the task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6865,27 +6865,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model task profiles.'
+                          ? 'Use this for Fighter / Strike model task names.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
                     <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
-                      {profiles.length} profiles
+                      {profiles.length} tasks
                     </span>
                   </div>
                   <TextAreaField
-                    label="Profiles"
+                    label="Task Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One task name per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
             })}
           </div>
           <div id="platform-task-tile-abbreviations" className="mt-5">
-            <h4 className="mb-2 text-sm font-bold text-white">Unit Mission Tile Labels</h4>
+            <h4 className="mb-2 text-sm font-bold text-white">Unit Schedule Tile Labels</h4>
             <div className="grid gap-4 lg:grid-cols-2">
               {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);

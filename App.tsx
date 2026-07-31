@@ -21807,13 +21807,12 @@ const App: React.FC = () => {
             details,
         };
         try {
-            console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem('dfp_setup_test_personnel_diag') || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-80);
             localStorage.setItem('dfp_setup_test_personnel_diag', JSON.stringify(next));
             (window as any).neoSetupTestPersonnelDiag = next;
         } catch (error) {
-            console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry, error);
+            // Diagnostic storage is best-effort only.
         }
     }, [activeUnitCode, dataSourceSettings, school, setupTestProfile]);
     const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
@@ -21847,13 +21846,11 @@ const App: React.FC = () => {
             details,
         };
         try {
-            console.log(`[CTX-DIAG] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY) || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-80);
             localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY, JSON.stringify(next));
             (window as any).neoContextSelectorDiag = next;
         } catch (error) {
-            console.log(`[CTX-DIAG] ${stage}`, entry, error);
             try {
                 localStorage.removeItem(ACTIVE_OPERATIONAL_CONTEXT_DIAG_KEY);
                 (window as any).neoContextSelectorDiag = [entry];
@@ -21907,14 +21904,6 @@ const App: React.FC = () => {
                     resourcePools: config?.resourcePools?.length || 0,
                     aircraftTypes: config?.aircraftTypes?.length || 0,
                 });
-                if (config) {
-                    console.log('[PlatformConfig] Loaded stage-two read context:', {
-                        setupTestProfile: setupTestProfile || null,
-                        locations: config.locations.length,
-                        units: config.units.length,
-                        resourcePools: config.resourcePools.length,
-                    });
-                }
             } catch (error) {
                 if (!cancelled) {
                     pushDfpDataDiag('startup:platform-config:error', {
@@ -21970,13 +21959,12 @@ const App: React.FC = () => {
                     },
                 };
                 try {
-                    console.log('[SETUP-TEST-LMP:APP] app:platform-config-event-received', entry);
                     const existing = JSON.parse(localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
                     const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-180);
                     localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
                     (window as any).neoSetupTestLmpDiag = next;
                 } catch (error) {
-                    console.log('[SETUP-TEST-LMP:APP] app:platform-config-event-received', entry, error);
+                    // Diagnostic storage is best-effort only.
                 }
             }
         };
@@ -22321,13 +22309,12 @@ const App: React.FC = () => {
             details,
         };
         try {
-            console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem('dfp_setup_test_context_diag') || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-120);
             localStorage.setItem('dfp_setup_test_context_diag', JSON.stringify(next));
             (window as any).neoSetupTestContextDiag = next;
         } catch (error) {
-            console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry, error);
+            // Diagnostic storage is best-effort only.
         }
     }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
 
@@ -22808,25 +22795,6 @@ const App: React.FC = () => {
         return !personLocation;
     }, [isActiveLocationAlias, platformConfig]);
 
-    useEffect(() => {
-        if (!platformConfigLoaded) return;
-        if (activePlatformResourcePool) {
-            console.log('[PlatformConfig] Active location resource context:', {
-                school,
-                unit: activeUnitCode,
-                operationalModel: activeOperationalModel,
-                pool: activePlatformResourcePool.code,
-                poolType: activePlatformResourcePool.poolType,
-                aircraftType: activePlatformResourcePool.aircraftTypeCode,
-                runtimeAircraftType: activeRuntimeAircraftTypeCode,
-                controlsDfpResourceRows: true,
-                settings: activePlatformResourcePool.settings,
-            });
-        } else {
-            console.log('[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.', { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
-        }
-    }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode, platformConfigLoaded, school]);
-
     // Filtered instructors/trainees based on legacy dataSourceSettings.
     // Defaults are commercial-safe DB-only; legacy mock flags are migrated off on startup.
     // Location matching is alias-aware so YMES/ESL/East Sale and YPEA/PEA/Pearce remain equivalent.
@@ -22970,7 +22938,6 @@ const App: React.FC = () => {
 
         const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
         setCurrentUser(auditUserString);
-        console.log('[AUDIT] setCurrentUser ->', auditUserString);
         pushDfpDataDiag('startup:audit-user-rank:end', {
             durationMs: Math.round(performance.now() - startedAt),
             formattedName,
@@ -22981,7 +22948,6 @@ const App: React.FC = () => {
         // Feed the real rank back into sessionUser so the bottom-right display shows correct rank
         if (rank) {
             setSessionUser(prev => prev ? { ...prev, militaryRank: rank } : prev);
-            console.log('[RANK] Updated sessionUser.militaryRank ->', rank);
         }
     };
 
@@ -23036,7 +23002,6 @@ const App: React.FC = () => {
                 try {
                     const ssoUser = JSON.parse(ssoUserData);
                     if (ssoUser && ssoUser.userId && ssoUser.username) {
-                        console.log('[SSO] Using SSO user from Next.js wrapper:', ssoUser.userId);
                         // Set authentication state from SSO data
                         setAuthUser({
                             userId: ssoUser.userId,
@@ -23715,13 +23680,12 @@ const App: React.FC = () => {
             details,
         };
         try {
-            console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry);
             const existing = JSON.parse(localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-500);
             localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
             (window as any).neoSetupTestLmpDiag = next;
         } catch (error) {
-            console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry, error);
+            // Diagnostic storage is best-effort only.
         }
     }, [activeUnitCode, school, setupTestProfile]);
     const visibleSyllabusDetails = useMemo(() => {
@@ -23941,7 +23905,6 @@ const App: React.FC = () => {
                     });
                     setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
                     setSyllabusError(null);
-                    console.log(`✅ [Syllabus] Loaded ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
                     pushDfpDataDiag('startup:syllabus:end', {
                         durationMs: Math.round(performance.now() - startedAt),
                         source: 'setup-test',
@@ -23955,8 +23918,6 @@ const App: React.FC = () => {
                     if (result.source === 'expired-cache') {
                         console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
                         setSyllabusError(result.error || null);
-                    } else {
-                        console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
                     }
                 } else {
                     console.warn('⚠️ [Syllabus] No syllabus items found in DB');
@@ -24002,7 +23963,6 @@ const App: React.FC = () => {
                     parsed._mockDataMigrated = true;
                     localStorage.setItem('dataSourceSettings', JSON.stringify(parsed));
                     setDataSourceSettings(prev => ({ ...prev, staff: false, trainee: false }));
-                    console.log('🔧 Migrated dataSourceSettings: mock data toggles reset to OFF');
                 }
             }
         } catch (e) {
@@ -24110,8 +24070,6 @@ const App: React.FC = () => {
                         const failed = results.filter(result => result.status === 'rejected').length;
                         if (failed > 0) {
                             console.warn(`[StaffRole] ${failed}/${legacyFixedCrewRoles.length} legacy AEA role migrations failed.`);
-                        } else {
-                            console.log(`[StaffRole] Migrated ${legacyFixedCrewRoles.length} fixed crew AEA role(s) to AWO.`);
                         }
                     });
                 }
@@ -24126,7 +24084,6 @@ const App: React.FC = () => {
 
                 // Load courses from DB if any exist
                 if (data.courses && data.courses.length > 0) {
-                    console.log('🎓 Loading', data.courses.length, 'courses from DB');
                     setCourses(data.courses);
                     // Rebuild courseColors from loaded courses
                     const colors: { [key: string]: string } = {};
@@ -24135,7 +24092,6 @@ const App: React.FC = () => {
                     setIsCoursesLoaded(true); // FIX: was never called when courses exist in DB
                 } else {
                     setIsCoursesLoaded(true);
-                    console.log('🎓 No courses in DB yet - keeping existing course state');
                 }
                 pushDfpDataDiag('startup:initial-data:state-seeded', {
                     durationMs: Math.round(performance.now() - stateSeedStartedAt),
@@ -24552,7 +24508,6 @@ const App: React.FC = () => {
                             });
                             if (response.ok) {
                                 recoveredCourses.push(recoveredCourse);
-                                console.log(`[Initial Load] Restored missing Flight School course row "${courseName}" from active DB trainees`);
                             } else {
                                 console.warn(`[Initial Load] Could not restore missing course "${courseName}": ${response.status}`);
                             }
@@ -24584,14 +24539,12 @@ const App: React.FC = () => {
                                 const recovered = getRecoveredFlightSchoolCourse(course, defaultColors[colorIndex % defaultColors.length]);
                                 updated[course] = recovered.color;
                                 colorIndex++;
-                                console.log(`[Initial Load] Added missing courseColor for "${course}"`);
                             }
                         });
                         return updated;
                     });
                 }
 
-                console.log('✅ State updated successfully');
                 pushDfpDataDiag('startup:initial-data:end', {
                     durationMs: Math.round(performance.now() - startedAt),
                     source: 'database',
@@ -24616,35 +24569,29 @@ const App: React.FC = () => {
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
     useEffect(() => {
         if (!platformConfigLoaded || !syllabusDetails.length || !allTraineesData.length) return;
-        console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
         setTraineeLMPs(prev => {
             const newLMPs = new Map(prev);
             allTraineesData.forEach((trainee: any) => {
                 const lmpType = getConfiguredLmpTypeForTrainee(trainee);
                 if (!lmpType) {
                     newLMPs.delete(trainee.fullName);
-                    console.log(`[LMP Re-init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
                     return;
                 }
                 const alreadySet = newLMPs.has(trainee.fullName);
                 const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'Assign');
                 if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
                     newLMPs.delete(trainee.fullName);
-                    console.log(`[LMP Re-init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                     return;
                 }
                 if (!alreadySet) {
                     const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
                     if (masterLMP.length > 0) {
                         newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
-                        console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
                     } else {
                         newLMPs.delete(trainee.fullName);
-                        console.log(`[LMP Re-init] No authorised ${lmpType} Master LMP found for ${trainee.fullName}; Individual LMP cleared`);
                     }
                 }
             });
-            console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
             return newLMPs;
         });
     }, [allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, platformConfigLoaded, resolveMasterLmpUnitForTrainee, syllabusDetails]);
@@ -27542,7 +27489,6 @@ const App: React.FC = () => {
                 // syllabusDetails is always loaded from the DB syllabus API (DB only, no mock data).
                 // The loadSyllabus useEffect above handles all syllabus loading.
                 if (saved.organisationSettings) {
-                    console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
                     pushContextSelectorDiag('settings:organisation-loaded', {
                         fleetSharingEnabled: saved.organisationSettings.fleetSharingEnabled,
                         selectedUnits: saved.organisationSettings.selectedUnits,
@@ -27554,7 +27500,6 @@ const App: React.FC = () => {
                     pushContextSelectorDiag('settings:organisation-missing');
                 }
 
-                console.log('[Settings] ✅ All settings restored from DB');
                 pushDfpDataDiag('startup:settings:end', {
                     durationMs: Math.round(performance.now() - startedAt),
                     foundSettings: true,
@@ -27574,7 +27519,6 @@ const App: React.FC = () => {
                     error: String(error),
                 });
             } finally {
-                console.log('[App] 🏁 Setting settingsLoaded = true');
                 pushContextSelectorDiag('settings:loaded-flag-true');
                 pushDfpDataDiag('startup:settings:loaded-flag-true', {
                     durationMs: Math.round(performance.now() - startedAt),
@@ -27601,11 +27545,9 @@ const App: React.FC = () => {
     // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
     useEffect(() => {
         if (!settingsLoaded) {
-            console.log('[App] ⏭️ Auto-save skipped — settingsLoaded is false');
             return;
         }
 
-        console.log('[App] 💾 Auto-save triggered — organisationSettings:', JSON.stringify(organisationSettings));
         const flyingWindowExclusionsByUnitForSave = {
             ...flyingWindowExclusionsByUnit,
             [activeFlyingWindowExclusionUnitKey]: flyingWindowExclusions,
@@ -27712,8 +27654,6 @@ const App: React.FC = () => {
         // Check for deployment events that overlap with the current date
         let deploymentCount = 0;
 
-        console.log('buildResources - Current view:', activeView, 'Current date:', date);
-
         if (activeView === 'Program Schedule' || activeView === 'DailyFlyingProgram' || activeView === 'InstructorSchedule' || activeView === 'TraineeSchedule') {
             // Match the rendered schedule source: deployment rows come from the
             // current date's saved events so stale/deleted deployments on other
@@ -27792,8 +27732,6 @@ const App: React.FC = () => {
             ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
             ...Array.from({ length: configuredGroundCount }, (_, i) => `Ground ${i + 1}`),
         ];
-
-        console.log('Built all resources:', allResources, 'STBY lines:', stbyLineCount);
         return allResources;
     }, [
         configuredAirframeCount,
@@ -27814,7 +27752,6 @@ const App: React.FC = () => {
     const getFilteredResources = useCallback((events: ScheduleEvent[], allResources: string[]) => {
         // Safety check: if no events, return empty array
         if (!events || events.length === 0) {
-            console.log('No events, returning empty resources');
             return [];
         }
 
@@ -27836,8 +27773,6 @@ const App: React.FC = () => {
 
             resourceLabels.push(category);
         }
-
-        console.log('Resource labels (one per event):', resourceLabels.slice(0, 30));
         return resourceLabels;
     }, []);
 
@@ -27864,12 +27799,8 @@ const App: React.FC = () => {
 
     // Sync priority events when remedial requests change
     useEffect(() => {
-        console.log('🔄 useEffect triggered - activeView:', activeView, 'remedialRequests count:', remedialRequests.filter(r => r.forceSchedule).length);
         if (activeView === 'Priorities' || activeView === 'ProgramData') {
-            console.log('✅ Active view matches, calling sync...');
             syncPriorityEventsWithSctAndRemedial();
-        } else {
-            console.log('⏸️ Not syncing - activeView is:', activeView);
         }
     }, [remedialRequests, activeView]);
 
@@ -27904,7 +27835,6 @@ const App: React.FC = () => {
             // Only reset to tomorrow if buildDfpDate is today or PAST today
             // (i.e., don't override a future build date the user intentionally set)
             if (buildDfpDate <= todayStr) {
-                console.log('Advancing build DFP date from', buildDfpDate, 'to', tomorrowStr, '(was past/today)');
                 setBuildDfpDate(tomorrowStr);
             }
         };
@@ -27945,11 +27875,7 @@ const App: React.FC = () => {
 
     const eventsForDate = useMemo(() => {
         // This is used for LOGIC (like conflict checks), not rendering.
-        console.log('🟡 eventsForDate memo recalculating');
-        console.log('🟡 date:', date);
-        console.log('🟡 publishedSchedules keys:', Object.keys(publishedSchedules));
         const events = publishedSchedules[date] || [];
-        console.log('🟡 eventsForDate count:', events.length);
         if (shouldRecordDfpRenderDiagnostics()) {
             pushDfpDataDiag('render:events-for-date', {
                 renderedDate: date,
@@ -27970,20 +27896,8 @@ const App: React.FC = () => {
                 })),
             });
         }
-
-        // Log configured continuation formation events
-        const continuationFormationEvents = events.filter(isConfiguredContinuationFormationEvent);
-        if (continuationFormationEvents.length > 0) {
-            console.log('🟡 Continuation formation events in eventsForDate:', continuationFormationEvents.map(e => ({
-                id: e.id,
-                flightNumber: e.flightNumber,
-                instructor: e.instructor,
-                pilot: e.pilot
-            })));
-        }
-
         return events;
-    }, [date, isConfiguredContinuationFormationEvent, publishedSchedules, snapshotDates]);
+    }, [date, publishedSchedules, snapshotDates]);
 
     const decorateEventWithForwardedPreFlightNotes = useCallback((event: ScheduleEvent): ScheduleEvent => {
         const tileEligible = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt';
