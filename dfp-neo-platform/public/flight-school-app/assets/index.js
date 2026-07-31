@@ -11496,7 +11496,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Personnel Terminology", description: "How people, ranks and instructors are named for this organisation.", action: settingsLink("platform-rank-terminology", "Take me there", { focusSubsectionId: "platform-personnel-terminology" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Personnel sort", value: personnelDisplaySettings.sortMode || "rank-then-name", options: ["rank-then-name", "alphabetical"], optionLabels: { "rank-then-name": "Rank then name", alphabetical: "Alphabetical" }, onChange: (value) => updatePersonnelDisplaySettings({ sortMode: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor term", value: personnelDisplaySettings.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Instructor display term", value: personnelDisplaySettings.instructorLabel || "", onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Civilian titles", value: (personnelDisplaySettings.civilianTitles || []).join(", ") || "Mr, Ms, Dr" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Trainee ranks", value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "separate" : "staff", options: ["staff", "separate"], optionLabels: { staff: "Uses staff rank order", separate: "Separate trainee rank order" }, onChange: (value) => updatePersonnelDisplaySettings({ useSeparateTraineeRankOrder: value === "separate" }), disabled: true })
         ] }),
@@ -33662,7 +33662,8 @@ const ConflictModal = ({
   conflict,
   onResolve,
   onCancel,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel = "Instructor"
 }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
@@ -33670,7 +33671,7 @@ const ConflictModal = ({
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
-  const personTypeDisplay = conflict.conflictedPerson === "instructor" ? "Instructor" : "Trainee";
+  const personTypeDisplay = conflict.conflictedPerson === "instructor" ? instructorLabel : "Trainee";
   const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
   const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -34821,7 +34822,8 @@ const AddGroundEventFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   operationalModel,
   groundResources = [],
-  cptResources = []
+  cptResources = [],
+  instructorLabel = "Instructor"
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const crewLabel = reactExports.useMemo(() => {
@@ -35028,9 +35030,9 @@ const AddGroundEventFlyout = ({
                       ] }, s.code)) })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-instructor", className: "block text-sm font-medium text-gray-400", children: "Instructor" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-instructor", className: "block text-sm font-medium text-gray-400", children: instructorLabel }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { id: "ground-instructor", value: instructor, onChange: (e) => setInstructor(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select an instructor" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: `Select ${instructorLabel.toLowerCase()}` }),
                         instructors.map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i, children: i }, i))
                       ] })
                     ] })
@@ -38335,7 +38337,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved mission/task profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -43514,12 +43516,12 @@ const PeopleTab = ({
       ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-4 text-center text-slate-400", children: "No trainees are currently waiting for a night flying event." }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: fieldsetShell, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Instructors" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Training Staff" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-5 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructors with 4 Events",
+            title: "Training Staff with 4 Events",
             value: stats.instructorsWithFourEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithFourEventsList,
@@ -43529,7 +43531,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructors with 3 Events",
+            title: "Training Staff with 3 Events",
             value: stats.instructorsWithThreeEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithThreeEventsList,
@@ -43539,7 +43541,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructors with 2 Events",
+            title: "Training Staff with 2 Events",
             value: stats.instructorsWithTwoEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithTwoEventsList,
@@ -43549,7 +43551,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructors with 1 Event",
+            title: "Training Staff with 1 Event",
             value: stats.instructorsWithOneEvent,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithOneEventList,
@@ -43559,7 +43561,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructors with 0 Events",
+            title: "Training Staff with 0 Events",
             value: stats.instructorsWithZeroEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithZeroEventsList,
@@ -43586,7 +43588,7 @@ const PeopleTab = ({
           {
             title: "Trainees with their Primary",
             value: stats.traineesWithPrimaryList.length,
-            description: "Paired with Primary Instructor",
+            description: "Paired with primary training staff",
             personnelList: stats.traineesWithPrimaryList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43596,7 +43598,7 @@ const PeopleTab = ({
           {
             title: "Trainees with their Secondary",
             value: stats.traineesWithSecondaryList.length,
-            description: "Paired with Secondary Instructor",
+            description: "Paired with secondary training staff",
             personnelList: stats.traineesWithSecondaryList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43604,9 +43606,9 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Trainees with Instructor from Flight",
+            title: "Trainees with Training Staff from Flight",
             value: stats.traineesWithInstructorFromFlightList.length,
-            description: "Paired with Instructor from same Flight",
+            description: "Paired with training staff from same Flight",
             personnelList: stats.traineesWithInstructorFromFlightList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43614,9 +43616,9 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Trainees with Other Instructors",
+            title: "Trainees with Other Training Staff",
             value: stats.traineesWithOtherInstructorsList.length,
-            description: "Paired with other Instructors",
+            description: "Paired with other training staff",
             personnelList: stats.traineesWithOtherInstructorsList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -44372,10 +44374,10 @@ const LimitingFactorsSection = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2 text-sm", children: [
         totalLimitingFactors.insufficientInstructors > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Insufficient Instructors:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Insufficient Training Staff:" }),
           " ",
           totalLimitingFactors.insufficientInstructors,
-          " events could not be scheduled due to lack of available instructors"
+          " events could not be scheduled due to lack of available training staff"
         ] }),
         totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
@@ -44423,10 +44425,10 @@ const LimitingFactorsSection = ({
           " events could not be scheduled because trainees reached their daily event limit"
         ] }),
         totalLimitingFactors.instructorLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Instructor Daily Limit:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Training Staff Daily Limit:" }),
           " ",
           totalLimitingFactors.instructorLimit,
-          " events could not be scheduled because instructors reached their daily event limit"
+          " events could not be scheduled because training staff reached their daily event limit"
         ] }),
         totalLimitingFactors.noTimeSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No Suitable Time Slots:" }),
@@ -66520,7 +66522,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
-      return "Open User Access Context, search for the user, then tick at least one permission profile such as Instructor, Scheduler or Unit Admin.";
+      return "Open User Access Context, search for the user, then tick at least one permission profile such as Training Staff, Scheduler or Unit Admin.";
     }
     if (lowerTitle.includes("unknown permission profile")) {
       return "Open User Access Context and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.";
@@ -70962,8 +70964,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Task Profiles",
-          subtitle: "Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed.",
+          title: "Mission / Task Profiles",
+          subtitle: "Mission or task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -70983,7 +70985,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the mission or task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
@@ -75416,7 +75418,7 @@ const sectionLabels = {
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Task Profiles",
+  "platform-task-profiles": "Mission / Task Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -81220,7 +81222,8 @@ const TrainingRecordsExportView = ({
     let csvContent = "";
     if (recordType === "all" || recordType === "events") {
       csvContent += "EVENTS\n";
-      csvContent += "Date,Type,Instructor,Student,Flight Number,Duration,Start Time,Resource\n";
+      csvContent += `Date,Type,${exportAssessorLabel},Student,Flight Number,Duration,Start Time,Resource
+`;
       filteredData.events.forEach((e) => {
         csvContent += `${e.date},${e.type},${e.instructor || ""},${e.student || e.pilot || ""},${e.flightNumber || ""},${e.duration || ""},${e.startTime || ""},${e.resourceId || ""}
 `;
@@ -81256,7 +81259,7 @@ const TrainingRecordsExportView = ({
       const eventsData = filteredData.events.map((e) => ({
         "Date": e.date || "",
         "Type": e.type || "",
-        "Instructor": e.instructor || "",
+        [exportAssessorLabel]: e.instructor || "",
         "Student": e.student || e.pilot || "",
         "Flight Number": e.flightNumber || "",
         "Duration (hrs)": e.duration || 0,
@@ -124518,7 +124521,7 @@ Do you want to replace the existing entry?`,
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
       conflict && /* @__PURE__ */ jsxRuntimeExports.jsx(ConflictModal, { conflict, onResolve: () => {
-      }, onCancel: () => setConflict(null), resourceDisplayNames }),
+      }, onCancel: () => setConflict(null), resourceDisplayNames, instructorLabel }),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
         NeoRemedyFlyout,
         {
@@ -124660,7 +124663,8 @@ Do you want to replace the existing entry?`,
           resourceDisplayNames,
           operationalModel: activeOperationalModel,
           groundResources: addGroundTileGroundResources,
-          cptResources: addGroundTileCptResources
+          cptResources: addGroundTileCptResources,
+          instructorLabel
         }
       ),
       showAuthFlyout && eventForAuth && /* @__PURE__ */ jsxRuntimeExports.jsx(

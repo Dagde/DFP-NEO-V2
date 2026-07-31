@@ -776,40 +776,40 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         </div>
       </div>
 
-      {/* Instructors */}
+      {/* Training staff */}
       <fieldset className={fieldsetShell}>
-        <legend className={legendClass}>Instructors</legend>
+        <legend className={legendClass}>Training Staff</legend>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <InteractiveStatCard
-            title="Instructors with 4 Events"
+            title="Training Staff with 4 Events"
             value={stats.instructorsWithFourEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithFourEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructors with 3 Events"
+            title="Training Staff with 3 Events"
             value={stats.instructorsWithThreeEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithThreeEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructors with 2 Events"
+            title="Training Staff with 2 Events"
             value={stats.instructorsWithTwoEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithTwoEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructors with 1 Event"
+            title="Training Staff with 1 Event"
             value={stats.instructorsWithOneEvent}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithOneEventList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructors with 0 Events"
+            title="Training Staff with 0 Events"
             value={stats.instructorsWithZeroEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithZeroEventsList}
@@ -832,28 +832,28 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
           <InteractiveStatCard
             title="Trainees with their Primary"
             value={stats.traineesWithPrimaryList.length}
-            description="Paired with Primary Instructor"
+            description="Paired with primary training staff"
             personnelList={stats.traineesWithPrimaryList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
             title="Trainees with their Secondary"
             value={stats.traineesWithSecondaryList.length}
-            description="Paired with Secondary Instructor"
+            description="Paired with secondary training staff"
             personnelList={stats.traineesWithSecondaryList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Trainees with Instructor from Flight"
+            title="Trainees with Training Staff from Flight"
             value={stats.traineesWithInstructorFromFlightList.length}
-            description="Paired with Instructor from same Flight"
+            description="Paired with training staff from same Flight"
             personnelList={stats.traineesWithInstructorFromFlightList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Trainees with Other Instructors"
+            title="Trainees with Other Training Staff"
             value={stats.traineesWithOtherInstructorsList.length}
-            description="Paired with other Instructors"
+            description="Paired with other training staff"
             personnelList={stats.traineesWithOtherInstructorsList}
             onPersonClick={onNavigateAndSelectPerson}
           />

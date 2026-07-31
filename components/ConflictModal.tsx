@@ -14,6 +14,7 @@ interface ConflictModalProps {
   onResolve: (resolution: 'changeTime' | 'changePerson') => void;
   onCancel: () => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorLabel?: string;
 }
 
 const ConflictModal: React.FC<ConflictModalProps> = ({
@@ -21,6 +22,7 @@ const ConflictModal: React.FC<ConflictModalProps> = ({
   onResolve,
   onCancel,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel = 'Instructor',
 }) => {
   const formatTime = (time: number) => {
     const hours = Math.floor(time);
@@ -29,7 +31,7 @@ const ConflictModal: React.FC<ConflictModalProps> = ({
   };
 
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
-  const personTypeDisplay = conflict.conflictedPerson === 'instructor' ? 'Instructor' : 'Trainee';
+  const personTypeDisplay = conflict.conflictedPerson === 'instructor' ? instructorLabel : 'Trainee';
   const existingEventTypeDisplay = conflict.conflictingEvent.type === 'ftd' ? `${resourceDisplayNames.ftd} session` : 'flight';
   const newEventTypeDisplay = conflict.newEvent.type === 'ftd' ? `${resourceDisplayNames.ftd} session` : 'flight';
 

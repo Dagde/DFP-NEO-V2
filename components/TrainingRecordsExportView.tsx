@@ -731,7 +731,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // Add Events
         if (recordType === 'all' || recordType === 'events') {
             csvContent += 'EVENTS\n';
-            csvContent += 'Date,Type,Instructor,Student,Flight Number,Duration,Start Time,Resource\n';
+            csvContent += `Date,Type,${exportAssessorLabel},Student,Flight Number,Duration,Start Time,Resource\n`;
             filteredData.events.forEach(e => {
                 csvContent += `${e.date},${e.type},${e.instructor || ''},${e.student || e.pilot || ''},${e.flightNumber || ''},${e.duration || ''},${e.startTime || ''},${e.resourceId || ''}\n`;
             });
@@ -774,7 +774,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             const eventsData = filteredData.events.map(e => ({
                 'Date': e.date || '',
                 'Type': e.type || '',
-                'Instructor': e.instructor || '',
+                [exportAssessorLabel]: e.instructor || '',
                 'Student': e.student || e.pilot || '',
                 'Flight Number': e.flightNumber || '',
                 'Duration (hrs)': e.duration || 0,

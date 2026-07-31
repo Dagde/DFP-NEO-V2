@@ -1374,7 +1374,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
-      return 'Open User Access Context, search for the user, then tick at least one permission profile such as Instructor, Scheduler or Unit Admin.';
+      return 'Open User Access Context, search for the user, then tick at least one permission profile such as Training Staff, Scheduler or Unit Admin.';
     }
     if (lowerTitle.includes('unknown permission profile')) {
       return 'Open User Access Context and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.';
@@ -6833,8 +6833,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Task Profiles"
-          subtitle="Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed."
+          title="Mission / Task Profiles"
+          subtitle="Mission or task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6856,7 +6856,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
+            Set the mission or task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {

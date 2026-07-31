@@ -45346,7 +45346,7 @@ appliedUpdates.forEach(update => {
                 />
             )}
 
-            {conflict && <ConflictModal conflict={conflict} onResolve={() => {}} onCancel={() => setConflict(null)} resourceDisplayNames={resourceDisplayNames} />}
+            {conflict && <ConflictModal conflict={conflict} onResolve={() => {}} onCancel={() => setConflict(null)} resourceDisplayNames={resourceDisplayNames} instructorLabel={instructorLabel} />}
             {neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && (
                 <NeoRemedyFlyout
                     problemTile={neoProblemTileForFlyout}
@@ -45493,6 +45493,7 @@ appliedUpdates.forEach(update => {
                     operationalModel={activeOperationalModel}
                     groundResources={addGroundTileGroundResources}
                     cptResources={addGroundTileCptResources}
+                    instructorLabel={instructorLabel}
                 />
             )}
             {showAuthFlyout && eventForAuth &&

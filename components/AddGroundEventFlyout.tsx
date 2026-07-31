@@ -37,6 +37,7 @@ interface AddGroundEventFlyoutProps {
   operationalModel?: unknown;
   groundResources?: string[];
   cptResources?: string[];
+  instructorLabel?: string;
 }
 
 type TabKey = 'ground' | 'academics';
@@ -67,6 +68,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     operationalModel,
     groundResources = [],
     cptResources = [],
+    instructorLabel = 'Instructor',
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('ground');
     const crewLabel = useMemo(() => {
@@ -304,9 +306,9 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                         </select>
                                     </div>
                                     <div>
-                                        <label htmlFor="ground-instructor" className="block text-sm font-medium text-gray-400">Instructor</label>
+                                        <label htmlFor="ground-instructor" className="block text-sm font-medium text-gray-400">{instructorLabel}</label>
                                         <select id="ground-instructor" value={instructor} onChange={e => setInstructor(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm">
-                                            <option value="" disabled>Select an instructor</option>
+                                            <option value="" disabled>{`Select ${instructorLabel.toLowerCase()}`}</option>
                                             {instructors.map(i => <option key={i} value={i}>{i}</option>)}
                                         </select>
                                     </div>
