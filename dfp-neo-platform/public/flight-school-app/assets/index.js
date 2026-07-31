@@ -92549,6 +92549,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
     config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
   );
+  const buildStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(config.staffQualificationCatalogue || null);
   const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
   const canContractorStaffWorkEventType = (eventType) => {
@@ -92560,7 +92561,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (key === "ground" || key === "academic") return Boolean(buildContractorStaffEventEligibility.ground);
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes("qfi") || ["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
     if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
@@ -108452,7 +108453,7 @@ const App = () => {
     if (key === "ground" || key === "academic") return contractorStaffEventEligibility.ground;
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("qfi") || ["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
     if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);

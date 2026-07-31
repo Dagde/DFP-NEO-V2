@@ -7086,6 +7086,7 @@ function generateDfpInternal(
     const buildPersonnelDisplaySettings = normalisePersonnelDisplaySettings(
         config.personnelDisplaySettings || DEFAULT_PERSONNEL_DISPLAY_SETTINGS
     );
+    const buildStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(config.staffQualificationCatalogue || null);
     const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Pick<Instructor, 'role'> | null): boolean => (
         String(instructor?.role || '').trim().toUpperCase() === 'SIM IP'
@@ -7101,7 +7102,8 @@ function generateDfpInternal(
     };
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
         !isContractorStaffRole(instructor) && (
-            ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
+            getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes('qfi')
+            || ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
             || instructor.isQFI === true
         )
     );
@@ -26137,7 +26139,8 @@ const App: React.FC = () => {
     };
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
         !isContractorStaffRole(instructor) && (
-            ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
+            getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes('qfi')
+            || ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
             || instructor.isQFI === true
         )
     );
