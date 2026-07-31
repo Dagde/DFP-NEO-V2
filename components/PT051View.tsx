@@ -59,6 +59,7 @@ const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
+type CommentSectionKey = typeof COMMENT_SECTIONS[number];
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
 
 const formatTrainingReportDisplayDate = (dateString?: string): string => {
@@ -189,37 +190,66 @@ const formatTime = (time: number): string => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-const parseComments = (raw: string | undefined) => {
+const escapeRegExp = (value: string): string =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const parseComments = (raw: string | undefined, sectionLabels: Partial<Record<CommentSectionKey, string>> = {}) => {
     const defaults = { QFI: '', Weather: '', Profile: '', Overall: '', NEST: '', Notes: '' };
     if (!raw) return defaults;
-    
+
     const result = { ...defaults };
-    
-    COMMENT_SECTIONS.forEach((section, index) => {
-        const nextSection = COMMENT_SECTIONS[index + 1];
-        const startMarker = `${section}:`;
-        const startIndex = raw.indexOf(startMarker);
-        
-        if (startIndex !== -1) {
-            let contentStart = startIndex + startMarker.length;
-            let endIndex = -1;
-            
-            if (nextSection) {
-                const nextMarker = `${nextSection}:`;
-                endIndex = raw.indexOf(nextMarker, contentStart);
-            }
-            
-            let content = '';
-            if (endIndex !== -1) {
-                content = raw.substring(contentStart, endIndex);
-            } else {
-                content = raw.substring(contentStart);
-            }
-            
-            result[section] = content.trim();
-        }
+
+    const makeLabels = (section: CommentSectionKey): string[] => {
+        const labels = [
+            sectionLabels[section],
+            section,
+            ...(section === 'QFI' ? ['Instructor', 'Report Instructor', 'Assessor'] : []),
+        ];
+        const seen = new Set<string>();
+        return labels
+            .map(label => String(label || '').trim())
+            .filter(Boolean)
+            .filter(label => {
+                const key = label.toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+    };
+
+    const labelToSection = new Map<string, CommentSectionKey>();
+    const labels = COMMENT_SECTIONS.flatMap(section => {
+        const sectionLabelOptions = makeLabels(section);
+        sectionLabelOptions.forEach(label => labelToSection.set(label.toLowerCase(), section));
+        return sectionLabelOptions;
     });
-    
+
+    const markerRegex = new RegExp(`(^|\\n)\\s*(${labels.sort((a, b) => b.length - a.length).map(escapeRegExp).join('|')})\\s*:`, 'gi');
+    const markers: Array<{ section: CommentSectionKey; start: number; contentStart: number }> = [];
+    let match: RegExpExecArray | null;
+
+    while ((match = markerRegex.exec(raw)) !== null) {
+        const section = labelToSection.get(String(match[2] || '').toLowerCase());
+        if (!section) continue;
+        markers.push({
+            section,
+            start: match.index,
+            contentStart: match.index + match[0].length,
+        });
+    }
+
+    if (markers.length === 0) {
+        result.Overall = raw.trim();
+        return result;
+    }
+
+    markers.forEach((marker, index) => {
+        const nextMarker = markers[index + 1];
+        result[marker.section] = raw
+            .slice(marker.contentStart, nextMarker ? nextMarker.start : raw.length)
+            .trim();
+    });
+
     return result;
 };
 
@@ -334,6 +364,22 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const overviewFields = reportTemplate.modules.overview.fields;
     const overallFields = reportTemplate.modules.overallAssessment.fields;
     const commentFieldsConfig = reportTemplate.modules.comments.fields;
+    const commentSectionLabels = useMemo<Record<CommentSectionKey, string>>(() => ({
+        QFI: commentFieldsConfig.assessor || instructorLabel || 'Instructor',
+        Weather: commentFieldsConfig.weather || 'Weather',
+        Profile: commentFieldsConfig.profile || 'Profile',
+        Overall: commentFieldsConfig.overall || 'Overall',
+        NEST: commentFieldsConfig.nest || 'NEST',
+        Notes: commentFieldsConfig.notes || 'Notes',
+    }), [
+        commentFieldsConfig.assessor,
+        commentFieldsConfig.weather,
+        commentFieldsConfig.profile,
+        commentFieldsConfig.overall,
+        commentFieldsConfig.nest,
+        commentFieldsConfig.notes,
+        instructorLabel,
+    ]);
     const missionStatusOptions = useMemo(() => (
         getTrainingReportCompletionResultOptions(reportTemplate)
     ), [reportTemplate]);
@@ -531,7 +577,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     const [commentFields, setCommentFields] = useState(() => {
-        const parsed = parseComments((initialAssessment as any)?.comments || initialAssessment?.overallComments);
+        const parsed = parseComments((initialAssessment as any)?.comments || initialAssessment?.overallComments, commentSectionLabels);
         if (!parsed.QFI && event.instructor) {
             parsed.QFI = event.instructor;
         }
@@ -740,6 +786,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         return [followUpPrefix, freeText].filter(Boolean).join('\n\n');
     };
 
+    const buildOverallComments = (): string => (
+        COMMENT_SECTIONS.map(key => `${commentSectionLabels[key] || key}:\n${key === 'Notes' ? buildTrainingReportNotes() : commentFields[key]}`).join('\n\n')
+    );
+
     // Filter instructors by trainee's unit
     const unitInstructors = useMemo(() => {
         return instructors.filter(instructor => instructor.unit === trainee.unit);
@@ -857,14 +907,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             isInitialCommentHydration.current = false;
             return;
         }
-        const combined = COMMENT_SECTIONS.map(key => `${key}:\n${key === 'Notes' ? buildTrainingReportNotes() : commentFields[key]}`).join('\n\n');
+        const combined = buildOverallComments();
         setAssessment(prev => ({
             ...prev,
             overallComments: combined,
             trainingReportNotes: buildTrainingReportNotes(),
             passNotesToNextEvent,
         }));
-    }, [commentFields, dcoResult, dncoFollowUp, dpcoFollowUp, passNotesToNextEvent]);
+    }, [commentFields, commentSectionLabels, dcoResult, dncoFollowUp, dpcoFollowUp, passNotesToNextEvent]);
 
     const handleSave = async (isAutoSave = false): Promise<boolean> => {
         if (!canEditPt051) {
@@ -892,7 +942,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
             passNotesToNextEvent,
             trainingReportNotes: buildTrainingReportNotes(),
-            overallComments: COMMENT_SECTIONS.map(key => `${key}:\n${key === 'Notes' ? buildTrainingReportNotes() : commentFields[key]}`).join('\n\n'),
+            overallComments: buildOverallComments(),
             groundSchoolAssessment,
             // Preserve timing data
             startTime: currentEvent?.startTime,
