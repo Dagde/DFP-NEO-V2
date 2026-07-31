@@ -8866,7 +8866,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-permission-profiles" className={getSectionClass('platform-permission-profiles')}>
         <SectionHeader
           title="Permission Profiles"
-          subtitle="Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it."
+          subtitle="Build reusable permission profiles. Profiles define what a user can do; access scopes define where they can do it."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-permission-profiles')}

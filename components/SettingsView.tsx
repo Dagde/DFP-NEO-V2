@@ -1699,7 +1699,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                             ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2}</span>}
                                         </div>
                                         <div className="flex justify-between items-center gap-3">
-                                            <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Supervisor session (hrs):</span>
+                                            <span className="text-xs text-gray-400">Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):</span>
                                             {isEditingLimits ? (
                                                 <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                             ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}
@@ -1743,7 +1743,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxFlightFtd}</span>}
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs text-gray-400">Staff (Flying Supervisor role assigned) - Max Duty Supervisor session (hrs):</span>
+                                                <span className="text-xs text-gray-400">Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):</span>
                                                 {isEditingLimits ? (
                                                     <input type="number" min="0.25" step="0.25" value={tempLimits.instructor.maxDutySup} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0}})} className="w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                                 ) : <span className="text-white font-mono">{eventLimits.instructor.maxDutySup}</span>}

@@ -75,7 +75,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         <button
           onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
           disabled={!isSupervisor || !canOpen('SupervisorDashboard')}
-          title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
+          title={!isSupervisor ? 'Access denied: Requires Flying Supervisor qualification.' : 'View Supervisor Dashboard'}
           className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor || !canOpen('SupervisorDashboard') ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <span className="leading-tight">Duty<br/>Pilot</span>

@@ -2071,8 +2071,8 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
   },
   {
     id: "instructor",
-    name: "Instructor",
-    description: "Instructor access to DFP, staff roster, trainee profiles, training reports and LMP records.",
+    name: "Training Staff",
+    description: "Training staff access to DFP, staff roster, trainee profiles, training reports and LMP records.",
     permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"]
   },
   {
@@ -7844,7 +7844,7 @@ const RightSidebar = ({
         {
           onClick: () => isSupervisor && onNavigate("SupervisorDashboard"),
           disabled: !isSupervisor || !canOpen("SupervisorDashboard"),
-          title: !isSupervisor ? "Access denied: Requires Flying Supervisor role." : "View Supervisor Dashboard",
+          title: !isSupervisor ? "Access denied: Requires Flying Supervisor qualification." : "View Supervisor Dashboard",
           className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor || !canOpen("SupervisorDashboard") ? "opacity-50 cursor-not-allowed" : ""}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
             "Duty",
@@ -42313,7 +42313,7 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "people-rules",
       step: "02",
-      label: "Instructor Rules",
+      label: "Training Staff Rules",
       shortLabel: "People",
       description: "Control how instructor preference or restriction should influence placement.",
       hidden: isFixedCrewModel
@@ -62876,7 +62876,7 @@ const SettingsView = ({
               isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "1", value: tempLimits.instructor.maxFlightSim || tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightSim: parseInt(e.target.value) || 1, maxFlightFtd: parseInt(e.target.value) || 1 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightSim || eventLimits.instructor.maxFlightFtd || 2 })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor role assigned) - Max Duty Supervisor session (hrs):" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):" }),
               isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
             ] })
           ] })
@@ -62914,7 +62914,7 @@ const SettingsView = ({
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0, maxFlightSim: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxFlightFtd })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor role assigned) - Max Duty Supervisor session (hrs):" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Staff (Flying Supervisor qualification assigned) - Max Duty Supervisor session (hrs):" }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", min: "0.25", step: "0.25", value: tempLimits.instructor.maxDutySup, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxDutySup: parseFloat(e.target.value) || 0 } }), className: "w-16 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: eventLimits.instructor.maxDutySup })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
@@ -72946,7 +72946,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Permission Profiles",
-          subtitle: "Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it.",
+          subtitle: "Build reusable permission profiles. Profiles define what a user can do; access scopes define where they can do it.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-permission-profiles"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addPermissionProfile, disabled: !canEditSection("platform-permission-profiles"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
