@@ -6812,8 +6812,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Task Profiles"
-          subtitle="Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
+          title="Mission Profiles"
+          subtitle="Model-specific mission profile lists used by Directed Events. Users can still type a mission profile manually if the assigned profile is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6835,7 +6835,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the task names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
+            Set the mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6867,7 +6867,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
           <div id="platform-task-tile-abbreviations" className="mt-5">
-            <h4 className="mb-2 text-sm font-bold text-white">Unit Task Tile Abbreviations</h4>
+            <h4 className="mb-2 text-sm font-bold text-white">Unit Mission Tile Abbreviations</h4>
             <div className="grid gap-4 lg:grid-cols-2">
               {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
