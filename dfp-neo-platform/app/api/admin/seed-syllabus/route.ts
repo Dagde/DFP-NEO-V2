@@ -330,6 +330,17 @@ export async function GET(request: NextRequest) {
   }
 
   const force = request.nextUrl.searchParams.get('force') === 'true';
+  const allowDemoSyllabusSeed = process.env.DFP_SEED_DEMO_SYLLABUS_DATA === 'true';
+  if (!allowDemoSyllabusSeed) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Demo syllabus seed is disabled',
+        message: 'Set DFP_SEED_DEMO_SYLLABUS_DATA=true only for deliberate demo or development seed runs.',
+      },
+      { status: 403 }
+    );
+  }
 
   try {
     // Check if already seeded
