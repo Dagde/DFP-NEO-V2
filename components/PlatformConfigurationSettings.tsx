@@ -10572,29 +10572,82 @@ const handleEditableTextBeforeInput = (
   insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
 };
 
-const Field = ({ inputId, label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; info?: string; maxLength?: number }) => (
-  <label>
-    <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
-    <input
-      id={inputId}
-      className={fieldClass}
-      value={value || ''}
-      disabled={disabled}
-      maxLength={maxLength}
-      onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange, maxLength)}
-      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange, maxLength)}
-      onKeyDown={stopEditableKeyPropagation}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
-    />
-    {typeof maxLength === 'number' ? (
-      <span className="mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-        {(value || '').length}/{maxLength}
-      </span>
-    ) : null}
-  </label>
-);
+const Field = ({
+  inputId,
+  label,
+  labelNoWrap = false,
+  value,
+  disabled,
+  onChange,
+  onFocus,
+  onBlur,
+  info,
+  maxLength,
+  commitOnBlur = true,
+}: {
+  inputId?: string;
+  label: string;
+  labelNoWrap?: boolean;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  info?: string;
+  maxLength?: number;
+  commitOnBlur?: boolean;
+}) => {
+  const normaliseFieldValue = (nextValue: string) => (typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue);
+  const [draftValue, setDraftValue] = useState(() => normaliseFieldValue(value || ''));
+  const [isEditing, setIsEditing] = useState(false);
+  const displayedValue = isEditing ? draftValue : normaliseFieldValue(value || '');
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(normaliseFieldValue(value || ''));
+  }, [isEditing, maxLength, value]);
+
+  const updateDraftValue = (nextValue: string) => {
+    const limitedValue = normaliseFieldValue(nextValue);
+    setDraftValue(limitedValue);
+    if (!commitOnBlur) onChange(limitedValue);
+  };
+
+  const commitDraftValue = () => {
+    const nextValue = normaliseFieldValue(draftValue);
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    if (commitOnBlur && nextValue !== normaliseFieldValue(value || '')) onChange(nextValue);
+    onBlur?.();
+  };
+
+  return (
+    <label>
+      <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
+      <input
+        id={inputId}
+        className={fieldClass}
+        value={displayedValue}
+        disabled={disabled}
+        maxLength={maxLength}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength)}
+        onKeyDown={stopEditableKeyPropagation}
+        onFocus={() => {
+          setIsEditing(true);
+          setDraftValue(normaliseFieldValue(value || ''));
+          onFocus?.();
+        }}
+        onBlur={commitDraftValue}
+        onChange={(event) => updateDraftValue(event.target.value)}
+      />
+      {typeof maxLength === 'number' ? (
+        <span className="mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          {displayedValue.length}/{maxLength}
+        </span>
+      ) : null}
+    </label>
+  );
+};
 
 const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[]; maxLength?: number }) => {
   const [draftValue, setDraftValue] = useState(value || '');
@@ -10680,6 +10733,9 @@ const CommaListField = ({
         className={fieldClass}
         value={draftValue}
         disabled={disabled}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+        onKeyDown={stopEditableKeyPropagation}
         onFocus={() => setIsEditing(true)}
         onChange={(event) => setDraftValue(event.target.value)}
         onBlur={commitDraftValue}
@@ -10836,22 +10892,71 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS'
   </label>
 );
 
-const TextAreaField = ({ label, value, disabled, onChange, onFocus, onBlur, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; onFocus?: () => void; onBlur?: () => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => (
-  <label className={className}>
-    <FieldLabel label={label} info={info} />
-    <textarea
-      className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
-      value={value || ''}
-      disabled={disabled}
-      onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange)}
-      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange)}
-      onKeyDown={stopEditableKeyPropagation}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  </label>
-);
+const TextAreaField = ({
+  label,
+  value,
+  disabled,
+  onChange,
+  onFocus,
+  onBlur,
+  info,
+  className = 'lg:col-span-2',
+  fieldClassName = 'w-full',
+  fieldSizingClassName = 'min-h-[74px]',
+  commitOnBlur = true,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  info?: string;
+  className?: string;
+  fieldClassName?: string;
+  fieldSizingClassName?: string;
+  commitOnBlur?: boolean;
+}) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const displayedValue = isEditing ? draftValue : value || '';
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const updateDraftValue = (nextValue: string) => {
+    setDraftValue(nextValue);
+    if (!commitOnBlur) onChange(nextValue);
+  };
+
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    if (commitOnBlur && draftValue !== (value || '')) onChange(draftValue);
+    onBlur?.();
+  };
+
+  return (
+    <label className={className}>
+      <FieldLabel label={label} info={info} />
+      <textarea
+        className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
+        value={displayedValue}
+        disabled={disabled}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue)}
+        onKeyDown={stopEditableKeyPropagation}
+        onFocus={() => {
+          setIsEditing(true);
+          setDraftValue(value || '');
+          onFocus?.();
+        }}
+        onBlur={commitDraftValue}
+        onChange={(event) => updateDraftValue(event.target.value)}
+      />
+    </label>
+  );
+};
 
 const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; maxLength?: number }) => {
   const [draft, setDraft] = useState(value || '');
@@ -10883,6 +10988,7 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
       onBlur={commitDraft}
       info={info}
       maxLength={maxLength}
+      commitOnBlur={false}
     />
   );
 };
@@ -10915,6 +11021,7 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
       className={className}
       fieldClassName={fieldClassName}
       fieldSizingClassName={fieldSizingClassName}
+      commitOnBlur={false}
     />
   );
 };

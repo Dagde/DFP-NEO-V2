@@ -74715,30 +74715,67 @@ const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
   event.stopPropagation();
   insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
 };
-const Field = ({ inputId, label, labelNoWrap = false, value, disabled, onChange, onFocus, onBlur, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      id: inputId,
-      className: fieldClass,
-      value: value || "",
-      disabled,
-      maxLength,
-      onBeforeInput: (event) => handleEditableTextBeforeInput(event, onChange, maxLength),
-      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, onChange, maxLength),
-      onKeyDown: stopEditableKeyPropagation,
-      onFocus,
-      onBlur,
-      onChange: (event) => onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
-    }
-  ),
-  typeof maxLength === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
-    (value || "").length,
-    "/",
-    maxLength
-  ] }) : null
-] });
+const Field = ({
+  inputId,
+  label,
+  labelNoWrap = false,
+  value,
+  disabled,
+  onChange,
+  onFocus,
+  onBlur,
+  info,
+  maxLength,
+  commitOnBlur = true
+}) => {
+  const normaliseFieldValue = (nextValue) => typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
+  const [draftValue, setDraftValue] = reactExports.useState(() => normaliseFieldValue(value || ""));
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : normaliseFieldValue(value || "");
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(normaliseFieldValue(value || ""));
+  }, [isEditing, maxLength, value]);
+  const updateDraftValue = (nextValue) => {
+    const limitedValue = normaliseFieldValue(nextValue);
+    setDraftValue(limitedValue);
+    if (!commitOnBlur) onChange(limitedValue);
+  };
+  const commitDraftValue = () => {
+    const nextValue = normaliseFieldValue(draftValue);
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    if (commitOnBlur && nextValue !== normaliseFieldValue(value || "")) onChange(nextValue);
+    onBlur?.();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        id: inputId,
+        className: fieldClass,
+        value: displayedValue,
+        disabled,
+        maxLength,
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setIsEditing(true);
+          setDraftValue(normaliseFieldValue(value || ""));
+          onFocus?.();
+        },
+        onBlur: commitDraftValue,
+        onChange: (event) => updateDraftValue(event.target.value)
+      }
+    ),
+    typeof maxLength === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
+      displayedValue.length,
+      "/",
+      maxLength
+    ] }) : null
+  ] });
+};
 const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }) => {
   const [draftValue, setDraftValue] = reactExports.useState(value || "");
   const [isEditing, setIsEditing] = reactExports.useState(false);
@@ -74802,6 +74839,9 @@ const CommaListField = ({
         className: fieldClass,
         value: draftValue,
         disabled,
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+        onKeyDown: stopEditableKeyPropagation,
         onFocus: () => setIsEditing(true),
         onChange: (event) => setDraftValue(event.target.value),
         onBlur: commitDraftValue
@@ -74945,23 +74985,56 @@ const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS"
     }
   )
 ] });
-const TextAreaField = ({ label, value, disabled, onChange, onFocus, onBlur, info, className = "lg:col-span-2", fieldClassName = "w-full", fieldSizingClassName = "min-h-[74px]" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "textarea",
-    {
-      className: `${fieldClass.replace("w-full", fieldClassName)} ${fieldSizingClassName} resize-y`,
-      value: value || "",
-      disabled,
-      onBeforeInput: (event) => handleEditableTextBeforeInput(event, onChange),
-      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, onChange),
-      onKeyDown: stopEditableKeyPropagation,
-      onFocus,
-      onBlur,
-      onChange: (event) => onChange(event.target.value)
-    }
-  )
-] });
+const TextAreaField = ({
+  label,
+  value,
+  disabled,
+  onChange,
+  onFocus,
+  onBlur,
+  info,
+  className = "lg:col-span-2",
+  fieldClassName = "w-full",
+  fieldSizingClassName = "min-h-[74px]",
+  commitOnBlur = true
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : value || "";
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const updateDraftValue = (nextValue) => {
+    setDraftValue(nextValue);
+    if (!commitOnBlur) onChange(nextValue);
+  };
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    if (commitOnBlur && draftValue !== (value || "")) onChange(draftValue);
+    onBlur?.();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "textarea",
+      {
+        className: `${fieldClass.replace("w-full", fieldClassName)} ${fieldSizingClassName} resize-y`,
+        value: displayedValue,
+        disabled,
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setIsEditing(true);
+          setDraftValue(value || "");
+          onFocus?.();
+        },
+        onBlur: commitDraftValue,
+        onChange: (event) => updateDraftValue(event.target.value)
+      }
+    )
+  ] });
+};
 const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }) => {
   const [draft, setDraft] = reactExports.useState(value || "");
   const [focused, setFocused] = reactExports.useState(false);
@@ -74989,7 +75062,8 @@ const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCo
       },
       onBlur: commitDraft,
       info,
-      maxLength
+      maxLength,
+      commitOnBlur: false
     }
   );
 };
@@ -75018,7 +75092,8 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
       info,
       className,
       fieldClassName,
-      fieldSizingClassName
+      fieldSizingClassName,
+      commitOnBlur: false
     }
   );
 };
