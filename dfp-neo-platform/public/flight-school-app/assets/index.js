@@ -11597,7 +11597,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task or mission profiles are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Profiles", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
@@ -20457,6 +20457,33 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
 };
 const splitListInput = (value) => value.split("\n").map((item) => item.trim()).filter(Boolean);
 const joinListInput = (items) => (items || []).join("\n");
+const DraftInsertEventTextArea = ({ value, onCommit }) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isFocused, setIsFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isFocused) setDraftValue(value || "");
+  }, [isFocused, value]);
+  const commitDraftValue = () => {
+    setIsFocused(false);
+    if (draftValue !== (value || "")) onCommit(draftValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+      value: isFocused ? draftValue : value || "",
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsFocused(true);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => setDraftValue(event.target.value)
+    }
+  );
+};
 const getInsertEventCrewResourceKind = (eventType) => {
   const syllabusType = String(eventType?.syllabusType || "").trim().toLowerCase();
   if (!syllabusType || syllabusType === "academics") return null;
@@ -20670,11 +20697,11 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Physical Resources" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: resourcesPhysical, onChange: (event) => setResourcesPhysical(event.target.value) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftInsertEventTextArea, { value: resourcesPhysical, onCommit: setResourcesPhysical })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "People Required" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: resourcesHuman, onChange: (event) => setResourcesHuman(event.target.value) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftInsertEventTextArea, { value: resourcesHuman, onCommit: setResourcesHuman })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
@@ -38367,7 +38394,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task or mission profile" : "No task or mission profiles configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task or mission profiles yet. Add them in Settings > Platform & Deployment > Task / Mission Profiles, or type manually.` })
     ] }) })
   ] });
@@ -40787,7 +40814,7 @@ const PrioritiesView = ({
   );
   const renderSavedSpecialEvents = () => {
     if (displayedStandardMissionProfiles.length === 0) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved task profiles for this unit context." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved task or mission profiles for this unit context." });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
@@ -59834,6 +59861,47 @@ const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1 = {
   Knowledge: "Domestics"
 };
 const SCORING_MATRIX_SECTION_HELP$1 = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
+const DraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
+  const [draft, setDraft] = reactExports.useState(value || "");
+  const [isFocused, setIsFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isFocused) setDraft(value || "");
+  }, [isFocused, value]);
+  const autoSize = (field) => {
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  };
+  const commitDraft = () => {
+    setIsFocused(false);
+    if (!readOnly) onCommit(draft);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: isFocused ? draft : value || "",
+      rows: 1,
+      readOnly,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraft),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraft),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: (event) => {
+        setDraft(value || "");
+        setIsFocused(true);
+        autoSize(event.currentTarget);
+      },
+      onBlur: commitDraft,
+      onChange: (event) => {
+        setDraft(event.target.value);
+        autoSize(event.currentTarget);
+      },
+      ref: (el) => {
+        if (el) autoSize(el);
+      },
+      className: `flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${!readOnly ? "border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "border-transparent bg-transparent text-gray-300 cursor-default"}`,
+      style: { minHeight: "38px", height: "auto" }
+    }
+  );
+};
 const getConfiguredScoringMatrixElements$1 = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
   if (Array.isArray(savedElements)) {
@@ -59861,6 +59929,9 @@ const AddElementFlyout = ({ onClose, onSave }) => {
           id: "element-name",
           type: "text",
           value: name,
+          onBeforeInput: (event) => handleEditableTextBeforeInput(event, setName),
+          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setName),
+          onKeyDown: stopEditableKeyPropagation,
           onChange: (e) => setName(e.target.value),
           autoFocus: true,
           className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
@@ -60202,19 +60273,11 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-2", children: phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade] ? phraseBank[currentDimension][grade].map((phrase, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2 group", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
+              DraftPhraseTextArea,
               {
                 value: phrase,
-                onChange: (e) => handlePhraseChange(grade, idx, e.target.value),
-                rows: 1,
                 readOnly: !editModeGrades.has(grade),
-                className: `flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${editModeGrades.has(grade) ? "border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500" : "border-transparent bg-transparent text-gray-300 cursor-default"}`,
-                style: { minHeight: "38px", height: "auto" },
-                onInput: (e) => {
-                  const target = e.currentTarget;
-                  target.style.height = "auto";
-                  target.style.height = `${target.scrollHeight}px`;
-                }
+                onCommit: (nextValue) => handlePhraseChange(grade, idx, nextValue)
               }
             ),
             editModeGrades.has(grade) && /* @__PURE__ */ jsxRuntimeExports.jsx(

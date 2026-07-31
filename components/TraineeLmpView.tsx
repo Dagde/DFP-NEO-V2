@@ -73,6 +73,39 @@ const splitListInput = (value: string): string[] =>
 
 const joinListInput = (items?: string[]): string => (items || []).join('\n');
 
+const DraftInsertEventTextArea: React.FC<{
+    value: string;
+    onCommit: (value: string) => void;
+}> = ({ value, onCommit }) => {
+    const [draftValue, setDraftValue] = useState(value || '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) setDraftValue(value || '');
+    }, [isFocused, value]);
+
+    const commitDraftValue = () => {
+        setIsFocused(false);
+        if (draftValue !== (value || '')) onCommit(draftValue);
+    };
+
+    return (
+        <textarea
+            className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+            value={isFocused ? draftValue : value || ''}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={() => {
+                setDraftValue(value || '');
+                setIsFocused(true);
+            }}
+            onBlur={commitDraftValue}
+            onChange={(event) => setDraftValue(event.target.value)}
+        />
+    );
+};
+
 const getInsertEventCrewResourceKind = (eventType?: InsertEventTypeConfig): AircraftCrewResourceKind | null => {
     const syllabusType = String(eventType?.syllabusType || '').trim().toLowerCase();
     if (!syllabusType || syllabusType === 'academics') return null;
@@ -323,11 +356,11 @@ export const LmpEventEditModal: React.FC<{
                     </label>
                     <label className="space-y-1 md:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Physical Resources</span>
-                        <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={resourcesPhysical} onChange={(event) => setResourcesPhysical(event.target.value)} />
+                        <DraftInsertEventTextArea value={resourcesPhysical} onCommit={setResourcesPhysical} />
                     </label>
                     <label className="space-y-1 md:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">People Required</span>
-                        <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={resourcesHuman} onChange={(event) => setResourcesHuman(event.target.value)} />
+                        <DraftInsertEventTextArea value={resourcesHuman} onCommit={setResourcesHuman} />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>

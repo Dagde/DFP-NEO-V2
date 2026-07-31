@@ -640,7 +640,7 @@ const TaskingProfileInput: React.FC<{
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching task profile' : 'No task profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching task or mission profile' : 'No task or mission profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
@@ -3655,7 +3655,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No saved task profiles for this unit context.
+          No saved task or mission profiles for this unit context.
         </div>
       );
     }

@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PhraseBank } from '../types';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { showDarkAlert } from './DarkMessageModal';
 
 interface ScoringMatrixFlyoutProps {
@@ -58,6 +58,59 @@ const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS: Record<string, string> = {
 };
 const SCORING_MATRIX_SECTION_HELP = 'Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.';
 
+const DraftPhraseTextArea: React.FC<{
+    value: string;
+    readOnly: boolean;
+    onCommit: (value: string) => void;
+}> = ({ value, readOnly, onCommit }) => {
+    const [draft, setDraft] = useState(value || '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) setDraft(value || '');
+    }, [isFocused, value]);
+
+    const autoSize = (field: HTMLTextAreaElement) => {
+        field.style.height = 'auto';
+        field.style.height = `${field.scrollHeight}px`;
+    };
+
+    const commitDraft = () => {
+        setIsFocused(false);
+        if (!readOnly) onCommit(draft);
+    };
+
+    return (
+        <textarea
+            value={isFocused ? draft : value || ''}
+            rows={1}
+            readOnly={readOnly}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={(event) => {
+                setDraft(value || '');
+                setIsFocused(true);
+                autoSize(event.currentTarget);
+            }}
+            onBlur={commitDraft}
+            onChange={(event) => {
+                setDraft(event.target.value);
+                autoSize(event.currentTarget);
+            }}
+            ref={(el) => {
+                if (el) autoSize(el);
+            }}
+            className={`flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${
+                !readOnly
+                    ? 'border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500'
+                    : 'border-transparent bg-transparent text-gray-300 cursor-default'
+            }`}
+            style={{ minHeight: '38px', height: 'auto' }}
+        />
+    );
+};
+
 const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] => {
     const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
     if (Array.isArray(savedElements)) {
@@ -100,6 +153,9 @@ const AddElementFlyout: React.FC<{
                             id="element-name"
                             type="text"
                             value={name}
+                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setName)}
+                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setName)}
+                            onKeyDown={stopEditableKeyPropagation}
                             onChange={e => setName(e.target.value)}
                             autoFocus
                             className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
@@ -536,22 +592,10 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
                                     {(phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade]) ? (
                                         phraseBank[currentDimension][grade].map((phrase, idx) => (
                                             <div key={idx} className="flex items-start space-x-2 group">
-                                                <textarea
+                                                <DraftPhraseTextArea
                                                     value={phrase}
-                                                    onChange={(e) => handlePhraseChange(grade, idx, e.target.value)}
-                                                    rows={1}
                                                     readOnly={!editModeGrades.has(grade)}
-                                                    className={`flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${
-                                                        editModeGrades.has(grade) 
-                                                            ? 'border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500' 
-                                                            : 'border-transparent bg-transparent text-gray-300 cursor-default'
-                                                    }`}
-                                                    style={{ minHeight: '38px', height: 'auto' }}
-                                                    onInput={(e) => {
-                                                        const target = e.currentTarget;
-                                                        target.style.height = 'auto';
-                                                        target.style.height = `${target.scrollHeight}px`;
-                                                    }}
+                                                    onCommit={(nextValue) => handlePhraseChange(grade, idx, nextValue)}
                                                 />
                                                 {editModeGrades.has(grade) && (
                                                     <button 

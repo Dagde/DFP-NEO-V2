@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PhraseBank } from '../types';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface PhraseBankFlyoutProps {
   onClose: () => void;
@@ -9,6 +10,53 @@ interface PhraseBankFlyoutProps {
   initialDimension?: 'Airmanship' | 'Preparation' | 'Technique';
   reportName?: string;
 }
+
+const DraftPhraseTextArea: React.FC<{
+    value: string;
+    onCommit: (value: string) => void;
+}> = ({ value, onCommit }) => {
+    const [draft, setDraft] = useState(value || '');
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (!isFocused) setDraft(value || '');
+    }, [isFocused, value]);
+
+    const autoSize = (field: HTMLTextAreaElement) => {
+        field.style.height = 'auto';
+        field.style.height = `${field.scrollHeight}px`;
+    };
+
+    const commitDraft = () => {
+        setIsFocused(false);
+        if (draft !== (value || '')) onCommit(draft);
+    };
+
+    return (
+        <textarea
+            value={isFocused ? draft : value || ''}
+            rows={1}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={(event) => {
+                setDraft(value || '');
+                setIsFocused(true);
+                autoSize(event.currentTarget);
+            }}
+            onBlur={commitDraft}
+            onChange={(event) => {
+                setDraft(event.target.value);
+                autoSize(event.currentTarget);
+            }}
+            ref={(el) => {
+                if (el) autoSize(el);
+            }}
+            className="flex-1 bg-gray-800 border border-gray-600 rounded p-2 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
+            style={{ minHeight: '38px', height: 'auto' }}
+        />
+    );
+};
 
 const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank, onUpdatePhraseBank, initialDimension = 'Airmanship', reportName = 'Report' }) => {
     const [activeMainTab, setActiveMainTab] = useState<'Core Dimensions' | 'Elements'>('Core Dimensions');
@@ -139,16 +187,9 @@ const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank
                                         <div className="p-4 space-y-2">
                                             {phraseBank[activeDimension]?.[grade]?.map((phrase, idx) => (
                                                 <div key={idx} className="flex items-start space-x-2 group">
-                                                    <textarea
+                                                    <DraftPhraseTextArea
                                                         value={phrase}
-                                                        onChange={(e) => handlePhraseChange(activeDimension, grade, idx, e.target.value)}
-                                                        rows={1}
-                                                        className="flex-1 bg-gray-800 border border-gray-600 rounded p-2 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
-                                                        style={{ minHeight: '38px', height: 'auto' }}
-                                                        onInput={(e) => {
-                                                            e.currentTarget.style.height = 'auto';
-                                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                                        }}
+                                                        onCommit={(nextValue) => handlePhraseChange(activeDimension, grade, idx, nextValue)}
                                                     />
                                                     <button 
                                                         onClick={() => handleDeletePhrase(activeDimension, grade, idx)}
