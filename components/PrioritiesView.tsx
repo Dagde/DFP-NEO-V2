@@ -769,7 +769,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Task Profile" hint={request.tasking || 'Select or type task profile'}>
+            <TaskingFieldPanel label="Mission / Task Profile" hint={request.tasking || 'Select or type mission / task profile'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}
