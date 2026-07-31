@@ -290,7 +290,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
     'platform-units': 'Units & Ownership',
-    'platform-task-profiles': 'Mission / Task Profiles',
+    'platform-task-profiles': 'Task Profiles',
     'platform-master-lmp-access': 'Master LMP Access',
     'platform-resource-pools': 'Aircraft & Resource Pools',
     'platform-unit-modules': 'Unit Features & Modules',

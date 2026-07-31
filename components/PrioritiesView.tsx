@@ -635,19 +635,19 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} mission / task profile
+                  {operationalModelLabel} task profile
                 </span>
               </button>
             ))
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching mission / task profile' : 'No mission / task profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching task profile' : 'No task profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? 'Keep typing to enter this mission or task manually.'
-                  : `${operationalModelLabel} has no saved mission/task profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.`}
+                  ? 'Keep typing to enter this task manually.'
+                  : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.`}
               </span>
             </div>
           )}
@@ -769,7 +769,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Mission / Task Profile" hint={request.tasking || 'Select or type mission / task profile'}>
+            <TaskingFieldPanel label="Task Profile" hint={request.tasking || 'Select or type task profile'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}

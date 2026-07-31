@@ -11469,7 +11469,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission / task tile labels", value: "No mission / task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task profile tile labels", value: "No task profiles are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Profiles", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
@@ -26976,7 +26976,7 @@ const CourseRosterView = ({
     )
   ] });
 };
-const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
+const ScoreDetailView = ({ trainee, scoreData, onBack, instructorLabel: instructorLabel2 = "Instructor" }) => {
   const getScoreColor2 = (score, type) => {
     const colors = {
       "2-5": { text: "text-green-300", bg: "bg-green-500/20" },
@@ -27015,7 +27015,7 @@ const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-semibold text-white", children: scoreData.date })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase", children: "Instructor" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase", children: instructorLabel2 }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-semibold text-white truncate", children: scoreData.instructor })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
@@ -38347,14 +38347,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " mission / task profile"
+            " task profile"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission / task profile" : "No mission / task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission or task manually." : `${operationalModelLabel} has no saved mission/task profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -38435,7 +38435,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission / Task Profile", hint: request.tasking || "Select or type mission / task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Task Profile", hint: request.tasking || "Select or type task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -71027,8 +71027,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Mission / Task Profiles",
-          subtitle: "Mission or task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed.",
+          title: "Task Profiles",
+          subtitle: "Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71066,7 +71066,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               TextAreaField,
               {
-                label: "Mission / Task Names",
+                label: "Task Names",
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
@@ -75481,7 +75481,7 @@ const sectionLabels = {
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Mission / Task Profiles",
+  "platform-task-profiles": "Task Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -76454,6 +76454,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   );
   const missionStatusOptions = reactExports.useMemo(() => getTrainingReportCompletionResultOptions(trainingReportTemplate), [trainingReportTemplate]);
   const missionStatusFieldLabel = reactExports.useMemo(() => normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result, [trainingReportTemplate]);
+  const instructorDisplayLabel = reactExports.useMemo(() => String(personnelDisplaySettings2?.instructorLabel || "").trim() || "Instructor", [personnelDisplaySettings2?.instructorLabel]);
   const getMissionStatusAuditLabel = (code) => {
     if (!code) return "Not selected";
     return missionStatusOptions.find((option) => option.code === code)?.label || code;
@@ -77614,7 +77615,10 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Captain/Instructor" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400", children: [
+                "Captain/",
+                instructorDisplayLabel
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: (event.instructor || event.pilot)?.split(" – ")[0] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
@@ -77674,7 +77678,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Instructor" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: instructorDisplayLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -77789,7 +77793,7 @@ ${error instanceof Error ? error.message : String(error)}`, "Post Flight Save Fa
             }, width: "w-12", bgColor: "bg-gray-700/50", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Captain", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-12", readOnly: true }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Instructor", fieldKey: "__hdr__", overrides: {}, onChange: () => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: instructorDisplayLabel, fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-12", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "Sim", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-10", readOnly: true }),
@@ -90558,15 +90562,15 @@ const DfpSidePanelTimeline = ({
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Mission / Task Profile",
+            "Task Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission / task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual mission / task profile",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission / task profile manually" })
+            "Manual task profile",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type task profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
@@ -121885,7 +121889,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             {
               trainee: selectedTraineeForHateSheet,
               scoreData: selectedScoreForDetail,
-              onBack: () => openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet")
+              onBack: () => openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet"),
+              instructorLabel: instructorLabel2
             }
           );
         }

@@ -6833,8 +6833,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Mission / Task Profiles"
-          subtitle="Mission or task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed."
+          title="Task Profiles"
+          subtitle="Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6877,7 +6877,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </span>
                   </div>
                   <TextAreaField
-                    label="Mission / Task Names"
+                    label="Task Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}

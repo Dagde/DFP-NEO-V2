@@ -100,6 +100,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const missionStatusFieldLabel = useMemo(() => (
         normaliseTrainingReportTemplate(trainingReportTemplate || null).modules.overallAssessment.fields.result
     ), [trainingReportTemplate]);
+    const instructorDisplayLabel = useMemo(() => (
+        String(personnelDisplaySettings?.instructorLabel || '').trim() || 'Instructor'
+    ), [personnelDisplaySettings?.instructorLabel]);
     const getMissionStatusAuditLabel = (code: TrainingReportCompletionCode | ''): string => {
         if (!code) return 'Not selected';
         return missionStatusOptions.find((option) => option.code === code)?.label || code;
@@ -1188,7 +1191,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     {/* Totals */}
                     <EditableLogbookCell label="TOTAL"      fieldKey="total"    overrides={overrides} onChange={onChange} width="w-12" bgColor="bg-gray-700/50" />
                     <EditableLogbookCell label="Captain"    fieldKey="captTime" overrides={overrides} onChange={onChange} width="w-12" />
-                    <EditableLogbookCell label="Instructor" fieldKey="instTime" overrides={overrides} onChange={onChange} width="w-12" />
+                    <EditableLogbookCell label={instructorDisplayLabel} fieldKey="instTime" overrides={overrides} onChange={onChange} width="w-12" />
 
                     {/* Instrument */}
                     <EditableLogbookCell label="Sim"    fieldKey="simIf"     overrides={overrides} onChange={onChange} width="w-10" />
@@ -1249,7 +1252,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     {/* Totals */}
                     <LogbookCell label="TOTAL" value={data.total} width="w-12" bgColor="bg-gray-700/50" />
                     <LogbookCell label="Captain" value={data.captTime} width="w-12" />
-                    <LogbookCell label="Instructor" value={data.instTime} width="w-12" />
+                    <LogbookCell label={instructorDisplayLabel} value={data.instTime} width="w-12" />
 
                     {/* Instrument */}
                     <LogbookCell label="Sim" value={data.simIf ?? ''} width="w-10" />
@@ -1582,9 +1585,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             />
                         </div>
 
-                        {/* Captain/Instructor */}
+                        {/* Captain / configured training staff label */}
                         <div className="flex-shrink-0" style={{width: '12rem'}}>
-                            <label className="block text-sm font-medium text-gray-400">Captain/Instructor</label>
+                            <label className="block text-sm font-medium text-gray-400">Captain/{instructorDisplayLabel}</label>
                             <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate">{(event.instructor || event.pilot)?.split(' – ')[0]}</div>
                         </div>
                         {/* Crew */}
@@ -1644,9 +1647,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                                 className="mt-1 block w-20 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
                             />
                         </div>
-                         {/* Instructor Time */}
+                         {/* Configured training staff time */}
                         <div className="flex-shrink-0">
-                            <label className="block text-sm font-medium text-gray-400">Instructor</label>
+                            <label className="block text-sm font-medium text-gray-400">{instructorDisplayLabel}</label>
                             <input
                                 type="text"
                                 value={instructorTime}
@@ -1742,7 +1745,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                                 </div>
                                 <EditableLogbookCell label="TOTAL"      fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-12" bgColor="bg-gray-700/50" readOnly />
                                 <EditableLogbookCell label="Captain"    fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-12" readOnly />
-                                <EditableLogbookCell label="Instructor" fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-12" readOnly />
+                                <EditableLogbookCell label={instructorDisplayLabel} fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-12" readOnly />
                                 <EditableLogbookCell label="Sim"        fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" readOnly />
                                 <EditableLogbookCell label="Actual"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" readOnly />
                                 <EditableLogbookCell label="2D App"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" readOnly />

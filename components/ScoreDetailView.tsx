@@ -5,9 +5,10 @@ interface ScoreDetailViewProps {
     trainee: Trainee;
     scoreData: Score;
     onBack: () => void;
+    instructorLabel?: string;
 }
 
-const ScoreDetailView: React.FC<ScoreDetailViewProps> = ({ trainee, scoreData, onBack }) => {
+const ScoreDetailView: React.FC<ScoreDetailViewProps> = ({ trainee, scoreData, onBack, instructorLabel = 'Instructor' }) => {
 
     const getScoreColor = (score: number, type: 'text' | 'bg') => {
         const colors = {
@@ -44,7 +45,7 @@ const ScoreDetailView: React.FC<ScoreDetailViewProps> = ({ trainee, scoreData, o
                         <p className="text-lg font-semibold text-white">{scoreData.date}</p>
                     </div>
                     <div className="text-center">
-                        <label className="block text-xs font-medium text-gray-400 uppercase">Instructor</label>
+                        <label className="block text-xs font-medium text-gray-400 uppercase">{instructorLabel}</label>
                         <p className="text-lg font-semibold text-white truncate">{scoreData.instructor}</p>
                     </div>
                     <div className="text-center">

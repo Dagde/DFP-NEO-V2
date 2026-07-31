@@ -372,7 +372,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             }
 
             // Record deletion in AUDIT before removing from local state
-            const auditDetails = `Assessment: ${assessmentToDelete.id || 'Unknown'}, Event: ${assessmentToDelete.eventId || 'Unknown'}, Date: ${assessmentToDelete.date || 'Unknown'}, Grade: ${assessmentToDelete.overallGrade || 'N/A'}, Instructor: ${assessmentToDelete.instructorName || assessmentToDelete.instructor || 'Unknown'}`;
+            const auditDetails = `Assessment: ${assessmentToDelete.id || 'Unknown'}, Event: ${assessmentToDelete.eventId || 'Unknown'}, Date: ${assessmentToDelete.date || 'Unknown'}, Grade: ${assessmentToDelete.overallGrade || 'N/A'}, ${reportAssessorLabel}: ${assessmentToDelete.instructorName || assessmentToDelete.instructor || 'Unknown'}`;
             const traineeName = trainee.name || trainee.fullName || 'Trainee not recorded';
             
             logAudit('Performance History', 'Delete', `Deleted ${trainingReportName} assessment for ${traineeName}`, auditDetails);
