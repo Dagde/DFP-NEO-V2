@@ -21734,7 +21734,7 @@ const formatTime$6 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const escapeRegExp$1 = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegExp$2 = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const parseComments = (raw, sectionLabels2 = {}) => {
   const defaults = { QFI: "", Weather: "", Profile: "", Overall: "", NEST: "", Notes: "" };
   if (!raw) return defaults;
@@ -21759,7 +21759,7 @@ const parseComments = (raw, sectionLabels2 = {}) => {
     sectionLabelOptions.forEach((label) => labelToSection.set(label.toLowerCase(), section));
     return sectionLabelOptions;
   });
-  const markerRegex = new RegExp(`(^|\\n)\\s*(${labels.sort((a, b) => b.length - a.length).map(escapeRegExp$1).join("|")})\\s*:`, "gi");
+  const markerRegex = new RegExp(`(^|\\n)\\s*(${labels.sort((a, b) => b.length - a.length).map(escapeRegExp$2).join("|")})\\s*:`, "gi");
   const markers = [];
   let match;
   while ((match = markerRegex.exec(raw)) !== null) {
@@ -58254,7 +58254,9 @@ const formatTrainingReportDate = (dateString) => {
     year: "2-digit"
   });
 };
-const parseReportComments = (raw) => {
+const COMMENT_SECTION_KEYS = ["assessor", "weather", "profile", "overall", "nest", "notes"];
+const escapeRegExp$1 = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const parseReportComments = (raw, sectionLabels2 = {}) => {
   const defaults = {
     assessor: "",
     weather: "",
@@ -58264,35 +58266,46 @@ const parseReportComments = (raw) => {
     notes: ""
   };
   if (!raw) return defaults;
-  const markers = [
-    { key: "assessor", label: "Assessor" },
-    { key: "weather", label: "Weather" },
-    { key: "profile", label: "Profile" },
-    { key: "overall", label: "Overall" },
-    { key: "nest", label: "NEST" },
-    { key: "notes", label: "Notes" }
-  ];
-  const hasMarkers = markers.some((marker) => raw.includes(`${marker.label}:`));
-  if (!hasMarkers) return { ...defaults, overall: raw };
+  const defaultLabels = {
+    assessor: ["Assessor", "Instructor", "Report Instructor", "QFI"],
+    weather: ["Weather"],
+    profile: ["Profile"],
+    overall: ["Overall"],
+    nest: ["NEST"],
+    notes: ["Notes"]
+  };
+  const labelToSection = /* @__PURE__ */ new Map();
+  const labels = COMMENT_SECTION_KEYS.flatMap((key) => {
+    const seen = /* @__PURE__ */ new Set();
+    return [sectionLabels2[key], ...defaultLabels[key]].map((label) => String(label || "").trim()).filter(Boolean).filter((label) => {
+      const normalised = label.toLowerCase();
+      if (seen.has(normalised)) return false;
+      seen.add(normalised);
+      labelToSection.set(normalised, key);
+      return true;
+    });
+  });
+  const markerRegex = new RegExp(`(^|\\n)\\s*(${labels.sort((a, b) => b.length - a.length).map(escapeRegExp$1).join("|")})\\s*:`, "gi");
+  const markers = [];
+  let match;
+  while ((match = markerRegex.exec(raw)) !== null) {
+    const key = labelToSection.get(String(match[2] || "").toLowerCase());
+    if (!key) continue;
+    markers.push({
+      key,
+      start: match.index,
+      contentStart: match.index + match[0].length
+    });
+  }
+  if (markers.length === 0) return { ...defaults, overall: raw };
   const parsed = { ...defaults };
   markers.forEach((marker, index) => {
-    const startMarker = `${marker.label}:`;
-    const startIndex = raw.indexOf(startMarker);
-    if (startIndex < 0) return;
-    const nextIndexes = markers.slice(index + 1).map((next) => raw.indexOf(`${next.label}:`, startIndex + startMarker.length)).filter((value) => value >= 0);
-    const endIndex = nextIndexes.length > 0 ? Math.min(...nextIndexes) : raw.length;
-    parsed[marker.key] = raw.slice(startIndex + startMarker.length, endIndex).trim();
+    const nextMarker = markers[index + 1];
+    parsed[marker.key] = raw.slice(marker.contentStart, nextMarker ? nextMarker.start : raw.length).trim();
   });
   return parsed;
 };
-const buildReportComments = (sections) => [
-  ["Assessor", sections.assessor],
-  ["Weather", sections.weather],
-  ["Profile", sections.profile],
-  ["Overall", sections.overall],
-  ["NEST", sections.nest],
-  ["Notes", sections.notes]
-].filter(([, value]) => String(value || "").trim()).map(([label, value]) => `${label}: ${String(value).trim()}`).join("\n\n");
+const buildReportComments = (sections, sectionLabels2) => COMMENT_SECTION_KEYS.map((key) => [sectionLabels2[key] || key, sections[key]]).filter(([, value]) => String(value || "").trim()).map(([label, value]) => `${label}: ${String(value).trim()}`).join("\n\n");
 const stripGeneratedFollowUpNotes = (value, generatedPrefix = "") => {
   const lines = String(value || "").split("\n");
   const cleanedPrefix = generatedPrefix.trim();
@@ -58336,6 +58349,21 @@ const AirCombatTrainingReportModal = ({
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
+  const commentSectionLabels = reactExports.useMemo(() => ({
+    assessor: commentFields.assessor || "Assessor",
+    weather: commentFields.weather || "Weather",
+    profile: commentFields.profile || "Profile",
+    overall: commentFields.overall || "Overall",
+    nest: commentFields.nest || "NEST",
+    notes: commentFields.notes || "Notes"
+  }), [
+    commentFields.assessor,
+    commentFields.weather,
+    commentFields.profile,
+    commentFields.overall,
+    commentFields.nest,
+    commentFields.notes
+  ]);
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
   const missionStatusLabelByCode = reactExports.useMemo(() => new Map(reportTemplate.completionResults.map((option) => [
@@ -58419,7 +58447,7 @@ const AirCombatTrainingReportModal = ({
     });
   }, [dncoFollowUp, dpcoFollowUp, eventCode2, initialReport?.dcoResult, initialReport?.dncoFollowUp, initialReport?.dpcoFollowUp, initialReport?.eventCode, initialReport?.id, staff.idNumber, staff.name]);
   const [commentSections, setCommentSections] = reactExports.useState(() => {
-    const parsed = parseReportComments(initialReport?.notes || "");
+    const parsed = parseReportComments(initialReport?.notes || "", commentSectionLabels);
     return {
       ...parsed,
       assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || "",
@@ -58630,7 +58658,7 @@ const AirCombatTrainingReportModal = ({
         passNotesToNextEvent,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
-        notes: buildReportComments({ ...commentSections, notes: buildNotesWithFollowUp() }),
+        notes: buildReportComments({ ...commentSections, notes: buildNotesWithFollowUp() }, commentSectionLabels),
         status: "Draft",
         dashboardAcknowledgedAt: now,
         createdAt: initialReport?.createdAt || now,

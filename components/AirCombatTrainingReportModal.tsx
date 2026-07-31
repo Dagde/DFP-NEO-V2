@@ -60,7 +60,14 @@ const COMMENT_SECTION_KEYS = ['assessor', 'weather', 'profile', 'overall', 'nest
 type CommentSectionKey = typeof COMMENT_SECTION_KEYS[number];
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
 
-const parseReportComments = (raw?: string): Record<CommentSectionKey, string> => {
+const escapeRegExp = (value: string): string => (
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+);
+
+const parseReportComments = (
+  raw?: string,
+  sectionLabels: Partial<Record<CommentSectionKey, string>> = {},
+): Record<CommentSectionKey, string> => {
   const defaults: Record<CommentSectionKey, string> = {
     assessor: '',
     weather: '',
@@ -70,40 +77,59 @@ const parseReportComments = (raw?: string): Record<CommentSectionKey, string> =>
     notes: '',
   };
   if (!raw) return defaults;
-  const markers: Array<{ key: CommentSectionKey; label: string }> = [
-    { key: 'assessor', label: 'Assessor' },
-    { key: 'weather', label: 'Weather' },
-    { key: 'profile', label: 'Profile' },
-    { key: 'overall', label: 'Overall' },
-    { key: 'nest', label: 'NEST' },
-    { key: 'notes', label: 'Notes' },
-  ];
-  const hasMarkers = markers.some(marker => raw.includes(`${marker.label}:`));
-  if (!hasMarkers) return { ...defaults, overall: raw };
+
+  const defaultLabels: Record<CommentSectionKey, string[]> = {
+    assessor: ['Assessor', 'Instructor', 'Report Instructor', 'QFI'],
+    weather: ['Weather'],
+    profile: ['Profile'],
+    overall: ['Overall'],
+    nest: ['NEST'],
+    notes: ['Notes'],
+  };
+  const labelToSection = new Map<string, CommentSectionKey>();
+  const labels = COMMENT_SECTION_KEYS.flatMap((key) => {
+    const seen = new Set<string>();
+    return [sectionLabels[key], ...defaultLabels[key]]
+      .map(label => String(label || '').trim())
+      .filter(Boolean)
+      .filter(label => {
+        const normalised = label.toLowerCase();
+        if (seen.has(normalised)) return false;
+        seen.add(normalised);
+        labelToSection.set(normalised, key);
+        return true;
+      });
+  });
+
+  const markerRegex = new RegExp(`(^|\\n)\\s*(${labels.sort((a, b) => b.length - a.length).map(escapeRegExp).join('|')})\\s*:`, 'gi');
+  const markers: Array<{ key: CommentSectionKey; start: number; contentStart: number }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = markerRegex.exec(raw)) !== null) {
+    const key = labelToSection.get(String(match[2] || '').toLowerCase());
+    if (!key) continue;
+    markers.push({
+      key,
+      start: match.index,
+      contentStart: match.index + match[0].length,
+    });
+  }
+
+  if (markers.length === 0) return { ...defaults, overall: raw };
+
   const parsed = { ...defaults };
   markers.forEach((marker, index) => {
-    const startMarker = `${marker.label}:`;
-    const startIndex = raw.indexOf(startMarker);
-    if (startIndex < 0) return;
-    const nextIndexes = markers
-      .slice(index + 1)
-      .map(next => raw.indexOf(`${next.label}:`, startIndex + startMarker.length))
-      .filter(value => value >= 0);
-    const endIndex = nextIndexes.length > 0 ? Math.min(...nextIndexes) : raw.length;
-    parsed[marker.key] = raw.slice(startIndex + startMarker.length, endIndex).trim();
+    const nextMarker = markers[index + 1];
+    parsed[marker.key] = raw.slice(marker.contentStart, nextMarker ? nextMarker.start : raw.length).trim();
   });
   return parsed;
 };
 
-const buildReportComments = (sections: Record<CommentSectionKey, string>): string => (
-  [
-    ['Assessor', sections.assessor],
-    ['Weather', sections.weather],
-    ['Profile', sections.profile],
-    ['Overall', sections.overall],
-    ['NEST', sections.nest],
-    ['Notes', sections.notes],
-  ]
+const buildReportComments = (
+  sections: Record<CommentSectionKey, string>,
+  sectionLabels: Record<CommentSectionKey, string>,
+): string => (
+  COMMENT_SECTION_KEYS.map(key => [sectionLabels[key] || key, sections[key]])
     .filter(([, value]) => String(value || '').trim())
     .map(([label, value]) => `${label}: ${String(value).trim()}`)
     .join('\n\n')
@@ -154,6 +180,21 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
+  const commentSectionLabels = useMemo<Record<CommentSectionKey, string>>(() => ({
+    assessor: commentFields.assessor || 'Assessor',
+    weather: commentFields.weather || 'Weather',
+    profile: commentFields.profile || 'Profile',
+    overall: commentFields.overall || 'Overall',
+    nest: commentFields.nest || 'NEST',
+    notes: commentFields.notes || 'Notes',
+  }), [
+    commentFields.assessor,
+    commentFields.weather,
+    commentFields.profile,
+    commentFields.overall,
+    commentFields.nest,
+    commentFields.notes,
+  ]);
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0
     ? enabledCompletionResults
@@ -260,7 +301,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     });
   }, [dncoFollowUp, dpcoFollowUp, eventCode, initialReport?.dcoResult, initialReport?.dncoFollowUp, initialReport?.dpcoFollowUp, initialReport?.eventCode, initialReport?.id, staff.idNumber, staff.name]);
   const [commentSections, setCommentSections] = useState<Record<CommentSectionKey, string>>(() => {
-    const parsed = parseReportComments(initialReport?.notes || '');
+    const parsed = parseReportComments(initialReport?.notes || '', commentSectionLabels);
     return {
       ...parsed,
       assessor: parsed.assessor || initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || '',
@@ -529,7 +570,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         passNotesToNextEvent,
         assessedElementScores: elementScores,
         groundSchoolAssessment,
-        notes: buildReportComments({ ...commentSections, notes: buildNotesWithFollowUp() }),
+        notes: buildReportComments({ ...commentSections, notes: buildNotesWithFollowUp() }, commentSectionLabels),
         status: 'Draft',
         dashboardAcknowledgedAt: now,
         createdAt: initialReport?.createdAt || now,
