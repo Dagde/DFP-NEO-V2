@@ -6452,14 +6452,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="mt-1 text-lg font-black text-white">{levelIndex}</div>
                     </div>
                     <DraftField
-                      label="Level Name"
+                      label="Level Type"
                       value={level.name}
                       disabled={!canEdit || !organisationStructureUnlocked}
                       onCommit={(value) => updateOrganisationStructureLevel(levelIndex, { name: value })}
                     />
                     {organisationStructureUnlocked ? (
                       <DraftTextAreaField
-                        label={`Options (${level.options.length})`}
+                        label={`Names in this level (${level.options.length})`}
                         value={level.options.join('\n')}
                         disabled={!canEdit}
                         onCommit={(value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) })}
@@ -6468,7 +6468,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       />
                     ) : (
                       <label className="min-w-0">
-                        <FieldLabel label={`Options (${level.options.length})`} />
+                        <FieldLabel label={`Names in this level (${level.options.length})`} />
                         <div className="max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">
                           {level.options.length > 0 ? (
                             <div className="flex min-w-max items-center gap-2 pb-1">
@@ -6701,7 +6701,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         className={`min-w-0 truncate ${parentOrganisationDisplay ? 'text-white' : 'text-gray-500'}`}
                         title={parentOrganisationPath.join('-')}
                       >
-                        {parentOrganisationDisplay || 'Choose Level 1'}
+                        {parentOrganisationDisplay || 'Choose parent'}
                       </span>
                       <span className="text-cyan-200">{openParentOrgUnitIndex === index ? '^' : 'v'}</span>
                     </button>

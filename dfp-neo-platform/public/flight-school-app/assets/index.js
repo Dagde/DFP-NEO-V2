@@ -70589,7 +70589,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 DraftField,
                 {
-                  label: "Level Name",
+                  label: "Level Type",
                   value: level.name,
                   disabled: !canEdit || !organisationStructureUnlocked,
                   onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { name: value })
@@ -70598,7 +70598,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               organisationStructureUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                 DraftTextAreaField,
                 {
-                  label: `Options (${level.options.length})`,
+                  label: `Names in this level (${level.options.length})`,
                   value: level.options.join("\n"),
                   disabled: !canEdit,
                   onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) }),
@@ -70606,7 +70606,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   fieldSizingClassName: "min-h-[76px]"
                 }
               ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: `Options (${level.options.length})` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: `Names in this level (${level.options.length})` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: level.options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-max items-center gap-2 pb-1", children: level.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No options defined" }) })
               ] })
             ] }, level.id || `org-structure-level-${levelIndex}`)) })
@@ -70821,7 +70821,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                             {
                               className: `min-w-0 truncate ${parentOrganisationDisplay ? "text-white" : "text-gray-500"}`,
                               title: parentOrganisationPath.join("-"),
-                              children: parentOrganisationDisplay || "Choose Level 1"
+                              children: parentOrganisationDisplay || "Choose parent"
                             }
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-cyan-200", children: openParentOrgUnitIndex === index ? "^" : "v" })
