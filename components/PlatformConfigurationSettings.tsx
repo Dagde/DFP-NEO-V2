@@ -7932,8 +7932,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
                   <div className="grid gap-3 p-3">
                     <div className="grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]">
-                      <Field label="Code" value={aircraft.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { code: value })} />
-                      <Field label="Name" value={aircraft.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('aircraftTypes', index, { name: value })} />
+                      <DraftField label="Code" value={aircraft.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('aircraftTypes', index, { code: value })} />
+                      <DraftField label="Name" value={aircraft.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('aircraftTypes', index, { name: value })} />
                       <SelectField label="Category" value={aircraft.category || 'Training'} disabled={!canEditResourcePools} options={['Training', 'Fighter', 'Airlift', 'Maritime', 'Rotary', 'Other']} onChange={(value) => updateRow('aircraftTypes', index, { category: value })} />
                       <TasField
                         label="TAS (KTAS)"
@@ -8104,8 +8104,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <Field label="Pool Code" value={pool.code} disabled={!canEditResourcePools} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
-                        <Field label="Pool Name" value={pool.name} disabled={!canEditResourcePools} onChange={(value) => updateRow('resourcePools', index, { name: value })} />
+                        <DraftField label="Pool Code" value={pool.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { code: value })} />
+                        <DraftField label="Pool Name" value={pool.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { name: value })} />
                         <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
                         <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
                         <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
@@ -8121,9 +8121,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
-                        <Field label="Aircraft" value={pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(pool.aircraftTypeCode)} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
-                        <Field label="Simulator" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
-                        <Field label="Procedural Trainer" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
+                        <DraftField label="Aircraft" value={pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(pool.aircraftTypeCode)} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
+                        <DraftField label="Simulator" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
+                        <DraftField label="Procedural Trainer" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                       </div>
                     </div>
 
@@ -8152,11 +8152,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className="grid gap-2">
                             {aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => (
                               <div key={`aircraft-number-prefix-${prefixIndex}`} className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                                <Field
+                                <DraftField
                                   label={`Prefix ${prefixIndex + 1}`}
                                   value={prefix}
                                   disabled={!canEditResourcePools}
-                                  onChange={(value) => updateAircraftNumberPrefix(index, prefixIndex, value)}
+                                  onCommit={(value) => updateAircraftNumberPrefix(index, prefixIndex, value)}
                                 />
                                 <button
                                   type="button"
