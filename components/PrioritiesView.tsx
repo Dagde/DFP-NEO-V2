@@ -3654,7 +3654,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No saved standard missions for this unit context.
+          No saved mission profiles for this unit context.
         </div>
       );
     }

@@ -2152,7 +2152,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ) : <UnitSettingsReadRow label="Task tile labels" value="No task profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Standard Missions" description="Regular unit mission profiles scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
+                    <UnitSettingsGroup title="Mission Profiles" description="Regular unit mission profiles scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
@@ -2160,7 +2160,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Missions" value="No standard missions are configured for this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Missions" value="No mission profiles are configured for this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build defaults are configured under Training & Standards." action={settingsLink('sct-events', 'Take me there')}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />
