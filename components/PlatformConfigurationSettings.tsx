@@ -1799,7 +1799,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [unitTypesDraft, setUnitTypesDraft] = useState('');
   const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
-  const [unitCallsignDrafts, setUnitCallsignDrafts] = useState<Record<string, string>>({});
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
 
@@ -3072,19 +3071,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     updateUnitCallsignSettings(unitCallsignSettings.entries.map((entry) => (
       entry.id === entryId ? { ...entry, ...changes } : entry
     )));
-  };
-
-  const updateUnitCallsignDraft = (entryId: string, value: string) => {
-    setUnitCallsignDrafts((previous) => ({ ...previous, [entryId]: value }));
-    updateUnitCallsignEntry(entryId, { callsign: value });
-  };
-
-  const commitUnitCallsignDraft = (entryId: string) => {
-    setUnitCallsignDrafts((previous) => {
-      if (!(entryId in previous)) return previous;
-      const { [entryId]: _committedDraft, ...remainingDrafts } = previous;
-      return remainingDrafts;
-    });
   };
 
   const addUnitCallsignEntry = () => {
@@ -9506,11 +9492,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="Choose rank-then-name to sort by configured rank priority first, then surname and first name. Choose alphabetical to ignore rank and sort only by name."
             />
             <div>
-              <Field
+              <DraftField
                 label="Instructor Display Term"
                 value={personnelDisplaySettings.instructorLabel}
                 disabled={!canEditRankTerminology}
-                onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
+                onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
                 info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
               />
               <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
@@ -9574,11 +9560,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </label>
             </div>
             <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(360px,1.2fr)]">
-              <Field
+              <DraftField
                 label="Display Name"
                 value={personnelDisplaySettings.simIpDisplayLabel}
                 disabled={!canEditRankTerminology || !personnelDisplaySettings.simIpDisplayEnabled}
-                onChange={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
+                onCommit={(value) => updatePersonnelDisplaySettings({ simIpDisplayLabel: value })}
                 info="The staff type name users see in profiles, staff lists and scheduling views. Examples: Contractor Staff, Contract Instructor, Simulator Instructor."
               />
               <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
@@ -9626,28 +9612,28 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
-            <Field
+            <DraftField
               label="Training Report Name"
               value={trainingReportTerminology.name}
               disabled={!canEditRankTerminology}
               maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
-              onChange={(value) => updateTrainingReportTerminology({ name: value })}
+              onCommit={(value) => updateTrainingReportTerminology({ name: value })}
               info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`}
             />
-            <Field
+            <DraftField
               label="Continuation Training Short Label"
               value={sctTerminology.shortLabel}
               disabled={!canEditRankTerminology}
               maxLength={SCT_SHORT_LABEL_MAX_LENGTH}
-              onChange={(value) => updateSctTerminology({ shortLabel: value })}
+              onCommit={(value) => updateSctTerminology({ shortLabel: value })}
               info="The display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes."
             />
-            <Field
+            <DraftField
               label="Continuation Training Full Name"
               value={sctTerminology.longLabel}
               disabled={!canEditRankTerminology}
               maxLength={SCT_LONG_LABEL_MAX_LENGTH}
-              onChange={(value) => updateSctTerminology({ longLabel: value })}
+              onCommit={(value) => updateSctTerminology({ longLabel: value })}
               info={`The full display label for staff continuation training flights and simulator events. You may rename it to match your organisation's terminology. Changing this label only affects what users see; it does not change the underlying event type or saved event codes. Maximum ${SCT_LONG_LABEL_MAX_LENGTH} characters.`}
             />
           </div>
@@ -9676,18 +9662,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
                   <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 lg:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_auto]">
-                    <Field
+                    <DraftField
                       label="Generic Position"
                       value={entry.genericName}
                       disabled={!canEditRankTerminology || isDefaultEntry}
-                      onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })}
+                      onCommit={(value) => updateCrewPositionEntry(entry.id, { genericName: value })}
                       info={isDefaultEntry ? 'Baseline generic positions stay fixed so aircraft seat links remain stable.' : 'The generic position saved on aircraft seat configuration.'}
                     />
-                    <Field
+                    <DraftField
                       label="Organisation Label"
                       value={entry.label}
                       disabled={!canEditRankTerminology}
-                      onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })}
+                      onCommit={(value) => updateCrewPositionEntry(entry.id, { label: value })}
                       info="The label users see when selecting crew positions. Example: Combat Systems Operator can be labelled Weapon System Operator."
                     />
                     <div>
@@ -9766,26 +9752,26 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 .sort((left, right) => (left.code || left.name).localeCompare(right.code || right.name, undefined, { sensitivity: 'base' }))
                 .map((entry) => (
                 <div key={entry.id} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 xl:grid-cols-[minmax(150px,1fr)_minmax(130px,0.8fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto]">
-                  <Field
+                  <DraftField
                     inputId={`qualification-name-${String(entry.id || '').replace(/[^a-zA-Z0-9_-]/g, '-')}`}
                     label="Qualification"
                     value={entry.name}
                     disabled={!canEditRankTerminology}
-                    onChange={(value) => updateStaffQualificationEntry(entry.id, { name: value })}
+                    onCommit={(value) => updateStaffQualificationEntry(entry.id, { name: value })}
                     info="The full qualification name shown in personnel profiles."
                   />
-                  <Field
+                  <DraftField
                     label="Code"
                     value={entry.code}
                     disabled={!canEditRankTerminology}
-                    onChange={(value) => updateStaffQualificationEntry(entry.id, { code: value })}
+                    onCommit={(value) => updateStaffQualificationEntry(entry.id, { code: value })}
                     info="Short code accepted by bulk upload. Examples: PIC, Crew Commander."
                   />
-                  <Field
+                  <DraftField
                     label="Role Restrictions"
                     value={(entry.roleRestrictions || []).join(', ')}
                     disabled={!canEditRankTerminology}
-                    onChange={(value) => updateStaffQualificationEntry(entry.id, {
+                    onCommit={(value) => updateStaffQualificationEntry(entry.id, {
                       roleRestrictions: value.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean),
                     })}
                     info="Optional comma-separated roles this qualification applies to. Leave blank for all roles."
@@ -9945,17 +9931,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       options={visibleUnitOptions}
                       onChange={(value) => updateUnitCallsignEntry(entry.id, { unitCode: value.toUpperCase(), isDefault: false })}
                     />
-                    <Field
+                    <DraftField
                       label="Callsign"
-                      value={unitCallsignDrafts[entry.id] ?? entry.callsign}
+                      value={entry.callsign}
                       disabled={!canEditRankTerminology}
-                      onChange={(value) => updateUnitCallsignDraft(entry.id, value)}
+                      onCommit={(value) => updateUnitCallsignEntry(entry.id, { callsign: value })}
                       info="Callsign base only. The sortie number is selected when creating or editing an event."
-                      onFocus={() => setUnitCallsignDrafts((previous) => ({
-                        ...previous,
-                        [entry.id]: previous[entry.id] ?? entry.callsign,
-                      }))}
-                      onBlur={() => commitUnitCallsignDraft(entry.id)}
                     />
                     <div className="flex items-end">
                       <button
@@ -10047,14 +10028,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <th className="w-[72px] border-b border-r border-gray-700 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-gray-500">Level</th>
                       {staffRankEquivalency.services.map((service, serviceIndex) => (
                         <th key={`service-${serviceIndex}`} className="border-b border-r border-gray-700 px-3 py-2 last:border-r-0">
-                          <input
+                          <DraftTextInput
                             value={service.name}
                             disabled={!canEditRankTerminology}
-                            data-rank-equivalency-input="true"
-                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankServiceName(serviceIndex, value))}
-                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankServiceName(serviceIndex, value))}
-                            onKeyDown={stopEditableKeyPropagation}
-                            onChange={(event) => updateStaffRankServiceName(serviceIndex, event.target.value)}
+                            onCommit={(value) => updateStaffRankServiceName(serviceIndex, value)}
                             className={`w-full rounded border px-2 py-1 text-xs font-bold ${
                               canEditRankTerminology
                                 ? 'border-gray-600 bg-gray-900 text-white'
@@ -10072,30 +10049,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         {row.ranks.map((cell, serviceIndex) => (
                           <td key={`${row.grade}-${serviceIndex}`} className="border-r border-t border-gray-700 p-2 last:border-r-0">
                             <div className="grid gap-1 sm:grid-cols-[1fr_92px]">
-                              <input
+                              <DraftTextInput
                                 value={cell.rank}
                                 disabled={!canEditRankTerminology}
                                 placeholder="Rank"
-                                data-rank-equivalency-input="true"
-                                onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value))}
-                                onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value))}
-                                onKeyDown={stopEditableKeyPropagation}
-                                onChange={(event) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', event.target.value)}
+                                onCommit={(value) => updateStaffRankCell(rowIndex, serviceIndex, 'rank', value)}
                                 className={`min-w-0 rounded border px-2 py-1 text-xs ${
                                   canEditRankTerminology
                                     ? 'border-gray-600 bg-gray-900 text-white placeholder:text-gray-600'
                                     : 'border-gray-700 bg-gray-800 text-gray-400 cursor-not-allowed'
                                 }`}
                               />
-                              <input
+                              <DraftTextInput
                                 value={cell.abbreviation}
                                 disabled={!canEditRankTerminology}
                                 placeholder="Abbrev"
-                                data-rank-equivalency-input="true"
-                                onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value))}
-                                onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value))}
-                                onKeyDown={stopEditableKeyPropagation}
-                                onChange={(event) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', event.target.value)}
+                                onCommit={(value) => updateStaffRankCell(rowIndex, serviceIndex, 'abbreviation', value)}
                                 className={`min-w-0 rounded border px-2 py-1 text-xs font-semibold ${
                                   canEditRankTerminology
                                     ? 'border-gray-600 bg-gray-900 text-white placeholder:text-gray-600'
@@ -10114,11 +10083,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 Military ranks are listed above by service and level. Civilian and contractor titles are managed separately below.
               </p>
             </div>
-            <TextAreaField
+            <DraftTextAreaField
               label="Civilian / Contractor Titles"
               value={personnelDisplaySettings.civilianTitles.join('\n')}
               disabled={!canEditRankTerminology}
-              onChange={updateCivilianTitles}
+              onCommit={updateCivilianTitles}
               info="Enter one civilian or contractor title per line. These titles appear after the military rank groups and are treated as equal status for sorting."
               className="block w-[200px] max-w-[200px]"
               fieldClassName="w-[200px] max-w-[200px]"
@@ -10144,11 +10113,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     className="h-4 w-4 rounded border-gray-500 accent-cyan-500 disabled:cursor-not-allowed"
                   />
                 </label>
-                <TextAreaField
+                <DraftTextAreaField
                   label="Trainee Rank Order"
                   value={formatRankOrderText(personnelDisplaySettings.traineeRankOrder)}
                   disabled={!canEditRankTerminology}
-                  onChange={(value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })}
+                  onCommit={(value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })}
                   info="Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
                 />
               </div>
@@ -10863,6 +10832,105 @@ const TextAreaField = ({ label, value, disabled, onChange, onFocus, onBlur, info
     />
   </label>
 );
+
+const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; maxLength?: number }) => {
+  const [draft, setDraft] = useState(value || '');
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(value || '');
+  }, [focused, value]);
+
+  const commitDraft = () => {
+    const nextValue = typeof maxLength === 'number' ? draft.slice(0, maxLength) : draft;
+    setFocused(false);
+    setDraft(nextValue);
+    if (nextValue !== (value || '')) onCommit(nextValue);
+  };
+
+  return (
+    <Field
+      inputId={inputId}
+      label={label}
+      labelNoWrap={labelNoWrap}
+      value={focused ? draft : value}
+      disabled={disabled}
+      onChange={setDraft}
+      onFocus={() => {
+        setFocused(true);
+        setDraft(value || '');
+      }}
+      onBlur={commitDraft}
+      info={info}
+      maxLength={maxLength}
+    />
+  );
+};
+
+const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => {
+  const [draft, setDraft] = useState(value || '');
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(value || '');
+  }, [focused, value]);
+
+  const commitDraft = () => {
+    setFocused(false);
+    if (draft !== (value || '')) onCommit(draft);
+  };
+
+  return (
+    <TextAreaField
+      label={label}
+      value={focused ? draft : value}
+      disabled={disabled}
+      onChange={setDraft}
+      onFocus={() => {
+        setFocused(true);
+        setDraft(value || '');
+      }}
+      onBlur={commitDraft}
+      info={info}
+      className={className}
+      fieldClassName={fieldClassName}
+      fieldSizingClassName={fieldSizingClassName}
+    />
+  );
+};
+
+const DraftTextInput = ({ value, disabled, placeholder, className, onCommit }: { value: string; disabled: boolean; placeholder?: string; className: string; onCommit: (value: string) => void }) => {
+  const [draft, setDraft] = useState(value || '');
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(value || '');
+  }, [focused, value]);
+
+  const commitDraft = () => {
+    setFocused(false);
+    if (draft !== (value || '')) onCommit(draft);
+  };
+
+  return (
+    <input
+      value={focused ? draft : value}
+      disabled={disabled}
+      placeholder={placeholder}
+      data-rank-equivalency-input="true"
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+      onKeyDown={stopEditableKeyPropagation}
+      onFocus={() => {
+        setFocused(true);
+        setDraft(value || '');
+      }}
+      onBlur={commitDraft}
+      onChange={(event) => setDraft(event.target.value)}
+      className={className}
+    />
+  );
+};
 
 const ToggleField = ({ label, checked, disabled, onChange, info }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void; info?: string }) => (
   <label className="flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2">
