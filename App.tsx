@@ -33056,7 +33056,7 @@ const App: React.FC = () => {
             // Check if currency event already exists
             const currencyEventExists = traineeLMP.some(item => item.id === `${currencyEventId}-CUR`);
             if (currencyEventExists) {
-                console.log(`Currency event ${currencyEventId}-CUR already exists in trainee's LMP`);
+                logScheduleDebug(`Currency event ${currencyEventId}-CUR already exists in trainee's LMP`);
                 return prev;
             }
 
@@ -33068,10 +33068,20 @@ const App: React.FC = () => {
             ];
 
             newLMPs.set(traineeFullName, updatedLMP);
-            console.log(`Added currency event ${currencyEvent.id} to ${traineeFullName}'s Individual LMP`);
+            logScheduleDebug(`Added currency event ${currencyEvent.id} to ${traineeFullName}'s Individual LMP`);
 
             return newLMPs;
         });
+    };
+
+    const logScheduleDebug = (...args: any[]) => {
+        try {
+            if (typeof window !== 'undefined' && window.localStorage?.getItem('dfp_schedule_debug') === 'true') {
+                console.log(...args);
+            }
+        } catch {
+            // Debug logging must never affect schedule save behaviour.
+        }
     };
 
     // ─── persistScheduleForDate ─────────────────────────────────────────────────
@@ -33084,11 +33094,11 @@ const App: React.FC = () => {
     const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[], baselineEventsForDate?: ScheduleEvent[]) => {
         // Skip seed data
         if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
-            console.log('[Persist] Skipped seed data for', targetDate);
+            logScheduleDebug('[Persist] Skipped seed data for', targetDate);
             return;
         }
         if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
-            console.log('[Persist] No events for', targetDate, '- nothing to persist');
+            logScheduleDebug('[Persist] No events for', targetDate, '- nothing to persist');
             return;
         }
 
@@ -33188,7 +33198,7 @@ const App: React.FC = () => {
             snapshotPayload.baselineEvents = baselineEventsForDate;
         }
 
-        console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
+        logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
         fetch(`${apiBase}/daily-snapshot/save`, {
             method: 'POST',
@@ -33200,7 +33210,7 @@ const App: React.FC = () => {
             if (result.success) {
                 loadedSnapshotDates.current.add(snapshotKey);
                 cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-                console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
+                logScheduleDebug(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
             } else {
                 console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
             }
@@ -33215,7 +33225,7 @@ const App: React.FC = () => {
         targetDate: string,
         assessmentsMap: Map<string, Pt051Assessment>
     ) => {
-        console.log(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
+        logScheduleDebug(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
     };
 
     const persistPt051AssessmentRecord = async (assessment: Pt051Assessment) => {
@@ -33273,8 +33283,8 @@ const App: React.FC = () => {
     };
 
     const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
-        console.log('🔵 ========== handleSaveEvents START ==========');
-        console.log('🔵 Called from:', new Error().stack?.split('\\n')[2]?.trim());
+        logScheduleDebug('🔵 ========== handleSaveEvents START ==========');
+        logScheduleDebug('🔵 Called from:', new Error().stack?.split('\\n')[2]?.trim());
 
         // System freeze check - prevent modifications when system is frozen
         // Read directly from localStorage as most reliable freeze check
@@ -33284,8 +33294,8 @@ const App: React.FC = () => {
             showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
             return;
         }
-        console.log('🔵 Events to save:', eventsToSave.length);
-        console.log('🔵 First event details:', {
+        logScheduleDebug('🔵 Events to save:', eventsToSave.length);
+        logScheduleDebug('🔵 First event details:', {
             id: eventsToSave[0]?.id,
             instructor: eventsToSave[0]?.instructor,
             student: eventsToSave[0]?.student,
@@ -33294,10 +33304,10 @@ const App: React.FC = () => {
             date: eventsToSave[0]?.date,
             resourceId: eventsToSave[0]?.resourceId
         });
-        console.log('🔵 isPriority:', isPriority);
-        console.log('🔵 activeView:', activeView);
-        console.log('🔵 date:', date);
-        console.log('🔵 buildDfpDate:', buildDfpDate);
+        logScheduleDebug('🔵 isPriority:', isPriority);
+        logScheduleDebug('🔵 activeView:', activeView);
+        logScheduleDebug('🔵 date:', date);
+        logScheduleDebug('🔵 buildDfpDate:', buildDfpDate);
         if (!eventsToSave || eventsToSave.length === 0) return;
         const isNextDaySaveContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
         const lockedPastEvents = eventsToSave.filter(event => (
@@ -33321,7 +33331,7 @@ const App: React.FC = () => {
         if (dayNightConflicts.length > 0) {
             const decision = await showDayNightConflictDecision(dayNightConflicts);
             if (decision === 'skip') {
-                console.log('SAVE CANCELLED - user chose not to schedule after day/night conflict:', dayNightConflicts);
+                logScheduleDebug('SAVE CANCELLED - user chose not to schedule after day/night conflict:', dayNightConflicts);
                 return;
             }
 
@@ -33397,7 +33407,7 @@ const App: React.FC = () => {
 
                 // Debug logging for continuation events
                 if (mainEvent.eventCategory === 'sct') {
-                    console.log('🔍 Continuation Save Decision:', {
+                    logScheduleDebug('🔍 Continuation Save Decision:', {
                         activeView,
                         isNextDayView,
                         mainEventDate: mainEvent.date,
@@ -33432,7 +33442,7 @@ const App: React.FC = () => {
                 // Debug logging for continuation event updates
                 eventsToSave.forEach(e => {
                     if (e.eventCategory === 'sct') {
-                        console.log('🔄 Updating continuation event in nextDayBuildEvents:', {
+                        logScheduleDebug('🔄 Updating continuation event in nextDayBuildEvents:', {
                             id: e.id,
                             student: e.student,
                             pilot: e.pilot,
@@ -33455,7 +33465,7 @@ const App: React.FC = () => {
                             // Include already assigned events from this batch
                             const eventsToCheck = [...allEventsForDate, ...alreadyAssigned];
                             const assignedResourceId = findAvailableResourceId(e, eventsToCheck);
-                            console.log(`Assigning resourceId to ${e.type} event:`, assignedResourceId);
+                            logScheduleDebug(`Assigning resourceId to ${e.type} event:`, assignedResourceId);
                             e.resourceId = assignedResourceId;
                             // Add to already assigned list
                             alreadyAssigned.push(e);
@@ -33463,8 +33473,8 @@ const App: React.FC = () => {
                     });
                 }
                 setPublishedSchedules((prev) => {
-                    console.log('🟢 setPublishedSchedules: START');
-                    console.log('🟢 Previous publishedSchedules keys:', Object.keys(prev));
+                    logScheduleDebug('🟢 setPublishedSchedules: START');
+                    logScheduleDebug('🟢 Previous publishedSchedules keys:', Object.keys(prev));
                     const newSchedules = { ...prev };
 
                     // Group events by their date (deployment tiles may have different dates)
@@ -33477,7 +33487,7 @@ const App: React.FC = () => {
                         eventsByDate.get(eventDate)!.push(event);
                     });
 
-                    console.log('🟢 Events grouped by date:', Array.from(eventsByDate.entries()).map(([date, events]) => ({
+                    logScheduleDebug('🟢 Events grouped by date:', Array.from(eventsByDate.entries()).map(([date, events]) => ({
                         date,
                         count: events.length,
                         eventIds: events.map(e => e.id),
@@ -33487,7 +33497,7 @@ const App: React.FC = () => {
                     // Save each group of events to their respective dates
                     eventsByDate.forEach((events, eventDate) => {
                         const currentScheduleForDate = newSchedules[eventDate] || [];
-                        console.log(`🟢 Processing date ${eventDate}:`, {
+                        logScheduleDebug(`🟢 Processing date ${eventDate}:`, {
                             currentEventsCount: currentScheduleForDate.length,
                             eventsToSaveCount: events.length
                         });
@@ -33496,16 +33506,16 @@ const App: React.FC = () => {
                         const removedConflictIds = removedPublishedConflictIdsByDate.get(eventDate) || new Set<string>();
                         const otherEvents = currentScheduleForDate.filter(e => !existingEventIds.has(e.id) && !removedConflictIds.has(e.id));
 
-                        console.log(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
+                        logScheduleDebug(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
 
                         newSchedules[eventDate] = [...otherEvents, ...events] as ScheduleEvent[];
 
-                        console.log(`🟢 Saved ${events.length} events to date ${eventDate}`);
-                        console.log(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
+                        logScheduleDebug(`🟢 Saved ${events.length} events to date ${eventDate}`);
+                        logScheduleDebug(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
 
                         // Log the specific event we just saved
                         const savedEvent = newSchedules[eventDate].find(e => e.id === events[0].id);
-                        console.log(`🟢 Saved event details:`, {
+                        logScheduleDebug(`🟢 Saved event details:`, {
                             id: savedEvent?.id,
                             instructor: savedEvent?.instructor,
                             student: savedEvent?.student,
@@ -33513,17 +33523,17 @@ const App: React.FC = () => {
                         });
                     });
 
-                    console.log('🟢 setPublishedSchedules: COMPLETE');
-                    console.log('🟢 New publishedSchedules keys:', Object.keys(newSchedules));
+                    logScheduleDebug('🟢 setPublishedSchedules: COMPLETE');
+                    logScheduleDebug('🟢 New publishedSchedules keys:', Object.keys(newSchedules));
 
                     return newSchedules;
                 });
 
                 // NEW APPROACH: Trigger training report sync after any Active DFP change
                 // Use functional setState to access the latest state
-                console.log('📋 Triggering training report sync after Active DFP change...');
+                logScheduleDebug('📋 Triggering training report sync after Active DFP change...');
                 setTimeout(() => {
-                    console.log('⏰ Executing delayed training report sync...');
+                    logScheduleDebug('⏰ Executing delayed training report sync...');
                     setPublishedSchedules(currentSchedules => {
                         setPt051Assessments(currentAssessments => {
                             syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -33656,7 +33666,7 @@ const App: React.FC = () => {
                    }
                }
            });
-        console.log('🔵 Setting selectedEvent to null (closing modal)');
+        logScheduleDebug('🔵 Setting selectedEvent to null (closing modal)');
         setSelectedEvent(null);
         setOracleContextForModal(null);
 
@@ -33667,7 +33677,7 @@ const App: React.FC = () => {
             setOraclePreviewEvent(null);
         }
 
-        console.log('🔵 ========== handleSaveEvents END ==========');
+        logScheduleDebug('🔵 ========== handleSaveEvents END ==========');
     };
 
     const handleCancelEvent = async (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {

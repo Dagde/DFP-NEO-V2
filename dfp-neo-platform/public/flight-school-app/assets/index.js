@@ -113869,7 +113869,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       }
       const currencyEventExists = traineeLMP.some((item) => item.id === `${currencyEventId}-CUR`);
       if (currencyEventExists) {
-        console.log(`Currency event ${currencyEventId}-CUR already exists in trainee's LMP`);
+        logScheduleDebug(`Currency event ${currencyEventId}-CUR already exists in trainee's LMP`);
         return prev;
       }
       const updatedLMP = [
@@ -113878,17 +113878,25 @@ ${error instanceof Error ? error.message : String(error)}`,
         ...traineeLMP.slice(baseEventIndex + 1)
       ];
       newLMPs.set(traineeFullName, updatedLMP);
-      console.log(`Added currency event ${currencyEvent.id} to ${traineeFullName}'s Individual LMP`);
+      logScheduleDebug(`Added currency event ${currencyEvent.id} to ${traineeFullName}'s Individual LMP`);
       return newLMPs;
     });
   };
+  const logScheduleDebug = (...args) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage?.getItem("dfp_schedule_debug") === "true") {
+        console.log(...args);
+      }
+    } catch {
+    }
+  };
   const persistScheduleForDate = (targetDate, allEventsForDate, baselineEventsForDate) => {
     if (allEventsForDate.some((e) => e.isHistoricalSeed === true)) {
-      console.log("[Persist] Skipped seed data for", targetDate);
+      logScheduleDebug("[Persist] Skipped seed data for", targetDate);
       return;
     }
     if (allEventsForDate.length === 0 && (!baselineEventsForDate || baselineEventsForDate.length === 0)) {
-      console.log("[Persist] No events for", targetDate, "- nothing to persist");
+      logScheduleDebug("[Persist] No events for", targetDate, "- nothing to persist");
       return;
     }
     const apiBase = getApiBaseUrl();
@@ -113973,7 +113981,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (baselineEventsForDate !== void 0) {
       snapshotPayload.baselineEvents = baselineEventsForDate;
     }
-    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events...`);
+    logScheduleDebug(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     fetch(`${apiBase}/daily-snapshot/save`, {
       method: "POST",
@@ -113983,7 +113991,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (result.success) {
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events`);
+        logScheduleDebug(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events`);
       } else {
         console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
       }
@@ -113992,7 +114000,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
   };
   const persistPt051AssessmentsForDate = async (targetDate, assessmentsMap) => {
-    console.log(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
+    logScheduleDebug(`[Training Report] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
   };
   const persistPt051AssessmentRecord = async (assessment) => {
     const apiBase = getApiBaseUrl();
@@ -114045,16 +114053,16 @@ ${error instanceof Error ? error.message : String(error)}`,
     return saved2;
   };
   const handleSaveEvents = async (eventsToSave, isPriority) => {
-    console.log("🔵 ========== handleSaveEvents START ==========");
-    console.log("🔵 Called from:", new Error().stack?.split("\\n")[2]?.trim());
+    logScheduleDebug("🔵 ========== handleSaveEvents START ==========");
+    logScheduleDebug("🔵 Called from:", new Error().stack?.split("\\n")[2]?.trim());
     const _freezeData = localStorage.getItem("systemFreezeState");
     const _isFrozen = _freezeData ? JSON.parse(_freezeData).isFrozen === true : false;
     if (_isFrozen) {
       showDarkAlert2("System is currently frozen. No modifications are allowed during a system freeze.", "System Frozen", "error");
       return;
     }
-    console.log("🔵 Events to save:", eventsToSave.length);
-    console.log("🔵 First event details:", {
+    logScheduleDebug("🔵 Events to save:", eventsToSave.length);
+    logScheduleDebug("🔵 First event details:", {
       id: eventsToSave[0]?.id,
       instructor: eventsToSave[0]?.instructor,
       student: eventsToSave[0]?.student,
@@ -114063,10 +114071,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       date: eventsToSave[0]?.date,
       resourceId: eventsToSave[0]?.resourceId
     });
-    console.log("🔵 isPriority:", isPriority);
-    console.log("🔵 activeView:", activeView);
-    console.log("🔵 date:", date);
-    console.log("🔵 buildDfpDate:", buildDfpDate);
+    logScheduleDebug("🔵 isPriority:", isPriority);
+    logScheduleDebug("🔵 activeView:", activeView);
+    logScheduleDebug("🔵 date:", date);
+    logScheduleDebug("🔵 buildDfpDate:", buildDfpDate);
     if (!eventsToSave || eventsToSave.length === 0) return;
     const isNextDaySaveContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const lockedPastEvents = eventsToSave.filter((event) => !isPriority && !isNextDaySaveContext && isPastDfpDate(event.date));
@@ -114084,7 +114092,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (dayNightConflicts.length > 0) {
       const decision = await showDayNightConflictDecision(dayNightConflicts);
       if (decision === "skip") {
-        console.log("SAVE CANCELLED - user chose not to schedule after day/night conflict:", dayNightConflicts);
+        logScheduleDebug("SAVE CANCELLED - user chose not to schedule after day/night conflict:", dayNightConflicts);
         return;
       }
       if (decision === "remove-conflicts") {
@@ -114147,7 +114155,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const isNextDayView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
         saveToNextDayBuild2 = mainEvent.date === buildDfpDate && isNextDayView;
         if (mainEvent.eventCategory === "sct") {
-          console.log("🔍 Continuation Save Decision:", {
+          logScheduleDebug("🔍 Continuation Save Decision:", {
             activeView,
             isNextDayView,
             mainEventDate: mainEvent.date,
@@ -114174,7 +114182,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const eventsForBuild = eventsToSave.map(({ date: date2, ...rest }) => rest);
         eventsToSave.forEach((e) => {
           if (e.eventCategory === "sct") {
-            console.log("🔄 Updating continuation event in nextDayBuildEvents:", {
+            logScheduleDebug("🔄 Updating continuation event in nextDayBuildEvents:", {
               id: e.id,
               student: e.student,
               pilot: e.pilot,
@@ -114191,15 +114199,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               const allEventsForDate = publishedSchedules[mainEvent.date] || [];
               const eventsToCheck = [...allEventsForDate, ...alreadyAssigned];
               const assignedResourceId = findAvailableResourceId(e, eventsToCheck);
-              console.log(`Assigning resourceId to ${e.type} event:`, assignedResourceId);
+              logScheduleDebug(`Assigning resourceId to ${e.type} event:`, assignedResourceId);
               e.resourceId = assignedResourceId;
               alreadyAssigned.push(e);
             }
           });
         }
         setPublishedSchedules((prev) => {
-          console.log("🟢 setPublishedSchedules: START");
-          console.log("🟢 Previous publishedSchedules keys:", Object.keys(prev));
+          logScheduleDebug("🟢 setPublishedSchedules: START");
+          logScheduleDebug("🟢 Previous publishedSchedules keys:", Object.keys(prev));
           const newSchedules = { ...prev };
           const eventsByDate = /* @__PURE__ */ new Map();
           eventsToSave.forEach((event) => {
@@ -114209,7 +114217,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             }
             eventsByDate.get(eventDate).push(event);
           });
-          console.log("🟢 Events grouped by date:", Array.from(eventsByDate.entries()).map(([date2, events2]) => ({
+          logScheduleDebug("🟢 Events grouped by date:", Array.from(eventsByDate.entries()).map(([date2, events2]) => ({
             date: date2,
             count: events2.length,
             eventIds: events2.map((e) => e.id),
@@ -114217,32 +114225,32 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           })));
           eventsByDate.forEach((events2, eventDate) => {
             const currentScheduleForDate = newSchedules[eventDate] || [];
-            console.log(`🟢 Processing date ${eventDate}:`, {
+            logScheduleDebug(`🟢 Processing date ${eventDate}:`, {
               currentEventsCount: currentScheduleForDate.length,
               eventsToSaveCount: events2.length
             });
             const existingEventIds = new Set(events2.map((e) => e.id));
             const removedConflictIds = removedPublishedConflictIdsByDate.get(eventDate) || /* @__PURE__ */ new Set();
             const otherEvents = currentScheduleForDate.filter((e) => !existingEventIds.has(e.id) && !removedConflictIds.has(e.id));
-            console.log(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
+            logScheduleDebug(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
             newSchedules[eventDate] = [...otherEvents, ...events2];
-            console.log(`🟢 Saved ${events2.length} events to date ${eventDate}`);
-            console.log(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
+            logScheduleDebug(`🟢 Saved ${events2.length} events to date ${eventDate}`);
+            logScheduleDebug(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
             const savedEvent = newSchedules[eventDate].find((e) => e.id === events2[0].id);
-            console.log(`🟢 Saved event details:`, {
+            logScheduleDebug(`🟢 Saved event details:`, {
               id: savedEvent?.id,
               instructor: savedEvent?.instructor,
               student: savedEvent?.student,
               pilot: savedEvent?.pilot
             });
           });
-          console.log("🟢 setPublishedSchedules: COMPLETE");
-          console.log("🟢 New publishedSchedules keys:", Object.keys(newSchedules));
+          logScheduleDebug("🟢 setPublishedSchedules: COMPLETE");
+          logScheduleDebug("🟢 New publishedSchedules keys:", Object.keys(newSchedules));
           return newSchedules;
         });
-        console.log("📋 Triggering training report sync after Active DFP change...");
+        logScheduleDebug("📋 Triggering training report sync after Active DFP change...");
         setTimeout(() => {
-          console.log("⏰ Executing delayed training report sync...");
+          logScheduleDebug("⏰ Executing delayed training report sync...");
           setPublishedSchedules((currentSchedules) => {
             setPt051Assessments((currentAssessments) => {
               syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -114338,7 +114346,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         }
       }
     });
-    console.log("🔵 Setting selectedEvent to null (closing modal)");
+    logScheduleDebug("🔵 Setting selectedEvent to null (closing modal)");
     setSelectedEvent(null);
     setOracleContextForModal(null);
     if (wasOracleEvent) {
@@ -114346,7 +114354,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       setOracleAnalysis(null);
       setOraclePreviewEvent(null);
     }
-    console.log("🔵 ========== handleSaveEvents END ==========");
+    logScheduleDebug("🔵 ========== handleSaveEvents END ==========");
   };
   const handleCancelEvent = async (eventId, cancellationCode, manualCodeEntry) => {
     const _freezeRaw = localStorage.getItem("systemFreezeState");
