@@ -6498,9 +6498,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
           {visibleLocationRows.map(({ location, index }) => {
             const rowKey = location.id || `platform-location-${index}`;
-            const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
-            const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
-            const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
             return (
               <div
                 key={rowKey}
@@ -6528,7 +6525,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={location.code}
                     disabled={!canEditSection('platform-locations')}
                     maxLength={4}
-                    suggestions={codeSuggestions}
+                    getSuggestions={(query) => getAirfieldCatalogueSuggestionsForQuery(query, airfieldCatalogueLookup)}
                     onChange={(value) => updateLocationIdentity(index, 'code', value)}
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                   />
@@ -6539,7 +6536,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={location.iataCode || ''}
                     disabled={!canEditSection('platform-locations')}
                     maxLength={3}
-                    suggestions={iataSuggestions}
+                    getSuggestions={(query) => getAirfieldCatalogueSuggestionsForQuery(query, airfieldCatalogueLookup)}
                     onChange={(value) => updateLocationIdentity(index, 'iataCode', value)}
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                   />
@@ -6549,7 +6546,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     label="Location Name"
                     value={location.name}
                     disabled={!canEditSection('platform-locations')}
-                    suggestions={nameSuggestions}
+                    getSuggestions={(query) => getAirfieldCatalogueSuggestionsForQuery(query, airfieldCatalogueLookup)}
                     onChange={(value) => updateLocationIdentity(index, 'name', value)}
                     onSelect={(entry) => applyKnownAirfieldToLocation(index, entry, location)}
                   />
@@ -10677,7 +10674,7 @@ const AirfieldLookupField = ({
   label,
   value,
   disabled,
-  suggestions,
+  getSuggestions,
   onChange,
   onSelect,
   maxLength,
@@ -10685,29 +10682,44 @@ const AirfieldLookupField = ({
   label: string;
   value: string;
   disabled: boolean;
-  suggestions: AirfieldCatalogueEntry[];
+  getSuggestions: (query: string) => AirfieldCatalogueEntry[];
   onChange: (value: string) => void;
   onSelect: (entry: AirfieldCatalogueEntry) => void;
   maxLength?: number;
 }) => {
+  const [draftValue, setDraftValue] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);
-  const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(value || '').trim().length >= 2;
+  const suggestions = getSuggestions(draftValue);
+  const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(draftValue || '').trim().length >= 2;
+
+  useEffect(() => {
+    if (!isOpen) setDraftValue(value || '');
+  }, [isOpen, value]);
+
+  const commitDraftValue = () => {
+    const nextValue = typeof maxLength === 'number' ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(nextValue);
+    if (nextValue !== (value || '')) onChange(nextValue);
+  };
 
   return (
     <label className="relative block">
       <FieldLabel label={label} />
       <input
         className={fieldClass}
-        value={value || ''}
+        value={draftValue}
         disabled={disabled}
         autoComplete="off"
         maxLength={maxLength}
-        onChange={(event) => {
-          onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value);
-          setIsOpen(true);
-        }}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength)}
+        onKeyDown={stopEditableKeyPropagation}
+        onChange={(event) => setDraftValue(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
         onFocus={() => setIsOpen(true)}
-        onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+        onBlur={() => {
+          commitDraftValue();
+          window.setTimeout(() => setIsOpen(false), 120);
+        }}
       />
       {showSuggestions ? (
         <div className="absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl">

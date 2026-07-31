@@ -70715,9 +70715,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         ] }),
         visibleLocationRows.map(({ location, index }) => {
           const rowKey = location.id || `platform-location-${index}`;
-          const codeSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.code, airfieldCatalogueLookup);
-          const iataSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.iataCode, airfieldCatalogueLookup);
-          const nameSuggestions = getAirfieldCatalogueSuggestionsForQuery(location.name, airfieldCatalogueLookup);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
@@ -70748,7 +70745,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     value: location.code,
                     disabled: !canEditSection("platform-locations"),
                     maxLength: 4,
-                    suggestions: codeSuggestions,
+                    getSuggestions: (query) => getAirfieldCatalogueSuggestionsForQuery(query, airfieldCatalogueLookup),
                     onChange: (value) => updateLocationIdentity(index, "code", value),
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
@@ -70760,7 +70757,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     value: location.iataCode || "",
                     disabled: !canEditSection("platform-locations"),
                     maxLength: 3,
-                    suggestions: iataSuggestions,
+                    getSuggestions: (query) => getAirfieldCatalogueSuggestionsForQuery(query, airfieldCatalogueLookup),
                     onChange: (value) => updateLocationIdentity(index, "iataCode", value),
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
@@ -70771,7 +70768,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     label: "Location Name",
                     value: location.name,
                     disabled: !canEditSection("platform-locations"),
-                    suggestions: nameSuggestions,
+                    getSuggestions: (query) => getAirfieldCatalogueSuggestionsForQuery(query, airfieldCatalogueLookup),
                     onChange: (value) => updateLocationIdentity(index, "name", value),
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
@@ -74741,29 +74738,42 @@ const AirfieldLookupField = ({
   label,
   value,
   disabled,
-  suggestions,
+  getSuggestions,
   onChange,
   onSelect,
   maxLength
 }) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
   const [isOpen, setIsOpen] = reactExports.useState(false);
-  const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(value || "").trim().length >= 2;
+  const suggestions = getSuggestions(draftValue);
+  const showSuggestions = isOpen && !disabled && suggestions.length > 0 && String(draftValue || "").trim().length >= 2;
+  reactExports.useEffect(() => {
+    if (!isOpen) setDraftValue(value || "");
+  }, [isOpen, value]);
+  const commitDraftValue = () => {
+    const nextValue = typeof maxLength === "number" ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(nextValue);
+    if (nextValue !== (value || "")) onChange(nextValue);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {
         className: fieldClass,
-        value: value || "",
+        value: draftValue,
         disabled,
         autoComplete: "off",
         maxLength,
-        onChange: (event) => {
-          onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value);
-          setIsOpen(true);
-        },
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength),
+        onKeyDown: stopEditableKeyPropagation,
+        onChange: (event) => setDraftValue(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value),
         onFocus: () => setIsOpen(true),
-        onBlur: () => window.setTimeout(() => setIsOpen(false), 120)
+        onBlur: () => {
+          commitDraftValue();
+          window.setTimeout(() => setIsOpen(false), 120);
+        }
       }
     ),
     showSuggestions ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl", children: suggestions.map((entry, entryIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
