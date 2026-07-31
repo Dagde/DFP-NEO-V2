@@ -10596,29 +10596,47 @@ const Field = ({ inputId, label, labelNoWrap = false, value, disabled, onChange,
   </label>
 );
 
-const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[]; maxLength?: number }) => (
-  <label>
-    <FieldLabel label={label} />
-    <div className="mt-[15px]">
-      <input
-        className={fieldClass}
-        value={value || ''}
-        disabled={disabled}
-        list={listId}
-        maxLength={maxLength}
-        onBeforeInput={(event) => handleEditableTextBeforeInput(event, onChange, maxLength)}
-        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, onChange, maxLength)}
-        onKeyDown={stopEditableKeyPropagation}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {listId && options.length > 0 ? (
-        <datalist id={listId}>
-          {options.map((option) => <option key={option} value={option} />)}
-        </datalist>
-      ) : null}
-    </div>
-  </label>
-);
+const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; listId?: string; options?: string[]; maxLength?: number }) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const commitDraftValue = () => {
+    const nextValue = typeof maxLength === 'number' ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    if (nextValue !== (value || '')) onChange(nextValue);
+  };
+
+  return (
+    <label>
+      <FieldLabel label={label} />
+      <div className="mt-[15px]">
+        <input
+          className={fieldClass}
+          value={draftValue}
+          disabled={disabled}
+          list={listId}
+          maxLength={maxLength}
+          onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength)}
+          onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength)}
+          onKeyDown={stopEditableKeyPropagation}
+          onFocus={() => setIsEditing(true)}
+          onBlur={commitDraftValue}
+          onChange={(event) => setDraftValue(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
+        />
+        {listId && options.length > 0 ? (
+          <datalist id={listId}>
+            {options.map((option) => <option key={option} value={option} />)}
+          </datalist>
+        ) : null}
+      </div>
+    </label>
+  );
+};
 
 const parseCommaListFieldValue = (value: string): string[] => (
   value.split(',').map((item) => item.trim()).filter(Boolean)

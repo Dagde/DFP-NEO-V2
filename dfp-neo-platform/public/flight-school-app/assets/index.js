@@ -74679,26 +74679,41 @@ const Field = ({ inputId, label, labelNoWrap = false, value, disabled, onChange,
     maxLength
   ] }) : null
 ] });
-const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-[15px]", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        className: fieldClass,
-        value: value || "",
-        disabled,
-        list: listId,
-        maxLength,
-        onBeforeInput: (event) => handleEditableTextBeforeInput(event, onChange, maxLength),
-        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, onChange, maxLength),
-        onKeyDown: stopEditableKeyPropagation,
-        onChange: (event) => onChange(event.target.value)
-      }
-    ),
-    listId && options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: listId, children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) }) : null
-  ] })
-] });
+const OffsetField = ({ label, value, disabled, onChange, listId, options = [], maxLength }) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    const nextValue = typeof maxLength === "number" ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    if (nextValue !== (value || "")) onChange(nextValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-[15px]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "input",
+        {
+          className: fieldClass,
+          value: draftValue,
+          disabled,
+          list: listId,
+          maxLength,
+          onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue, maxLength),
+          onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue, maxLength),
+          onKeyDown: stopEditableKeyPropagation,
+          onFocus: () => setIsEditing(true),
+          onBlur: commitDraftValue,
+          onChange: (event) => setDraftValue(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
+        }
+      ),
+      listId && options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: listId, children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option }, option)) }) : null
+    ] })
+  ] });
+};
 const parseCommaListFieldValue = (value) => value.split(",").map((item) => item.trim()).filter(Boolean);
 const formatCommaListFieldValue = (value) => value.map((item) => String(item || "").trim()).filter(Boolean).join(", ");
 const CommaListField = ({
