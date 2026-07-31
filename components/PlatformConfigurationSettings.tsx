@@ -8458,9 +8458,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <NumberField label="Offline Grace Days" value={Number(deploymentProfile.offlineGraceDays ?? 30)} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ offlineGraceDays: value })} />
               <NumberField label="Licence Check Interval Hours" value={Number(deploymentProfile.checkIntervalHours ?? 24)} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ checkIntervalHours: value })} />
               <SelectField label="Authentication Model" value={deploymentProfile.authModel} disabled={!canEditSection('platform-deployment-readiness')} options={AUTH_MODEL_OPTIONS} onChange={(value) => updateDeploymentProfile({ authModel: value })} />
-              <Field label="Data Residence" value={deploymentProfile.dataResidence || ''} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} />
-              <Field label="Network Posture" value={deploymentProfile.networkPosture || ''} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ networkPosture: value })} />
-              <TextAreaField label="Deployment Notes" value={deploymentProfile.notes || ''} disabled={!canEditSection('platform-deployment-readiness')} onChange={(value) => updateDeploymentProfile({ notes: value })} />
+              <DraftField label="Data Residence" value={deploymentProfile.dataResidence || ''} disabled={!canEditSection('platform-deployment-readiness')} onCommit={(value) => updateDeploymentProfile({ dataResidence: value })} />
+              <DraftField label="Network Posture" value={deploymentProfile.networkPosture || ''} disabled={!canEditSection('platform-deployment-readiness')} onCommit={(value) => updateDeploymentProfile({ networkPosture: value })} />
+              <DraftTextAreaField label="Deployment Notes" value={deploymentProfile.notes || ''} disabled={!canEditSection('platform-deployment-readiness')} onCommit={(value) => updateDeploymentProfile({ notes: value })} />
             </div>
           </div>
 
@@ -8544,12 +8544,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </span>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
-              <Field label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
+              <DraftField label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ environmentName: value })} />
+              <DraftField label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
               <SelectField label="Release Channel" value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEditSection('platform-operational-runbook')} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
-              <Field label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
-              <Field label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
-              <Field label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
+              <DraftField label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ supportOwner: value })} />
+              <DraftField label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ supportContact: value })} />
+              <DraftField label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
             </div>
           </div>
 
@@ -8566,7 +8566,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="grid gap-3 lg:grid-cols-3">
               <SelectField label="Backup Frequency" value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEditSection('platform-operational-runbook')} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
               <NumberField label="Backup Retention Days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
-              <Field label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
+              <DraftField label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
               <DateField label="Last Backup Date" value={operationalRunbook.lastBackupDate || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
               <DateField label="Last Restore Test Date" value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
               <div className="grid grid-cols-2 gap-3">
@@ -8587,13 +8587,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
-              <Field label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
+              <DraftField label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
+              <DraftField label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
               <DateField label="Last Update Date" value={operationalRunbook.lastUpdateDate || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
-              <Field label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
+              <DraftField label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
               <NumberField label="Audit Retention Years" value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
               <SelectField label="Accreditation Status" value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEditSection('platform-operational-runbook')} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
-              <TextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEditSection('platform-operational-runbook')} onChange={(value) => updateOperationalRunbook({ notes: value })} />
+              <DraftTextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEditSection('platform-operational-runbook')} onCommit={(value) => updateOperationalRunbook({ notes: value })} />
             </div>
           </div>
 
