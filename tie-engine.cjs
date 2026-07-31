@@ -1,6 +1,6 @@
 // ============================================================
 // TRAINING INTELLIGENCE ENGINE (TIE) - Offline Analytics Subsystem
-// All analysis uses real PT-051 data from DB; all results stored back in DB
+// All analysis uses real training report data from DB; all results stored back in DB
 // ============================================================
 
 // ============================================================
@@ -294,7 +294,7 @@ async function seedTIEDefaults(db) {
   // Default settings
   const defaults = [
     { key: 'concern_threshold_grade', value: 3, description: 'Grade at or below which an element is flagged as concern (scale 1-5)' },
-    { key: 'min_observations_for_pattern', value: 3, description: 'Minimum PT-051 records before flagging a pattern' },
+    { key: 'min_observations_for_pattern', value: 3, description: 'Minimum training report records before flagging a pattern' },
     { key: 'recency_weight_factor', value: 1.5, description: 'Multiplier applied to most recent 30% of events' },
     { key: 'comment_weight_vs_score', value: 0.4, description: 'Weight of comment tags vs numeric scores (0-1)' },
     { key: 'bottleneck_threshold_pct', value: 40, description: 'Pct of trainees scoring at/below concern threshold to flag bottleneck' },
@@ -312,7 +312,7 @@ async function seedTIEDefaults(db) {
     { key: 'at_risk_recent_drop_threshold', value: 0.4, description: 'Recent average drop from overall average required for at-risk' },
     { key: 'at_risk_low_recent_grade', value: 3.2, description: 'Recent average below which trainee is at-risk' },
     { key: 'at_risk_recurring_weak_element_count', value: 3, description: 'Recurring weak element count required for at-risk' },
-    { key: 'at_risk_min_assessments', value: 3, description: 'Minimum PT-051 records before at-risk criteria apply' },
+    { key: 'at_risk_min_assessments', value: 3, description: 'Minimum training report records before at-risk criteria apply' },
   ];
 
   for (const d of defaults) {
@@ -667,12 +667,12 @@ function generateTraineeNarrative(data) {
   const parts = [];
 
   if (totalPt051Count < 3) {
-    return `${name} has ${totalPt051Count} PT-051 record(s) on file. Insufficient data for comprehensive analysis.`;
+    return `${name} has ${totalPt051Count} training report record(s) on file. Insufficient data for comprehensive analysis.`;
   }
 
   // Overall performance
   const gradeDesc = avgGrade >= 4.0 ? 'above average' : avgGrade >= 3.5 ? 'average' : 'below average';
-  parts.push(`${name}'s overall performance across ${totalPt051Count} PT-051 assessments is ${gradeDesc} with a mean grade of ${avgGrade.toFixed(2)}.`);
+  parts.push(`${name}'s overall performance across ${totalPt051Count} training report assessments is ${gradeDesc} with a mean grade of ${avgGrade.toFixed(2)}.`);
 
   // Trend
   if (trend === 'improving') parts.push(`Performance is showing an improving trend over the assessment period.`);
@@ -746,7 +746,7 @@ function generateCourseNarrative(data) {
   const { courseName, totalTrainees, totalPt051s, bottleneckEvents, atRiskTrainees, bottleneckSkills } = data;
   const parts = [];
 
-  parts.push(`${courseName} has ${totalTrainees} trainees with ${totalPt051s} PT-051 assessments on record.`);
+  parts.push(`${courseName} has ${totalTrainees} trainees with ${totalPt051s} training report assessments on record.`);
 
   if (bottleneckEvents && bottleneckEvents.length > 0) {
     parts.push(`Bottleneck events identified: ${bottleneckEvents.slice(0, 3).join(', ')}. These events show concentrated low performance.`);
@@ -883,19 +883,19 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     // ── Load skill mappings ────────────────────────────────────
     const skillMappings = await safeQuery(db, `SELECT * FROM "TIESkillMapping" WHERE "isActive" = TRUE`);
 
-    // ── Load PT-051 data from DataBackup ──────────────────────
+    // ── Load training report data from DataBackup ─────────────
     const pt051Backup = await db.dataBackup.findFirst({
       where: { type: 'historical_pt051_assessments' },
       orderBy: { createdAt: 'desc' }
     });
     if (!pt051Backup || !pt051Backup.data) {
       await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1::text WHERE id=$2::text`,
-        'No PT-051 data found in database', runId);
-      return { success: false, error: 'No PT-051 data found', runId };
+        'No training report data found in database', runId);
+      return { success: false, error: 'No training report data found', runId };
     }
 
     const allPt051Raw = typeof pt051Backup.data === 'string' ? JSON.parse(pt051Backup.data) : pt051Backup.data;
-    // PT-051 data stored as dict keyed by record ID - extract values
+    // Training report data is stored as a dictionary keyed by record ID.
     let pt051Records = Array.isArray(allPt051Raw) ? allPt051Raw : Object.values(allPt051Raw);
 
     // Filter by course if specified
@@ -918,7 +918,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
     if (pt051Records.length === 0) {
       await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1::text WHERE id=$2::text`,
-        'No PT-051 records found for selected course', runId);
+        'No training report records found for selected course', runId);
       return { success: false, error: 'No records for course', runId };
     }
 
@@ -942,7 +942,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     }
 
   console.log("🔵 TIE CHECKPOINT 1: Starting Layer 1+2 ingest");
-    // ── LAYER 1+2: Ingest and normalise PT-051 data ───────────
+    // ── LAYER 1+2: Ingest and normalise training report data ──
     const allDates = pt051Records.map(r => r.date).filter(Boolean).sort();
     const normInputs = [];
     const allCommentTags = [];
@@ -1205,7 +1205,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           VALUES($1::text,$2::text,'trainee',$3::text,'recurring_weakness',$4::text,$5::text,$6::text,$7::text,$8::numeric,$9::int,$10::jsonb,$11::text,$12::text)
           ON CONFLICT DO NOTHING
         `, fid, runId, traineeFullName,
-           `${weakElements.slice(0,3).join(', ')} average at or below ${CONCERN_THRESHOLD} across ${grades.length} PT-051s.`,
+           `${weakElements.slice(0,3).join(', ')} average at or below ${CONCERN_THRESHOLD} across ${grades.length} training reports.`,
            `Recurring weakness in ${weakSkillFamilies.slice(0,2).join(' and ')} — appears consistently across multiple events.`,
            `Focus remedial coaching on ${weakElements[0]}. Consider targeted exercises before next progression event.`,
            conf.level, Number(conf.score), grades.length,

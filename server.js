@@ -8145,6 +8145,13 @@ app.delete('/api/admin/purge-inactive', async (req, res) => {
 
 app.get('/api/admin/seed-syllabus', async (req, res) => {
   if (!validateSeedEndpointSecret(req, res)) return;
+  if (process.env.DFP_SEED_DEMO_SYLLABUS_DATA !== 'true') {
+    return res.status(400).json({
+      success: false,
+      error: 'Demo syllabus seed disabled',
+      message: 'The built-in demo syllabus seed is disabled for commercial deployments. Set DFP_SEED_DEMO_SYLLABUS_DATA=true only for deliberate demo or test environments, or load syllabus data through the configured import tools.',
+    });
+  }
   const { force } = req.query;
 
   try {
