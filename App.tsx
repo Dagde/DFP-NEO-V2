@@ -3989,12 +3989,12 @@ const DfpSidePanelTimeline: React.FC<{
                         onClick={() => setShowAssistTaskForm(value => !value)}
                         className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
                     >
-                        {showAssistTaskForm ? 'Hide Mission Details' : '+ Add Mission'}
+                        {showAssistTaskForm ? 'Hide Task Details' : '+ Add Task'}
                     </button>
                     {showAssistTaskForm && (
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Mission Profile
+                                Task Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
                                     <option value="">Select task profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
@@ -22624,7 +22624,7 @@ const App: React.FC = () => {
                 compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
                 compositeProfileId: String(row?.compositeProfileId || '').trim(),
                 aircraftTypeCode: String(row?.aircraftTypeCode || '').trim().toUpperCase(),
-                missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
+                missionName: String(row?.missionName || row?.name || `Flight Profile ${index + 1}`).trim(),
                 shortTitle: String(row?.shortTitle || '').trim().slice(0, 8),
                 description: String(row?.description || '').trim(),
                 resourceType: (['Flight', 'FTD', 'CPT', 'Ground'].includes(String(row?.resourceType || row?.type || 'Flight')) ? String(row?.resourceType || row?.type || 'Flight') : 'Flight') as StandardMissionProfile['resourceType'],
@@ -28708,6 +28708,19 @@ const App: React.FC = () => {
         }
     };
 
+    const logRoutineAppDebug = (...args: any[]) => {
+        try {
+            if (typeof window !== 'undefined' && (
+                window.localStorage?.getItem('dfp_app_verbose_diag') === 'true' ||
+                window.localStorage?.getItem('neo_build_verbose_diag') === 'true'
+            )) {
+                console.log(...args);
+            }
+        } catch {
+            // Routine debug logging must never affect app rendering.
+        }
+    };
+
     const nextDayEventSegments = useMemo(() => {
         logNeoBuildUiDebug('🚀 [NEO-Build] nextDayEventSegments useMemo recalculating');
         logNeoBuildUiDebug('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
@@ -29485,8 +29498,9 @@ const App: React.FC = () => {
         outcome: 'conflict' | 'clear' | 'twr-di-missing' | 'twr-di-exempt',
         details: Record<string, any> = {}
     ) => {
+        if (!isNeoBuildVerboseDiagnosticsEnabled()) return;
         if (!isStbyFlightLineEvent(event) && outcome === 'clear') return;
-        console.log('[ValidationTrace]', {
+        logRoutineAppDebug('[ValidationTrace]', {
             context,
             outcome,
             key: getValidationEventKey(event),
@@ -29550,7 +29564,7 @@ const App: React.FC = () => {
         if (continuationFormationEvents.length > 0) {
             // console.log('🔴 ✈️ Continuation formation events found:', continuationFormationEvents.length);
             continuationFormationEvents.forEach(e => {
-                console.log(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || 'EMPTY'}", Pilot: ${e.pilot}`);
+                logRoutineAppDebug(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || 'EMPTY'}", Pilot: ${e.pilot}`);
             });
         }
 
@@ -29729,7 +29743,7 @@ const App: React.FC = () => {
         const newConflicts = calculateUnavailabilityConflictsForEvents(eventsToCheck);
 
         // ── DATA TRACKING: log what's causing red tiles ──────────────────────────────────
-        if (newConflicts.size > 0) {
+        if (isNeoBuildVerboseDiagnosticsEnabled() && newConflicts.size > 0) {
             const allPersonnel: (Instructor | Trainee)[] = [...allInstructorsData, ...allTraineesData];
             const personMap = new Map<string, Instructor | Trainee>();
             allPersonnel.forEach(p => {
@@ -29746,19 +29760,19 @@ const App: React.FC = () => {
                     if (person?.unavailability) {
                         const deployTags = person.unavailability.filter((p: any) => p?.notes?.startsWith('__deploy__'));
                         const otherPeriods = person.unavailability.filter((p: any) => !p?.notes?.startsWith('__deploy__'));
-                        console.log(
+                        logRoutineAppDebug(
                             '  RED: [' + evtDesc + '] person=' + name +
                             (deployTags.length > 0 ? ' DEPLOY_TAGS=' + JSON.stringify(deployTags.map((p: any) => p.notes)) : '') +
                             (otherPeriods.length > 0 ? ' other_periods=' + otherPeriods.length : '')
                         );
                     } else {
-                        console.log('  RED: [' + evtDesc + '] person=' + name + ' (no unavailability data found)');
+                        logRoutineAppDebug('  RED: [' + evtDesc + '] person=' + name + ' (no unavailability data found)');
                     }
                 });
             });
             console.groupEnd();
-        } else {
-            console.log('[UnavailConflicts] No conflicts on', eventsForDate?.[0]?.date || 'unknown date');
+        } else if (isNeoBuildVerboseDiagnosticsEnabled()) {
+            logRoutineAppDebug('[UnavailConflicts] No conflicts on', eventsForDate?.[0]?.date || 'unknown date');
         }
         // ─────────────────────────────────────────────────────────────────────────────────
 
@@ -30141,7 +30155,7 @@ const App: React.FC = () => {
                     updated.delete(trainee.fullName);
                     return updated;
                 });
-                console.log(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || 'unit'} is not authorised to assign it`);
+                logRoutineAppDebug(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || 'unit'} is not authorised to assign it`);
                 return null;
             }
 
@@ -30155,7 +30169,7 @@ const App: React.FC = () => {
                 updated.set(trainee.fullName, scopedPersistedLmp);
                 return updated;
             });
-            console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${scopedPersistedLmp.length} events)`);
+            logRoutineAppDebug(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${scopedPersistedLmp.length} events)`);
             return scopedPersistedLmp;
         } catch (error) {
             pushDfpDataDiag('report-lmp:load:error', {
@@ -30274,7 +30288,7 @@ const App: React.FC = () => {
                     updated.set(`pt051-${assessment!.eventId}-${assessment!.traineeFullName}`, assessment!);
                     return updated;
                 });
-                console.log(`[Training Report] Loaded authoritative report for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
+                logRoutineAppDebug(`[Training Report] Loaded authoritative report for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
             }
 
             return assessment;
@@ -30667,11 +30681,11 @@ const App: React.FC = () => {
             (item.lmpType === 'Staff CAT' || item.lmpType === 'Master LMP' || !item.lmpType)
         ));
         if (!matchingItem) {
-            console.log(`[PostFlight] Training report skipped: ${eventCode} is not a course/training package syllabus event`);
+            logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode} is not a course/training package syllabus event`);
             return;
         }
         if (matchingItem.assessmentRequired !== true) {
-            console.log(`[PostFlight] Training report skipped: ${eventCode} does not have Assessment required selected`);
+            logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode} does not have Assessment required selected`);
             return;
         }
 
@@ -30777,7 +30791,7 @@ const App: React.FC = () => {
             existingReport ? 'Edit' : 'Create',
             `${existingReport ? 'Updated' : 'Generated'} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
         );
-        console.log(`[PostFlight] ✅ Draft training report ${existingReport ? 'updated' : 'generated'} for ${staff.name} — ${eventCode} (${dcoResult})`);
+        logRoutineAppDebug(`[PostFlight] ✅ Draft training report ${existingReport ? 'updated' : 'generated'} for ${staff.name} — ${eventCode} (${dcoResult})`);
     };
 
     const handleReassignTrainingReportNotification = async (
@@ -31013,7 +31027,7 @@ const App: React.FC = () => {
             setTraineeLMPs(prev => {
                 const newLMPs = new Map(prev);
                 newLMPs.set(savedTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(savedTrainee.fullName), masterLMP));
-                console.log(`[Individual LMP] Initialized ${savedTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
+                logRoutineAppDebug(`[Individual LMP] Initialized ${savedTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
                 return newLMPs;
             });
         }
@@ -31023,8 +31037,8 @@ const App: React.FC = () => {
 
     // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
     const handleUpdateTrainee = useCallback(async (data: Trainee) => {
-        console.log('📝 [APP] handleUpdateTrainee called');
-        console.log('📝 [APP] Trainee data received:', {
+        logRoutineAppDebug('📝 [APP] handleUpdateTrainee called');
+        logRoutineAppDebug('📝 [APP] Trainee data received:', {
             id: (data as any).id,
             idNumber: data.idNumber,
             name: data.name,
@@ -31051,8 +31065,8 @@ const App: React.FC = () => {
 
         // If this is a DB trainee, persist changes to the database
         const dbId = (data as any).id;
-        console.log('📝 [APP] DB ID:', dbId);
-        console.log('📝 [APP] Is DB trainee?', dbId && (data as any)._dataSource === 'database');
+        logRoutineAppDebug('📝 [APP] DB ID:', dbId);
+        logRoutineAppDebug('📝 [APP] Is DB trainee?', dbId && (data as any)._dataSource === 'database');
 
         if (dbId && (data as any)._dataSource === 'database') {
             try {
@@ -31080,8 +31094,8 @@ const App: React.FC = () => {
                     unavailability: data.unavailability || [],
                 };
 
-                console.log('📝 [APP] PATCH body to send:', patchBody);
-                console.log('📝 [APP] PATCH unavailability field:', patchBody.unavailability);
+                logRoutineAppDebug('📝 [APP] PATCH body to send:', patchBody);
+                logRoutineAppDebug('📝 [APP] PATCH unavailability field:', patchBody.unavailability);
 
                 const response = await fetch(`/api/trainees/${dbId}`, {
                     method: 'PATCH',
@@ -31112,13 +31126,13 @@ const App: React.FC = () => {
                     })
                 });
 
-                console.log('📝 [APP] PATCH response status:', response.status);
-                console.log('📝 [APP] PATCH response ok:', response.ok);
+                logRoutineAppDebug('📝 [APP] PATCH response status:', response.status);
+                logRoutineAppDebug('📝 [APP] PATCH response ok:', response.ok);
 
                 if (response.ok) {
-                    console.log(`✅ DB trainee updated: ${data.name}`);
+                    logRoutineAppDebug(`✅ DB trainee updated: ${data.name}`);
                     const responseData = await response.json();
-                    console.log('📝 [APP] Response data:', responseData);
+                    logRoutineAppDebug('📝 [APP] Response data:', responseData);
                 } else {
                     const err = await response.text();
                     console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
@@ -31128,7 +31142,7 @@ const App: React.FC = () => {
                 console.error(`❌ Error updating DB trainee ${data.name}:`, err);
             }
         } else {
-            console.log('⚠️ [APP] Skipping DB update - not a DB trainee or no ID');
+            logRoutineAppDebug('⚠️ [APP] Skipping DB update - not a DB trainee or no ID');
         }
     }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
 
@@ -31233,7 +31247,7 @@ const App: React.FC = () => {
             if (prereqIndex !== -1) {
                 const oldPrereq = subsequentEvent.prerequisites[prereqIndex];
                 subsequentEvent.prerequisites[prereqIndex] = reFlyEvent.id;
-                console.log(`✅ Updated prerequisite for ${subsequentEvent.code}: ${oldPrereq} → ${reFlyEvent.id}`);
+                logRoutineAppDebug(`✅ Updated prerequisite for ${subsequentEvent.code}: ${oldPrereq} → ${reFlyEvent.id}`);
             }
         });
 
@@ -31992,7 +32006,7 @@ const App: React.FC = () => {
             });
 
             if (result.success) {
-                console.log(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
+                logRoutineAppDebug(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
                 setSuccessMessage(`Course ${courseName} updated successfully!`);
             } else {
                 console.error('[EditCourse] Failed to update course in DB:', result.error);
@@ -32887,7 +32901,7 @@ const App: React.FC = () => {
                 const conflictingEvents = existingEvents.filter(e =>
                     e.resourceId === resourceId && isOverlapping(e, eventToPlace)
                 );
-                console.log(`Checking ${resourceId}:`, conflictingEvents.length > 0 ? 'OCCUPIED' : 'AVAILABLE', conflictingEvents);
+                logRoutineAppDebug(`Checking ${resourceId}:`, conflictingEvents.length > 0 ? 'OCCUPIED' : 'AVAILABLE', conflictingEvents);
 
                 if (conflictingEvents.length === 0) {
                     return resourceId;
@@ -33891,9 +33905,9 @@ const App: React.FC = () => {
 
         // NEW APPROACH: Trigger training report sync after deletion (only for Active DFP)
         if (!isNextDay) {
-            console.log('📋 Triggering training report sync after event deletion...');
+            logRoutineAppDebug('📋 Triggering training report sync after event deletion...');
             setTimeout(() => {
-                console.log('⏰ Executing delayed training report sync after deletion...');
+                logRoutineAppDebug('⏰ Executing delayed training report sync after deletion...');
                 setPublishedSchedules(currentSchedules => {
                     setPt051Assessments(currentAssessments => {
                         syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -34003,14 +34017,14 @@ const App: React.FC = () => {
         }
         const snapshotDate = getDailySnapshotKey(date);
 
-        console.log('🔔 [Alert] ========== SEND ALERT START ==========');
-        console.log('🔔 [Alert] eventId:', eventId);
-        console.log('🔔 [Alert] date:', date);
-        console.log('🔔 [Alert] snapshotDate:', snapshotDate);
-        console.log('🔔 [Alert] sentBy:', userId);
-        console.log('🔔 [Alert] recipients:', recipients);
-        console.log('🔔 [Alert] URL:', `${apiBase}/alerts/send`);
-        console.log('🔔 [Alert] eventForAlert:', eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : 'NOT FOUND');
+        logRoutineAppDebug('🔔 [Alert] ========== SEND ALERT START ==========');
+        logRoutineAppDebug('🔔 [Alert] eventId:', eventId);
+        logRoutineAppDebug('🔔 [Alert] date:', date);
+        logRoutineAppDebug('🔔 [Alert] snapshotDate:', snapshotDate);
+        logRoutineAppDebug('🔔 [Alert] sentBy:', userId);
+        logRoutineAppDebug('🔔 [Alert] recipients:', recipients);
+        logRoutineAppDebug('🔔 [Alert] URL:', `${apiBase}/alerts/send`);
+        logRoutineAppDebug('🔔 [Alert] eventForAlert:', eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : 'NOT FOUND');
 
         if (!recipients || recipients.length === 0) {
             console.warn('🔔 [Alert] No recipients - alert not sent');
@@ -34039,7 +34053,7 @@ const App: React.FC = () => {
                 } : {},
             };
 
-            console.log('🔔 [Alert] Payload:', JSON.stringify(payload, null, 2));
+            logRoutineAppDebug('🔔 [Alert] Payload:', JSON.stringify(payload, null, 2));
 
             const res = await fetch(`${apiBase}/alerts/send`, {
                 method: 'POST',
@@ -34048,8 +34062,8 @@ const App: React.FC = () => {
             });
 
             const responseText = await res.text();
-            console.log('🔔 [Alert] Response status:', res.status);
-            console.log('🔔 [Alert] Response body:', responseText);
+            logRoutineAppDebug('🔔 [Alert] Response status:', res.status);
+            logRoutineAppDebug('🔔 [Alert] Response body:', responseText);
 
             if (res.ok) {
                 const data = JSON.parse(responseText);
@@ -34060,7 +34074,7 @@ const App: React.FC = () => {
                         [eventId]: data.alertEntry || data,
                     },
                 }));
-                console.log('🔔 [Alert] Alert sent successfully! alertId:', data.alertId);
+                logRoutineAppDebug('🔔 [Alert] Alert sent successfully! alertId:', data.alertId);
                 return true;
             } else {
                 console.warn('🔔 [Alert] Failed to send alert. Status:', res.status, 'Body:', responseText);
@@ -34071,7 +34085,7 @@ const App: React.FC = () => {
             return false;
         }
         finally {
-            console.log('🔔 [Alert] ========== SEND ALERT END ==========');
+            logRoutineAppDebug('🔔 [Alert] ========== SEND ALERT END ==========');
         }
     };
 
@@ -34095,7 +34109,7 @@ const App: React.FC = () => {
                     delete dateData[eventId];
                     return { ...prev, [date]: dateData };
                 });
-                console.log('🔔 [Alert] Alert cleared for event:', eventId);
+                logRoutineAppDebug('🔔 [Alert] Alert cleared for event:', eventId);
             } else {
                 console.warn('🔔 [Alert] Failed to clear alert:', res.status);
             }
@@ -34106,7 +34120,7 @@ const App: React.FC = () => {
 
     // Visual Adjust handlers
     const handleVisualAdjustStart = async (event: ScheduleEvent) => {
-        console.log('Visual Adjust Start - Event:', event);
+        logRoutineAppDebug('Visual Adjust Start - Event:', event);
         if (isPastDfpDate(event.date || date)) {
             denyPastDfpEdit('visually adjust tiles');
             return;
@@ -34122,7 +34136,7 @@ const App: React.FC = () => {
         }
         setIsVisualAdjustMode(true);
         setVisualAdjustEvent(event);
-        console.log('Visual Adjust Mode set to true');
+        logRoutineAppDebug('Visual Adjust Mode set to true');
     };
 
     const handleVisualAdjustEnd = (event: ScheduleEvent) => {
@@ -34156,7 +34170,7 @@ const App: React.FC = () => {
     // Auto-adds high-priority continuation/currency and force-scheduled remedial events to the highest priority list.
     const syncPriorityEventsWithSctAndRemedial = () => {
         const continuationShortLabel = getSctTerminology(platformConfig, activeUnitCode).shortLabel;
-        console.log(`\ud83d\udccb Starting sync of priority events with ${continuationShortLabel} and remedial requests...`);
+        logRoutineAppDebug(`\ud83d\udccb Starting sync of priority events with ${continuationShortLabel} and remedial requests...`);
 
         let added = 0;
         const newPriorityEvents = [...highestPriorityEvents];
@@ -34226,14 +34240,14 @@ const App: React.FC = () => {
         const hasSctParticipant = (sctReq: SctRequest): boolean => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
 
         // 1. Auto-add high-priority continuation/currency requests and medium/low requests with includeInBuild=true.
-        console.log(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
+        logRoutineAppDebug(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req =>
             (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req =>
             (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
-        console.log(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
+        logRoutineAppDebug(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
         const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel)
             ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS
             : null;
@@ -34287,7 +34301,7 @@ const App: React.FC = () => {
                     dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
-                console.log(`🔄 Updated HIGH priority ${continuationShortLabel} flight:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                logRoutineAppDebug(`🔄 Updated HIGH priority ${continuationShortLabel} flight:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else {
                 if (existingInNextDay) {
                     setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-flight-${sctReq.id}`));
@@ -34338,8 +34352,8 @@ const App: React.FC = () => {
 
                 newPriorityEvents.push(newEvent);
                 added++;
-                console.log(`\u2705 Added HIGH priority ${continuationShortLabel} flight:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
-                console.log('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
+                logRoutineAppDebug(`\u2705 Added HIGH priority ${continuationShortLabel} flight:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                logRoutineAppDebug('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
             }
         });
 
@@ -34392,7 +34406,7 @@ const App: React.FC = () => {
                     dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
-                console.log(`🔄 Updated HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                logRoutineAppDebug(`🔄 Updated HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else {
                 if (existingInNextDay) {
                     setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-ftd-${sctReq.id}`));
@@ -34440,8 +34454,8 @@ const App: React.FC = () => {
                     dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
-                console.log(`\u2705 Added HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
-                console.log('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
+                logRoutineAppDebug(`\u2705 Added HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                logRoutineAppDebug('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
 
                 newPriorityEvents.push(newEvent);
                 added++;
@@ -34464,12 +34478,12 @@ const App: React.FC = () => {
             remedialHighestPriorityBeforeSync: highestPriorityEvents.filter(e => e.isRemedial || e.id?.startsWith('remedial-')).length,
             nextDayBuildEventsBeforeSync: nextDayBuildEvents.length,
         });
-        console.log(`🔍 Checking ${remedialRequestsForSync.length} remedial requests for Force Schedule...`);
+        logRoutineAppDebug(`🔍 Checking ${remedialRequestsForSync.length} remedial requests for Force Schedule...`);
         if (remedialRequests.length === 0 && storedRemedialRequests.length > 0) {
-            console.log(`📦 Using ${storedRemedialRequests.length} persisted Force Schedule remedial request(s) for pre-build sync`);
+            logRoutineAppDebug(`📦 Using ${storedRemedialRequests.length} persisted Force Schedule remedial request(s) for pre-build sync`);
         }
         const forceScheduledRemedials = remedialRequestsForSync.filter(r => r.forceSchedule);
-        console.log(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
+        logRoutineAppDebug(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
 
         remedialRequestsForSync.forEach(remedialReq => {
             if (!remedialReq.forceSchedule) {
@@ -34491,7 +34505,7 @@ const App: React.FC = () => {
                 return;
             }
             if (remedialReq.forceSchedule) {
-                console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
+                logRoutineAppDebug(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
 
                 const remedialPriorityEventId = `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`;
                 const existingEventIndex = newPriorityEvents.findIndex(e =>
@@ -34513,7 +34527,7 @@ const App: React.FC = () => {
                         syllabusItem = individualLMP.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
                         if (syllabusItem) {
                             syllabusSource = 'individual-lmp';
-                            console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
+                            logRoutineAppDebug(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
                         }
                     }
                 }
@@ -34522,7 +34536,7 @@ const App: React.FC = () => {
                     syllabusItem = syllabusDetails.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
                     if (syllabusItem) {
                         syllabusSource = 'master-syllabus';
-                        console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+                        logRoutineAppDebug(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
                     }
                 }
 
@@ -34626,7 +34640,7 @@ const App: React.FC = () => {
                             outcome: 'refreshed-existing-highest-priority-event',
                             nextHandoff: 'runBuildAlgorithm.highestPriorityEvents',
                         });
-                        console.log(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
+                        logRoutineAppDebug(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
                     } else {
                         traceRemedialSyncMovement({
                             phase: 'highest-priority-remedial-refresh-skipped',
@@ -34636,7 +34650,7 @@ const App: React.FC = () => {
                             outcome: 'skipped',
                             reason: !trainee ? 'TRAINEE_NOT_FOUND' : 'SYLLABUS_ITEM_NOT_FOUND',
                         });
-                        console.log(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
+                        logRoutineAppDebug(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
                     }
                 } else if (!existingEvent) {
                     if (!syllabusItem) {
@@ -34648,7 +34662,7 @@ const App: React.FC = () => {
 
                     if (trainee && syllabusItem) {
                         // CRITICAL FIX: Get allocated instructor from remedial package
-                        console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || 'None'}`);
+                        logRoutineAppDebug(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || 'None'}`);
 
                         const newEvent: ScheduleEvent = {
                             id: remedialPriorityEventId,
@@ -34702,7 +34716,7 @@ const App: React.FC = () => {
                             nextHandoff: 'runBuildAlgorithm.highestPriorityEvents',
                         });
                         added++;
-                        console.log('\u2705 Added Force Schedule remedial:', syllabusItem.code, 'for', trainee.fullName);
+                        logRoutineAppDebug('\u2705 Added Force Schedule remedial:', syllabusItem.code, 'for', trainee.fullName);
                     } else {
                         traceRemedialSyncMovement({
                             phase: 'highest-priority-remedial-create-skipped',
@@ -34723,12 +34737,12 @@ const App: React.FC = () => {
         if (hasChanges) {
             setHighestPriorityEvents(newPriorityEvents);
             if (added > 0) {
-                console.log(`\\ud83d\\udcca Priority Events Sync Complete: Added ${added} auto-generated events`);
+                logRoutineAppDebug(`\\ud83d\\udcca Priority Events Sync Complete: Added ${added} auto-generated events`);
             } else {
-                console.log('\\ud83d\\udd04 Priority Events Sync Complete: Updated existing events');
+                logRoutineAppDebug('\\ud83d\\udd04 Priority Events Sync Complete: Updated existing events');
             }
         } else {
-            console.log('\\u2705 No changes to priority events');
+            logRoutineAppDebug('\\u2705 No changes to priority events');
         }
         traceRemedialSyncMovement({
             phase: 'pre-build-sync-complete',
@@ -34773,8 +34787,8 @@ const App: React.FC = () => {
         const schedules = currentPublishedSchedules || publishedSchedules;
         const assessments = currentPt051Assessments || pt051Assessments;
 
-        console.log('🔄 Starting training report sync with Active DFP...');
-        console.log('Published schedules keys:', Object.keys(schedules));
+        logRoutineAppDebug('🔄 Starting training report sync with Active DFP...');
+        logRoutineAppDebug('Published schedules keys:', Object.keys(schedules));
 
         // Get all events from Active DFP (published schedules only)
         const activeDfpEvents: ScheduleEvent[] = [];
@@ -34782,9 +34796,9 @@ const App: React.FC = () => {
             activeDfpEvents.push(...scheduleEvents);
         });
 
-        console.log('Total events on Active DFP:', activeDfpEvents.length);
-        console.log('Current training report count:', assessments.size);
-        console.log('Sample events:', activeDfpEvents.slice(0, 3).map(e => ({
+        logRoutineAppDebug('Total events on Active DFP:', activeDfpEvents.length);
+        logRoutineAppDebug('Current training report count:', assessments.size);
+        logRoutineAppDebug('Sample events:', activeDfpEvents.slice(0, 3).map(e => ({
             id: e.id,
             flightNumber: e.flightNumber,
             date: e.date,
@@ -34818,7 +34832,7 @@ const App: React.FC = () => {
                                     event?.type === 'cpt';
 
             if (isDutySup || isStbyFlightNumber || isStbyResource || isDeployment || !isValidEventType) {
-                console.log('⏭️ Skipping event:', {
+                logRoutineAppDebug('⏭️ Skipping event:', {
                     flightNumber: event?.flightNumber,
                     type: event?.type,
                     resourceId: event?.resourceId,
@@ -34840,7 +34854,7 @@ const App: React.FC = () => {
 
             // Log event types being processed for training report creation.
             if (trainees.length > 0) {
-                console.log(`📋 Processing ${event.type} event for training report:`, {
+                logRoutineAppDebug(`📋 Processing ${event.type} event for training report:`, {
                     flightNumber: event.flightNumber,
                     type: event.type,
                     date: event.date,
@@ -34876,7 +34890,7 @@ const App: React.FC = () => {
                     );
                     if (existingUnassessedForFlight) {
                         newAssessments.delete(existingUnassessedForFlight.id);
-                        console.log('🔄 Replacing unassessed training report for', traineeFullName, 'on', event.flightNumber, '- overwriting with rescheduled event details');
+                        logRoutineAppDebug('🔄 Replacing unassessed training report for', traineeFullName, 'on', event.flightNumber, '- overwriting with rescheduled event details');
                     }
 
                     // Create new report, either fresh or replacing the old unassessed one.
@@ -34901,7 +34915,7 @@ const App: React.FC = () => {
 
                     newAssessments.set(newAssessment.id, newAssessment);
                     created++;
-                    console.log('✅ Created training report for', traineeFullName, 'on', event.flightNumber, event.date);
+                    logRoutineAppDebug('✅ Created training report for', traineeFullName, 'on', event.flightNumber, event.date);
                 }
             });
         });
@@ -34920,25 +34934,25 @@ const App: React.FC = () => {
                 if (assessment.instructorName !== (correspondingEvent.instructor || '')) {
                     updates.instructorName = correspondingEvent.instructor || '';
                     needsUpdate = true;
-                    console.log('📝 Instructor changed:', assessment.instructorName, '→', correspondingEvent.instructor);
+                    logRoutineAppDebug('📝 Instructor changed:', assessment.instructorName, '→', correspondingEvent.instructor);
                 }
 
                 if (assessment.flightNumber !== correspondingEvent.flightNumber) {
                     updates.flightNumber = correspondingEvent.flightNumber;
                     needsUpdate = true;
-                    console.log('📝 Flight number changed:', assessment.flightNumber, '→', correspondingEvent.flightNumber);
+                    logRoutineAppDebug('📝 Flight number changed:', assessment.flightNumber, '→', correspondingEvent.flightNumber);
                 }
 
                 if (assessment.date !== correspondingEvent.date) {
                     updates.date = correspondingEvent.date;
                     needsUpdate = true;
-                    console.log('📝 Date changed:', assessment.date, '→', correspondingEvent.date);
+                    logRoutineAppDebug('📝 Date changed:', assessment.date, '→', correspondingEvent.date);
                 }
 
                 if (needsUpdate) {
                     newAssessments.set(assessmentId, { ...assessment, ...updates });
                     updated++;
-                    console.log('✏️ Updated training report for', assessment.traineeFullName, 'on', assessment.flightNumber);
+                    logRoutineAppDebug('✏️ Updated training report for', assessment.traineeFullName, 'on', assessment.flightNumber);
                 }
             }
         });
@@ -34950,7 +34964,7 @@ const App: React.FC = () => {
         newAssessments.forEach((assessment, assessmentId) => {
             if (!activeDfpEventIds.has(assessment.eventId)) {
                 assessmentsToDelete.push(assessmentId);
-                console.log('🗑️ Deleting training report for', assessment.traineeFullName, 'on', assessment.flightNumber, assessment.date, '(event no longer on Active DFP)');
+                logRoutineAppDebug('🗑️ Deleting training report for', assessment.traineeFullName, 'on', assessment.flightNumber, assessment.date, '(event no longer on Active DFP)');
             }
         });
 
@@ -34980,7 +34994,7 @@ const App: React.FC = () => {
                 dupes.slice(1).forEach(old => {
                     newAssessments.delete(old.id);
                     dupDeleted++;
-                    console.log('🧹 Removed duplicate unassessed training report for', old.traineeFullName, 'on', old.flightNumber, old.date);
+                    logRoutineAppDebug('🧹 Removed duplicate unassessed training report for', old.traineeFullName, 'on', old.flightNumber, old.date);
                 });
             }
         });
@@ -34988,9 +35002,9 @@ const App: React.FC = () => {
         // Update state if changes were made
         if (created > 0 || deleted > 0 || updated > 0 || dupDeleted > 0) {
             setPt051Assessments(newAssessments);
-            console.log(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
+            logRoutineAppDebug(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
         } else {
-            console.log('✅ Training reports already in sync with Active DFP');
+            logRoutineAppDebug('✅ Training reports already in sync with Active DFP');
         }
     };
 
@@ -35015,7 +35029,7 @@ const App: React.FC = () => {
         setHighestPriorityEvents(prevEvents =>
             prevEvents.filter(event => event.id !== eventId)
         );
-        console.log('🗑️ Deleted priority event:', eventId);
+        logRoutineAppDebug('🗑️ Deleted priority event:', eventId);
     };
 
     const handleSelectInstructorFromSchedule = (instructorName: string) => {
@@ -36638,7 +36652,7 @@ const App: React.FC = () => {
 
         // IMPORTANT: Always use the FULL raw publishedSchedules[date].
         const fullRawEvents: ScheduleEvent[] = publishedSchedules[pauseDate] || [];
-        console.log('[PauseBuild] Starting pause build for', pauseDate,
+        logRoutineAppDebug('[PauseBuild] Starting pause build for', pauseDate,
             'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd,
             'fullRawEvents:', fullRawEvents.length);
 
@@ -36680,12 +36694,12 @@ const App: React.FC = () => {
             }
             return e;
         });
-        console.log('[PauseBuild] Cleared for rebuild:', cancelledIds.size, 'events');
+        logRoutineAppDebug('[PauseBuild] Cleared for rebuild:', cancelledIds.size, 'events');
 
         // ── Step 3: Locked events = completed events + non-affected-type events ─────────
         // These stay exactly where they are; everything else will be rebuilt from pauseEnd.
         const lockedEvents: ScheduleEvent[] = eventsAfterCancel.filter(e => !e.isCancelled);
-        console.log('[PauseBuild] Locked (completed + non-affected type) events:', lockedEvents.length);
+        logRoutineAppDebug('[PauseBuild] Locked (completed + non-affected type) events:', lockedEvents.length);
 
         if (isFixedCrewLikeOperationalModel(activeOperationalModel)) {
             const slotStep = 5 / 60;
@@ -36868,9 +36882,9 @@ const App: React.FC = () => {
                 if (placed) {
                     scheduledEvents.push(placed);
                     rescheduledCancelledIds.add(original.id);
-                    console.log(`[PauseBuild][CrewModel] Reprogrammed ${original.flightNumber} from ${original.startTime.toFixed(2)} to ${placed.startTime.toFixed(2)} on ${placed.resourceId}`);
+                    logRoutineAppDebug(`[PauseBuild][CrewModel] Reprogrammed ${original.flightNumber} from ${original.startTime.toFixed(2)} to ${placed.startTime.toFixed(2)} on ${placed.resourceId}`);
                 } else {
-                    console.log(`[PauseBuild][CrewModel] Could not reprogram ${original.flightNumber}; will stage as OPS PAUSE STBY.`);
+                    logRoutineAppDebug(`[PauseBuild][CrewModel] Could not reprogram ${original.flightNumber}; will stage as OPS PAUSE STBY.`);
                 }
             }
 
@@ -36906,7 +36920,7 @@ const App: React.FC = () => {
                 return true;
             }).map(event => ({ ...event, date: pauseDate }));
 
-            console.log('[PauseBuild][CrewModel] Final staged events:', finalEvents.length,
+            logRoutineAppDebug('[PauseBuild][CrewModel] Final staged events:', finalEvents.length,
                 '(locked:', lockedEvents.length,
                 'reprogrammed:', rescheduledCancelledIds.size,
                 'STBY cancelled:', stbyEvents.length, ')');
@@ -37032,7 +37046,7 @@ const App: React.FC = () => {
             }
             return 0; // mixed: process flights and FTDs independently
         });
-        console.log('[PauseBuild] Affected trainees to reschedule:', affectedEntries.length,
+        logRoutineAppDebug('[PauseBuild] Affected trainees to reschedule:', affectedEntries.length,
             '(flights:', affectedEntries.filter(e => e.eventType === 'flight').length,
             'FTDs:', affectedEntries.filter(e => e.eventType === 'ftd').length, ')');
 
@@ -37202,7 +37216,7 @@ const App: React.FC = () => {
 
         // Start scheduling from the first 5-min boundary at or after pauseEnd
         const slotStart = roundUpTo5Min(pauseEnd);
-        console.log('[PauseBuild] Scheduling window:', slotStart, 'to', dayEnd);
+        logRoutineAppDebug('[PauseBuild] Scheduling window:', slotStart, 'to', dayEnd);
 
         // ── Step 5a: Reschedule FTD events ──────────────────────────────────────────────
         const ftdEntries = affectedEntries.filter(e => e.eventType === 'ftd');
@@ -37287,12 +37301,12 @@ const App: React.FC = () => {
                     scheduledEvents.push(newEvent);
                     successfullyScheduled.add(`ftd:${trainee.fullName}`);
                     scheduled = true;
-                    console.log(`[PauseBuild] Rescheduled FTD ${trainee.fullName} at ${slot.toFixed(2)} on ${ftdResourceId}`);
+                    logRoutineAppDebug(`[PauseBuild] Rescheduled FTD ${trainee.fullName} at ${slot.toFixed(2)} on ${ftdResourceId}`);
                     break;
                 }
 
                 if (!scheduled) {
-                    console.log(`[PauseBuild] FTD ${trainee.fullName} could not be rescheduled before dayEnd — dropped`);
+                    logRoutineAppDebug(`[PauseBuild] FTD ${trainee.fullName} could not be rescheduled before dayEnd — dropped`);
                 }
             }
         }
@@ -37381,16 +37395,16 @@ const App: React.FC = () => {
                 scheduledEvents.push(newEvent);
                 successfullyScheduled.add(trainee.fullName);
                 scheduled = true;
-                console.log(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
+                logRoutineAppDebug(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
                 break;
             }
 
             if (!scheduled) {
-                console.log(`[PauseBuild] Could not schedule FLIGHT ${trainee.fullName} (${syllabusItem.code})`);
+                logRoutineAppDebug(`[PauseBuild] Could not schedule FLIGHT ${trainee.fullName} (${syllabusItem.code})`);
             }
         }
 
-        console.log('[PauseBuild] Successfully scheduled:', successfullyScheduled.size, 'entries');
+        logRoutineAppDebug('[PauseBuild] Successfully scheduled:', successfullyScheduled.size, 'entries');
 
         // ── Step 6: Place unscheduled flight/FTD trainees on STBY with red X ──────────
         const stbyOccupied: { resourceId: string; start: number; end: number }[] = scheduledEvents
@@ -37441,7 +37455,7 @@ const App: React.FC = () => {
             });
         }
 
-        console.log('[PauseBuild] STBY (cancelled) events:', stbyEvents.length,
+        logRoutineAppDebug('[PauseBuild] STBY (cancelled) events:', stbyEvents.length,
             '(unscheduled flights + unschedulable FTDs)');
 
         // ── Step 7: Combine and return ────────────────────────────────────────────────
@@ -37453,7 +37467,7 @@ const App: React.FC = () => {
             finalEvents.push({ ...e, date: pauseDate });
         }
 
-        console.log('[PauseBuild] Final staged events:', finalEvents.length,
+        logRoutineAppDebug('[PauseBuild] Final staged events:', finalEvents.length,
             '(locked:', lockedEvents.length,
             'newly scheduled:', successfullyScheduled.size,
             'STBY cancelled:', stbyEvents.length, ')');
@@ -37480,7 +37494,7 @@ const App: React.FC = () => {
         // Ensure every event has the correct date field
         const finalEvents: ScheduleEvent[] = dedupedEvents.map(e => ({ ...e, date: targetDate }));
 
-        console.log('[PausePublish] Publishing', finalEvents.length, 'events for', targetDate,
+        logRoutineAppDebug('[PausePublish] Publishing', finalEvents.length, 'events for', targetDate,
             '(was:', (publishedSchedules[targetDate] || []).length, 'before)');
 
         // 1. Update publishedSchedules (triggers re-render of Program Schedule view)
@@ -37522,7 +37536,7 @@ const App: React.FC = () => {
             `Cancelled: ${cancelledCount} (OPS PAUSE) | Active post-rebuild: ${activeCount} | By: ${authUser?.displayName || 'Unknown'}`
         );
 
-        console.log('[PausePublish] Done. Total:', finalEvents.length,
+        logRoutineAppDebug('[PausePublish] Done. Total:', finalEvents.length,
             'Active:', activeCount, 'Cancelled (OPS_PAUSE):', cancelledCount);
     };
 
@@ -37537,7 +37551,7 @@ const App: React.FC = () => {
             seenPublishIds.add(e.id);
             return true;
         });
-        console.log('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
+        logRoutineAppDebug('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
 
         const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
         const publishedPriorityEventIds = new Set(
@@ -37633,9 +37647,9 @@ const App: React.FC = () => {
         }));
 
         // NEW APPROACH: Sync training reports with Active DFP after publish
-        console.log('\u{1F4CB} Triggering training report sync after publish...');
+        logRoutineAppDebug('\u{1F4CB} Triggering training report sync after publish...');
         setTimeout(() => {
-            console.log('\u{23F0} Executing delayed training report sync after publish...');
+            logRoutineAppDebug('\u{23F0} Executing delayed training report sync after publish...');
             setPublishedSchedules(currentSchedules => {
                 setPt051Assessments(currentAssessments => {
                     syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -37809,7 +37823,7 @@ const App: React.FC = () => {
                 if (!saveResponse.ok || !result.success) {
                     throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
                 }
-                console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
+                logRoutineAppDebug(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
                 // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
                 loadedSnapshotDates.current.add(snapshotKey);
                 cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
@@ -37823,7 +37837,7 @@ const App: React.FC = () => {
                 return;
             }
         } else if (hasSeedData) {
-            console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
+            logRoutineAppDebug(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
             await showDarkAlert(
                 'This DFP contains setup-only events, so it was not saved as a real published DFP.',
                 'Publish Save Blocked',
@@ -37855,10 +37869,10 @@ const App: React.FC = () => {
         );
 
         // Deployment unavailability check
-        console.log('[DeployUnavail] handleDeploymentUnavailability: deployments=' + deploymentTiles.length + ' flights=' + flightTiles.length);
+        logRoutineAppDebug('[DeployUnavail] handleDeploymentUnavailability: deployments=' + deploymentTiles.length + ' flights=' + flightTiles.length);
 
         if (deploymentTiles.length === 0) {
-            console.log('[DeployUnavail] No deployment tiles - removing all lingering Deployed periods');
+            logRoutineAppDebug('[DeployUnavail] No deployment tiles - removing all lingering Deployed periods');
             // No deployments — remove any lingering Deployed periods tagged to all flight tiles
             for (const flight of flightTiles) {
                 await removeDeployedUnavailability(flight.id);
@@ -37874,7 +37888,7 @@ const App: React.FC = () => {
                 if (cleanupRes.ok) {
                     const cleanupData = await cleanupRes.json();
                     if (cleanupData.personnelFixed > 0 || cleanupData.traineesFixed > 0) {
-                        console.log('[DeployUnavail] Server cleanup fixed', cleanupData.personnelFixed, 'personnel and', cleanupData.traineesFixed, 'trainees in DB');
+                        logRoutineAppDebug('[DeployUnavail] Server cleanup fixed', cleanupData.personnelFixed, 'personnel and', cleanupData.traineesFixed, 'trainees in DB');
                     }
                 }
             } catch (err) { console.error('[DeployUnavail] Server cleanup call failed:', err); }
@@ -38050,7 +38064,7 @@ const App: React.FC = () => {
         // Diagnostic logging
         const instructorsWithTag = latestInstructors.filter(i => (i.unavailability || []).some(p => p.notes === tag));
         const traineesWithTag    = latestTrainees.filter(t => (t.unavailability || []).some(p => p.notes === tag));
-        console.log('[DeployUnavail] removeDeployedUnavailability flightId="' + flightId + '" tag="' + tag + '"',
+        logRoutineAppDebug('[DeployUnavail] removeDeployedUnavailability flightId="' + flightId + '" tag="' + tag + '"',
             'instructors with tag:', instructorsWithTag.map(i => i.name),
             'trainees with tag:', traineesWithTag.map(t => t.name)
         );
@@ -38073,7 +38087,7 @@ const App: React.FC = () => {
                         body: JSON.stringify({ unavailability: updated }),
                     });
                     if (!resp.ok) console.error('[DeployUnavail] PATCH instructor failed:', instructor.name, resp.status);
-                    else console.log('[DeployUnavail] PATCH instructor OK:', instructor.name, 'removed tag', tag);
+                    else logRoutineAppDebug('[DeployUnavail] PATCH instructor OK:', instructor.name, 'removed tag', tag);
                 } catch (err) { console.error('[DeployUnavail] Failed to remove Deployed unavailability for instructor:', instructor.name, err); }
             }
         }
@@ -38096,7 +38110,7 @@ const App: React.FC = () => {
                         body: JSON.stringify({ unavailability: updated }),
                     });
                     if (!resp.ok) console.error('[DeployUnavail] PATCH trainee failed:', trainee.name, resp.status);
-                    else console.log('[DeployUnavail] PATCH trainee OK:', trainee.name, 'removed tag', tag);
+                    else logRoutineAppDebug('[DeployUnavail] PATCH trainee OK:', trainee.name, 'removed tag', tag);
                 } catch (err) { console.error('[DeployUnavail] Failed to remove Deployed unavailability for trainee:', trainee.name, err); }
             }
         }
@@ -38474,13 +38488,13 @@ appliedUpdates.forEach(update => {
     }, [syllabusDetails]);
 
     const addTileSyllabusOptions = useMemo(() => {
-        console.log('addTileSyllabusOptions filtering visibleSyllabusDetails:', visibleSyllabusDetails);
+        logRoutineAppDebug('addTileSyllabusOptions filtering visibleSyllabusDetails:', visibleSyllabusDetails);
         const filtered = visibleSyllabusDetails.filter(item =>
             item.type === 'Flight' ||
             item.type === 'FTD' ||
             (item.type === 'Ground School' && item.code.includes('CPT'))
         );
-        console.log('Filtered items:', filtered);
+        logRoutineAppDebug('Filtered items:', filtered);
         const configuredContinuationOptions = getContinuationEventNames(sctEvents);
         const options = [...filtered.map(item => item.id), ...configuredContinuationOptions];
 
@@ -38949,7 +38963,7 @@ appliedUpdates.forEach(update => {
             setSyllabusDetails(setupSyllabus as SyllabusItemDetail[]);
             setSyllabusError(null);
             setSyllabusLoading(false);
-            console.log(`✅ [Syllabus] Applied ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+            logRoutineAppDebug(`✅ [Syllabus] Applied ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
         };
         window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
         return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
@@ -38957,7 +38971,7 @@ appliedUpdates.forEach(update => {
 
     // Refresh database data (personnel and trainees) - called when database is modified
     const handleDatabaseDataChanged = useCallback(async () => {
-        console.log('🔄 Refreshing database data after database modification...');
+        logRoutineAppDebug('🔄 Refreshing database data after database modification...');
 
         if (isSetupTestMode()) {
             const setupPersonnel = readSetupTestPersonnel();
@@ -38993,7 +39007,7 @@ appliedUpdates.forEach(update => {
                     return [...nonDbInstructors, ...dbPersonnel];
                 });
                 setArchivedInstructorsData(dbPersonnel.filter((person: any) => !isRecordActive(person)));
-                console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
+                logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
             }
 
             // Fetch fresh trainees data
@@ -39025,13 +39039,13 @@ appliedUpdates.forEach(update => {
                         if (!updated[course]) {
                             updated[course] = defaultColors[colorIndex % defaultColors.length];
                             colorIndex++;
-                            console.log(`[DB Load] Added missing courseColor for "${course}"`);
+                            logRoutineAppDebug(`[DB Load] Added missing courseColor for "${course}"`);
                         }
                     });
                     return updated;
                 });
 
-                console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+                logRoutineAppDebug(`✅ Refreshed ${dbTrainees.length} trainees from database`);
             }
         } catch (error) {
             console.error('❌ Error refreshing database data:', error);
@@ -39039,12 +39053,12 @@ appliedUpdates.forEach(update => {
     }, [scopedApiPath]);
 
     const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
-        console.log(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
-        console.log(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
+        logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
+        logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
 
         const missingId = updatedTrainees.filter(t => !t.idNumber);
         const missingName = updatedTrainees.filter(t => !t.name);
-        console.log(`🔵 [handleBulkUpdateTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
+        logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
 
         // Update in-memory state immediately
         const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
@@ -39052,7 +39066,7 @@ appliedUpdates.forEach(update => {
             const existingIds = new Set(prevTrainees.map(t => t.idNumber));
             const updatedExisting = prevTrainees.map(t => updatedMap.get(t.idNumber) || t);
             const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
-            console.log(`🔵 [handleBulkUpdateTrainees] State update: ${updatedExisting.length} existing updated, ${newToAdd.length} new added`);
+            logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] State update: ${updatedExisting.length} existing updated, ${newToAdd.length} new added`);
             return [...updatedExisting, ...newToAdd];
         });
 
@@ -39060,8 +39074,8 @@ appliedUpdates.forEach(update => {
         try {
             const courses = [...new Set(updatedTrainees.map(t => t.course).filter(Boolean))];
             const course = courses.length === 1 ? courses[0] : (updatedTrainees.length > 0 ? updatedTrainees[0].course : undefined);
-            console.log(`🔵 [handleBulkUpdateTrainees] Courses in payload: ${courses.join(', ')}, using: ${course}`);
-            console.log(`🔵 [handleBulkUpdateTrainees] Calling POST ${getApiBase()}/trainees/bulk`);
+            logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Courses in payload: ${courses.join(', ')}, using: ${course}`);
+            logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Calling POST ${getApiBase()}/trainees/bulk`);
 
             const response = await fetch(`${getApiBase()}/trainees/bulk`, {
                 method: 'POST',
@@ -39073,10 +39087,10 @@ appliedUpdates.forEach(update => {
                     replaceAll: false
                 })
             });
-            console.log(`🔵 [handleBulkUpdateTrainees] API response status: ${response.status}`);
+            logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] API response status: ${response.status}`);
             if (response.ok) {
                 const result = await response.json();
-                console.log(`✅ [handleBulkUpdateTrainees] DB save success:`, JSON.stringify(result));
+                logRoutineAppDebug(`✅ [handleBulkUpdateTrainees] DB save success:`, JSON.stringify(result));
                 setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
                 // Refresh from DB so the UI shows the newly saved trainees immediately
                 await handleDatabaseDataChanged();
@@ -39092,7 +39106,7 @@ appliedUpdates.forEach(update => {
     }, [handleDatabaseDataChanged]);
 
     const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[], onSaved?: () => void) => {
-        console.log(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
+        logRoutineAppDebug(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
 
         // Update in-memory state immediately with ALL trainees (other courses + new course)
         setTraineesData(newTrainees);
@@ -39112,7 +39126,7 @@ appliedUpdates.forEach(update => {
             if (!courseGroups.has(c)) courseGroups.set(c, []);
             courseGroups.get(c)!.push(t);
         });
-        console.log(`🔵 [handleReplaceTrainees] Course groups:`, [...courseGroups.entries()].map(([c,ts]) => `${c}:${ts.length}`).join(', '));
+        logRoutineAppDebug(`🔵 [handleReplaceTrainees] Course groups:`, [...courseGroups.entries()].map(([c,ts]) => `${c}:${ts.length}`).join(', '));
 
         // Persist to database for EACH course group separately
         // For other existing courses: just upsert (replaceAll=false)
@@ -39130,7 +39144,7 @@ appliedUpdates.forEach(update => {
         // This is safe because the in-memory state already reflects the replace operation
 
         try {
-            console.log(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
+            logRoutineAppDebug(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
 
             const response = await fetch(`${getApiBase()}/trainees/bulk`, {
                 method: 'POST',
@@ -39142,11 +39156,11 @@ appliedUpdates.forEach(update => {
                 })
             });
 
-            console.log(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
+            logRoutineAppDebug(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
 
             if (response.ok) {
                 const result = await response.json();
-                console.log(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
+                logRoutineAppDebug(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
                 setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
                 // Refresh from DB so the UI shows the newly saved trainees immediately
                 await handleDatabaseDataChanged();
@@ -39207,7 +39221,7 @@ appliedUpdates.forEach(update => {
                 fetch(`${apiBase}/personnel`, { credentials: 'include' }),
                 fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
             ]);
-            console.log('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
+            logRoutineAppDebug('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
             let pollChanged = false;
             if (personnelRes.ok) {
                 const personnelData = await personnelRes.json();
@@ -39216,13 +39230,13 @@ appliedUpdates.forEach(update => {
                     currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
                 }));
-                console.log('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
+                logRoutineAppDebug('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
                 setInstructorsData(prev => {
                     const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
                     const prevHash = buildUnavailHash(prevDbPersonnel);
                     const newHash  = buildUnavailHash(dbPersonnel);
                     if (prevHash === newHash) return prev;
-                    console.log('[Poll] Personnel unavailability CHANGED - updating state');
+                    logRoutineAppDebug('[Poll] Personnel unavailability CHANGED - updating state');
                     pollChanged = true;
                     const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
                     return [...nonDbInstructors, ...dbPersonnel];
@@ -39234,13 +39248,13 @@ appliedUpdates.forEach(update => {
                     ...t,
                     _dataSource: 'database' as const,
                 }));
-                console.log('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
+                logRoutineAppDebug('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                 setTraineesData(prev => {
                     const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
                     const prevHash = buildUnavailHash(prevDbTrainees);
                     const newHash  = buildUnavailHash(dbTrainees);
                     if (prevHash === newHash) return prev;
-                    console.log('[Poll] Trainee unavailability CHANGED - updating state');
+                    logRoutineAppDebug('[Poll] Trainee unavailability CHANGED - updating state');
                     pollChanged = true;
                     const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
                     return [...mockTrainees, ...dbTrainees];
@@ -39720,8 +39734,8 @@ appliedUpdates.forEach(update => {
     // Academic session save — creates one grouped ground event per trainee, flagged isAcademic=true
     // so NEO Build never touches it
     const handleSaveAcademicEvent = (data: import('./components/AcademicsTab').AcademicSaveData) => {
-        console.log('🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====');
-        console.log('🎓 [AcademicPublish] data received:', {
+        logRoutineAppDebug('🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====');
+        logRoutineAppDebug('🎓 [AcademicPublish] data received:', {
             course: data.course,
             date: data.date,
             workStart: data.workStart,
@@ -39749,8 +39763,8 @@ appliedUpdates.forEach(update => {
         const lessonCodes = data.lessons.map(l => l.code).join(', ');
         const sessionDuration = data.workEnd - data.workStart;
 
-        console.log('🎓 [AcademicPublish] lessonCodes:', lessonCodes);
-        console.log('🎓 [AcademicPublish] sessionDuration:', sessionDuration, '(workStart:', data.workStart, '→ workEnd:', data.workEnd, ')');
+        logRoutineAppDebug('🎓 [AcademicPublish] lessonCodes:', lessonCodes);
+        logRoutineAppDebug('🎓 [AcademicPublish] sessionDuration:', sessionDuration, '(workStart:', data.workStart, '→ workEnd:', data.workEnd, ')');
 
         if (sessionDuration <= 0) {
             console.error('🎓 [AcademicPublish] ❌ BLOCKED: sessionDuration is', sessionDuration, '— workStart/workEnd invalid');
@@ -39758,7 +39772,7 @@ appliedUpdates.forEach(update => {
         }
 
         const eventId = uuidv4();
-        console.log('🎓 [AcademicPublish] Generated event ID:', eventId);
+        logRoutineAppDebug('🎓 [AcademicPublish] Generated event ID:', eventId);
 
         // ONE event per classroom resource — spans full working day (workStart → workEnd)
         // Contains all timeline tiles as academicTiles for inset rendering
@@ -39791,7 +39805,7 @@ appliedUpdates.forEach(update => {
             })),
         };
 
-        console.log('🎓 [AcademicPublish] academicDayEvent constructed:', {
+        logRoutineAppDebug('🎓 [AcademicPublish] academicDayEvent constructed:', {
             id: academicDayEvent.id,
             date: academicDayEvent.date,
             type: academicDayEvent.type,
@@ -39807,34 +39821,34 @@ appliedUpdates.forEach(update => {
         // FIX: Add event to publishedSchedules (the state the schedule view renders from),
         // NOT to the legacy 'events' state which is not rendered in the daily schedule view.
         const eventDate = data.date;
-        console.log('🎓 [AcademicPublish] Adding to publishedSchedules for date:', eventDate);
-        console.log('🎓 [AcademicPublish] Current publishedSchedules keys:', Object.keys(publishedSchedules));
-        console.log('🎓 [AcademicPublish] Current events for this date:', (publishedSchedules[eventDate] || []).length);
+        logRoutineAppDebug('🎓 [AcademicPublish] Adding to publishedSchedules for date:', eventDate);
+        logRoutineAppDebug('🎓 [AcademicPublish] Current publishedSchedules keys:', Object.keys(publishedSchedules));
+        logRoutineAppDebug('🎓 [AcademicPublish] Current events for this date:', (publishedSchedules[eventDate] || []).length);
 
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
             const existing = prev[eventDate] || [];
             const updated = [...existing, academicDayEvent];
-            console.log('🎓 [AcademicPublish] setPublishedSchedules updater — was', existing.length, 'events, now', updated.length, 'for date', eventDate);
+            logRoutineAppDebug('🎓 [AcademicPublish] setPublishedSchedules updater — was', existing.length, 'events, now', updated.length, 'for date', eventDate);
             return { ...prev, [eventDate]: updated };
         });
 
         // Also keep the legacy events state in sync (used by some sub-components)
         setEvents((prev: ScheduleEvent[]) => {
-            console.log('🎓 [AcademicPublish] setEvents updater — appending to', prev.length, 'events');
+            logRoutineAppDebug('🎓 [AcademicPublish] setEvents updater — appending to', prev.length, 'events');
             return [...prev, academicDayEvent];
         });
 
         // Persist to DB so the event survives a page refresh
         // We must pass the updated array directly (not rely on state) to avoid async race
         const updatedEventsForDate = [...(publishedSchedules[eventDate] || []), academicDayEvent];
-        console.log('🎓 [AcademicPublish] Persisting', updatedEventsForDate.length, 'events for date', eventDate, 'to DB snapshot...');
+        logRoutineAppDebug('🎓 [AcademicPublish] Persisting', updatedEventsForDate.length, 'events for date', eventDate, 'to DB snapshot...');
         persistScheduleForDate(eventDate, updatedEventsForDate);
 
         setShowAddGroundEvent(false);
         const successMsg = `Academic session published for ${data.date}: ${lessonCodes || 'ACAD-SESSION'}`;
-        console.log('🎓 [AcademicPublish] ✅ Success:', successMsg);
+        logRoutineAppDebug('🎓 [AcademicPublish] ✅ Success:', successMsg);
         setSuccessMessage(successMsg);
-        console.log('🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====');
+        logRoutineAppDebug('🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====');
     };
 
 
@@ -40600,32 +40614,32 @@ appliedUpdates.forEach(update => {
         remedy: NeoRemedy,
         problemTile: ScheduleEvent
     ): (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[] => {
-        console.log('📝 applyRemedyToEvents called');
-        console.log('📝 Events list length:', eventsList.length);
-        console.log('📝 Problem tile ID:', problemTile.id);
-        console.log('📝 Remedy type:', remedy.type);
+        logRoutineAppDebug('📝 applyRemedyToEvents called');
+        logRoutineAppDebug('📝 Events list length:', eventsList.length);
+        logRoutineAppDebug('📝 Problem tile ID:', problemTile.id);
+        logRoutineAppDebug('📝 Remedy type:', remedy.type);
 
         return eventsList.map(event => {
             if (event.id === problemTile.id) {
-                console.log('✅ Found matching event, applying remedy');
+                logRoutineAppDebug('✅ Found matching event, applying remedy');
                 const updatedEvent = { ...event };
-                console.log('📝 Original instructor:', updatedEvent.instructor);
+                logRoutineAppDebug('📝 Original instructor:', updatedEvent.instructor);
 
                 if (remedy.type === 'timeshift') {
-                    console.log('📝 Applying timeshift remedy');
+                    logRoutineAppDebug('📝 Applying timeshift remedy');
                     updatedEvent.startTime = remedy.newStartTime;
                     if (remedy.instructor.name) {
                         updatedEvent.instructor = remedy.instructor.name;
                     }
                 } else if (remedy.type === 'instructor') {
-                    console.log('📝 Applying instructor remedy');
-                    console.log('📝 New instructor:', remedy.instructor.name);
+                    logRoutineAppDebug('📝 Applying instructor remedy');
+                    logRoutineAppDebug('📝 New instructor:', remedy.instructor.name);
                     updatedEvent.instructor = remedy.instructor.name;
                     if ((updatedEvent.type === 'flight' || updatedEvent.type === 'ftd') && updatedEvent.flightType !== 'Solo') {
                         updatedEvent.pilot = remedy.instructor.name;
                     }
                 } else if (remedy.type === 'trainee') {
-                    console.log('📝 Applying trainee remedy');
+                    logRoutineAppDebug('📝 Applying trainee remedy');
                     if (updatedEvent.flightType === 'Solo') {
                         updatedEvent.pilot = remedy.trainee.name;
                         updatedEvent.student = '';
@@ -41025,44 +41039,44 @@ appliedUpdates.forEach(update => {
             // Rule 0: EXCLUDE PAUSED/NTSC TRAINEES - Oracle should NOT offer these trainees
             if (trainee.isPaused) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
             }
 
             // Check for NTSC status (assume it might be in course name or a status field)
             const isNtsc = trainee.course.includes('NTSC') || trainee.fullName.includes('NTSC');
             if (isNtsc) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
             }
 
             // Rule 1: EXCLUDE TRAINEES WHOSE NEXT EVENT IS REMEDIAL
             if (nextSyllabusEvent && nextSyllabusEvent.isRemedial) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} excluded - next event ${nextSyllabusEvent.code} is REMEDIAL`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - next event ${nextSyllabusEvent.code} is REMEDIAL`);
             }
 
             // Rule 2: Only one flight per day
             if (hasFlight) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} ineligible - already has flight scheduled for ${analysisDate}`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - already has flight scheduled for ${analysisDate}`);
             }
 
             // Rule 3: Max 1 FTD + 1 flight per day
             if (hasFtd && hasFlight) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} ineligible - has both FTD and flight scheduled for ${analysisDate}`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - has both FTD and flight scheduled for ${analysisDate}`);
             }
 
             // Rule 4: Max 2 ground events per day
             if (groundEventsToday >= 2) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} ineligible - already has ${groundEventsToday} ground events for ${analysisDate}`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - already has ${groundEventsToday} ground events for ${analysisDate}`);
             }
 
             // Rule 5: Must have valid next syllabus event
             if (!nextSyllabusEvent) {
                 isEligible = false;
-                console.log(`Oracle: ${trainee.fullName} ineligible - no next syllabus event found`);
+                logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - no next syllabus event found`);
             }
 
 
@@ -41285,7 +41299,7 @@ appliedUpdates.forEach(update => {
                 e.type === 'flight' && e.date === analysisDate
             );
             if (hasExistingFlightToday) {
-                console.log(`Oracle: Excluding ${tr.trainee.fullName} - already has a flight scheduled for ${analysisDate}`);
+                logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - already has a flight scheduled for ${analysisDate}`);
                 return false;
             }
 
@@ -41300,7 +41314,7 @@ appliedUpdates.forEach(update => {
                     nextSyllabusEventRefs.has(String(e.flightNumber || '').trim()) && e.date === analysisDate
                 );
                 if (hasThisEventAlready) {
-                    console.log(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.code || tr.nextSyllabusEvent.id} on ${analysisDate}`);
+                    logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.code || tr.nextSyllabusEvent.id} on ${analysisDate}`);
                     return false;
                 }
             }
@@ -41322,12 +41336,12 @@ appliedUpdates.forEach(update => {
                    const proposedIsDay = !proposedIsNight;
 
                    if (nextEventClassification === 'Night' && proposedIsDay) {
-                       console.log(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Night but proposed time is Day (${bookingWindow.start.toFixed(2)})`);
+                       logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Night but proposed time is Day (${bookingWindow.start.toFixed(2)})`);
                        return false;
                    }
 
                    if (nextEventClassification === 'Day' && proposedIsNight) {
-                       console.log(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Day but proposed time is Night (${bookingWindow.start.toFixed(2)})`);
+                       logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Day but proposed time is Night (${bookingWindow.start.toFixed(2)})`);
                        return false;
                    }
                }
@@ -41346,7 +41360,7 @@ appliedUpdates.forEach(update => {
             const isUnavailable = isPersonStaticallyUnavailable(tr.trainee, bookingWindow.start, bookingWindow.end, analysisDate, 'flight');
 
             if (!dayNightCheck.isAllowed) {
-                console.log(`Oracle: Excluding ${tr.trainee.fullName} - ${dayNightCheck.reason}`);
+                logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - ${dayNightCheck.reason}`);
                 return false;
             }
 
@@ -41978,11 +41992,11 @@ appliedUpdates.forEach(update => {
                         return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
                     });
 
-                console.log('🔍 STAFF SCHEDULE - Location filtering and sorting applied');
-                console.log('🔍 School:', school);
-                console.log('👁 Total instructors:', instructorsData?.length);
-                console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
-                console.log('🔍 Sorted instructors (unit then configured personnel sort):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
+                logRoutineAppDebug('🔍 STAFF SCHEDULE - Location filtering and sorting applied');
+                logRoutineAppDebug('🔍 School:', school);
+                logRoutineAppDebug('👁 Total instructors:', instructorsData?.length);
+                logRoutineAppDebug('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
+                logRoutineAppDebug('🔍 Sorted instructors (unit then configured personnel sort):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
 
                 try {
                     return <InstructorScheduleView
@@ -42134,7 +42148,7 @@ appliedUpdates.forEach(update => {
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => { void handleDeleteTraineeFromRoster(trainee); }}
                             onUpdateCourseNumber={(oldCourseNumber, newCourseNumber) => {
-                                console.log(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
+                                logRoutineAppDebug(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
                                 setTraineesData(prev => prev.map(t =>
                                     t.course === oldCourseNumber
                                         ? { ...t, course: newCourseNumber }
@@ -42156,7 +42170,7 @@ appliedUpdates.forEach(update => {
                                 });
                             }}
                             onUpdateCourseUnit={async (courseNumber, newUnit) => {
-                                console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                logRoutineAppDebug(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
 
                                 // Update local state immediately for UI responsiveness
                                 setTraineesData(prev => {
@@ -42166,7 +42180,7 @@ appliedUpdates.forEach(update => {
                                             : t
                                     );
                                     const changed = updated.filter(t => t.course === courseNumber).length;
-                                    console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                                    logRoutineAppDebug(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
                                     return updated;
                                 });
 
@@ -42178,7 +42192,7 @@ appliedUpdates.forEach(update => {
                                         body: JSON.stringify({ courseNumber, newUnit })
                                     });
                                     if (response.ok) {
-                                        console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                                        logRoutineAppDebug(`[CourseEdit] 💾 Saved unit change to database`);
                                     } else {
                                         console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
                                     }
@@ -42194,7 +42208,7 @@ appliedUpdates.forEach(update => {
                                 });
                             }}
                             onBackcourseTrainee={(trainee, newCourse) => {
-                                console.log(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
+                                logRoutineAppDebug(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
                                 setTraineesData(prev => prev.map(t =>
                                     t.idNumber === trainee.idNumber
                                         ? { ...t, course: newCourse }
@@ -42314,7 +42328,7 @@ appliedUpdates.forEach(update => {
                             }}
                             onUpdateCourseUnit={async (courseNumber, newUnit) => {
                                 // Update unit for all trainees in the course
-                                console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                logRoutineAppDebug(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
 
                                 // Update local state immediately for UI responsiveness
                                 setTraineesData(prev => {
@@ -42324,7 +42338,7 @@ appliedUpdates.forEach(update => {
                                             : t
                                     );
                                     const changed = updated.filter(t => t.course === courseNumber).length;
-                                    console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                                    logRoutineAppDebug(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
                                     return updated;
                                 });
 
@@ -42336,7 +42350,7 @@ appliedUpdates.forEach(update => {
                                         body: JSON.stringify({ courseNumber, newUnit })
                                     });
                                     if (response.ok) {
-                                        console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                                        logRoutineAppDebug(`[CourseEdit] 💾 Saved unit change to database`);
                                     } else {
                                         console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
                                     }
@@ -42590,7 +42604,7 @@ appliedUpdates.forEach(update => {
                     sctFtds={sctFtds}
                     sctEvents={sctEvents}
                     onAddSctRequest={async (type) => {
-                      console.log('[CONTINUATION] onAddSctRequest called with type:', type);
+                      logRoutineAppDebug('[CONTINUATION] onAddSctRequest called with type:', type);
                       const newReq: SctRequest = {
                           id: uuidv4(),
                           name: '',
@@ -42614,29 +42628,29 @@ appliedUpdates.forEach(update => {
                           crewIndividual: '',
                           aircraftCount: 1,
                       };
-                      console.log('[CONTINUATION] Created new request:', newReq.id);
+                      logRoutineAppDebug('[CONTINUATION] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
                       // Persist to DB using robust userId lookup
                       const userId = getCurrentUserId();
-                      console.log('[CONTINUATION] Attempting to save - userId from getCurrentUserId():', userId);
+                      logRoutineAppDebug('[CONTINUATION] Attempting to save - userId from getCurrentUserId():', userId);
                       if (userId) {
                         try {
                           const payload = { ...newReq, userId, requestType: type };
-                          console.log('[CONTINUATION] POST payload:', JSON.stringify(payload));
+                          logRoutineAppDebug('[CONTINUATION] POST payload:', JSON.stringify(payload));
                           const res = await fetch('/api/sct-requests', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                           });
-                          console.log('[CONTINUATION] POST response status:', res.status);
+                          logRoutineAppDebug('[CONTINUATION] POST response status:', res.status);
                           if (res.ok) {
                             const saved = await res.json();
                             // Update local state with DB-assigned id
                             const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
                             if (type === 'flight') setSctFlights(updater);
                             else setSctFtds(updater);
-                            console.log('[CONTINUATION] Saved to DB:', saved.id, 'userId:', saved.userId);
+                            logRoutineAppDebug('[CONTINUATION] Saved to DB:', saved.id, 'userId:', saved.userId);
                           } else {
                             const errData = await res.json().catch(() => ({}));
                             console.error('[CONTINUATION] Failed to save to DB:', res.status, errData);
@@ -42753,7 +42767,7 @@ appliedUpdates.forEach(update => {
                             if (existing) {
                                 // Toggle the forceSchedule property
                                 const newForceScheduleValue = !existing.forceSchedule;
-                                console.log(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
+                                logRoutineAppDebug(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
                                 newRequests = prev.map(r =>
                                     r.traineeId === traineeId && r.eventCode === eventCode
                                         ? { ...r, forceSchedule: newForceScheduleValue, aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id }
@@ -42761,11 +42775,11 @@ appliedUpdates.forEach(update => {
                                 );
                             } else {
                                 // Create new request with forceSchedule set to true
-                                console.log(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode}`);
+                                logRoutineAppDebug(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode}`);
                                 newRequests = [...prev, { traineeId, eventCode, forceSchedule: true, aircraftConfigId: BASE_AIRCRAFT_CONFIG.id }];
                             }
 
-                            console.log(`📋 Updated remedialRequests:`, newRequests.filter(r => r.forceSchedule));
+                            logRoutineAppDebug(`📋 Updated remedialRequests:`, newRequests.filter(r => r.forceSchedule));
                             storeRemedialRequests(newRequests);
                             return newRequests;
                         });
@@ -42978,26 +42992,26 @@ appliedUpdates.forEach(update => {
                             }}
                             onReassignTrainingReport={handleReassignTrainingReportNotification}
                             onSelectPt051={(assessment) => {
-                                console.log('🔍 Dashboard training report clicked:', assessment);
-                                console.log('Looking for event ID:', assessment.eventId);
-                                console.log('Total events available:', allPublishedEvents.length);
+                                logRoutineAppDebug('🔍 Dashboard training report clicked:', assessment);
+                                logRoutineAppDebug('Looking for event ID:', assessment.eventId);
+                                logRoutineAppDebug('Total events available:', allPublishedEvents.length);
 
                                 // Find the event associated with this training report
                                 const event = allPublishedEvents.find(e => e.id === assessment.eventId);
-                                console.log('Found event:', event);
+                                logRoutineAppDebug('Found event:', event);
 
                                 // Find the trainee
                                 const trainee = allTraineesData.find(t => t.fullName === assessment.traineeFullName);
-                                console.log('Found trainee:', trainee);
+                                logRoutineAppDebug('Found trainee:', trainee);
 
                                 if (event && trainee) {
-                                    console.log('✅ Setting event and trainee, navigating to PT051');
+                                    logRoutineAppDebug('✅ Setting event and trainee, navigating to PT051');
                                     // Set state synchronously
                                     setEventForPt051(event);
                                     setSelectedTraineeForHateSheet(trainee);
                                     // Use setTimeout to ensure state is set before navigation
                                     setTimeout(() => {
-                                        console.log('🚀 Navigating to PT051 view');
+                                        logRoutineAppDebug('🚀 Navigating to PT051 view');
                                         handleNavigation('PT051');
                                     }, 0);
                                 } else {
@@ -43012,8 +43026,8 @@ appliedUpdates.forEach(update => {
                                     });
 
                                     // Try to find event by flight number and date as fallback
-                                    console.log('🔄 Attempting fallback search...');
-                                    console.log('Searching for:', {
+                                    logRoutineAppDebug('🔄 Attempting fallback search...');
+                                    logRoutineAppDebug('Searching for:', {
                                         flightNumber: assessment.flightNumber,
                                         date: assessment.date,
                                         instructor: assessment.instructorName
@@ -43025,14 +43039,14 @@ appliedUpdates.forEach(update => {
                                         e.instructor === assessment.instructorName
                                     );
 
-                                    console.log('Fallback result:', fallbackEvent);
+                                    logRoutineAppDebug('Fallback result:', fallbackEvent);
 
                                     if (fallbackEvent && trainee) {
-                                        console.log('✅ Found event using fallback (flight number + date + instructor):', fallbackEvent);
+                                        logRoutineAppDebug('✅ Found event using fallback (flight number + date + instructor):', fallbackEvent);
                                         setEventForPt051(fallbackEvent);
                                         setSelectedTraineeForHateSheet(trainee);
                                         setTimeout(() => {
-                                            console.log('🚀 Navigating to PT051 view (fallback)');
+                                            logRoutineAppDebug('🚀 Navigating to PT051 view (fallback)');
                                             handleNavigation('PT051');
                                         }, 0);
                                     } else {
@@ -43045,25 +43059,25 @@ appliedUpdates.forEach(update => {
                                         });
 
                                         // Try secondary fallback: just flight number and instructor (ignore date)
-                                        console.log('🔄 Attempting secondary fallback (flight number + instructor only)...');
+                                        logRoutineAppDebug('🔄 Attempting secondary fallback (flight number + instructor only)...');
                                         const secondaryFallbackEvent = allPublishedEvents.find(e =>
                                             e.flightNumber === assessment.flightNumber &&
                                             e.instructor === assessment.instructorName
                                         );
 
                                         if (secondaryFallbackEvent && trainee) {
-                                            console.log('✅ Found event using secondary fallback:', secondaryFallbackEvent);
+                                            logRoutineAppDebug('✅ Found event using secondary fallback:', secondaryFallbackEvent);
                                             console.warn('⚠️ Note: Event date may differ from training report date');
                                             setEventForPt051(secondaryFallbackEvent);
                                             setSelectedTraineeForHateSheet(trainee);
                                             setTimeout(() => {
-                                                console.log('🚀 Navigating to PT051 view (secondary fallback)');
+                                                logRoutineAppDebug('🚀 Navigating to PT051 view (secondary fallback)');
                                                 handleNavigation('PT051');
                                             }, 0);
                                         } else {
                                             console.error('❌ All fallback attempts failed - cannot open training report');
                                             // Create mock event as last resort
-                                            console.log('🔧 Creating mock event as last resort...');
+                                            logRoutineAppDebug('🔧 Creating mock event as last resort...');
 
                                             // Determine event type based on flight number
                                             let eventType: 'flight' | 'ground' | 'cpt' = 'flight';
@@ -43093,11 +43107,11 @@ appliedUpdates.forEach(update => {
                                             };
 
                                             if (trainee) {
-                                                console.log('✅ Created mock event:', mockEvent);
+                                                logRoutineAppDebug('✅ Created mock event:', mockEvent);
                                                 setEventForPt051(mockEvent);
                                                 setSelectedTraineeForHateSheet(trainee);
                                                 setTimeout(() => {
-                                                    console.log('🚀 Navigating to PT051 view (mock event)');
+                                                    logRoutineAppDebug('🚀 Navigating to PT051 view (mock event)');
                                                     handleNavigation('PT051');
                                                 }, 0);
                                             }
@@ -43124,7 +43138,7 @@ appliedUpdates.forEach(update => {
                             }}
                         />;
             case 'Staff':
-                console.log(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
+                logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
                             onClose={handleCloseStaffView}
                             events={events}
@@ -43141,8 +43155,8 @@ appliedUpdates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
-                                console.log("📝 [APP] handleUpdateInstructor called");
-                                console.log("📝 [APP] Instructor data received:", {
+                                logRoutineAppDebug("📝 [APP] handleUpdateInstructor called");
+                                logRoutineAppDebug("📝 [APP] Instructor data received:", {
                                     id: (data as any).id,
                                     name: data.name,
                                     unavailability: data.unavailability,
@@ -43161,16 +43175,16 @@ appliedUpdates.forEach(update => {
                                             body: JSON.stringify(data),
                                         });
 
-                                        console.log('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
-                                        console.log('📝 [APP] PATCH body:', JSON.stringify(data));
-                                        console.log('📝 [APP] PATCH body unavailability field:', data.unavailability);
+                                        logRoutineAppDebug('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
+                                        logRoutineAppDebug('📝 [APP] PATCH body:', JSON.stringify(data));
+                                        logRoutineAppDebug('📝 [APP] PATCH body unavailability field:', data.unavailability);
 
-                                        console.log('📝 [APP] PATCH response status:', response.status);
-                                        console.log('📝 [APP] PATCH response ok:', response.ok);
+                                        logRoutineAppDebug('📝 [APP] PATCH response status:', response.status);
+                                        logRoutineAppDebug('📝 [APP] PATCH response ok:', response.ok);
 
                                         if (response.ok) {
                                             const responseData = await response.json();
-                                            console.log('📝 [APP] PATCH response data:', responseData);
+                                            logRoutineAppDebug('📝 [APP] PATCH response data:', responseData);
                                         }
 
                                         if (!response.ok) {
@@ -43271,8 +43285,8 @@ appliedUpdates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
-                                console.log("📝 [APP] handleUpdateInstructor called (Instance 2)");
-                                console.log("📝 [APP] Instructor data received:", {
+                                logRoutineAppDebug("📝 [APP] handleUpdateInstructor called (Instance 2)");
+                                logRoutineAppDebug("📝 [APP] Instructor data received:", {
                                     id: (data as any).id,
                                     name: data.name,
                                     unavailability: data.unavailability,
@@ -43290,16 +43304,16 @@ appliedUpdates.forEach(update => {
                                             body: JSON.stringify(data),
                                         });
 
-                                        console.log('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
-                                        console.log('📝 [APP] PATCH body:', JSON.stringify(data));
-                                        console.log('📝 [APP] PATCH body unavailability field:', data.unavailability);
+                                        logRoutineAppDebug('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
+                                        logRoutineAppDebug('📝 [APP] PATCH body:', JSON.stringify(data));
+                                        logRoutineAppDebug('📝 [APP] PATCH body unavailability field:', data.unavailability);
 
-                                        console.log('📝 [APP] PATCH response status:', response.status);
-                                        console.log('📝 [APP] PATCH response ok:', response.ok);
+                                        logRoutineAppDebug('📝 [APP] PATCH response status:', response.status);
+                                        logRoutineAppDebug('📝 [APP] PATCH response ok:', response.ok);
 
                                         if (response.ok) {
                                             const responseData = await response.json();
-                                            console.log('📝 [APP] PATCH response data:', responseData);
+                                            logRoutineAppDebug('📝 [APP] PATCH response data:', responseData);
                                         }
 
                                         if (!response.ok) {
@@ -43602,8 +43616,8 @@ appliedUpdates.forEach(update => {
                             operationalModel={activeOperationalModel}
                         />;
             case 'PT051':
-                console.log('eventForPt051:', eventForPt051);
-                console.log('selectedTraineeForHateSheet:', selectedTraineeForHateSheet);
+                logRoutineAppDebug('eventForPt051:', eventForPt051);
+                logRoutineAppDebug('selectedTraineeForHateSheet:', selectedTraineeForHateSheet);
 
                 if (eventForPt051 && selectedTraineeForHateSheet) {
                     const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
@@ -43619,22 +43633,22 @@ appliedUpdates.forEach(update => {
                     }
                     // Find the training report for this event and trainee combination
                     const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-                    console.log('Looking for assessment with key:', assessmentKey);
-                    console.log('Available assessment keys:', Array.from(pt051Assessments.keys()));
+                    logRoutineAppDebug('Looking for assessment with key:', assessmentKey);
+                    logRoutineAppDebug('Available assessment keys:', Array.from(pt051Assessments.keys()));
 
                     let existingAssessment = pt051Assessments.get(assessmentKey);
-                    console.log('Direct lookup result:', existingAssessment);
+                    logRoutineAppDebug('Direct lookup result:', existingAssessment);
 
                     // Fallback: search by eventId and traineeFullName if key lookup fails
                     if (!existingAssessment) {
-                        console.log('Direct lookup failed, trying fallback search...');
+                        logRoutineAppDebug('Direct lookup failed, trying fallback search...');
                         existingAssessment = Array.from(pt051Assessments.values()).find(
                             a => a.eventId === eventForPt051.id && a.traineeFullName === selectedTraineeForHateSheet.fullName
                         );
-                        console.log('Fallback search result:', existingAssessment);
+                        logRoutineAppDebug('Fallback search result:', existingAssessment);
                     }
                     if (!existingAssessment) {
-                        console.log('Event ID lookup failed, trying trainee/event/date fallback...');
+                        logRoutineAppDebug('Event ID lookup failed, trying trainee/event/date fallback...');
                         existingAssessment = Array.from(pt051Assessments.values()).find(
                             a =>
                                 a.traineeFullName === selectedTraineeForHateSheet.fullName &&
@@ -43645,7 +43659,7 @@ appliedUpdates.forEach(update => {
                                 a.traineeFullName === selectedTraineeForHateSheet.fullName &&
                                 a.flightNumber === eventForPt051.flightNumber
                         );
-                        console.log('Trainee/event/date fallback result:', existingAssessment);
+                        logRoutineAppDebug('Trainee/event/date fallback result:', existingAssessment);
                     }
                     const pt051LoadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                     if (!loadedPt051Keys.has(pt051LoadKey)) {
@@ -43673,7 +43687,7 @@ appliedUpdates.forEach(update => {
                         }}
                         onEventUpdate={(updatedEvent) => {
                             // Update the eventForPt051 state when event is modified
-                            console.log('Updating eventForPt051 with:', updatedEvent);
+                            logRoutineAppDebug('Updating eventForPt051 with:', updatedEvent);
                             setEventForPt051(updatedEvent);
 
                             // Also update the main events array if this event exists there
@@ -43692,7 +43706,7 @@ appliedUpdates.forEach(update => {
                                 denyPlatformAction(`delete ${selectedTrainingReportName} assessment`);
                                 return;
                             }
-                            console.log('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
+                            logRoutineAppDebug('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
                             const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
                             const apiBase = getApiBaseUrl();
                             const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
@@ -43711,7 +43725,7 @@ appliedUpdates.forEach(update => {
 
                             // Find and delete the training report assessment from local state after the database delete succeeds.
                             const assessmentKey = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
-                            console.log('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
+                            logRoutineAppDebug('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
                             const updatedAssessments = new Map(pt051Assessments);
                             const deleted = updatedAssessments.delete(assessmentKey);
                             Array.from(updatedAssessments.entries()).forEach(([key, assessment]) => {
@@ -43722,7 +43736,7 @@ appliedUpdates.forEach(update => {
                                     updatedAssessments.delete(key);
                                 }
                             });
-                            console.log('🗑️ App.tsx: Assessment deleted from map:', deleted);
+                            logRoutineAppDebug('🗑️ App.tsx: Assessment deleted from map:', deleted);
                             setPt051Assessments(updatedAssessments);
                             setLoadedPt051Keys(prev => {
                                 const updated = new Set(prev);
@@ -43731,9 +43745,9 @@ appliedUpdates.forEach(update => {
                             });
 
                             // Log training report deletion to audit trail
-                            console.log('📋 App.tsx: Logging to audit...');
+                            logRoutineAppDebug('📋 App.tsx: Logging to audit...');
                             logAudit('Performance History', 'Delete', `Deleted ${selectedTrainingReportName} for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
-                            console.log('✅ App.tsx: Audit logged successfully');
+                            logRoutineAppDebug('✅ App.tsx: Audit logged successfully');
 
                             setSuccessMessage(`${selectedTrainingReportName} Assessment Deleted!`);
                         }}
@@ -43763,7 +43777,7 @@ appliedUpdates.forEach(update => {
                                     console.warn('[Training Report] Failed to persist assessment snapshot:', err);
                                 });
                             const performanceSave = persistPt051AssessmentRecord(normalizedAssessment)
-                                .then(() => console.log(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`))
+                                .then(() => logRoutineAppDebug(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`))
                                 .catch(err => {
                                     console.warn('[Training Report] Failed to persist trainee performance record:', err);
                                     if (!isAutoSave) {
@@ -43814,7 +43828,7 @@ appliedUpdates.forEach(update => {
                                     .then(res => res.json())
                                     .then(data => {
                                         if (data.success) {
-                                            console.log(`[Training Report -> Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                                            logRoutineAppDebug(`[Training Report -> Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                                             // Update in-memory scores state so Course Progress and NEO Build
                                             // scheduling immediately reflect the completed event.
                                             setScores(prev => {
@@ -43833,7 +43847,7 @@ appliedUpdates.forEach(update => {
                                                     ? existing.map((score, index) => index === scoreIndex ? { ...score, ...newScore } : score)
                                                     : [...existing, newScore];
                                                 updated.set(assessment.traineeFullName, updatedScores);
-                                                console.log(`[Training Report -> Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
+                                                logRoutineAppDebug(`[Training Report -> Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
                                                 return updated;
                                             });
                                         } else {
@@ -43883,14 +43897,14 @@ appliedUpdates.forEach(update => {
                                 onSave={async (data) => {
                                     // ── DETAILED DATA TRACKING ──────────────────────────────────────
                                     console.group('%c[PostFlight] onSave fired', 'color:#00bfff;font-weight:bold');
-                                    console.log('[PostFlight] Full data:', JSON.stringify(data, null, 2));
-                                    console.log('[PostFlight] Guard — eventForPostFlight:', !!eventForPostFlight, '| totalTime:', data.totalTime, '| takeoffTime:', data.takeoffTime);
-                                    console.log('[PostFlight] result=%s | aircraft=%s | from=%s | to=%s | isSolo=%s | isDual=%s', data.result, data.aircraftNumber, data.from, data.to, data.isSolo, data.isDual);
-                                    console.log('[PostFlight] Times: total=%s | capt=%s | instr=%s | night=%s | ifAct=%s | ifSim=%s | ineff=%s', data.totalTime, data.captainTime, data.instructorTime, data.nightTime, data.ifActualTime, data.ifSimTime, data.ineffectiveTime);
-                                    console.log('[PostFlight] Approaches:', data.approaches);
+                                    logRoutineAppDebug('[PostFlight] Full data:', JSON.stringify(data, null, 2));
+                                    logRoutineAppDebug('[PostFlight] Guard — eventForPostFlight:', !!eventForPostFlight, '| totalTime:', data.totalTime, '| takeoffTime:', data.takeoffTime);
+                                    logRoutineAppDebug('[PostFlight] result=%s | aircraft=%s | from=%s | to=%s | isSolo=%s | isDual=%s', data.result, data.aircraftNumber, data.from, data.to, data.isSolo, data.isDual);
+                                    logRoutineAppDebug('[PostFlight] Times: total=%s | capt=%s | instr=%s | night=%s | ifAct=%s | ifSim=%s | ineff=%s', data.totalTime, data.captainTime, data.instructorTime, data.nightTime, data.ifActualTime, data.ifSimTime, data.ineffectiveTime);
+                                    logRoutineAppDebug('[PostFlight] Approaches:', data.approaches);
                                     console.groupEnd();
                                     // ── END DATA TRACKING ───────────────────────────────────────────
-                                    console.log('Post flight data saved:', data);
+                                    logRoutineAppDebug('Post flight data saved:', data);
 
                                     if (eventForPostFlight) {
                                         try {
@@ -43985,7 +43999,7 @@ appliedUpdates.forEach(update => {
 
                                             if (ecRes.ok) {
                                                 const ecData = await ecRes.json();
-                                                console.log(
+                                                logRoutineAppDebug(
                                                     `[PostFlight] EventCompletion ${ecData.created ? 'created' : 'updated'} ` +
                                                     `for ${completionPayload.traineeFullName} — ` +
                                                     `${completionPayload.eventCode} -> ${data.result}`
@@ -44043,7 +44057,7 @@ appliedUpdates.forEach(update => {
                                                     const freshData = await freshRes.json();
                                                     if (Array.isArray(freshData.currencyStatus)) {
                                                         existingStatus = freshData.currencyStatus;
-                                                        console.log(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
+                                                        logRoutineAppDebug(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
                                                     }
                                                 }
                                             } catch (fetchErr) {
@@ -44110,7 +44124,7 @@ appliedUpdates.forEach(update => {
                                                 }
                                                 // Invalidate the CurrencyPanel cache so next open fetches fresh DB data
                                                 savedCurrencyCache.delete(dbId);
-                                                console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
+                                                logRoutineAppDebug(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
                                                 // Log to audit trail — describe what currencies were updated
                                                 const auditChangeParts: string[] = [];
                                                 for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
@@ -44144,7 +44158,7 @@ appliedUpdates.forEach(update => {
                                     //   Instructor:   instructorTime recorded.
                                     //   Night, IF actual/sim, ineffective, approaches go to both rows.
                                     // ── FlightLogEntry guard tracking ──────────────────────────────────
-                                    console.log("[PostFlight] FlightLogEntry guard: eventForPostFlight=", !!eventForPostFlight, "| data.totalTime=", JSON.stringify(data.totalTime), "| data.takeoffTime=", JSON.stringify(data.takeoffTime), "| guard passes:", !!(eventForPostFlight && (data.totalTime || data.takeoffTime)));
+                                    logRoutineAppDebug("[PostFlight] FlightLogEntry guard: eventForPostFlight=", !!eventForPostFlight, "| data.totalTime=", JSON.stringify(data.totalTime), "| data.takeoffTime=", JSON.stringify(data.takeoffTime), "| guard passes:", !!(eventForPostFlight && (data.totalTime || data.takeoffTime)));
                                     if (eventForPostFlight && (data.totalTime || data.takeoffTime)) {
                                         const pfEvt = eventForPostFlight;
                                         const isSoloFlight = !!data.isSolo;
@@ -44161,7 +44175,7 @@ appliedUpdates.forEach(update => {
                                                 throw new Error(`${label} flight log save failed (${response.status}): ${errorText}`);
                                             }
                                             const saved = await response.json();
-                                            console.log(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved.entry?.personName || payload.personName);
+                                            logRoutineAppDebug(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved.entry?.personName || payload.personName);
                                             return saved;
                                         };
 
@@ -44384,7 +44398,7 @@ appliedUpdates.forEach(update => {
                                                 captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : undefined,
                                                 crewLogSnapshot:    data.crewLog    && Object.keys(data.crewLog).length    > 0 ? data.crewLog    : undefined,
                                             };
-                                            console.log('[PostFlight] Trainee FlightLog payload:', JSON.stringify(traineeLogPayload, null, 2));
+                                            logRoutineAppDebug('[PostFlight] Trainee FlightLog payload:', JSON.stringify(traineeLogPayload, null, 2));
                                             await saveFlightLogEntry(traineeLogPayload, 'trainee');
                                         }
 
@@ -44406,7 +44420,7 @@ appliedUpdates.forEach(update => {
                                                 captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : undefined,
                                                 crewLogSnapshot:    data.crewLog    && Object.keys(data.crewLog).length    > 0 ? data.crewLog    : undefined,
                                             };
-                                            console.log('[PostFlight] Instructor FlightLog payload:', JSON.stringify(instrLogPayload, null, 2));
+                                            logRoutineAppDebug('[PostFlight] Instructor FlightLog payload:', JSON.stringify(instrLogPayload, null, 2));
                                             await saveFlightLogEntry(instrLogPayload, 'instructor');
                                         }
                                         }
@@ -44446,9 +44460,9 @@ appliedUpdates.forEach(update => {
                                                     next.set((matchingPt051 as any).id, updatedAssessment);
                                                     return next;
                                                 });
-                                                console.log(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                                                logRoutineAppDebug(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
                                             } else {
-                                                console.log(`[PostFlight] ℹ️ No unassessed training report found for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                                                logRoutineAppDebug(`[PostFlight] ℹ️ No unassessed training report found for ${pt051TraineeName} — ${pt051FlightNumber}`);
                                             }
                                         }
                                     }
@@ -44483,7 +44497,7 @@ appliedUpdates.forEach(update => {
                                                             : draft
                                                     );
                                                 localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
-                                                console.log(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared from draft and priority queues' : 'reset for rescheduling'}:`, completedCurrencyDraftId);
+                                                logRoutineAppDebug(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared from draft and priority queues' : 'reset for rescheduling'}:`, completedCurrencyDraftId);
                                             }
                                         } catch (currencyDraftErr) {
                                             console.warn('[PostFlight] Currency draft update failed:', currencyDraftErr);
@@ -44508,7 +44522,7 @@ appliedUpdates.forEach(update => {
                                                     if (nextTaskingRequests.length !== taskingRequests.length) {
                                                         localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                                                         window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                                                        console.log(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
+                                                        logRoutineAppDebug(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
                                                     }
                                                 }
                                                 setHighestPriorityEvents(prev =>
@@ -44567,8 +44581,8 @@ appliedUpdates.forEach(update => {
 
 
     const handleNavigateToProfile = (user: any) => {
-       console.log('🎡 Navigating to profile:', user);
-       console.log('user:', JSON.stringify(user));
+       logRoutineAppDebug('🎡 Navigating to profile:', user);
+       logRoutineAppDebug('user:', JSON.stringify(user));
 
        // Determine if this is a trainee or staff based on available fields
        // Trainees have 'course' field, staff don't
@@ -44579,7 +44593,7 @@ appliedUpdates.forEach(update => {
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster
        if (isStaff) {
-          console.log('Opening staff profile:', user.name);
+          logRoutineAppDebug('Opening staff profile:', user.name);
           // Try to find the full instructor object from instructorsData first
           const fullInstructor = instructorsData.find(i =>
              i.idNumber === (user.pmkeysId || user.idNumber) || i.name === user.name
@@ -44593,7 +44607,7 @@ appliedUpdates.forEach(update => {
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (isTrainee) {
-          console.log('Opening trainee profile:', user.name);
+          logRoutineAppDebug('Opening trainee profile:', user.name);
           // Try to find the full trainee object from allTraineesData first (unfiltered)
           // This ensures all DB fields (unit, location, flight, etc.) are populated
           // Must use allTraineesData not traineesData (which is location-filtered)
@@ -45128,8 +45142,8 @@ appliedUpdates.forEach(update => {
                     instructors={instructorsData.map(i => i.name)}
                     trainees={allTraineesData.map(t => t.fullName)}
                     syllabus={(() => {
-                        console.log('addTileSyllabusOptions length:', addTileSyllabusOptions.length);
-                        console.log('syllabusForModal length:', syllabusForModal.length);
+                        logRoutineAppDebug('addTileSyllabusOptions length:', addTileSyllabusOptions.length);
+                        logRoutineAppDebug('syllabusForModal length:', syllabusForModal.length);
                         return isAddingTile ? addTileSyllabusOptions : syllabusForModal;
                     })()}
                     syllabusDetails={syllabusDetails}
@@ -45181,18 +45195,18 @@ appliedUpdates.forEach(update => {
                         setSelectedEvent(null);
                     }}
                     onScoresCreated={(newScores) => {
-                        console.log('App.tsx: onScoresCreated called with:', newScores);
+                        logRoutineAppDebug('App.tsx: onScoresCreated called with:', newScores);
                         // Add the new scores to the existing scores map
                         const updatedScores = new Map(scores);
                         newScores.forEach(score => {
-                            console.log('Adding score for trainee:', score.traineeName);
+                            logRoutineAppDebug('Adding score for trainee:', score.traineeName);
                             const traineeScores = updatedScores.get(score.traineeName) || [];
                             traineeScores.push(score);
                             updatedScores.set(score.traineeName, traineeScores);
                         });
-                        console.log('Updated scores map:', updatedScores);
+                        logRoutineAppDebug('Updated scores map:', updatedScores);
                         setScores(updatedScores);
-                        console.log('Scores state updated successfully');
+                        logRoutineAppDebug('Scores state updated successfully');
 
                         // Persist new training report completions to DB Individual LMP
                         // Group new scores by trainee name and update their LMP
@@ -45235,7 +45249,7 @@ appliedUpdates.forEach(update => {
                                     }),
                                 });
                                 if (res.ok) {
-                                    console.log(`[LMP] ✅ Updated DB Individual LMP for ${traineeName}: ${completedEventIds.length} events complete`);
+                                    logRoutineAppDebug(`[LMP] ✅ Updated DB Individual LMP for ${traineeName}: ${completedEventIds.length} events complete`);
                                 } else {
                                     console.warn(`[LMP] Failed to update DB LMP for ${traineeName}`);
                                 }
@@ -45499,7 +45513,7 @@ appliedUpdates.forEach(update => {
                     instructor={instructorForSct}
                     onClose={() => setShowSctRequest(false)}
                     onSave={async (request) => {
-                        console.log('[CONTINUATION] SctRequestFlyout onSave called with request:', request);
+                        logRoutineAppDebug('[CONTINUATION] SctRequestFlyout onSave called with request:', request);
                         const requestWithDefaults = {
                             ...request,
                             aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
@@ -45517,7 +45531,7 @@ appliedUpdates.forEach(update => {
                             try {
                                 const requestType = requestWithDefaults.event.includes('FTD') ? 'ftd' : 'flight';
                                 const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
-                                console.log('[CONTINUATION] POST from SctRequestFlyout:', JSON.stringify(payload));
+                                logRoutineAppDebug('[CONTINUATION] POST from SctRequestFlyout:', JSON.stringify(payload));
                                 const res = await fetch('/api/sct-requests', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -45525,7 +45539,7 @@ appliedUpdates.forEach(update => {
                                 });
                                 if (res.ok) {
                                     const saved = await res.json();
-                                    console.log('[CONTINUATION] Saved from Flyout:', saved.id, 'userId:', saved.userId);
+                                    logRoutineAppDebug('[CONTINUATION] Saved from Flyout:', saved.id, 'userId:', saved.userId);
                                     // Update local state with DB-assigned id
                                     if (requestWithDefaults.event.includes('FTD')) {
                                         setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));

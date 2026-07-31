@@ -40776,7 +40776,7 @@ const PrioritiesView = ({
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200", children: isOpen ? "v" : ">" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Mission Profile" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Flight Profile" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70", children: unitLabel })
                 ] })
               ]
@@ -40839,11 +40839,11 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
-            renderStandardMissionTile("Mission", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            renderStandardMissionTile("Flight Profile", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Mission name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Mission Profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Flight Profile" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-200/70", children: shortTitle || "No short title" })
             ] })),
             renderStandardMissionTile("Unit / Aircraft", /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -65633,7 +65633,7 @@ const normaliseStandardMissionProfiles = (source) => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Flight Profile ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || "").slice(0, 8),
       description: String(row?.description || ""),
       resourceType,
@@ -69634,7 +69634,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
       compositeProfileId: combinedContext ? baseId : "",
       aircraftTypeCode,
-      missionName: `Mission Profile ${missionIndex}`,
+      missionName: `Flight Profile ${missionIndex}`,
       shortTitle: `TASK${missionIndex}`.slice(0, 8),
       description: "",
       resourceType: "Flight",
@@ -71148,7 +71148,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Profile Identity" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Profile Details" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
@@ -90195,12 +90195,12 @@ const DfpSidePanelTimeline = ({
             type: "button",
             onClick: () => setShowAssistTaskForm((value) => !value),
             className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
-            children: showAssistTaskForm ? "Hide Mission Details" : "+ Add Mission"
+            children: showAssistTaskForm ? "Hide Task Details" : "+ Add Task"
           }
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Mission Profile",
+            "Task Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
@@ -105297,7 +105297,7 @@ const App = () => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
+      missionName: String(row?.missionName || row?.name || `Flight Profile ${index + 1}`).trim(),
       shortTitle: String(row?.shortTitle || "").trim().slice(0, 8),
       description: String(row?.description || "").trim(),
       resourceType: ["Flight", "FTD", "CPT", "Ground"].includes(String(row?.resourceType || row?.type || "Flight")) ? String(row?.resourceType || row?.type || "Flight") : "Flight",
@@ -110351,6 +110351,14 @@ ${"=".repeat(60)}`);
     } catch {
     }
   };
+  const logRoutineAppDebug = (...args) => {
+    try {
+      if (typeof window !== "undefined" && (window.localStorage?.getItem("dfp_app_verbose_diag") === "true" || window.localStorage?.getItem("neo_build_verbose_diag") === "true")) {
+        console.log(...args);
+      }
+    } catch {
+    }
+  };
   const nextDayEventSegments = reactExports.useMemo(() => {
     logNeoBuildUiDebug("🚀 [NEO-Build] nextDayEventSegments useMemo recalculating");
     logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
@@ -110922,8 +110930,9 @@ ${"=".repeat(60)}`);
     return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
   };
   const logValidationTrace = (context, event, outcome, details = {}) => {
+    if (!isNeoBuildVerboseDiagnosticsEnabled()) return;
     if (!isStbyFlightLineEvent(event) && outcome === "clear") return;
-    console.log("[ValidationTrace]", {
+    logRoutineAppDebug("[ValidationTrace]", {
       context,
       outcome,
       key: getValidationEventKey2(event),
@@ -110964,7 +110973,7 @@ ${"=".repeat(60)}`);
     const continuationFormationEvents = eventsForConflictCheck.filter(isConfiguredContinuationFormationEvent);
     if (continuationFormationEvents.length > 0) {
       continuationFormationEvents.forEach((e) => {
-        console.log(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || "EMPTY"}", Pilot: ${e.pilot}`);
+        logRoutineAppDebug(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || "EMPTY"}", Pilot: ${e.pilot}`);
       });
     }
     for (const event of eventsForConflictCheck) {
@@ -111099,7 +111108,7 @@ ${"=".repeat(60)}`);
   const unavailabilityConflicts = reactExports.useMemo(() => {
     const eventsToCheck = eventsForDate || [];
     const newConflicts = calculateUnavailabilityConflictsForEvents(eventsToCheck);
-    if (newConflicts.size > 0) {
+    if (isNeoBuildVerboseDiagnosticsEnabled() && newConflicts.size > 0) {
       const allPersonnel = [...allInstructorsData, ...allTraineesData];
       const personMap = /* @__PURE__ */ new Map();
       allPersonnel.forEach((p) => {
@@ -111114,17 +111123,17 @@ ${"=".repeat(60)}`);
           if (person?.unavailability) {
             const deployTags = person.unavailability.filter((p) => p?.notes?.startsWith("__deploy__"));
             const otherPeriods = person.unavailability.filter((p) => !p?.notes?.startsWith("__deploy__"));
-            console.log(
+            logRoutineAppDebug(
               "  RED: [" + evtDesc + "] person=" + name + (deployTags.length > 0 ? " DEPLOY_TAGS=" + JSON.stringify(deployTags.map((p) => p.notes)) : "") + (otherPeriods.length > 0 ? " other_periods=" + otherPeriods.length : "")
             );
           } else {
-            console.log("  RED: [" + evtDesc + "] person=" + name + " (no unavailability data found)");
+            logRoutineAppDebug("  RED: [" + evtDesc + "] person=" + name + " (no unavailability data found)");
           }
         });
       });
       console.groupEnd();
-    } else {
-      console.log("[UnavailConflicts] No conflicts on", eventsForDate?.[0]?.date || "unknown date");
+    } else if (isNeoBuildVerboseDiagnosticsEnabled()) {
+      logRoutineAppDebug("[UnavailConflicts] No conflicts on", eventsForDate?.[0]?.date || "unknown date");
     }
     return newConflicts;
   }, [eventsForDate, calculateUnavailabilityConflictsForEvents, allInstructorsData, allTraineesData]);
@@ -111432,7 +111441,7 @@ ${"=".repeat(60)}`);
           updated.delete(trainee.fullName);
           return updated;
         });
-        console.log(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || "unit"} is not authorised to assign it`);
+        logRoutineAppDebug(`[Individual LMP] Blocked persisted ${persistedLmpType} LMP for ${trainee.fullName}; ${traineeUnitCode || "unit"} is not authorised to assign it`);
         return null;
       }
       const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, persistedLmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
@@ -111442,7 +111451,7 @@ ${"=".repeat(60)}`);
         updated.set(trainee.fullName, scopedPersistedLmp);
         return updated;
       });
-      console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${scopedPersistedLmp.length} events)`);
+      logRoutineAppDebug(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${scopedPersistedLmp.length} events)`);
       return scopedPersistedLmp;
     } catch (error) {
       pushDfpDataDiag("report-lmp:load:error", {
@@ -111532,7 +111541,7 @@ ${"=".repeat(60)}`);
           updated.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
           return updated;
         });
-        console.log(`[Training Report] Loaded authoritative report for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
+        logRoutineAppDebug(`[Training Report] Loaded authoritative report for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
       }
       return assessment;
     } catch (error) {
@@ -111853,11 +111862,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const matchingItem = syllabusDetails.find((item) => item.isActive !== false && String(item.code || "").trim().toUpperCase() === eventCode2.toUpperCase() && (item.lmpType === "Staff CAT" || item.lmpType === "Master LMP" || !item.lmpType));
     if (!matchingItem) {
-      console.log(`[PostFlight] Training report skipped: ${eventCode2} is not a course/training package syllabus event`);
+      logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode2} is not a course/training package syllabus event`);
       return;
     }
     if (matchingItem.assessmentRequired !== true) {
-      console.log(`[PostFlight] Training report skipped: ${eventCode2} does not have Assessment required selected`);
+      logRoutineAppDebug(`[PostFlight] Training report skipped: ${eventCode2} does not have Assessment required selected`);
       return;
     }
     const preferences = { ...staff.preferences || {} };
@@ -111941,7 +111950,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       existingReport ? "Edit" : "Create",
       `${existingReport ? "Updated" : "Generated"} draft ${report.reportName} from post-flight ${dcoResult} for ${report.staffName} - Event: ${report.eventCode}`
     );
-    console.log(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
+    logRoutineAppDebug(`[PostFlight] ✅ Draft training report ${existingReport ? "updated" : "generated"} for ${staff.name} — ${eventCode2} (${dcoResult})`);
   };
   const handleReassignTrainingReportNotification = async (entry, assignee) => {
     const sourceStaff = allInstructorsData.find((person) => entry.staff.id ? person.id === entry.staff.id : person.idNumber === entry.staff.idNumber) || entry.staff;
@@ -112132,15 +112141,15 @@ ${error instanceof Error ? error.message : String(error)}`,
       setTraineeLMPs((prev) => {
         const newLMPs = new Map(prev);
         newLMPs.set(savedTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(savedTrainee.fullName), masterLMP));
-        console.log(`[Individual LMP] Initialized ${savedTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
+        logRoutineAppDebug(`[Individual LMP] Initialized ${savedTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
         return newLMPs;
       });
     }
     setSuccessMessage("New Trainee Added!");
   }, [activeUnitCode2, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, school, scopedApiPath, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
-    console.log("📝 [APP] handleUpdateTrainee called");
-    console.log("📝 [APP] Trainee data received:", {
+    logRoutineAppDebug("📝 [APP] handleUpdateTrainee called");
+    logRoutineAppDebug("📝 [APP] Trainee data received:", {
       id: data.id,
       idNumber: data.idNumber,
       name: data.name,
@@ -112162,8 +112171,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
     const dbId = data.id;
-    console.log("📝 [APP] DB ID:", dbId);
-    console.log("📝 [APP] Is DB trainee?", dbId && data._dataSource === "database");
+    logRoutineAppDebug("📝 [APP] DB ID:", dbId);
+    logRoutineAppDebug("📝 [APP] Is DB trainee?", dbId && data._dataSource === "database");
     if (dbId && data._dataSource === "database") {
       try {
         const patchBody = {
@@ -112189,8 +112198,8 @@ ${error instanceof Error ? error.message : String(error)}`,
           preferences: data.preferences || {},
           unavailability: data.unavailability || []
         };
-        console.log("📝 [APP] PATCH body to send:", patchBody);
-        console.log("📝 [APP] PATCH unavailability field:", patchBody.unavailability);
+        logRoutineAppDebug("📝 [APP] PATCH body to send:", patchBody);
+        logRoutineAppDebug("📝 [APP] PATCH unavailability field:", patchBody.unavailability);
         const response = await fetch(`/api/trainees/${dbId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -112219,12 +112228,12 @@ ${error instanceof Error ? error.message : String(error)}`,
             unavailability: data.unavailability || []
           })
         });
-        console.log("📝 [APP] PATCH response status:", response.status);
-        console.log("📝 [APP] PATCH response ok:", response.ok);
+        logRoutineAppDebug("📝 [APP] PATCH response status:", response.status);
+        logRoutineAppDebug("📝 [APP] PATCH response ok:", response.ok);
         if (response.ok) {
-          console.log(`✅ DB trainee updated: ${data.name}`);
+          logRoutineAppDebug(`✅ DB trainee updated: ${data.name}`);
           const responseData = await response.json();
-          console.log("📝 [APP] Response data:", responseData);
+          logRoutineAppDebug("📝 [APP] Response data:", responseData);
         } else {
           const err = await response.text();
           console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
@@ -112234,7 +112243,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.error(`❌ Error updating DB trainee ${data.name}:`, err);
       }
     } else {
-      console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
+      logRoutineAppDebug("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
     }
   }, [activeUnitCode2, getMasterLmpAccessContextForUnit, platformConfig2]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
@@ -112339,7 +112348,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (prereqIndex !== -1) {
         const oldPrereq = subsequentEvent.prerequisites[prereqIndex];
         subsequentEvent.prerequisites[prereqIndex] = reFlyEvent.id;
-        console.log(`✅ Updated prerequisite for ${subsequentEvent.code}: ${oldPrereq} → ${reFlyEvent.id}`);
+        logRoutineAppDebug(`✅ Updated prerequisite for ${subsequentEvent.code}: ${oldPrereq} → ${reFlyEvent.id}`);
       }
     });
     return cleanedLmp;
@@ -112967,7 +112976,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         status: course.status
       });
       if (result.success) {
-        console.log(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
+        logRoutineAppDebug(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
         setSuccessMessage(`Course ${courseName} updated successfully!`);
       } else {
         console.error("[EditCourse] Failed to update course in DB:", result.error);
@@ -113735,7 +113744,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         const conflictingEvents = existingEvents.filter(
           (e) => e.resourceId === resourceId && isOverlapping(e, eventToPlace)
         );
-        console.log(`Checking ${resourceId}:`, conflictingEvents.length > 0 ? "OCCUPIED" : "AVAILABLE", conflictingEvents);
+        logRoutineAppDebug(`Checking ${resourceId}:`, conflictingEvents.length > 0 ? "OCCUPIED" : "AVAILABLE", conflictingEvents);
         if (conflictingEvents.length === 0) {
           return resourceId;
         }
@@ -114527,9 +114536,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       });
     }
     if (!isNextDay) {
-      console.log("📋 Triggering training report sync after event deletion...");
+      logRoutineAppDebug("📋 Triggering training report sync after event deletion...");
       setTimeout(() => {
-        console.log("⏰ Executing delayed training report sync after deletion...");
+        logRoutineAppDebug("⏰ Executing delayed training report sync after deletion...");
         setPublishedSchedules((currentSchedules) => {
           setPt051Assessments((currentAssessments) => {
             syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -114611,14 +114620,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       return false;
     }
     const snapshotDate = getDailySnapshotKey(date);
-    console.log("🔔 [Alert] ========== SEND ALERT START ==========");
-    console.log("🔔 [Alert] eventId:", eventId);
-    console.log("🔔 [Alert] date:", date);
-    console.log("🔔 [Alert] snapshotDate:", snapshotDate);
-    console.log("🔔 [Alert] sentBy:", userId);
-    console.log("🔔 [Alert] recipients:", recipients);
-    console.log("🔔 [Alert] URL:", `${apiBase}/alerts/send`);
-    console.log("🔔 [Alert] eventForAlert:", eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : "NOT FOUND");
+    logRoutineAppDebug("🔔 [Alert] ========== SEND ALERT START ==========");
+    logRoutineAppDebug("🔔 [Alert] eventId:", eventId);
+    logRoutineAppDebug("🔔 [Alert] date:", date);
+    logRoutineAppDebug("🔔 [Alert] snapshotDate:", snapshotDate);
+    logRoutineAppDebug("🔔 [Alert] sentBy:", userId);
+    logRoutineAppDebug("🔔 [Alert] recipients:", recipients);
+    logRoutineAppDebug("🔔 [Alert] URL:", `${apiBase}/alerts/send`);
+    logRoutineAppDebug("🔔 [Alert] eventForAlert:", eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : "NOT FOUND");
     if (!recipients || recipients.length === 0) {
       console.warn("🔔 [Alert] No recipients - alert not sent");
       return false;
@@ -114644,15 +114653,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           pilot: eventForAlert.pilot
         } : {}
       };
-      console.log("🔔 [Alert] Payload:", JSON.stringify(payload, null, 2));
+      logRoutineAppDebug("🔔 [Alert] Payload:", JSON.stringify(payload, null, 2));
       const res = await fetch(`${apiBase}/alerts/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
       const responseText = await res.text();
-      console.log("🔔 [Alert] Response status:", res.status);
-      console.log("🔔 [Alert] Response body:", responseText);
+      logRoutineAppDebug("🔔 [Alert] Response status:", res.status);
+      logRoutineAppDebug("🔔 [Alert] Response body:", responseText);
       if (res.ok) {
         const data = JSON.parse(responseText);
         setAlertsDataByDate((prev) => ({
@@ -114662,7 +114671,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             [eventId]: data.alertEntry || data
           }
         }));
-        console.log("🔔 [Alert] Alert sent successfully! alertId:", data.alertId);
+        logRoutineAppDebug("🔔 [Alert] Alert sent successfully! alertId:", data.alertId);
         return true;
       } else {
         console.warn("🔔 [Alert] Failed to send alert. Status:", res.status, "Body:", responseText);
@@ -114672,7 +114681,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       console.error("🔔 [Alert] Exception sending alert:", err);
       return false;
     } finally {
-      console.log("🔔 [Alert] ========== SEND ALERT END ==========");
+      logRoutineAppDebug("🔔 [Alert] ========== SEND ALERT END ==========");
     }
   };
   const handleClearAlert = async (eventId) => {
@@ -114693,7 +114702,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           delete dateData[eventId];
           return { ...prev, [date]: dateData };
         });
-        console.log("🔔 [Alert] Alert cleared for event:", eventId);
+        logRoutineAppDebug("🔔 [Alert] Alert cleared for event:", eventId);
       } else {
         console.warn("🔔 [Alert] Failed to clear alert:", res.status);
       }
@@ -114702,7 +114711,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
   };
   const handleVisualAdjustStart = async (event) => {
-    console.log("Visual Adjust Start - Event:", event);
+    logRoutineAppDebug("Visual Adjust Start - Event:", event);
     if (isPastDfpDate(event.date || date)) {
       denyPastDfpEdit("visually adjust tiles");
       return;
@@ -114717,7 +114726,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     setIsVisualAdjustMode(true);
     setVisualAdjustEvent(event);
-    console.log("Visual Adjust Mode set to true");
+    logRoutineAppDebug("Visual Adjust Mode set to true");
   };
   const handleVisualAdjustEnd = (event) => {
     const finalEvent = visualAdjustEvent && visualAdjustEvent.id === event.id ? visualAdjustEvent : event;
@@ -114742,7 +114751,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   const syncPriorityEventsWithSctAndRemedial = () => {
     const continuationShortLabel = getSctTerminology(platformConfig2, activeUnitCode2).shortLabel;
-    console.log(`📋 Starting sync of priority events with ${continuationShortLabel} and remedial requests...`);
+    logRoutineAppDebug(`📋 Starting sync of priority events with ${continuationShortLabel} and remedial requests...`);
     let added = 0;
     const newPriorityEvents = [...highestPriorityEvents];
     const remedialPrioritySyncTrace = [];
@@ -114803,14 +114812,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       return configured.length > 0 ? Array.from(new Set(configured)) : [fallbackConfigId];
     };
     const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
-    console.log(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
+    logRoutineAppDebug(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
       (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     const highPrioritySctFtds = sctFtds.filter(
       (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
-    console.log(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
+    logRoutineAppDebug(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel) ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : null;
     highPrioritySctFlights.forEach((sctReq) => {
       const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
@@ -114853,7 +114862,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
-        console.log(`🔄 Updated HIGH priority ${continuationShortLabel} flight:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        logRoutineAppDebug(`🔄 Updated HIGH priority ${continuationShortLabel} flight:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else {
         if (existingInNextDay) {
           setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-flight-${sctReq.id}`));
@@ -114907,8 +114916,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         };
         newPriorityEvents.push(newEvent);
         added++;
-        console.log(`✅ Added HIGH priority ${continuationShortLabel} flight:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
-        console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
+        logRoutineAppDebug(`✅ Added HIGH priority ${continuationShortLabel} flight:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        logRoutineAppDebug("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
       }
     });
     highPrioritySctFtds.forEach((sctReq) => {
@@ -114952,7 +114961,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
-        console.log(`🔄 Updated HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        logRoutineAppDebug(`🔄 Updated HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else {
         if (existingInNextDay) {
           setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-ftd-${sctReq.id}`));
@@ -115004,8 +115013,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
-        console.log(`✅ Added HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
-        console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
+        logRoutineAppDebug(`✅ Added HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        logRoutineAppDebug("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
         newPriorityEvents.push(newEvent);
         added++;
       }
@@ -115025,12 +115034,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       remedialHighestPriorityBeforeSync: highestPriorityEvents.filter((e) => e.isRemedial || e.id?.startsWith("remedial-")).length,
       nextDayBuildEventsBeforeSync: nextDayBuildEvents.length
     });
-    console.log(`🔍 Checking ${remedialRequestsForSync.length} remedial requests for Force Schedule...`);
+    logRoutineAppDebug(`🔍 Checking ${remedialRequestsForSync.length} remedial requests for Force Schedule...`);
     if (remedialRequests.length === 0 && storedRemedialRequests.length > 0) {
-      console.log(`📦 Using ${storedRemedialRequests.length} persisted Force Schedule remedial request(s) for pre-build sync`);
+      logRoutineAppDebug(`📦 Using ${storedRemedialRequests.length} persisted Force Schedule remedial request(s) for pre-build sync`);
     }
     const forceScheduledRemedials = remedialRequestsForSync.filter((r) => r.forceSchedule);
-    console.log(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
+    logRoutineAppDebug(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
     remedialRequestsForSync.forEach((remedialReq) => {
       if (!remedialReq.forceSchedule) {
         traceRemedialSyncMovement({
@@ -115051,7 +115060,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         return;
       }
       if (remedialReq.forceSchedule) {
-        console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
+        logRoutineAppDebug(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
         const remedialPriorityEventId = `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`;
         const existingEventIndex = newPriorityEvents.findIndex(
           (e) => e.id === remedialPriorityEventId
@@ -115068,7 +115077,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
             if (syllabusItem) {
               syllabusSource = "individual-lmp";
-              console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
+              logRoutineAppDebug(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
             }
           }
         }
@@ -115076,7 +115085,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
           if (syllabusItem) {
             syllabusSource = "master-syllabus";
-            console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+            logRoutineAppDebug(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
           }
         }
         const duration = syllabusItem?.duration || 1.5;
@@ -115168,7 +115177,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               outcome: "refreshed-existing-highest-priority-event",
               nextHandoff: "runBuildAlgorithm.highestPriorityEvents"
             });
-            console.log(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
+            logRoutineAppDebug(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
           } else {
             traceRemedialSyncMovement({
               phase: "highest-priority-remedial-refresh-skipped",
@@ -115178,7 +115187,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               outcome: "skipped",
               reason: !trainee ? "TRAINEE_NOT_FOUND" : "SYLLABUS_ITEM_NOT_FOUND"
             });
-            console.log(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
+            logRoutineAppDebug(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
           }
         } else if (!existingEvent) {
           if (!syllabusItem) {
@@ -115188,7 +115197,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
           }
           if (trainee && syllabusItem) {
-            console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
+            logRoutineAppDebug(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
             const newEvent = {
               id: remedialPriorityEventId,
               date: buildDfpDate,
@@ -115240,7 +115249,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               nextHandoff: "runBuildAlgorithm.highestPriorityEvents"
             });
             added++;
-            console.log("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee.fullName);
+            logRoutineAppDebug("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee.fullName);
           } else {
             traceRemedialSyncMovement({
               phase: "highest-priority-remedial-create-skipped",
@@ -115258,12 +115267,12 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     if (hasChanges) {
       setHighestPriorityEvents(newPriorityEvents);
       if (added > 0) {
-        console.log(`\\ud83d\\udcca Priority Events Sync Complete: Added ${added} auto-generated events`);
+        logRoutineAppDebug(`\\ud83d\\udcca Priority Events Sync Complete: Added ${added} auto-generated events`);
       } else {
-        console.log("\\ud83d\\udd04 Priority Events Sync Complete: Updated existing events");
+        logRoutineAppDebug("\\ud83d\\udd04 Priority Events Sync Complete: Updated existing events");
       }
     } else {
-      console.log("\\u2705 No changes to priority events");
+      logRoutineAppDebug("\\u2705 No changes to priority events");
     }
     traceRemedialSyncMovement({
       phase: "pre-build-sync-complete",
@@ -115290,15 +115299,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   const syncPt051WithActiveDfp = (currentPublishedSchedules, currentPt051Assessments) => {
     const schedules = currentPublishedSchedules || publishedSchedules;
     const assessments = currentPt051Assessments || pt051Assessments;
-    console.log("🔄 Starting training report sync with Active DFP...");
-    console.log("Published schedules keys:", Object.keys(schedules));
+    logRoutineAppDebug("🔄 Starting training report sync with Active DFP...");
+    logRoutineAppDebug("Published schedules keys:", Object.keys(schedules));
     const activeDfpEvents = [];
     Object.values(schedules).forEach((scheduleEvents) => {
       activeDfpEvents.push(...scheduleEvents);
     });
-    console.log("Total events on Active DFP:", activeDfpEvents.length);
-    console.log("Current training report count:", assessments.size);
-    console.log("Sample events:", activeDfpEvents.slice(0, 3).map((e) => ({
+    logRoutineAppDebug("Total events on Active DFP:", activeDfpEvents.length);
+    logRoutineAppDebug("Current training report count:", assessments.size);
+    logRoutineAppDebug("Sample events:", activeDfpEvents.slice(0, 3).map((e) => ({
       id: e.id,
       flightNumber: e.flightNumber,
       date: e.date,
@@ -115317,7 +115326,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       const isDeployment = event?.type === "deployment";
       const isValidEventType = event?.type === "flight" || event?.type === "ftd" || event?.type === "ground" || event?.type === "cpt";
       if (isDutySup || isStbyFlightNumber || isStbyResource2 || isDeployment || !isValidEventType) {
-        console.log("⏭️ Skipping event:", {
+        logRoutineAppDebug("⏭️ Skipping event:", {
           flightNumber: event?.flightNumber,
           type: event?.type,
           resourceId: event?.resourceId,
@@ -115333,7 +115342,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         trainees.push(...event.attendees);
       }
       if (trainees.length > 0) {
-        console.log(`📋 Processing ${event.type} event for training report:`, {
+        logRoutineAppDebug(`📋 Processing ${event.type} event for training report:`, {
           flightNumber: event.flightNumber,
           type: event.type,
           date: event.date,
@@ -115356,7 +115365,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           );
           if (existingUnassessedForFlight) {
             newAssessments.delete(existingUnassessedForFlight.id);
-            console.log("🔄 Replacing unassessed training report for", traineeFullName, "on", event.flightNumber, "- overwriting with rescheduled event details");
+            logRoutineAppDebug("🔄 Replacing unassessed training report for", traineeFullName, "on", event.flightNumber, "- overwriting with rescheduled event details");
           }
           const newAssessment = {
             id: `pt051-${assessmentKey}`,
@@ -115378,7 +115387,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           };
           newAssessments.set(newAssessment.id, newAssessment);
           created++;
-          console.log("✅ Created training report for", traineeFullName, "on", event.flightNumber, event.date);
+          logRoutineAppDebug("✅ Created training report for", traineeFullName, "on", event.flightNumber, event.date);
         }
       });
     });
@@ -115391,22 +115400,22 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         if (assessment.instructorName !== (correspondingEvent.instructor || "")) {
           updates.instructorName = correspondingEvent.instructor || "";
           needsUpdate = true;
-          console.log("📝 Instructor changed:", assessment.instructorName, "→", correspondingEvent.instructor);
+          logRoutineAppDebug("📝 Instructor changed:", assessment.instructorName, "→", correspondingEvent.instructor);
         }
         if (assessment.flightNumber !== correspondingEvent.flightNumber) {
           updates.flightNumber = correspondingEvent.flightNumber;
           needsUpdate = true;
-          console.log("📝 Flight number changed:", assessment.flightNumber, "→", correspondingEvent.flightNumber);
+          logRoutineAppDebug("📝 Flight number changed:", assessment.flightNumber, "→", correspondingEvent.flightNumber);
         }
         if (assessment.date !== correspondingEvent.date) {
           updates.date = correspondingEvent.date;
           needsUpdate = true;
-          console.log("📝 Date changed:", assessment.date, "→", correspondingEvent.date);
+          logRoutineAppDebug("📝 Date changed:", assessment.date, "→", correspondingEvent.date);
         }
         if (needsUpdate) {
           newAssessments.set(assessmentId, { ...assessment, ...updates });
           updated++;
-          console.log("✏️ Updated training report for", assessment.traineeFullName, "on", assessment.flightNumber);
+          logRoutineAppDebug("✏️ Updated training report for", assessment.traineeFullName, "on", assessment.flightNumber);
         }
       }
     });
@@ -115415,7 +115424,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     newAssessments.forEach((assessment, assessmentId) => {
       if (!activeDfpEventIds.has(assessment.eventId)) {
         assessmentsToDelete.push(assessmentId);
-        console.log("🗑️ Deleting training report for", assessment.traineeFullName, "on", assessment.flightNumber, assessment.date, "(event no longer on Active DFP)");
+        logRoutineAppDebug("🗑️ Deleting training report for", assessment.traineeFullName, "on", assessment.flightNumber, assessment.date, "(event no longer on Active DFP)");
       }
     });
     assessmentsToDelete.forEach((id) => {
@@ -115439,15 +115448,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         dupes.slice(1).forEach((old) => {
           newAssessments.delete(old.id);
           dupDeleted++;
-          console.log("🧹 Removed duplicate unassessed training report for", old.traineeFullName, "on", old.flightNumber, old.date);
+          logRoutineAppDebug("🧹 Removed duplicate unassessed training report for", old.traineeFullName, "on", old.flightNumber, old.date);
         });
       }
     });
     if (created > 0 || deleted > 0 || updated > 0 || dupDeleted > 0) {
       setPt051Assessments(newAssessments);
-      console.log(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
+      logRoutineAppDebug(`📊 Training report sync complete: Created ${created}, Updated ${updated}, Deleted ${deleted}, Duplicates removed ${dupDeleted}`);
     } else {
-      console.log("✅ Training reports already in sync with Active DFP");
+      logRoutineAppDebug("✅ Training reports already in sync with Active DFP");
     }
   };
   const handleUpdatePriorityEvent = (eventId, updates) => {
@@ -115469,7 +115478,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     setHighestPriorityEvents(
       (prevEvents) => prevEvents.filter((event) => event.id !== eventId)
     );
-    console.log("🗑️ Deleted priority event:", eventId);
+    logRoutineAppDebug("🗑️ Deleted priority event:", eventId);
   };
   const handleSelectInstructorFromSchedule = (instructorName) => {
     const instructor = instructorsData.find((i) => i.name === instructorName);
@@ -116830,7 +116839,7 @@ ${conflictLines.join("\n")}${moreText}`,
       ftdEndTime: pFtdEnd
     } = config;
     const fullRawEvents = publishedSchedules[pauseDate] || [];
-    console.log(
+    logRoutineAppDebug(
       "[PauseBuild] Starting pause build for",
       pauseDate,
       "pauseEnd:",
@@ -116866,9 +116875,9 @@ ${conflictLines.join("\n")}${moreText}`,
       }
       return e;
     });
-    console.log("[PauseBuild] Cleared for rebuild:", cancelledIds.size, "events");
+    logRoutineAppDebug("[PauseBuild] Cleared for rebuild:", cancelledIds.size, "events");
     const lockedEvents = eventsAfterCancel.filter((e) => !e.isCancelled);
-    console.log("[PauseBuild] Locked (completed + non-affected type) events:", lockedEvents.length);
+    logRoutineAppDebug("[PauseBuild] Locked (completed + non-affected type) events:", lockedEvents.length);
     if (isFixedCrewLikeOperationalModel(activeOperationalModel)) {
       const slotStep = 5 / 60;
       const scheduledEvents2 = [...lockedEvents];
@@ -117023,9 +117032,9 @@ ${conflictLines.join("\n")}${moreText}`,
         if (placed) {
           scheduledEvents2.push(placed);
           rescheduledCancelledIds.add(original.id);
-          console.log(`[PauseBuild][CrewModel] Reprogrammed ${original.flightNumber} from ${original.startTime.toFixed(2)} to ${placed.startTime.toFixed(2)} on ${placed.resourceId}`);
+          logRoutineAppDebug(`[PauseBuild][CrewModel] Reprogrammed ${original.flightNumber} from ${original.startTime.toFixed(2)} to ${placed.startTime.toFixed(2)} on ${placed.resourceId}`);
         } else {
-          console.log(`[PauseBuild][CrewModel] Could not reprogram ${original.flightNumber}; will stage as OPS PAUSE STBY.`);
+          logRoutineAppDebug(`[PauseBuild][CrewModel] Could not reprogram ${original.flightNumber}; will stage as OPS PAUSE STBY.`);
         }
       }
       const stbyOccupied2 = scheduledEvents2.filter((e) => e.resourceId?.startsWith("STBY") && !e.isCancelled).map((e) => ({ resourceId: e.resourceId, start: e.startTime, end: e.startTime + e.duration }));
@@ -117055,7 +117064,7 @@ ${conflictLines.join("\n")}${moreText}`,
         seenIds2.add(event.id);
         return true;
       }).map((event) => ({ ...event, date: pauseDate }));
-      console.log(
+      logRoutineAppDebug(
         "[PauseBuild][CrewModel] Final staged events:",
         finalEvents2.length,
         "(locked:",
@@ -117155,7 +117164,7 @@ ${conflictLines.join("\n")}${moreText}`,
       }
       return 0;
     });
-    console.log(
+    logRoutineAppDebug(
       "[PauseBuild] Affected trainees to reschedule:",
       affectedEntries.length,
       "(flights:",
@@ -117260,7 +117269,7 @@ ${conflictLines.join("\n")}${moreText}`,
       return (totalMinutes + (5 - remainder)) / 60;
     };
     const slotStart = roundUpTo5Min(pauseEnd);
-    console.log("[PauseBuild] Scheduling window:", slotStart, "to", dayEnd);
+    logRoutineAppDebug("[PauseBuild] Scheduling window:", slotStart, "to", dayEnd);
     const ftdEntries = affectedEntries.filter((e) => e.eventType === "ftd");
     const cancelledFtdEvents = eventsAfterCancel.filter(
       (e) => cancelledIds.has(e.id) && e.type === "ftd" && !completedEventIds.has(e.id)
@@ -117326,11 +117335,11 @@ ${conflictLines.join("\n")}${moreText}`,
           scheduledEvents.push(newEvent);
           successfullyScheduled.add(`ftd:${trainee.fullName}`);
           scheduled = true;
-          console.log(`[PauseBuild] Rescheduled FTD ${trainee.fullName} at ${slot.toFixed(2)} on ${ftdResourceId}`);
+          logRoutineAppDebug(`[PauseBuild] Rescheduled FTD ${trainee.fullName} at ${slot.toFixed(2)} on ${ftdResourceId}`);
           break;
         }
         if (!scheduled) {
-          console.log(`[PauseBuild] FTD ${trainee.fullName} could not be rescheduled before dayEnd — dropped`);
+          logRoutineAppDebug(`[PauseBuild] FTD ${trainee.fullName} could not be rescheduled before dayEnd — dropped`);
         }
       }
     }
@@ -117404,14 +117413,14 @@ ${conflictLines.join("\n")}${moreText}`,
         scheduledEvents.push(newEvent);
         successfullyScheduled.add(trainee.fullName);
         scheduled = true;
-        console.log(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
+        logRoutineAppDebug(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
         break;
       }
       if (!scheduled) {
-        console.log(`[PauseBuild] Could not schedule FLIGHT ${trainee.fullName} (${syllabusItem.code})`);
+        logRoutineAppDebug(`[PauseBuild] Could not schedule FLIGHT ${trainee.fullName} (${syllabusItem.code})`);
       }
     }
-    console.log("[PauseBuild] Successfully scheduled:", successfullyScheduled.size, "entries");
+    logRoutineAppDebug("[PauseBuild] Successfully scheduled:", successfullyScheduled.size, "entries");
     const stbyOccupied = scheduledEvents.filter((e) => e.resourceId?.startsWith("STBY") && !e.isCancelled).map((e) => ({ resourceId: e.resourceId, start: e.startTime, end: e.startTime + e.duration }));
     const getNextStbySlot = (evStart, evEnd) => {
       let stbyLine = 1;
@@ -117448,7 +117457,7 @@ ${conflictLines.join("\n")}${moreText}`,
         cancellationCode: "OPS_PAUSE"
       });
     }
-    console.log(
+    logRoutineAppDebug(
       "[PauseBuild] STBY (cancelled) events:",
       stbyEvents.length,
       "(unscheduled flights + unschedulable FTDs)"
@@ -117460,7 +117469,7 @@ ${conflictLines.join("\n")}${moreText}`,
       seenIds.add(e.id);
       finalEvents.push({ ...e, date: pauseDate });
     }
-    console.log(
+    logRoutineAppDebug(
       "[PauseBuild] Final staged events:",
       finalEvents.length,
       "(locked:",
@@ -117482,7 +117491,7 @@ ${conflictLines.join("\n")}${moreText}`,
       return true;
     });
     const finalEvents = dedupedEvents.map((e) => ({ ...e, date: targetDate }));
-    console.log(
+    logRoutineAppDebug(
       "[PausePublish] Publishing",
       finalEvents.length,
       "events for",
@@ -117519,7 +117528,7 @@ ${conflictLines.join("\n")}${moreText}`,
       `Pause Flight Ops committed for ${targetDate}`,
       `Cancelled: ${cancelledCount} (OPS PAUSE) | Active post-rebuild: ${activeCount} | By: ${authUser?.displayName || "Unknown"}`
     );
-    console.log(
+    logRoutineAppDebug(
       "[PausePublish] Done. Total:",
       finalEvents.length,
       "Active:",
@@ -117536,7 +117545,7 @@ ${conflictLines.join("\n")}${moreText}`,
       seenPublishIds.add(e.id);
       return true;
     });
-    console.log("[PUBLISH] nextDayBuildEvents:", nextDayBuildEvents.length, "→ after dedup:", dedupedBuildEvents.length);
+    logRoutineAppDebug("[PUBLISH] nextDayBuildEvents:", nextDayBuildEvents.length, "→ after dedup:", dedupedBuildEvents.length);
     const newEventsForDate = dedupedBuildEvents.map((e) => ({ ...e, date: buildDfpDate }));
     const publishedPriorityEventIds = new Set(
       newEventsForDate.map((event) => String(event.id || "").trim()).filter(Boolean)
@@ -117605,9 +117614,9 @@ ${conflictLines.join("\n")}${moreText}`,
       ...prev,
       [publishedSnapshotKey]: currentAircraftConfigState
     }));
-    console.log("📋 Triggering training report sync after publish...");
+    logRoutineAppDebug("📋 Triggering training report sync after publish...");
     setTimeout(() => {
-      console.log("⏰ Executing delayed training report sync after publish...");
+      logRoutineAppDebug("⏰ Executing delayed training report sync after publish...");
       setPublishedSchedules((currentSchedules) => {
         setPt051Assessments((currentAssessments) => {
           syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -117753,7 +117762,7 @@ ${conflictLines.join("\n")}${moreText}`,
         if (!saveResponse.ok || !result.success) {
           throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
         }
-        console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode2}), ${newEventsForDate.length} events`);
+        logRoutineAppDebug(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode2}), ${newEventsForDate.length} events`);
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
       } catch (err) {
@@ -117770,7 +117779,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         return;
       }
     } else if (hasSeedData) {
-      console.log(`⚠️ [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
+      logRoutineAppDebug(`⚠️ [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
       await showDarkAlert2(
         "This DFP contains setup-only events, so it was not saved as a real published DFP.",
         "Publish Save Blocked",
@@ -117788,9 +117797,9 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const flightTiles = updatedSchedule.filter(
       (e) => e.type === "flight" || e.type === "ftd" || e.type === "cpt" || e.type === "ground"
     );
-    console.log("[DeployUnavail] handleDeploymentUnavailability: deployments=" + deploymentTiles.length + " flights=" + flightTiles.length);
+    logRoutineAppDebug("[DeployUnavail] handleDeploymentUnavailability: deployments=" + deploymentTiles.length + " flights=" + flightTiles.length);
     if (deploymentTiles.length === 0) {
-      console.log("[DeployUnavail] No deployment tiles - removing all lingering Deployed periods");
+      logRoutineAppDebug("[DeployUnavail] No deployment tiles - removing all lingering Deployed periods");
       for (const flight of flightTiles) {
         await removeDeployedUnavailability(flight.id);
       }
@@ -117803,7 +117812,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         if (cleanupRes.ok) {
           const cleanupData = await cleanupRes.json();
           if (cleanupData.personnelFixed > 0 || cleanupData.traineesFixed > 0) {
-            console.log("[DeployUnavail] Server cleanup fixed", cleanupData.personnelFixed, "personnel and", cleanupData.traineesFixed, "trainees in DB");
+            logRoutineAppDebug("[DeployUnavail] Server cleanup fixed", cleanupData.personnelFixed, "personnel and", cleanupData.traineesFixed, "trainees in DB");
           }
         }
       } catch (err) {
@@ -117949,7 +117958,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     const latestTrainees = allTraineesDataRef.current;
     const instructorsWithTag = latestInstructors.filter((i) => (i.unavailability || []).some((p) => p.notes === tag));
     const traineesWithTag = latestTrainees.filter((t) => (t.unavailability || []).some((p) => p.notes === tag));
-    console.log(
+    logRoutineAppDebug(
       '[DeployUnavail] removeDeployedUnavailability flightId="' + flightId + '" tag="' + tag + '"',
       "instructors with tag:",
       instructorsWithTag.map((i) => i.name),
@@ -117973,7 +117982,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
             body: JSON.stringify({ unavailability: updated })
           });
           if (!resp.ok) console.error("[DeployUnavail] PATCH instructor failed:", instructor.name, resp.status);
-          else console.log("[DeployUnavail] PATCH instructor OK:", instructor.name, "removed tag", tag);
+          else logRoutineAppDebug("[DeployUnavail] PATCH instructor OK:", instructor.name, "removed tag", tag);
         } catch (err) {
           console.error("[DeployUnavail] Failed to remove Deployed unavailability for instructor:", instructor.name, err);
         }
@@ -117996,7 +118005,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
             body: JSON.stringify({ unavailability: updated })
           });
           if (!resp.ok) console.error("[DeployUnavail] PATCH trainee failed:", trainee.name, resp.status);
-          else console.log("[DeployUnavail] PATCH trainee OK:", trainee.name, "removed tag", tag);
+          else logRoutineAppDebug("[DeployUnavail] PATCH trainee OK:", trainee.name, "removed tag", tag);
         } catch (err) {
           console.error("[DeployUnavail] Failed to remove Deployed unavailability for trainee:", trainee.name, err);
         }
@@ -118307,11 +118316,11 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     return syllabusDetails.map((item) => item.id);
   }, [syllabusDetails]);
   const addTileSyllabusOptions = reactExports.useMemo(() => {
-    console.log("addTileSyllabusOptions filtering visibleSyllabusDetails:", visibleSyllabusDetails);
+    logRoutineAppDebug("addTileSyllabusOptions filtering visibleSyllabusDetails:", visibleSyllabusDetails);
     const filtered = visibleSyllabusDetails.filter(
       (item) => item.type === "Flight" || item.type === "FTD" || item.type === "Ground School" && item.code.includes("CPT")
     );
-    console.log("Filtered items:", filtered);
+    logRoutineAppDebug("Filtered items:", filtered);
     const configuredContinuationOptions = getContinuationEventNames(sctEvents);
     const options = [...filtered.map((item) => item.id), ...configuredContinuationOptions];
     return options;
@@ -118717,13 +118726,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       setSyllabusDetails(setupSyllabus);
       setSyllabusError(null);
       setSyllabusLoading(false);
-      console.log(`✅ [Syllabus] Applied ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
+      logRoutineAppDebug(`✅ [Syllabus] Applied ${setupSyllabus.length} setup-test LMP item(s) from local browser data`);
     };
     window.addEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
     return () => window.removeEventListener(SETUP_TEST_SYLLABUS_EVENT, applySetupTestSyllabus);
   }, [pushSetupTestLmpDiag, setupTestProfile]);
   const handleDatabaseDataChanged = reactExports.useCallback(async () => {
-    console.log("🔄 Refreshing database data after database modification...");
+    logRoutineAppDebug("🔄 Refreshing database data after database modification...");
     if (isSetupTestMode()) {
       const setupPersonnel = readSetupTestPersonnel();
       const setupInstructors = (setupPersonnel.instructors || []).map((person) => ({
@@ -118754,7 +118763,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           return [...nonDbInstructors, ...dbPersonnel];
         });
         setArchivedInstructorsData(dbPersonnel.filter((person) => !isRecordActive(person)));
-        console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
+        logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
       }
       const traineesRes = await fetch(scopedApiPath("/api/trainees"), { credentials: "include" });
       if (traineesRes.ok) {
@@ -118787,36 +118796,36 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
             if (!updated[course]) {
               updated[course] = defaultColors[colorIndex % defaultColors.length];
               colorIndex++;
-              console.log(`[DB Load] Added missing courseColor for "${course}"`);
+              logRoutineAppDebug(`[DB Load] Added missing courseColor for "${course}"`);
             }
           });
           return updated;
         });
-        console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+        logRoutineAppDebug(`✅ Refreshed ${dbTrainees.length} trainees from database`);
       }
     } catch (error) {
       console.error("❌ Error refreshing database data:", error);
     }
   }, [scopedApiPath]);
   const handleBulkUpdateTrainees = reactExports.useCallback(async (updatedTrainees) => {
-    console.log(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
-    console.log(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
+    logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
+    logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
     const missingId = updatedTrainees.filter((t) => !t.idNumber);
     const missingName = updatedTrainees.filter((t) => !t.name);
-    console.log(`🔵 [handleBulkUpdateTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
+    logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
     const updatedMap = new Map(updatedTrainees.map((t) => [t.idNumber, t]));
     setTraineesData((prevTrainees) => {
       const existingIds = new Set(prevTrainees.map((t) => t.idNumber));
       const updatedExisting = prevTrainees.map((t) => updatedMap.get(t.idNumber) || t);
       const newToAdd = updatedTrainees.filter((ut) => !existingIds.has(ut.idNumber));
-      console.log(`🔵 [handleBulkUpdateTrainees] State update: ${updatedExisting.length} existing updated, ${newToAdd.length} new added`);
+      logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] State update: ${updatedExisting.length} existing updated, ${newToAdd.length} new added`);
       return [...updatedExisting, ...newToAdd];
     });
     try {
       const courses2 = [...new Set(updatedTrainees.map((t) => t.course).filter(Boolean))];
       const course = courses2.length === 1 ? courses2[0] : updatedTrainees.length > 0 ? updatedTrainees[0].course : void 0;
-      console.log(`🔵 [handleBulkUpdateTrainees] Courses in payload: ${courses2.join(", ")}, using: ${course}`);
-      console.log(`🔵 [handleBulkUpdateTrainees] Calling POST ${getApiBase2()}/trainees/bulk`);
+      logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Courses in payload: ${courses2.join(", ")}, using: ${course}`);
+      logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Calling POST ${getApiBase2()}/trainees/bulk`);
       const response = await fetch(`${getApiBase2()}/trainees/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118827,10 +118836,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           replaceAll: false
         })
       });
-      console.log(`🔵 [handleBulkUpdateTrainees] API response status: ${response.status}`);
+      logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] API response status: ${response.status}`);
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ [handleBulkUpdateTrainees] DB save success:`, JSON.stringify(result));
+        logRoutineAppDebug(`✅ [handleBulkUpdateTrainees] DB save success:`, JSON.stringify(result));
         setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
         await handleDatabaseDataChanged();
       } else {
@@ -118844,7 +118853,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     }
   }, [handleDatabaseDataChanged]);
   const handleReplaceTrainees = reactExports.useCallback(async (newTrainees, onSaved) => {
-    console.log(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
+    logRoutineAppDebug(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
     setTraineesData(newTrainees);
     setSuccessMessage("Trainees successfully replaced!");
     const courseGroups = /* @__PURE__ */ new Map();
@@ -118853,9 +118862,9 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       if (!courseGroups.has(c)) courseGroups.set(c, []);
       courseGroups.get(c).push(t);
     });
-    console.log(`🔵 [handleReplaceTrainees] Course groups:`, [...courseGroups.entries()].map(([c, ts]) => `${c}:${ts.length}`).join(", "));
+    logRoutineAppDebug(`🔵 [handleReplaceTrainees] Course groups:`, [...courseGroups.entries()].map(([c, ts]) => `${c}:${ts.length}`).join(", "));
     try {
-      console.log(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase2()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
+      logRoutineAppDebug(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase2()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
       const response = await fetch(`${getApiBase2()}/trainees/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118866,10 +118875,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           // Safe upsert — create new, update existing, don't deactivate
         })
       });
-      console.log(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
+      logRoutineAppDebug(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
       if (response.ok) {
         const result = await response.json();
-        console.log(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
+        logRoutineAppDebug(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
         setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
         await handleDatabaseDataChanged();
       } else {
@@ -118915,7 +118924,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         fetch(`${apiBase}/personnel`, { credentials: "include" }),
         fetch(`${apiBase}/trainees`, { credentials: "include" })
       ]);
-      console.log("[Poll] Personnel response:", personnelRes.status, "Trainees response:", traineesRes.status);
+      logRoutineAppDebug("[Poll] Personnel response:", personnelRes.status, "Trainees response:", traineesRes.status);
       let pollChanged = false;
       if (personnelRes.ok) {
         const personnelData2 = await personnelRes.json();
@@ -118924,13 +118933,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
           _dataSource: "database"
         }));
-        console.log("[Poll] Fetched", dbPersonnel.length, "personnel. Unavailability total:", dbPersonnel.reduce((sum, p) => sum + (p.unavailability?.length || 0), 0));
+        logRoutineAppDebug("[Poll] Fetched", dbPersonnel.length, "personnel. Unavailability total:", dbPersonnel.reduce((sum, p) => sum + (p.unavailability?.length || 0), 0));
         setInstructorsData((prev) => {
           const prevDbPersonnel = prev.filter((i) => i._dataSource === "database");
           const prevHash = buildUnavailHash(prevDbPersonnel);
           const newHash = buildUnavailHash(dbPersonnel);
           if (prevHash === newHash) return prev;
-          console.log("[Poll] Personnel unavailability CHANGED - updating state");
+          logRoutineAppDebug("[Poll] Personnel unavailability CHANGED - updating state");
           pollChanged = true;
           const nonDbInstructors = prev.filter((i) => i._dataSource !== "database");
           return [...nonDbInstructors, ...dbPersonnel];
@@ -118942,13 +118951,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           ...t,
           _dataSource: "database"
         }));
-        console.log("[Poll] Fetched", dbTrainees.length, "trainees. Unavailability total:", dbTrainees.reduce((sum, t) => sum + (t.unavailability?.length || 0), 0));
+        logRoutineAppDebug("[Poll] Fetched", dbTrainees.length, "trainees. Unavailability total:", dbTrainees.reduce((sum, t) => sum + (t.unavailability?.length || 0), 0));
         setTraineesData((prev) => {
           const prevDbTrainees = prev.filter((t) => t._dataSource === "database");
           const prevHash = buildUnavailHash(prevDbTrainees);
           const newHash = buildUnavailHash(dbTrainees);
           if (prevHash === newHash) return prev;
-          console.log("[Poll] Trainee unavailability CHANGED - updating state");
+          logRoutineAppDebug("[Poll] Trainee unavailability CHANGED - updating state");
           pollChanged = true;
           const mockTrainees = prev.filter((t) => t._dataSource === "mockdata");
           return [...mockTrainees, ...dbTrainees];
@@ -119340,8 +119349,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     setSuccessMessage(newEvent.resourceId === requestedResourceId ? "Ground event added to the DFP." : `Ground event added to the DFP on ${newEvent.resourceId}.`);
   };
   const handleSaveAcademicEvent = (data) => {
-    console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====");
-    console.log("🎓 [AcademicPublish] data received:", {
+    logRoutineAppDebug("🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====");
+    logRoutineAppDebug("🎓 [AcademicPublish] data received:", {
       course: data.course,
       date: data.date,
       workStart: data.workStart,
@@ -119364,14 +119373,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const lessonCodes = data.lessons.map((l) => l.code).join(", ");
     const sessionDuration = data.workEnd - data.workStart;
-    console.log("🎓 [AcademicPublish] lessonCodes:", lessonCodes);
-    console.log("🎓 [AcademicPublish] sessionDuration:", sessionDuration, "(workStart:", data.workStart, "→ workEnd:", data.workEnd, ")");
+    logRoutineAppDebug("🎓 [AcademicPublish] lessonCodes:", lessonCodes);
+    logRoutineAppDebug("🎓 [AcademicPublish] sessionDuration:", sessionDuration, "(workStart:", data.workStart, "→ workEnd:", data.workEnd, ")");
     if (sessionDuration <= 0) {
       console.error("🎓 [AcademicPublish] ❌ BLOCKED: sessionDuration is", sessionDuration, "— workStart/workEnd invalid");
       return;
     }
     const eventId = v4();
-    console.log("🎓 [AcademicPublish] Generated event ID:", eventId);
+    logRoutineAppDebug("🎓 [AcademicPublish] Generated event ID:", eventId);
     const academicDayEvent = {
       id: eventId,
       date: data.date,
@@ -119400,7 +119409,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         isStandard: t.isStandard
       }))
     };
-    console.log("🎓 [AcademicPublish] academicDayEvent constructed:", {
+    logRoutineAppDebug("🎓 [AcademicPublish] academicDayEvent constructed:", {
       id: academicDayEvent.id,
       date: academicDayEvent.date,
       type: academicDayEvent.type,
@@ -119413,27 +119422,27 @@ ${error instanceof Error ? error.message : String(error)}`,
       academicTilesCount: academicDayEvent.academicTiles?.length
     });
     const eventDate = data.date;
-    console.log("🎓 [AcademicPublish] Adding to publishedSchedules for date:", eventDate);
-    console.log("🎓 [AcademicPublish] Current publishedSchedules keys:", Object.keys(publishedSchedules));
-    console.log("🎓 [AcademicPublish] Current events for this date:", (publishedSchedules[eventDate] || []).length);
+    logRoutineAppDebug("🎓 [AcademicPublish] Adding to publishedSchedules for date:", eventDate);
+    logRoutineAppDebug("🎓 [AcademicPublish] Current publishedSchedules keys:", Object.keys(publishedSchedules));
+    logRoutineAppDebug("🎓 [AcademicPublish] Current events for this date:", (publishedSchedules[eventDate] || []).length);
     setPublishedSchedules((prev) => {
       const existing = prev[eventDate] || [];
       const updated = [...existing, academicDayEvent];
-      console.log("🎓 [AcademicPublish] setPublishedSchedules updater — was", existing.length, "events, now", updated.length, "for date", eventDate);
+      logRoutineAppDebug("🎓 [AcademicPublish] setPublishedSchedules updater — was", existing.length, "events, now", updated.length, "for date", eventDate);
       return { ...prev, [eventDate]: updated };
     });
     setEvents((prev) => {
-      console.log("🎓 [AcademicPublish] setEvents updater — appending to", prev.length, "events");
+      logRoutineAppDebug("🎓 [AcademicPublish] setEvents updater — appending to", prev.length, "events");
       return [...prev, academicDayEvent];
     });
     const updatedEventsForDate = [...publishedSchedules[eventDate] || [], academicDayEvent];
-    console.log("🎓 [AcademicPublish] Persisting", updatedEventsForDate.length, "events for date", eventDate, "to DB snapshot...");
+    logRoutineAppDebug("🎓 [AcademicPublish] Persisting", updatedEventsForDate.length, "events for date", eventDate, "to DB snapshot...");
     persistScheduleForDate(eventDate, updatedEventsForDate);
     setShowAddGroundEvent(false);
     const successMsg = `Academic session published for ${data.date}: ${lessonCodes || "ACAD-SESSION"}`;
-    console.log("🎓 [AcademicPublish] ✅ Success:", successMsg);
+    logRoutineAppDebug("🎓 [AcademicPublish] ✅ Success:", successMsg);
     setSuccessMessage(successMsg);
-    console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====");
+    logRoutineAppDebug("🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====");
   };
   const replacementViolatesDayNightSeparation = reactExports.useCallback((personName, personRole, candidateEvent, allEvents) => {
     const candidateClassification = getScheduleEventDayNightClassification(candidateEvent);
@@ -120299,32 +120308,32 @@ ${error instanceof Error ? error.message : String(error)}`,
       let isEligible = nextSyllabusEvent?.type === "Flight";
       if (trainee.isPaused) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
       }
       const isNtsc = trainee.course.includes("NTSC") || trainee.fullName.includes("NTSC");
       if (isNtsc) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
       }
       if (nextSyllabusEvent && nextSyllabusEvent.isRemedial) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} excluded - next event ${nextSyllabusEvent.code} is REMEDIAL`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} excluded - next event ${nextSyllabusEvent.code} is REMEDIAL`);
       }
       if (hasFlight) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - already has flight scheduled for ${analysisDate}`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - already has flight scheduled for ${analysisDate}`);
       }
       if (hasFtd && hasFlight) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - has both FTD and flight scheduled for ${analysisDate}`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - has both FTD and flight scheduled for ${analysisDate}`);
       }
       if (groundEventsToday >= 2) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - already has ${groundEventsToday} ground events for ${analysisDate}`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - already has ${groundEventsToday} ground events for ${analysisDate}`);
       }
       if (!nextSyllabusEvent) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - no next syllabus event found`);
+        logRoutineAppDebug(`Oracle: ${trainee.fullName} ineligible - no next syllabus event found`);
       }
       return { trainee, availableWindows: [], nextSyllabusEvent, isEligible };
     });
@@ -120512,7 +120521,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         (e) => e.type === "flight" && e.date === analysisDate
       );
       if (hasExistingFlightToday) {
-        console.log(`Oracle: Excluding ${tr.trainee.fullName} - already has a flight scheduled for ${analysisDate}`);
+        logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - already has a flight scheduled for ${analysisDate}`);
         return false;
       }
       if (tr.nextSyllabusEvent) {
@@ -120524,7 +120533,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           (e) => nextSyllabusEventRefs.has(String(e.flightNumber || "").trim()) && e.date === analysisDate
         );
         if (hasThisEventAlready) {
-          console.log(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.code || tr.nextSyllabusEvent.id} on ${analysisDate}`);
+          logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - already scheduled for event ${tr.nextSyllabusEvent.code || tr.nextSyllabusEvent.id} on ${analysisDate}`);
           return false;
         }
       }
@@ -120537,11 +120546,11 @@ ${error instanceof Error ? error.message : String(error)}`,
         const proposedIsNight = classifyStartBySolarDaylight(bookingWindow.start, analysisDate) === "Night";
         const proposedIsDay = !proposedIsNight;
         if (nextEventClassification === "Night" && proposedIsDay) {
-          console.log(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Night but proposed time is Day (${bookingWindow.start.toFixed(2)})`);
+          logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Night but proposed time is Day (${bookingWindow.start.toFixed(2)})`);
           return false;
         }
         if (nextEventClassification === "Day" && proposedIsNight) {
-          console.log(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Day but proposed time is Night (${bookingWindow.start.toFixed(2)})`);
+          logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - Next event is Day but proposed time is Night (${bookingWindow.start.toFixed(2)})`);
           return false;
         }
       }
@@ -120555,7 +120564,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       );
       const isUnavailable = isPersonStaticallyUnavailable(tr.trainee, bookingWindow.start, bookingWindow.end, analysisDate, "flight");
       if (!dayNightCheck.isAllowed) {
-        console.log(`Oracle: Excluding ${tr.trainee.fullName} - ${dayNightCheck.reason}`);
+        logRoutineAppDebug(`Oracle: Excluding ${tr.trainee.fullName} - ${dayNightCheck.reason}`);
         return false;
       }
       return !isUnavailable && !hasOverlap;
@@ -121103,11 +121112,11 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
           return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
         });
-        console.log("🔍 STAFF SCHEDULE - Location filtering and sorting applied");
-        console.log("🔍 School:", school);
-        console.log("👁 Total instructors:", instructorsData?.length);
-        console.log("🔍 Filtered instructors:", locationFilteredInstructorsForSchedule?.length);
-        console.log("🔍 Sorted instructors (unit then configured personnel sort):", locationFilteredInstructorsForSchedule.map((i) => `${i.unit || "No Unit"} - ${i.rank} ${i.name}`));
+        logRoutineAppDebug("🔍 STAFF SCHEDULE - Location filtering and sorting applied");
+        logRoutineAppDebug("🔍 School:", school);
+        logRoutineAppDebug("👁 Total instructors:", instructorsData?.length);
+        logRoutineAppDebug("🔍 Filtered instructors:", locationFilteredInstructorsForSchedule?.length);
+        logRoutineAppDebug("🔍 Sorted instructors (unit then configured personnel sort):", locationFilteredInstructorsForSchedule.map((i) => `${i.unit || "No Unit"} - ${i.rank} ${i.name}`));
         try {
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             InstructorScheduleView,
@@ -121264,7 +121273,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               void handleDeleteTraineeFromRoster(trainee);
             },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
-              console.log(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
+              logRoutineAppDebug(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
               setTraineesData((prev) => prev.map(
                 (t) => t.course === oldCourseNumber ? { ...t, course: newCourseNumber } : t
               ));
@@ -121284,13 +121293,13 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onUpdateCourseUnit: async (courseNumber, newUnit) => {
-              console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+              logRoutineAppDebug(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
               setTraineesData((prev) => {
                 const updated = prev.map(
                   (t) => t.course === courseNumber ? { ...t, unit: newUnit } : t
                 );
                 const changed = updated.filter((t) => t.course === courseNumber).length;
-                console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                logRoutineAppDebug(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
                 return updated;
               });
               try {
@@ -121300,7 +121309,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   body: JSON.stringify({ courseNumber, newUnit })
                 });
                 if (response.ok) {
-                  console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                  logRoutineAppDebug(`[CourseEdit] 💾 Saved unit change to database`);
                 } else {
                   console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
                 }
@@ -121315,7 +121324,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onBackcourseTrainee: (trainee, newCourse) => {
-              console.log(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
+              logRoutineAppDebug(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
               setTraineesData((prev) => prev.map(
                 (t) => t.idNumber === trainee.idNumber ? { ...t, course: newCourse } : t
               ));
@@ -121433,13 +121442,13 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onUpdateCourseUnit: async (courseNumber, newUnit) => {
-              console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+              logRoutineAppDebug(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
               setTraineesData((prev) => {
                 const updated = prev.map(
                   (t) => t.course === courseNumber ? { ...t, unit: newUnit } : t
                 );
                 const changed = updated.filter((t) => t.course === courseNumber).length;
-                console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                logRoutineAppDebug(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
                 return updated;
               });
               try {
@@ -121449,7 +121458,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   body: JSON.stringify({ courseNumber, newUnit })
                 });
                 if (response.ok) {
-                  console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                  logRoutineAppDebug(`[CourseEdit] 💾 Saved unit change to database`);
                 } else {
                   console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
                 }
@@ -121698,7 +121707,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             sctFtds,
             sctEvents,
             onAddSctRequest: async (type) => {
-              console.log("[CONTINUATION] onAddSctRequest called with type:", type);
+              logRoutineAppDebug("[CONTINUATION] onAddSctRequest called with type:", type);
               const newReq = {
                 id: v4(),
                 name: "",
@@ -121722,27 +121731,27 @@ ${error instanceof Error ? error.message : String(error)}`,
                 crewIndividual: "",
                 aircraftCount: 1
               };
-              console.log("[CONTINUATION] Created new request:", newReq.id);
+              logRoutineAppDebug("[CONTINUATION] Created new request:", newReq.id);
               if (type === "flight") setSctFlights((prev) => [...prev, newReq]);
               else setSctFtds((prev) => [...prev, newReq]);
               const userId = getCurrentUserId();
-              console.log("[CONTINUATION] Attempting to save - userId from getCurrentUserId():", userId);
+              logRoutineAppDebug("[CONTINUATION] Attempting to save - userId from getCurrentUserId():", userId);
               if (userId) {
                 try {
                   const payload = { ...newReq, userId, requestType: type };
-                  console.log("[CONTINUATION] POST payload:", JSON.stringify(payload));
+                  logRoutineAppDebug("[CONTINUATION] POST payload:", JSON.stringify(payload));
                   const res = await fetch("/api/sct-requests", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                   });
-                  console.log("[CONTINUATION] POST response status:", res.status);
+                  logRoutineAppDebug("[CONTINUATION] POST response status:", res.status);
                   if (res.ok) {
                     const saved2 = await res.json();
                     const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved2.id } : r);
                     if (type === "flight") setSctFlights(updater);
                     else setSctFtds(updater);
-                    console.log("[CONTINUATION] Saved to DB:", saved2.id, "userId:", saved2.userId);
+                    logRoutineAppDebug("[CONTINUATION] Saved to DB:", saved2.id, "userId:", saved2.userId);
                   } else {
                     const errData = await res.json().catch(() => ({}));
                     console.error("[CONTINUATION] Failed to save to DB:", res.status, errData);
@@ -121862,15 +121871,15 @@ ${error instanceof Error ? error.message : String(error)}`,
                 let newRequests;
                 if (existing) {
                   const newForceScheduleValue = !existing.forceSchedule;
-                  console.log(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode2}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
+                  logRoutineAppDebug(`🔄 Toggling Force Schedule for trainee ${traineeId}, event ${eventCode2}: ${existing.forceSchedule} → ${newForceScheduleValue}`);
                   newRequests = prev.map(
                     (r) => r.traineeId === traineeId && r.eventCode === eventCode2 ? { ...r, forceSchedule: newForceScheduleValue, aircraftConfigId: r.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id } : r
                   );
                 } else {
-                  console.log(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode2}`);
+                  logRoutineAppDebug(`✅ Creating new Force Schedule request for trainee ${traineeId}, event ${eventCode2}`);
                   newRequests = [...prev, { traineeId, eventCode: eventCode2, forceSchedule: true, aircraftConfigId: BASE_AIRCRAFT_CONFIG.id }];
                 }
-                console.log(`📋 Updated remedialRequests:`, newRequests.filter((r) => r.forceSchedule));
+                logRoutineAppDebug(`📋 Updated remedialRequests:`, newRequests.filter((r) => r.forceSchedule));
                 storeRemedialRequests(newRequests);
                 return newRequests;
               });
@@ -122068,19 +122077,19 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             onReassignTrainingReport: handleReassignTrainingReportNotification,
             onSelectPt051: (assessment) => {
-              console.log("🔍 Dashboard training report clicked:", assessment);
-              console.log("Looking for event ID:", assessment.eventId);
-              console.log("Total events available:", allPublishedEvents.length);
+              logRoutineAppDebug("🔍 Dashboard training report clicked:", assessment);
+              logRoutineAppDebug("Looking for event ID:", assessment.eventId);
+              logRoutineAppDebug("Total events available:", allPublishedEvents.length);
               const event = allPublishedEvents.find((e) => e.id === assessment.eventId);
-              console.log("Found event:", event);
+              logRoutineAppDebug("Found event:", event);
               const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
-              console.log("Found trainee:", trainee);
+              logRoutineAppDebug("Found trainee:", trainee);
               if (event && trainee) {
-                console.log("✅ Setting event and trainee, navigating to PT051");
+                logRoutineAppDebug("✅ Setting event and trainee, navigating to PT051");
                 setEventForPt051(event);
                 setSelectedTraineeForHateSheet(trainee);
                 setTimeout(() => {
-                  console.log("🚀 Navigating to PT051 view");
+                  logRoutineAppDebug("🚀 Navigating to PT051 view");
                   handleNavigation("PT051");
                 }, 0);
               } else {
@@ -122093,8 +122102,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                   availableTrainees: allTraineesData.map((t) => t.fullName).slice(0, 10),
                   eventsForSameFlightNumber: allPublishedEvents.filter((e) => e.flightNumber === assessment.flightNumber).map((e) => ({ id: e.id, date: e.date, instructor: e.instructor }))
                 });
-                console.log("🔄 Attempting fallback search...");
-                console.log("Searching for:", {
+                logRoutineAppDebug("🔄 Attempting fallback search...");
+                logRoutineAppDebug("Searching for:", {
                   flightNumber: assessment.flightNumber,
                   date: assessment.date,
                   instructor: assessment.instructorName
@@ -122102,13 +122111,13 @@ ${error instanceof Error ? error.message : String(error)}`,
                 const fallbackEvent = allPublishedEvents.find(
                   (e) => e.flightNumber === assessment.flightNumber && e.date === assessment.date && e.instructor === assessment.instructorName
                 );
-                console.log("Fallback result:", fallbackEvent);
+                logRoutineAppDebug("Fallback result:", fallbackEvent);
                 if (fallbackEvent && trainee) {
-                  console.log("✅ Found event using fallback (flight number + date + instructor):", fallbackEvent);
+                  logRoutineAppDebug("✅ Found event using fallback (flight number + date + instructor):", fallbackEvent);
                   setEventForPt051(fallbackEvent);
                   setSelectedTraineeForHateSheet(trainee);
                   setTimeout(() => {
-                    console.log("🚀 Navigating to PT051 view (fallback)");
+                    logRoutineAppDebug("🚀 Navigating to PT051 view (fallback)");
                     handleNavigation("PT051");
                   }, 0);
                 } else {
@@ -122119,22 +122128,22 @@ ${error instanceof Error ? error.message : String(error)}`,
                     matchingDates: allPublishedEvents.filter((e) => e.date === assessment.date).length,
                     matchingInstructors: allPublishedEvents.filter((e) => e.instructor === assessment.instructorName).length
                   });
-                  console.log("🔄 Attempting secondary fallback (flight number + instructor only)...");
+                  logRoutineAppDebug("🔄 Attempting secondary fallback (flight number + instructor only)...");
                   const secondaryFallbackEvent = allPublishedEvents.find(
                     (e) => e.flightNumber === assessment.flightNumber && e.instructor === assessment.instructorName
                   );
                   if (secondaryFallbackEvent && trainee) {
-                    console.log("✅ Found event using secondary fallback:", secondaryFallbackEvent);
+                    logRoutineAppDebug("✅ Found event using secondary fallback:", secondaryFallbackEvent);
                     console.warn("⚠️ Note: Event date may differ from training report date");
                     setEventForPt051(secondaryFallbackEvent);
                     setSelectedTraineeForHateSheet(trainee);
                     setTimeout(() => {
-                      console.log("🚀 Navigating to PT051 view (secondary fallback)");
+                      logRoutineAppDebug("🚀 Navigating to PT051 view (secondary fallback)");
                       handleNavigation("PT051");
                     }, 0);
                   } else {
                     console.error("❌ All fallback attempts failed - cannot open training report");
-                    console.log("🔧 Creating mock event as last resort...");
+                    logRoutineAppDebug("🔧 Creating mock event as last resort...");
                     let eventType = "flight";
                     const flightNum = assessment.flightNumber || "";
                     if (flightNum.includes("CPT") || flightNum.includes("Cpt")) {
@@ -122158,11 +122167,11 @@ ${error instanceof Error ? error.message : String(error)}`,
                       crew: []
                     };
                     if (trainee) {
-                      console.log("✅ Created mock event:", mockEvent);
+                      logRoutineAppDebug("✅ Created mock event:", mockEvent);
                       setEventForPt051(mockEvent);
                       setSelectedTraineeForHateSheet(trainee);
                       setTimeout(() => {
-                        console.log("🚀 Navigating to PT051 view (mock event)");
+                        logRoutineAppDebug("🚀 Navigating to PT051 view (mock event)");
                         handleNavigation("PT051");
                       }, 0);
                     }
@@ -122192,7 +122201,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
         );
       case "Staff":
-        console.log(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
+        logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           StaffView,
           {
@@ -122211,8 +122220,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
-              console.log("📝 [APP] handleUpdateInstructor called");
-              console.log("📝 [APP] Instructor data received:", {
+              logRoutineAppDebug("📝 [APP] handleUpdateInstructor called");
+              logRoutineAppDebug("📝 [APP] Instructor data received:", {
                 id: data.id,
                 name: data.name,
                 unavailability: data.unavailability,
@@ -122227,14 +122236,14 @@ ${error instanceof Error ? error.message : String(error)}`,
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                   });
-                  console.log("📝 [APP] PATCHing existing instructor to /api/personnel/" + dbId);
-                  console.log("📝 [APP] PATCH body:", JSON.stringify(data));
-                  console.log("📝 [APP] PATCH body unavailability field:", data.unavailability);
-                  console.log("📝 [APP] PATCH response status:", response.status);
-                  console.log("📝 [APP] PATCH response ok:", response.ok);
+                  logRoutineAppDebug("📝 [APP] PATCHing existing instructor to /api/personnel/" + dbId);
+                  logRoutineAppDebug("📝 [APP] PATCH body:", JSON.stringify(data));
+                  logRoutineAppDebug("📝 [APP] PATCH body unavailability field:", data.unavailability);
+                  logRoutineAppDebug("📝 [APP] PATCH response status:", response.status);
+                  logRoutineAppDebug("📝 [APP] PATCH response ok:", response.ok);
                   if (response.ok) {
                     const responseData = await response.json();
-                    console.log("📝 [APP] PATCH response data:", responseData);
+                    logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
                   }
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -122333,8 +122342,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             school,
             personnelData,
             onUpdateInstructor: async (data) => {
-              console.log("📝 [APP] handleUpdateInstructor called (Instance 2)");
-              console.log("📝 [APP] Instructor data received:", {
+              logRoutineAppDebug("📝 [APP] handleUpdateInstructor called (Instance 2)");
+              logRoutineAppDebug("📝 [APP] Instructor data received:", {
                 id: data.id,
                 name: data.name,
                 unavailability: data.unavailability,
@@ -122349,14 +122358,14 @@ ${error instanceof Error ? error.message : String(error)}`,
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data)
                   });
-                  console.log("📝 [APP] PATCHing existing instructor to /api/personnel/" + dbId);
-                  console.log("📝 [APP] PATCH body:", JSON.stringify(data));
-                  console.log("📝 [APP] PATCH body unavailability field:", data.unavailability);
-                  console.log("📝 [APP] PATCH response status:", response.status);
-                  console.log("📝 [APP] PATCH response ok:", response.ok);
+                  logRoutineAppDebug("📝 [APP] PATCHing existing instructor to /api/personnel/" + dbId);
+                  logRoutineAppDebug("📝 [APP] PATCH body:", JSON.stringify(data));
+                  logRoutineAppDebug("📝 [APP] PATCH body unavailability field:", data.unavailability);
+                  logRoutineAppDebug("📝 [APP] PATCH response status:", response.status);
+                  logRoutineAppDebug("📝 [APP] PATCH response ok:", response.ok);
                   if (response.ok) {
                     const responseData = await response.json();
-                    console.log("📝 [APP] PATCH response data:", responseData);
+                    logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
                   }
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -122668,8 +122677,8 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
         );
       case "PT051":
-        console.log("eventForPt051:", eventForPt051);
-        console.log("selectedTraineeForHateSheet:", selectedTraineeForHateSheet);
+        logRoutineAppDebug("eventForPt051:", eventForPt051);
+        logRoutineAppDebug("selectedTraineeForHateSheet:", selectedTraineeForHateSheet);
         if (eventForPt051 && selectedTraineeForHateSheet) {
           const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig2, selectedTraineeForHateSheet.unit || activeUnitCode2);
           const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || getTrainingReportDisplayNameForUnit(selectedTraineeForHateSheet.unit || activeUnitCode2);
@@ -122685,25 +122694,25 @@ ${error instanceof Error ? error.message : String(error)}`,
             ] }) });
           }
           const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-          console.log("Looking for assessment with key:", assessmentKey);
-          console.log("Available assessment keys:", Array.from(pt051Assessments.keys()));
+          logRoutineAppDebug("Looking for assessment with key:", assessmentKey);
+          logRoutineAppDebug("Available assessment keys:", Array.from(pt051Assessments.keys()));
           let existingAssessment = pt051Assessments.get(assessmentKey);
-          console.log("Direct lookup result:", existingAssessment);
+          logRoutineAppDebug("Direct lookup result:", existingAssessment);
           if (!existingAssessment) {
-            console.log("Direct lookup failed, trying fallback search...");
+            logRoutineAppDebug("Direct lookup failed, trying fallback search...");
             existingAssessment = Array.from(pt051Assessments.values()).find(
               (a) => a.eventId === eventForPt051.id && a.traineeFullName === selectedTraineeForHateSheet.fullName
             );
-            console.log("Fallback search result:", existingAssessment);
+            logRoutineAppDebug("Fallback search result:", existingAssessment);
           }
           if (!existingAssessment) {
-            console.log("Event ID lookup failed, trying trainee/event/date fallback...");
+            logRoutineAppDebug("Event ID lookup failed, trying trainee/event/date fallback...");
             existingAssessment = Array.from(pt051Assessments.values()).find(
               (a) => a.traineeFullName === selectedTraineeForHateSheet.fullName && a.flightNumber === eventForPt051.flightNumber && (!eventForPt051.date || !a.date || a.date === eventForPt051.date)
             ) || Array.from(pt051Assessments.values()).find(
               (a) => a.traineeFullName === selectedTraineeForHateSheet.fullName && a.flightNumber === eventForPt051.flightNumber
             );
-            console.log("Trainee/event/date fallback result:", existingAssessment);
+            logRoutineAppDebug("Trainee/event/date fallback result:", existingAssessment);
           }
           const pt051LoadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
           if (!loadedPt051Keys.has(pt051LoadKey)) {
@@ -122732,7 +122741,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");
               },
               onEventUpdate: (updatedEvent) => {
-                console.log("Updating eventForPt051 with:", updatedEvent);
+                logRoutineAppDebug("Updating eventForPt051 with:", updatedEvent);
                 setEventForPt051(updatedEvent);
                 setEvents((prevEvents) => {
                   const eventExists = prevEvents.some((e) => e.id === updatedEvent.id);
@@ -122749,7 +122758,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   denyPlatformAction(`delete ${selectedTrainingReportName} assessment`);
                   return;
                 }
-                console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
+                logRoutineAppDebug("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
                 const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
                 const apiBase = getApiBaseUrl();
                 const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
@@ -122767,7 +122776,7 @@ ${errorText || `HTTP ${response.status}`}`,
                   throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
                 }
                 const assessmentKey2 = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
-                console.log("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
+                logRoutineAppDebug("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
                 const updatedAssessments = new Map(pt051Assessments);
                 const deleted = updatedAssessments.delete(assessmentKey2);
                 Array.from(updatedAssessments.entries()).forEach(([key, assessment]) => {
@@ -122775,16 +122784,16 @@ ${errorText || `HTTP ${response.status}`}`,
                     updatedAssessments.delete(key);
                   }
                 });
-                console.log("🗑️ App.tsx: Assessment deleted from map:", deleted);
+                logRoutineAppDebug("🗑️ App.tsx: Assessment deleted from map:", deleted);
                 setPt051Assessments(updatedAssessments);
                 setLoadedPt051Keys((prev) => {
                   const updated = new Set(prev);
                   updated.delete(`${deleteEventId}-${selectedTraineeForHateSheet.fullName}`);
                   return updated;
                 });
-                console.log("📋 App.tsx: Logging to audit...");
+                logRoutineAppDebug("📋 App.tsx: Logging to audit...");
                 logAudit("Performance History", "Delete", `Deleted ${selectedTrainingReportName} for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
-                console.log("✅ App.tsx: Audit logged successfully");
+                logRoutineAppDebug("✅ App.tsx: Audit logged successfully");
                 setSuccessMessage(`${selectedTrainingReportName} Assessment Deleted!`);
               },
               onSave: async (assessment, isAutoSave) => {
@@ -122808,7 +122817,7 @@ ${errorText || `HTTP ${response.status}`}`,
                 void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
                   console.warn("[Training Report] Failed to persist assessment snapshot:", err);
                 });
-                const performanceSave = persistPt051AssessmentRecord(normalizedAssessment).then(() => console.log(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
+                const performanceSave = persistPt051AssessmentRecord(normalizedAssessment).then(() => logRoutineAppDebug(`[Training Report] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
                   console.warn("[Training Report] Failed to persist trainee performance record:", err);
                   if (!isAutoSave) {
                     void showDarkAlert2(`${selectedTrainingReportName} could not be saved to the database.
@@ -122848,7 +122857,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                       })
                     }).then((res) => res.json()).then((data) => {
                       if (data.success) {
-                        console.log(`[Training Report -> Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                        logRoutineAppDebug(`[Training Report -> Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                         setScores((prev) => {
                           const existing = prev.get(assessment.traineeFullName) || [];
                           const newScore = {
@@ -122863,7 +122872,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                           const scoreIndex = existing.findIndex((s) => s.event === eventId);
                           const updatedScores = scoreIndex >= 0 ? existing.map((score, index) => index === scoreIndex ? { ...score, ...newScore } : score) : [...existing, newScore];
                           updated.set(assessment.traineeFullName, updatedScores);
-                          console.log(`[Training Report -> Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
+                          logRoutineAppDebug(`[Training Report -> Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
                           return updated;
                         });
                       } else {
@@ -122927,13 +122936,13 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
               },
               onSave: async (data) => {
                 console.group("%c[PostFlight] onSave fired", "color:#00bfff;font-weight:bold");
-                console.log("[PostFlight] Full data:", JSON.stringify(data, null, 2));
-                console.log("[PostFlight] Guard — eventForPostFlight:", !!eventForPostFlight, "| totalTime:", data.totalTime, "| takeoffTime:", data.takeoffTime);
-                console.log("[PostFlight] result=%s | aircraft=%s | from=%s | to=%s | isSolo=%s | isDual=%s", data.result, data.aircraftNumber, data.from, data.to, data.isSolo, data.isDual);
-                console.log("[PostFlight] Times: total=%s | capt=%s | instr=%s | night=%s | ifAct=%s | ifSim=%s | ineff=%s", data.totalTime, data.captainTime, data.instructorTime, data.nightTime, data.ifActualTime, data.ifSimTime, data.ineffectiveTime);
-                console.log("[PostFlight] Approaches:", data.approaches);
+                logRoutineAppDebug("[PostFlight] Full data:", JSON.stringify(data, null, 2));
+                logRoutineAppDebug("[PostFlight] Guard — eventForPostFlight:", !!eventForPostFlight, "| totalTime:", data.totalTime, "| takeoffTime:", data.takeoffTime);
+                logRoutineAppDebug("[PostFlight] result=%s | aircraft=%s | from=%s | to=%s | isSolo=%s | isDual=%s", data.result, data.aircraftNumber, data.from, data.to, data.isSolo, data.isDual);
+                logRoutineAppDebug("[PostFlight] Times: total=%s | capt=%s | instr=%s | night=%s | ifAct=%s | ifSim=%s | ineff=%s", data.totalTime, data.captainTime, data.instructorTime, data.nightTime, data.ifActualTime, data.ifSimTime, data.ineffectiveTime);
+                logRoutineAppDebug("[PostFlight] Approaches:", data.approaches);
                 console.groupEnd();
-                console.log("Post flight data saved:", data);
+                logRoutineAppDebug("Post flight data saved:", data);
                 if (eventForPostFlight) {
                   try {
                     const duplicateRes = await fetch(`/api/flight-log?scheduleEventId=${encodeURIComponent(eventForPostFlight.id)}`, {
@@ -123008,7 +123017,7 @@ Do you want to replace the existing entry?`,
                     });
                     if (ecRes.ok) {
                       const ecData = await ecRes.json();
-                      console.log(
+                      logRoutineAppDebug(
                         `[PostFlight] EventCompletion ${ecData.created ? "created" : "updated"} for ${completionPayload.traineeFullName} — ${completionPayload.eventCode} -> ${data.result}`
                       );
                     } else {
@@ -123051,7 +123060,7 @@ Do you want to replace the existing entry?`,
                         const freshData = await freshRes.json();
                         if (Array.isArray(freshData.currencyStatus)) {
                           existingStatus = freshData.currencyStatus;
-                          console.log(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
+                          logRoutineAppDebug(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
                         }
                       }
                     } catch (fetchErr) {
@@ -123104,7 +123113,7 @@ Do you want to replace the existing entry?`,
                         ));
                       }
                       savedCurrencyCache.delete(dbId);
-                      console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
+                      logRoutineAppDebug(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
                       const auditChangeParts = [];
                       for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
                         if (!value || value === "false") continue;
@@ -123129,7 +123138,7 @@ Do you want to replace the existing entry?`,
                     }
                   }
                 }
-                console.log("[PostFlight] FlightLogEntry guard: eventForPostFlight=", !!eventForPostFlight, "| data.totalTime=", JSON.stringify(data.totalTime), "| data.takeoffTime=", JSON.stringify(data.takeoffTime), "| guard passes:", !!(eventForPostFlight && (data.totalTime || data.takeoffTime)));
+                logRoutineAppDebug("[PostFlight] FlightLogEntry guard: eventForPostFlight=", !!eventForPostFlight, "| data.totalTime=", JSON.stringify(data.totalTime), "| data.takeoffTime=", JSON.stringify(data.takeoffTime), "| guard passes:", !!(eventForPostFlight && (data.totalTime || data.takeoffTime)));
                 if (eventForPostFlight && (data.totalTime || data.takeoffTime)) {
                   const pfEvt = eventForPostFlight;
                   const isSoloFlight = !!data.isSolo;
@@ -123146,7 +123155,7 @@ Do you want to replace the existing entry?`,
                       throw new Error(`${label} flight log save failed (${response.status}): ${errorText}`);
                     }
                     const saved2 = await response.json();
-                    console.log(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved2.entry?.personName || payload.personName);
+                    logRoutineAppDebug(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved2.entry?.personName || payload.personName);
                     return saved2;
                   };
                   const parsedTotal = parseFloat(data.totalTime || "") || void 0;
@@ -123345,7 +123354,7 @@ Do you want to replace the existing entry?`,
                         captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
                         crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
                       };
-                      console.log("[PostFlight] Trainee FlightLog payload:", JSON.stringify(traineeLogPayload, null, 2));
+                      logRoutineAppDebug("[PostFlight] Trainee FlightLog payload:", JSON.stringify(traineeLogPayload, null, 2));
                       await saveFlightLogEntry(traineeLogPayload, "trainee");
                     }
                     if (pfEvt.instructor) {
@@ -123365,7 +123374,7 @@ Do you want to replace the existing entry?`,
                         captainLogSnapshot: data.captainLog && Object.keys(data.captainLog).length > 0 ? data.captainLog : void 0,
                         crewLogSnapshot: data.crewLog && Object.keys(data.crewLog).length > 0 ? data.crewLog : void 0
                       };
-                      console.log("[PostFlight] Instructor FlightLog payload:", JSON.stringify(instrLogPayload, null, 2));
+                      logRoutineAppDebug("[PostFlight] Instructor FlightLog payload:", JSON.stringify(instrLogPayload, null, 2));
                       await saveFlightLogEntry(instrLogPayload, "instructor");
                     }
                   }
@@ -123392,9 +123401,9 @@ Do you want to replace the existing entry?`,
                         next.set(matchingPt051.id, updatedAssessment);
                         return next;
                       });
-                      console.log(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                      logRoutineAppDebug(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
                     } else {
-                      console.log(`[PostFlight] ℹ️ No unassessed training report found for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                      logRoutineAppDebug(`[PostFlight] ℹ️ No unassessed training report found for ${pt051TraineeName} — ${pt051FlightNumber}`);
                     }
                   }
                 }
@@ -123418,7 +123427,7 @@ Do you want to replace the existing entry?`,
                         (draft) => draft.id === completedCurrencyDraftId ? { ...draft, pushed: false, selected: true } : draft
                       );
                       localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
-                      console.log(`[PostFlight] Currency draft ${data.result === "DCO" ? "cleared from draft and priority queues" : "reset for rescheduling"}:`, completedCurrencyDraftId);
+                      logRoutineAppDebug(`[PostFlight] Currency draft ${data.result === "DCO" ? "cleared from draft and priority queues" : "reset for rescheduling"}:`, completedCurrencyDraftId);
                     }
                   } catch (currencyDraftErr) {
                     console.warn("[PostFlight] Currency draft update failed:", currencyDraftErr);
@@ -123436,7 +123445,7 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          console.log(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
+                          logRoutineAppDebug(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
@@ -123492,13 +123501,13 @@ Do you want to replace the existing entry?`,
     }
   };
   const handleNavigateToProfile = (user) => {
-    console.log("🎡 Navigating to profile:", user);
-    console.log("user:", JSON.stringify(user));
+    logRoutineAppDebug("🎡 Navigating to profile:", user);
+    logRoutineAppDebug("user:", JSON.stringify(user));
     const isTrainee = user.userType === "TRAINEE" || user.course || user._dataSource === "trainee";
     const userRoleCode = String(user.role || "").trim().toUpperCase();
     const isStaff = user.userType === "STAFF" || !isTrainee && (user.isQFI || user.isOFI || user.isCFI || userRoleCode === "INSTRUCTOR");
     if (isStaff) {
-      console.log("Opening staff profile:", user.name);
+      logRoutineAppDebug("Opening staff profile:", user.name);
       const fullInstructor = instructorsData.find(
         (i) => i.idNumber === (user.pmkeysId || user.idNumber) || i.name === user.name
       );
@@ -123511,7 +123520,7 @@ Do you want to replace the existing entry?`,
       handleNavigation("Instructors");
       setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
     } else if (isTrainee) {
-      console.log("Opening trainee profile:", user.name);
+      logRoutineAppDebug("Opening trainee profile:", user.name);
       const fullTrainee = allTraineesData.find(
         (t) => t.idNumber === (user.pmkeysId || user.idNumber) || t.name === user.name
       );
@@ -124054,8 +124063,8 @@ Do you want to replace the existing entry?`,
           instructors: instructorsData.map((i) => i.name),
           trainees: allTraineesData.map((t) => t.fullName),
           syllabus: (() => {
-            console.log("addTileSyllabusOptions length:", addTileSyllabusOptions.length);
-            console.log("syllabusForModal length:", syllabusForModal.length);
+            logRoutineAppDebug("addTileSyllabusOptions length:", addTileSyllabusOptions.length);
+            logRoutineAppDebug("syllabusForModal length:", syllabusForModal.length);
             return isAddingTile ? addTileSyllabusOptions : syllabusForModal;
           })(),
           syllabusDetails,
@@ -124099,17 +124108,17 @@ Do you want to replace the existing entry?`,
             setSelectedEvent(null);
           },
           onScoresCreated: (newScores) => {
-            console.log("App.tsx: onScoresCreated called with:", newScores);
+            logRoutineAppDebug("App.tsx: onScoresCreated called with:", newScores);
             const updatedScores = new Map(scores);
             newScores.forEach((score) => {
-              console.log("Adding score for trainee:", score.traineeName);
+              logRoutineAppDebug("Adding score for trainee:", score.traineeName);
               const traineeScores = updatedScores.get(score.traineeName) || [];
               traineeScores.push(score);
               updatedScores.set(score.traineeName, traineeScores);
             });
-            console.log("Updated scores map:", updatedScores);
+            logRoutineAppDebug("Updated scores map:", updatedScores);
             setScores(updatedScores);
-            console.log("Scores state updated successfully");
+            logRoutineAppDebug("Scores state updated successfully");
             const traineeNamesWithNewScores = [...new Set(newScores.map((s) => s.traineeName))];
             traineeNamesWithNewScores.forEach(async (traineeName) => {
               try {
@@ -124141,7 +124150,7 @@ Do you want to replace the existing entry?`,
                   })
                 });
                 if (res.ok) {
-                  console.log(`[LMP] ✅ Updated DB Individual LMP for ${traineeName}: ${completedEventIds.length} events complete`);
+                  logRoutineAppDebug(`[LMP] ✅ Updated DB Individual LMP for ${traineeName}: ${completedEventIds.length} events complete`);
                 } else {
                   console.warn(`[LMP] Failed to update DB LMP for ${traineeName}`);
                 }
@@ -124398,7 +124407,7 @@ Do you want to replace the existing entry?`,
           instructor: instructorForSct,
           onClose: () => setShowSctRequest(false),
           onSave: async (request) => {
-            console.log("[CONTINUATION] SctRequestFlyout onSave called with request:", request);
+            logRoutineAppDebug("[CONTINUATION] SctRequestFlyout onSave called with request:", request);
             const requestWithDefaults = {
               ...request,
               aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
@@ -124414,7 +124423,7 @@ Do you want to replace the existing entry?`,
               try {
                 const requestType = requestWithDefaults.event.includes("FTD") ? "ftd" : "flight";
                 const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
-                console.log("[CONTINUATION] POST from SctRequestFlyout:", JSON.stringify(payload));
+                logRoutineAppDebug("[CONTINUATION] POST from SctRequestFlyout:", JSON.stringify(payload));
                 const res = await fetch("/api/sct-requests", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -124422,7 +124431,7 @@ Do you want to replace the existing entry?`,
                 });
                 if (res.ok) {
                   const saved2 = await res.json();
-                  console.log("[CONTINUATION] Saved from Flyout:", saved2.id, "userId:", saved2.userId);
+                  logRoutineAppDebug("[CONTINUATION] Saved from Flyout:", saved2.id, "userId:", saved2.userId);
                   if (requestWithDefaults.event.includes("FTD")) {
                     setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved2.id } : r));
                   } else {

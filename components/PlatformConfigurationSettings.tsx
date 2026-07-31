@@ -443,7 +443,7 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
       compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Flight Profile ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
       description: String(row?.description || ''),
       resourceType,
@@ -5439,7 +5439,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode,
-      missionName: `Mission Profile ${missionIndex}`,
+      missionName: `Flight Profile ${missionIndex}`,
       shortTitle: `TASK${missionIndex}`.slice(0, 8),
       description: '',
       resourceType: 'Flight',
@@ -7180,7 +7180,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Mission Profile Identity</div>
+                                <div className={resourceSectionPanelTitleClass}>Profile Details</div>
                                 <div className={resourceSectionPanelHintClass}>Name, short tile title and notes.</div>
                               </div>
                             </div>
