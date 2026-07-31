@@ -639,12 +639,12 @@ const TaskingProfileInput: React.FC<{
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching task profile' : 'No task profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching mission profile' : 'No mission profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
                   ? 'Keep typing to enter this tasking manually.'
-                  : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.`}
+                  : `${operationalModelLabel} has no saved profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.`}
               </span>
             </div>
           )}

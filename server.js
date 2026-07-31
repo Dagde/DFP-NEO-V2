@@ -1552,7 +1552,7 @@ const PLATFORM_FIELD_LABELS = {
     'settings.cpt': 'Procedural trainer rows',
     'settings.standby': 'STBY rows',
     'settings.ground': 'Ground rows',
-    'settings.applyToV2Runtime': 'DFP resource rows enabled',
+    'settings.applyToV2Runtime': 'DFP Resource Rows',
   },
   CommercialUnitModule: {
     unitCode: 'Unit',
