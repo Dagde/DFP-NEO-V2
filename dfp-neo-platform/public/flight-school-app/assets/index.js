@@ -27591,6 +27591,41 @@ const parseProgressionFull$1 = (raw) => {
     labels: filtered.map((x) => x.label)
   };
 };
+const ModalDraftTextArea$1 = ({
+  value,
+  onCommit,
+  rows,
+  placeholder,
+  className
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    onCommit(draftValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: isEditing ? draftValue : value || "",
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => setDraftValue(event.target.value),
+      rows,
+      placeholder,
+      className
+    }
+  );
+};
 const formatFixedCrewDisplayGroup$2 = (crew) => {
   const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
   if (!cleaned) return "";
@@ -30326,10 +30361,10 @@ ${swapNote}` : swapNote
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
+              ModalDraftTextArea$1,
               {
                 value: notes,
-                onChange: (e) => setNotes(e.target.value),
+                onCommit: setNotes,
                 rows: 2,
                 placeholder: "Optional notes...",
                 className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
@@ -30449,10 +30484,10 @@ ${swapNote}` : swapNote
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Swap / Manifest Notes" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "textarea",
+                    ModalDraftTextArea$1,
                     {
                       value: fixedCrewManifestNotes,
-                      onChange: (e) => setFixedCrewManifestNotes(e.target.value),
+                      onCommit: setFixedCrewManifestNotes,
                       rows: 3,
                       placeholder: "Optional swap reason or manifest notes...",
                       className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
@@ -30821,10 +30856,10 @@ ${swapNote}` : swapNote
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "(optional)" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
+              ModalDraftTextArea$1,
               {
                 value: alertUserNote,
-                onChange: (e) => setAlertUserNote(e.target.value),
+                onCommit: setAlertUserNote,
                 placeholder: "Add any extra information for recipients...",
                 rows: 2,
                 className: "w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500"
@@ -31135,6 +31170,41 @@ const formatDate$3 = (dateStr) => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
   return `${String(d.getDate()).padStart(2, "0")} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+};
+const ModalDraftTextArea = ({
+  value,
+  onCommit,
+  rows,
+  placeholder,
+  className
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    onCommit(draftValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: isEditing ? draftValue : value || "",
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => setDraftValue(event.target.value),
+      rows,
+      placeholder,
+      className
+    }
+  );
 };
 const formatFixedCrewDisplayGroup$1 = (crew) => {
   const cleaned = String(crew || "").replace(/^CREW\s*/i, "").trim();
@@ -33196,10 +33266,10 @@ const AddFlightTileModal = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Swap / Manifest Notes" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "textarea",
+                      ModalDraftTextArea,
                       {
                         value: fixedCrewManifestNotes,
-                        onChange: (e) => setFixedCrewManifestNotes(e.target.value),
+                        onCommit: setFixedCrewManifestNotes,
                         rows: 5,
                         placeholder: "Optional swap reason or manifest notes...",
                         className: "w-full h-full min-h-[132px] bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
@@ -33677,10 +33747,10 @@ const AddFlightTileModal = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "textarea",
+                      ModalDraftTextArea,
                       {
                         value: notes,
-                        onChange: (e) => setNotes(e.target.value),
+                        onCommit: setNotes,
                         rows: 2,
                         placeholder: "Optional notes...",
                         className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
@@ -41043,8 +41113,10 @@ const PrioritiesView = ({
                 "textarea",
                 {
                   value: String(getStandardMissionDraftValue(profile, "description") || ""),
+                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => updateStandardMissionDraft(profile.id, { description: value })),
+                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => updateStandardMissionDraft(profile.id, { description: value })),
+                  onKeyDown: stopEditableKeyPropagation,
                   onChange: (event) => updateStandardMissionDraft(profile.id, { description: event.target.value }),
-                  onKeyDown: (event) => event.stopPropagation(),
                   className: "h-16 w-full resize-none rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400",
                   placeholder: "Description"
                 }
@@ -59691,6 +59763,9 @@ const AuthorisationFlyout = ({
               id: "auth-notes",
               rows: 3,
               value: notes,
+              onBeforeInput: (event2) => handleEditableTextBeforeInput(event2, setNotes),
+              onKeyDownCapture: (event2) => handleEditableTextKeyDownCapture(event2, setNotes),
+              onKeyDown: stopEditableKeyPropagation,
               onChange: (e) => setNotes(e.target.value),
               disabled: !!(event.authoSignedBy ?? event.captainSignedBy),
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
@@ -61869,6 +61944,14 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
             "textarea",
             {
               value: phrase,
+              onBeforeInput: (event) => {
+                if (!readOnly && editModeGrades.has(grade)) handleEditableTextBeforeInput(event, (value) => handlePhraseChange(grade, idx, value));
+              },
+              onKeyDownCapture: (event) => {
+                if (!readOnly && editModeGrades.has(grade)) handleEditableTextKeyDownCapture(event, (value) => handlePhraseChange(grade, idx, value));
+                else stopEditableKeyPropagation(event);
+              },
+              onKeyDown: stopEditableKeyPropagation,
               onChange: (e) => {
                 if (!readOnly && editModeGrades.has(grade)) handlePhraseChange(grade, idx, e.target.value);
               },
@@ -82967,6 +83050,38 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
+const DraftSchedulerNotesTextArea = ({
+  value,
+  onCommit
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    onCommit(draftValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: isEditing ? draftValue : value || "",
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => setDraftValue(event.target.value),
+      rows: 3,
+      className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white",
+      placeholder: "e.g., Specific training objectives, time constraints..."
+    }
+  );
+};
 const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode: activeUnitCode2 = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
@@ -83193,16 +83308,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Notes for Scheduler" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "textarea",
-          {
-            value: notes,
-            onChange: (e) => setNotes(e.target.value),
-            rows: 3,
-            className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white",
-            placeholder: "e.g., Specific training objectives, time constraints..."
-          }
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftSchedulerNotesTextArea, { value: notes, onCommit: setNotes })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [

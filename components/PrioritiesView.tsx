@@ -58,6 +58,7 @@ import {
   timeFieldToHours,
   type FixedCrewAvailabilityWindow,
 } from '../utils/fixedCrewAvailability';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { showDarkAlert } from './DarkMessageModal';
 
@@ -3912,8 +3913,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </select>
                         <textarea
                           value={String(getStandardMissionDraftValue(profile, 'description') || '')}
+                          onBeforeInput={event => handleEditableTextBeforeInput(event, value => updateStandardMissionDraft(profile.id, { description: value }))}
+                          onKeyDownCapture={event => handleEditableTextKeyDownCapture(event, value => updateStandardMissionDraft(profile.id, { description: value }))}
+                          onKeyDown={stopEditableKeyPropagation}
                           onChange={event => updateStandardMissionDraft(profile.id, { description: event.target.value })}
-                          onKeyDown={event => event.stopPropagation()}
                           className="h-16 w-full resize-none rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-cyan-400"
                           placeholder="Description"
                         />

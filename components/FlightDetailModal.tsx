@@ -45,6 +45,7 @@ import {
     getUnitCallsignEntries,
     type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -79,6 +80,50 @@ const safeN = (n: number | undefined | null): number => {
 const safe = (n: number | undefined | null, d = 2): string => {
   if (n === undefined || n === null || isNaN(Number(n))) return '\u2014';
   return Number(n).toFixed(d);
+};
+
+const ModalDraftTextArea = ({
+    value,
+    onCommit,
+    rows,
+    placeholder,
+    className,
+}: {
+    value: string;
+    onCommit: (value: string) => void;
+    rows: number;
+    placeholder?: string;
+    className: string;
+}) => {
+    const [draftValue, setDraftValue] = useState(value || '');
+    const [isEditing, setIsEditing] = useState(false);
+
+    useEffect(() => {
+        if (!isEditing) setDraftValue(value || '');
+    }, [isEditing, value]);
+
+    const commitDraftValue = () => {
+        setIsEditing(false);
+        onCommit(draftValue);
+    };
+
+    return (
+        <textarea
+            value={isEditing ? draftValue : value || ''}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={() => {
+                setDraftValue(value || '');
+                setIsEditing(true);
+            }}
+            onBlur={commitDraftValue}
+            onChange={(event) => setDraftValue(event.target.value)}
+            rows={rows}
+            placeholder={placeholder}
+            className={className}
+        />
+    );
 };
 
 const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
@@ -3591,9 +3636,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     )}
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
-                                        <textarea
+                                        <ModalDraftTextArea
                                             value={notes}
-                                            onChange={e => setNotes(e.target.value)}
+                                            onCommit={setNotes}
                                             rows={2}
                                             placeholder="Optional notes..."
                                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
@@ -3728,9 +3773,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Swap / Manifest Notes</label>
-                                                        <textarea
+                                                        <ModalDraftTextArea
                                                             value={fixedCrewManifestNotes}
-                                                            onChange={e => setFixedCrewManifestNotes(e.target.value)}
+                                                            onCommit={setFixedCrewManifestNotes}
                                                             rows={3}
                                                             placeholder="Optional swap reason or manifest notes..."
                                                             className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
@@ -4160,9 +4205,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         <label className="text-gray-400 text-xs font-semibold uppercase tracking-wide block mb-1">
                                             Additional message <span className="text-gray-500">(optional)</span>
                                         </label>
-                                        <textarea
+                                        <ModalDraftTextArea
                                             value={alertUserNote}
-                                            onChange={(e) => setAlertUserNote(e.target.value)}
+                                            onCommit={setAlertUserNote}
                                             placeholder="Add any extra information for recipients..."
                                             rows={2}
                                             className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500"

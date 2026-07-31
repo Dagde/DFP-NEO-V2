@@ -7,7 +7,7 @@ import { EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, Cancellat
 import ACHistoryPage from './ACHistoryPage';
 import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import EmergencyPage from './EmergencyPage';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -461,6 +461,14 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                                     <div key={idx} className="flex items-start space-x-2 group">
                                         <textarea
                                             value={phrase}
+                                            onBeforeInput={(event) => {
+                                                if (!readOnly && editModeGrades.has(grade)) handleEditableTextBeforeInput(event, (value) => handlePhraseChange(grade, idx, value));
+                                            }}
+                                            onKeyDownCapture={(event) => {
+                                                if (!readOnly && editModeGrades.has(grade)) handleEditableTextKeyDownCapture(event, (value) => handlePhraseChange(grade, idx, value));
+                                                else stopEditableKeyPropagation(event);
+                                            }}
+                                            onKeyDown={stopEditableKeyPropagation}
                                             onChange={(e) => { if (!readOnly && editModeGrades.has(grade)) handlePhraseChange(grade, idx, e.target.value); }}
                                             readOnly={readOnly || !editModeGrades.has(grade)}
                                             rows={1}

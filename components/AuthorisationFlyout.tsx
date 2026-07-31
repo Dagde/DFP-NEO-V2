@@ -5,6 +5,7 @@ import PinEntryFlyout from './PinEntryFlyout';
 import ClearAuthConfirmation from './ClearAuthConfirmation';
 import StaffSearchDropdown from './StaffSearchDropdown';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 // ─── Currency helpers (mirrors CurrencyPanel logic) ─────────────────────────
 
@@ -549,6 +550,9 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                             id="auth-notes"
                             rows={3}
                             value={notes}
+                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setNotes)}
+                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setNotes)}
+                            onKeyDown={stopEditableKeyPropagation}
                             onChange={e => setNotes(e.target.value)}
                             disabled={!!(event.authoSignedBy ?? event.captainSignedBy)}
                             className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"

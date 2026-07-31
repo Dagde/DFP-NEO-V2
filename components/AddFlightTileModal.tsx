@@ -38,6 +38,7 @@ import {
   timeFieldToHours,
   type FixedCrewAvailabilityWindow,
 } from '../utils/fixedCrewAvailability';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 const CONTINUATION_COURSE_KEY = '__continuation_events__';
 
@@ -88,6 +89,50 @@ const formatDate = (dateStr: string): string => {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const d = new Date(dateStr + 'T00:00:00');
   return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+};
+
+const ModalDraftTextArea = ({
+  value,
+  onCommit,
+  rows,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+  rows: number;
+  placeholder?: string;
+  className: string;
+}) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    onCommit(draftValue);
+  };
+
+  return (
+    <textarea
+      value={isEditing ? draftValue : value || ''}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+      onKeyDown={stopEditableKeyPropagation}
+      onFocus={() => {
+        setDraftValue(value || '');
+        setIsEditing(true);
+      }}
+      onBlur={commitDraftValue}
+      onChange={(event) => setDraftValue(event.target.value)}
+      rows={rows}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
 };
 
 const formatFixedCrewDisplayGroup = (crew?: string | null): string => {
@@ -3353,9 +3398,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Swap / Manifest Notes</label>
-                  <textarea
+                  <ModalDraftTextArea
                     value={fixedCrewManifestNotes}
-                    onChange={e => setFixedCrewManifestNotes(e.target.value)}
+                    onCommit={setFixedCrewManifestNotes}
                     rows={5}
                     placeholder="Optional swap reason or manifest notes..."
                     className="w-full h-full min-h-[132px] bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-emerald-500 resize-none"
@@ -3783,9 +3828,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 )}
                 <div className="mt-3">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
-                  <textarea
+                  <ModalDraftTextArea
                     value={notes}
-                    onChange={e => setNotes(e.target.value)}
+                    onCommit={setNotes}
                     rows={2}
                     placeholder="Optional notes..."
                     className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"

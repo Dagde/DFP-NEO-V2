@@ -4,6 +4,7 @@ import { Instructor, SctRequest } from '../types';
 import { BASE_AIRCRAFT_CONFIG, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
 import { getContinuationEventCurrencyProfiles } from '../utils/continuationEvents';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { showDarkAlert } from './DarkMessageModal';
 
 interface SctRequestFlyoutProps {
@@ -19,6 +20,44 @@ interface SctRequestFlyoutProps {
   activeUnitCodes?: string[];
   aircraftTypeCode?: string | null;
 }
+
+const DraftSchedulerNotesTextArea = ({
+  value,
+  onCommit,
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+}) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    onCommit(draftValue);
+  };
+
+  return (
+    <textarea
+      value={isEditing ? draftValue : value || ''}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+      onKeyDown={stopEditableKeyPropagation}
+      onFocus={() => {
+        setDraftValue(value || '');
+        setIsEditing(true);
+      }}
+      onBlur={commitDraftValue}
+      onChange={(event) => setDraftValue(event.target.value)}
+      rows={3}
+      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
+      placeholder="e.g., Specific training objectives, time constraints..."
+    />
+  );
+};
 
 const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = '18:30', aircraftConfigurationDefinitions = [], activeUnitCode = '', activeUnitCodes = [], aircraftTypeCode = '' }) => {
   const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
@@ -266,13 +305,7 @@ const SctRequestFlyout: React.FC<SctRequestFlyoutProps> = ({ instructor, onClose
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-400">Notes for Scheduler</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              rows={3}
-              className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
-              placeholder="e.g., Specific training objectives, time constraints..."
-            />
+            <DraftSchedulerNotesTextArea value={notes} onCommit={setNotes} />
           </div>
         </div>
 
