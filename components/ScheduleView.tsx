@@ -2920,7 +2920,8 @@ const InitialSetupWizard: React.FC<{
     };
     const parseWizardOrganisationPath = (value: string) => String(value || '').split('/').map((item) => item.trim()).filter(Boolean);
     const getWizardOrganisationRelationshipPathsForDraft = (draft: typeof organisationDraft) => {
-        const levels = getOrganisationDraftLevels(draft);
+        const levels = getOrganisationDraftLevels(draft)
+            .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }));
         const rootLabel = levels[0]?.options?.[0] || draft.name || draft.code || 'Organisation';
         const parentRowsByLevel = levels.map((level, levelIndex) => (
             levelIndex === 0
@@ -3324,6 +3325,7 @@ const InitialSetupWizard: React.FC<{
     );
     const saveOrganisationDraft = (options: { preserveWizardDraft?: boolean; message?: string } = {}) => {
         const organisationLevels = getOrganisationDraftLevels(organisationDraft)
+            .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }))
             .filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
         const rootLabel = organisationLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
         const parentRowsByLevel = organisationLevels.map((level, levelIndex) => (
@@ -3400,7 +3402,7 @@ const InitialSetupWizard: React.FC<{
                     options: draft.options,
                     childrenByParent: parentMapsByLevel[levelIndex]?.childrenByParent || {},
                     parentByChild: parentMapsByLevel[levelIndex]?.parentByChild || {},
-                })).filter((level) => String(level.name || '').trim() || level.options.length > 0),
+                })).filter((level) => String(level.name || '').trim() || (Array.isArray(level.options) && level.options.length > 0)),
                 relationshipPaths,
             },
         })));
@@ -4109,7 +4111,7 @@ const InitialSetupWizard: React.FC<{
                 saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft, staffRows: importedRows });
             }
             const message = isSetupTestMode
-                ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? '' : 's'} to Staff Profiles in this local test app.`
+                ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? '' : 's'} to Staff Profiles in this setup.`
                 : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? '' : 's'} into the wizard staff list.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
@@ -4241,7 +4243,7 @@ const InitialSetupWizard: React.FC<{
                     sortOrder: item.sortOrder,
                 })),
             });
-            const message = `Loaded ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode}. Click “Commit uploaded LMP events” to add them to the local test app.`;
+            const message = `Loaded ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode}. Click “Commit uploaded LMP events” to add them to this setup.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -4259,7 +4261,7 @@ const InitialSetupWizard: React.FC<{
                 grade5: getWizardCellByHeader(result.headers || [], row, 'Grade 5'),
             })).filter((row) => row.dimension || row.passStandard || row.failStandard);
             setScoringDraft(formatWizardScoringRows(importedRows));
-            const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. Click Next to sync it into the local test app.`;
+            const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? '' : 's'} into the wizard. Click Next to sync it into Settings.`;
             setImportConfirmations((current) => ({ ...current, [template.id]: message }));
             setSaveMessage(message);
             return;
@@ -5119,12 +5121,13 @@ const InitialSetupWizard: React.FC<{
         </div>
     );
     const organisationPreviewLevels = getOrganisationDraftLevels(organisationDraft)
+        .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }))
         .filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || '').trim());
     const organisationRootLabel = organisationPreviewLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || 'Organisation';
     const getParentOptionsForOrganisationLevel = (levelIndex: number) => (
         levelIndex <= 1
             ? [organisationRootLabel].filter(Boolean)
-            : getOrganisationDraftLevel(organisationDraft, levelIndex - 1).options
+            : (Array.isArray(getOrganisationDraftLevel(organisationDraft, levelIndex - 1)?.options) ? getOrganisationDraftLevel(organisationDraft, levelIndex - 1).options : [])
     );
     const level1ParentOptions = getParentOptionsForOrganisationLevel(1);
     const level2ParentOptions = getParentOptionsForOrganisationLevel(2);
@@ -5293,6 +5296,7 @@ const InitialSetupWizard: React.FC<{
     };
     const buildSetupTestOrganisationStructure = (unitRows: ReturnType<typeof parseWizardUnitRows>) => {
         const organisationLevels = getOrganisationDraftLevels(organisationDraft)
+            .map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }))
             .filter((level, index) => (
                 index === 0
                 || String(level.name || '').trim().toLowerCase() !== 'unit'
@@ -5830,8 +5834,8 @@ const InitialSetupWizard: React.FC<{
             safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(steps.length - 1));
         }
         setSaveMessage(markComplete
-            ? 'Setup saved into this local test app only. The real DFP-NEO app and database were not touched.'
-            : 'This step has been synced into the local test Settings. The real DFP-NEO app and database were not touched.'
+            ? 'Setup saved in this setup workspace.'
+            : 'This step has been synced into Settings for this setup workspace.'
         );
     };
 
@@ -5933,7 +5937,7 @@ const InitialSetupWizard: React.FC<{
             row.surname || row.givenNames || row.unit || row.position || row.qualifications
         )).length;
         saveSetupTestWizardDrafts(false, { staffDraft, staffRows });
-        const message = `Committed ${staffCount} staff profile${staffCount === 1 ? '' : 's'} to Staff Profiles in this local test app.`;
+        const message = `Committed ${staffCount} staff profile${staffCount === 1 ? '' : 's'} to Staff Profiles in this setup.`;
         setImportConfirmations((current) => ({ ...current, staff: message }));
         setSaveMessage(message);
     };
@@ -5959,7 +5963,7 @@ const InitialSetupWizard: React.FC<{
         const nextUnitDraft = { ...unitDraft, hasTrainees: true };
         setUnitDraft(nextUnitDraft);
         saveSetupTestWizardDrafts(false, { traineeDraft, traineeRows, unitDraft: nextUnitDraft });
-        const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this local test app.`;
+        const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? '' : 's'} to the trainee list in this setup.`;
         setImportConfirmations((current) => ({ ...current, trainees: message }));
         setTraineeAllocationCommitted(true);
         setShowMoreTraineesPrompt(true);
@@ -6083,7 +6087,7 @@ const InitialSetupWizard: React.FC<{
                 sortOrder: item.sortOrder,
             })),
         });
-        saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+        saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this setup.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
             const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
             const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
             const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
@@ -6300,7 +6304,7 @@ const InitialSetupWizard: React.FC<{
                 })),
             });
         }
-        const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode} to this local test app.`;
+        const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} for ${cleanLmpCode} to this setup.`;
         setImportConfirmations((current) => ({ ...current, courses: message }));
         setSaveMessage(message);
     };
@@ -6395,12 +6399,13 @@ const InitialSetupWizard: React.FC<{
         if (additionalOrganisationLevelIndex >= 4 && additionalOrganisationLevelIndex <= MAX_INITIAL_SETUP_ORGANISATION_LEVELS) {
             const level = getOrganisationDraftLevel(organisationDraft, additionalOrganisationLevelIndex);
             const parentLevel = getOrganisationDraftLevel(organisationDraft, additionalOrganisationLevelIndex - 1);
+            const levelOptions = Array.isArray(level?.options) ? level.options : [];
             return promptShell(
                 <p>This layer sits under <strong>{parentLevel.name || `Level ${additionalOrganisationLevelIndex - 1}`}</strong>. Add the items for this level and choose each immediate parent.</p>,
                 organisationLevelAnswer(
                     additionalOrganisationLevelIndex,
                     level.name,
-                    level.options.join('\n'),
+                    levelOptions.join('\n'),
                     level.parents,
                     (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { name: value }),
                     (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { options: value }),
@@ -6640,7 +6645,7 @@ const InitialSetupWizard: React.FC<{
                     {renderStaffEditor()}
                     <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                         <p className="text-xs font-semibold leading-5 text-emerald-900">
-                            This writes the staff shown above into the local test app Staff Profiles. It does not touch the real DFP-NEO database.
+                            This writes the staff shown above into Staff Profiles for this setup.
                         </p>
                         <button
                             type="button"
@@ -6688,7 +6693,7 @@ const InitialSetupWizard: React.FC<{
                             {renderTraineeEditor('allocation')}
                             <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                                 <p className="text-xs font-semibold leading-5 text-emerald-900">
-                                    This writes the trainees shown above into the local test app trainee list. It does not touch the real DFP-NEO database.
+                                    This writes the trainees shown above into the trainee list for this setup.
                                 </p>
                                 <button
                                     type="button"
@@ -6801,7 +6806,7 @@ const InitialSetupWizard: React.FC<{
         return promptShell(
             <p>
                 {isSetupTestMode
-                    ? <>In this local test app, each step has already synced into Settings as you clicked Next. Press <strong>Save setup</strong> to mark the wizard complete.</>
+                    ? <>Each step has already synced into Settings as you clicked Next. Press <strong>Save setup</strong> to mark the wizard complete.</>
                     : <>Review the setup below. Nothing from this wizard is written to Settings until you press <strong>Save setup</strong>.</>
                 }
             </p>,

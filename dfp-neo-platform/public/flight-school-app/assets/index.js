@@ -12093,7 +12093,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   };
   const parseWizardOrganisationPath = (value) => String(value || "").split("/").map((item) => item.trim()).filter(Boolean);
   const getWizardOrganisationRelationshipPathsForDraft = (draft) => {
-    const levels = getOrganisationDraftLevels(draft);
+    const levels = getOrganisationDraftLevels(draft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] }));
     const rootLabel = levels[0]?.options?.[0] || draft.name || draft.code || "Organisation";
     const parentRowsByLevel = levels.map((level, levelIndex) => levelIndex === 0 ? [] : buildWizardParentRowsForChildren(level.options, level.parents, levels[levelIndex - 1]?.options || []));
     return buildWizardRelationshipPathsFromLevelRows(rootLabel, parentRowsByLevel);
@@ -12429,7 +12429,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   };
   const isOrganisationWizardStep = (stepId) => String(stepId || "") === "org-name" || String(stepId || "") === "units-today" || /^org-level\d+$/.test(String(stepId || ""));
   const saveOrganisationDraft = (options = {}) => {
-    const organisationLevels = getOrganisationDraftLevels(organisationDraft).filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
+    const organisationLevels = getOrganisationDraftLevels(organisationDraft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] })).filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
     const rootLabel = organisationLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || "Organisation";
     const parentRowsByLevel = organisationLevels.map((level, levelIndex) => levelIndex === 0 ? [] : buildWizardParentRowsForChildren(level.options, level.parents, organisationLevels[levelIndex - 1]?.options || []));
     const organisationRelationshipPaths = buildWizardRelationshipPathsFromLevelRows(rootLabel, parentRowsByLevel);
@@ -12501,7 +12501,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           options: draft.options,
           childrenByParent: parentMapsByLevel[levelIndex]?.childrenByParent || {},
           parentByChild: parentMapsByLevel[levelIndex]?.parentByChild || {}
-        })).filter((level) => String(level.name || "").trim() || level.options.length > 0),
+        })).filter((level) => String(level.name || "").trim() || Array.isArray(level.options) && level.options.length > 0),
         relationshipPaths
       }
     })));
@@ -13155,7 +13155,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       if (isSetupTestMode$1) {
         saveSetupTestWizardDrafts(false, { staffDraft: nextStaffDraft, staffRows: importedRows });
       }
-      const message = isSetupTestMode$1 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this local test app.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
+      const message = isSetupTestMode$1 ? `Committed ${importedRows.length} uploaded staff profile${importedRows.length === 1 ? "" : "s"} to Staff Profiles in this setup.` : `Imported ${importedRows.length} staff row${importedRows.length === 1 ? "" : "s"} into the wizard staff list.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -13279,7 +13279,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           sortOrder: item.sortOrder
         }))
       });
-      const message = `Loaded ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} for ${cleanLmpCode}. Click “Commit uploaded LMP events” to add them to the local test app.`;
+      const message = `Loaded ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} for ${cleanLmpCode}. Click “Commit uploaded LMP events” to add them to this setup.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -13297,7 +13297,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         grade5: getWizardCellByHeader(result.headers || [], row, "Grade 5")
       })).filter((row) => row.dimension || row.passStandard || row.failStandard);
       setScoringDraft(formatWizardScoringRows(importedRows));
-      const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into the local test app.`;
+      const message = `Imported ${importedRows.length} scoring matrix row${importedRows.length === 1 ? "" : "s"} into the wizard. Click Next to sync it into Settings.`;
       setImportConfirmations((current) => ({ ...current, [template.id]: message }));
       setSaveMessage(message);
       return;
@@ -14014,9 +14014,9 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     },
     visibleStep.id
   );
-  const organisationPreviewLevels = getOrganisationDraftLevels(organisationDraft).filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
+  const organisationPreviewLevels = getOrganisationDraftLevels(organisationDraft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] })).filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
   const organisationRootLabel = organisationPreviewLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || "Organisation";
-  const getParentOptionsForOrganisationLevel = (levelIndex) => levelIndex <= 1 ? [organisationRootLabel].filter(Boolean) : getOrganisationDraftLevel(organisationDraft, levelIndex - 1).options;
+  const getParentOptionsForOrganisationLevel = (levelIndex) => levelIndex <= 1 ? [organisationRootLabel].filter(Boolean) : Array.isArray(getOrganisationDraftLevel(organisationDraft, levelIndex - 1)?.options) ? getOrganisationDraftLevel(organisationDraft, levelIndex - 1).options : [];
   const level1ParentOptions = getParentOptionsForOrganisationLevel(1);
   const level2ParentOptions = getParentOptionsForOrganisationLevel(2);
   const level3ParentOptions = getParentOptionsForOrganisationLevel(3);
@@ -14121,7 +14121,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     }, "field-edit:organisation-level-count");
   };
   const buildSetupTestOrganisationStructure = (unitRows) => {
-    const organisationLevels = getOrganisationDraftLevels(organisationDraft).filter((level, index) => index === 0 || String(level.name || "").trim().toLowerCase() !== "unit").filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
+    const organisationLevels = getOrganisationDraftLevels(organisationDraft).map((level) => ({ ...level, options: Array.isArray(level?.options) ? level.options : [] })).filter((level, index) => index === 0 || String(level.name || "").trim().toLowerCase() !== "unit").filter((level, index) => index === 0 || level.options.length > 0 || String(level.name || "").trim());
     const rootLabel = organisationLevels[0]?.options?.[0] || organisationDraft.name || organisationDraft.code || "Organisation";
     const parentRowsByLevel = organisationLevels.map((level, levelIndex) => levelIndex === 0 ? [] : buildWizardParentRowsForChildren(level.options, level.parents, organisationLevels[levelIndex - 1]?.options || []));
     const relationshipPaths = buildWizardRelationshipPathsFromLevelRows(rootLabel, parentRowsByLevel);
@@ -14613,7 +14613,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       safeSetWizardLocalStorage(initialSetupWizardStorageKey, String(steps.length - 1));
     }
     setSaveMessage(
-      markComplete ? "Setup saved into this local test app only. The real DFP-NEO app and database were not touched." : "This step has been synced into the local test Settings. The real DFP-NEO app and database were not touched."
+      markComplete ? "Setup saved in this setup workspace." : "This step has been synced into Settings for this setup workspace."
     );
   };
   const saveAllWizardDrafts = () => {
@@ -14712,7 +14712,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     const staffRows = uploadedStaffProfileRows.length > 0 ? uploadedStaffProfileRows : void 0;
     const staffCount = (staffRows || parseWizardStaffRows(staffDraft)).filter((row) => row.surname || row.givenNames || row.unit || row.position || row.qualifications).length;
     saveSetupTestWizardDrafts(false, { staffDraft, staffRows });
-    const message = `Committed ${staffCount} staff profile${staffCount === 1 ? "" : "s"} to Staff Profiles in this local test app.`;
+    const message = `Committed ${staffCount} staff profile${staffCount === 1 ? "" : "s"} to Staff Profiles in this setup.`;
     setImportConfirmations((current) => ({ ...current, staff: message }));
     setSaveMessage(message);
   };
@@ -14734,7 +14734,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     const nextUnitDraft = { ...unitDraft, hasTrainees: true };
     setUnitDraft(nextUnitDraft);
     saveSetupTestWizardDrafts(false, { traineeDraft, traineeRows, unitDraft: nextUnitDraft });
-    const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? "" : "s"} to the trainee list in this local test app.`;
+    const message = `Committed ${traineeCount} trainee profile${traineeCount === 1 ? "" : "s"} to the trainee list in this setup.`;
     setImportConfirmations((current) => ({ ...current, trainees: message }));
     setTraineeAllocationCommitted(true);
     setShowMoreTraineesPrompt(true);
@@ -14854,7 +14854,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         sortOrder: item.sortOrder
       }))
     });
-    saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this local test app.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
+    saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this setup.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
       const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
       const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
@@ -15050,7 +15050,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         }))
       });
     }
-    const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} for ${cleanLmpCode} to this local test app.`;
+    const message = `Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} for ${cleanLmpCode} to this setup.`;
     setImportConfirmations((current) => ({ ...current, courses: message }));
     setSaveMessage(message);
   };
@@ -15168,6 +15168,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     if (additionalOrganisationLevelIndex >= 4 && additionalOrganisationLevelIndex <= MAX_INITIAL_SETUP_ORGANISATION_LEVELS) {
       const level = getOrganisationDraftLevel(organisationDraft, additionalOrganisationLevelIndex);
       const parentLevel = getOrganisationDraftLevel(organisationDraft, additionalOrganisationLevelIndex - 1);
+      const levelOptions = Array.isArray(level?.options) ? level.options : [];
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
           "This layer sits under ",
@@ -15177,7 +15178,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         organisationLevelAnswer(
           additionalOrganisationLevelIndex,
           level.name,
-          level.options.join("\n"),
+          levelOptions.join("\n"),
           level.parents,
           (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { name: value }),
           (value) => updateAdditionalOrganisationLevel(additionalOrganisationLevelIndex, { options: value }),
@@ -15406,7 +15407,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           renderStaffEditor(),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the staff shown above into the local test app Staff Profiles. It does not touch the real DFP-NEO database." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the staff shown above into Staff Profiles for this setup." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -15452,7 +15453,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: unitDraft.hasTrainees ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           renderTraineeEditor("allocation"),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the trainees shown above into the local test app trainee list. It does not touch the real DFP-NEO database." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold leading-5 text-emerald-900", children: "This writes the trainees shown above into the trainee list for this setup." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -15563,7 +15564,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     }
     return promptShell(
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: isSetupTestMode$1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        "In this local test app, each step has already synced into Settings as you clicked Next. Press ",
+        "Each step has already synced into Settings as you clicked Next. Press ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Save setup" }),
         " to mark the wizard complete."
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -70351,7 +70352,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const organisationParentLevels = organisationStructure.levels.slice(1).map((level, index) => ({
     levelIndex: index + 1,
     name: level.name || `Level ${index + 1}`,
-    options: level.options.map((option) => String(option || "").trim()).filter(Boolean)
+    options: (Array.isArray(level?.options) ? level.options : []).map((option) => String(option || "").trim()).filter(Boolean)
   })).filter((level) => level.options.length > 0);
   const updateUnitParentOrganisationPath = (unitIndex, unit, levelIndex, selectedValue) => {
     const currentPath = getUnitParentOrganisationPath2(unit);
@@ -70529,7 +70530,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
                 organisationStructure.levelCount,
                 " levels · ",
-                organisationStructure.levels.reduce((sum, level) => sum + level.options.length, 0),
+                organisationStructure.levels.reduce((sum, level) => sum + (Array.isArray(level?.options) ? level.options.length : 0), 0),
                 " options"
               ] })
             ] }),
@@ -70602,35 +70603,38 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               ),
               organisationStructureImportError ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded border border-red-500/30 bg-red-950/40 px-3 py-2 text-xs text-red-200", children: organisationStructureImportError }) : null
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: organisationStructure.levels.map((level, levelIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3 md:grid-cols-[72px_220px_1fr]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60", children: "Level" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-white", children: levelIndex })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                DraftField,
-                {
-                  label: "Level Type",
-                  value: level.name,
-                  disabled: !canEdit || !organisationStructureUnlocked,
-                  onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { name: value })
-                }
-              ),
-              organisationStructureUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                DraftTextAreaField,
-                {
-                  label: `Names in this level (${level.options.length})`,
-                  value: level.options.join("\n"),
-                  disabled: !canEdit,
-                  onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) }),
-                  className: "min-w-0",
-                  fieldSizingClassName: "min-h-[76px]"
-                }
-              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: `Names in this level (${level.options.length})` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: level.options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-max items-center gap-2 pb-1", children: level.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No options defined" }) })
-              ] })
-            ] }, level.id || `org-structure-level-${levelIndex}`)) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: organisationStructure.levels.map((level, levelIndex) => {
+              const levelOptions = Array.isArray(level?.options) ? level.options : [];
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3 md:grid-cols-[72px_220px_1fr]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-center", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60", children: "Level" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-white", children: levelIndex })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftField,
+                  {
+                    label: "Level Type",
+                    value: level.name,
+                    disabled: !canEdit || !organisationStructureUnlocked,
+                    onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { name: value })
+                  }
+                ),
+                organisationStructureUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  DraftTextAreaField,
+                  {
+                    label: `Names in this level (${levelOptions.length})`,
+                    value: levelOptions.join("\n"),
+                    disabled: !canEdit,
+                    onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) }),
+                    className: "min-w-0",
+                    fieldSizingClassName: "min-h-[76px]"
+                  }
+                ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: `Names in this level (${levelOptions.length})` }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: levelOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-max items-center gap-2 pb-1", children: levelOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No options defined" }) })
+                ] })
+              ] }, level.id || `org-structure-level-${levelIndex}`);
+            }) })
           ] })
         ] })
       ] })
@@ -108455,7 +108459,7 @@ const App = () => {
     registerSetupTestCoursesFromTrainees(nextTrainees);
     setIsStaffLoaded(true);
     setIsTraineeLoaded(true);
-    setSuccessMessage(`Setup Wizard committed ${nextInstructors.length} staff profile${nextInstructors.length === 1 ? "" : "s"}${nextTrainees.length > 0 ? ` and ${nextTrainees.length} trainee profile${nextTrainees.length === 1 ? "" : "s"}` : ""} to this local test app.`);
+    setSuccessMessage(`Setup Wizard committed ${nextInstructors.length} staff profile${nextInstructors.length === 1 ? "" : "s"}${nextTrainees.length > 0 ? ` and ${nextTrainees.length} trainee profile${nextTrainees.length === 1 ? "" : "s"}` : ""} to this setup.`);
   }, [pushSetupTestPersonnelDiag, registerSetupTestCoursesFromTrainees]);
   const handleSaveStandardMissionProfileFromPlanner = reactExports.useCallback((profileId, changes) => {
     const targetId = String(profileId || "").trim();

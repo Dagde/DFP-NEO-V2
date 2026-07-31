@@ -26052,7 +26052,7 @@ const App: React.FC = () => {
         registerSetupTestCoursesFromTrainees(nextTrainees);
         setIsStaffLoaded(true);
         setIsTraineeLoaded(true);
-        setSuccessMessage(`Setup Wizard committed ${nextInstructors.length} staff profile${nextInstructors.length === 1 ? '' : 's'}${nextTrainees.length > 0 ? ` and ${nextTrainees.length} trainee profile${nextTrainees.length === 1 ? '' : 's'}` : ''} to this local test app.`);
+        setSuccessMessage(`Setup Wizard committed ${nextInstructors.length} staff profile${nextInstructors.length === 1 ? '' : 's'}${nextTrainees.length > 0 ? ` and ${nextTrainees.length} trainee profile${nextTrainees.length === 1 ? '' : 's'}` : ''} to this setup.`);
     }, [pushSetupTestPersonnelDiag, registerSetupTestCoursesFromTrainees]);
     const handleSaveStandardMissionProfileFromPlanner = useCallback((profileId: string, changes: Partial<StandardMissionProfile>) => {
         const targetId = String(profileId || '').trim();

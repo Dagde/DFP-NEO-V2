@@ -6157,7 +6157,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     .map((level, index) => ({
       levelIndex: index + 1,
       name: level.name || `Level ${index + 1}`,
-      options: level.options.map((option) => String(option || '').trim()).filter(Boolean),
+      options: (Array.isArray(level?.options) ? level.options : []).map((option) => String(option || '').trim()).filter(Boolean),
     }))
     .filter((level) => level.options.length > 0);
   const updateUnitParentOrganisationPath = (unitIndex: number, unit: any, levelIndex: number, selectedValue: string) => {
@@ -6385,7 +6385,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/15 bg-cyan-500/10 px-4 py-3">
               <div>
                 <h5 className="text-sm font-bold text-white">Organisation Structure</h5>
-                <p className="mt-1 text-xs text-gray-400">{organisationStructure.levelCount} levels · {organisationStructure.levels.reduce((sum, level) => sum + level.options.length, 0)} options</p>
+                <p className="mt-1 text-xs text-gray-400">{organisationStructure.levelCount} levels · {organisationStructure.levels.reduce((sum, level) => sum + (Array.isArray(level?.options) ? level.options.length : 0), 0)} options</p>
               </div>
               <div className="flex flex-wrap items-center gap-[1px]">
                 <button
@@ -6445,7 +6445,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
 
               <div className="space-y-2">
-                {organisationStructure.levels.map((level, levelIndex) => (
+                {organisationStructure.levels.map((level, levelIndex) => {
+                  const levelOptions = Array.isArray(level?.options) ? level.options : [];
+                  return (
                   <div key={level.id || `org-structure-level-${levelIndex}`} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900 p-3 md:grid-cols-[72px_220px_1fr]">
                     <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-center">
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60">Level</div>
@@ -6459,8 +6461,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     />
                     {organisationStructureUnlocked ? (
                       <DraftTextAreaField
-                        label={`Names in this level (${level.options.length})`}
-                        value={level.options.join('\n')}
+                        label={`Names in this level (${levelOptions.length})`}
+                        value={levelOptions.join('\n')}
                         disabled={!canEdit}
                         onCommit={(value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) })}
                         className="min-w-0"
@@ -6468,11 +6470,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       />
                     ) : (
                       <label className="min-w-0">
-                        <FieldLabel label={`Names in this level (${level.options.length})`} />
+                        <FieldLabel label={`Names in this level (${levelOptions.length})`} />
                         <div className="max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">
-                          {level.options.length > 0 ? (
+                          {levelOptions.length > 0 ? (
                             <div className="flex min-w-max items-center gap-2 pb-1">
-                              {level.options.map((option) => (
+                              {levelOptions.map((option) => (
                                 <span key={option} className="max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200" title={option}>{option}</span>
                               ))}
                             </div>
@@ -6483,7 +6485,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </label>
                     )}
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           </div>
