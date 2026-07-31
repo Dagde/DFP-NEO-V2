@@ -3994,19 +3994,19 @@ const DfpSidePanelTimeline: React.FC<{
                         onClick={() => setShowAssistTaskForm(value => !value)}
                         className="rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100"
                     >
-                        {showAssistTaskForm ? 'Hide Task Details' : '+ Add Task'}
+                        {showAssistTaskForm ? 'Hide Mission Details' : '+ Add Mission'}
                     </button>
                     {showAssistTaskForm && (
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Task Profile
+                                Mission / Task Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
-                                    <option value="">Select task profile</option>
+                                    <option value="">Select mission/task profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
-                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual task profile
-                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type task profile manually" />
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission/task profile
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission/task profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
@@ -7734,7 +7734,7 @@ function generateDfpInternal(
             duplicateCrewMemberships: [] as any[],
             queueSourceAudit: null,
             sctCrewTrace: {
-                purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Specific Currency Requests.`,
+                purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Continuation / Currency Requests.`,
                 requestInputs: [] as any[],
                 priorityInputs: [] as any[],
                 activeDfpInputs: [] as any[],
@@ -20639,7 +20639,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry: any) => (
                 (event.sctRequestId && entry.sctRequestId === event.sctRequestId) || entry.eventId === event.id
             ));
-            let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.`;
+            let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Continuation / Currency Requests.`;
             if (request && !selectedCrew) {
                 likelyReason = `The ${buildContinuationShortLabel} request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.`;
             } else if (request && matchingQueue.length === 0) {
@@ -22646,7 +22646,7 @@ const App: React.FC = () => {
                 compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
                 compositeProfileId: String(row?.compositeProfileId || '').trim(),
                 aircraftTypeCode: String(row?.aircraftTypeCode || '').trim().toUpperCase(),
-                missionName: String(row?.missionName || row?.name || `Task Profile ${index + 1}`).trim(),
+                missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
                 shortTitle: String(row?.shortTitle || '').trim().slice(0, 8),
                 description: String(row?.description || '').trim(),
                 resourceType: (['Flight', 'FTD', 'CPT', 'Ground'].includes(String(row?.resourceType || row?.type || 'Flight')) ? String(row?.resourceType || row?.type || 'Flight') : 'Flight') as StandardMissionProfile['resourceType'],

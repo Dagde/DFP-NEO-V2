@@ -4840,15 +4840,15 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
-const DEFAULT_SCT_TERMINOLOGY = {
+const DEFAULT_SCT_TERMINOLOGY$1 = {
   shortLabel: "ContT",
   longLabel: "Continuation Training"
 };
 const SCT_SHORT_LABEL_MAX_LENGTH = 12;
 const SCT_LONG_LABEL_MAX_LENGTH = 40;
 const normaliseSctTerminology = (input) => ({
-  shortLabel: String(input?.shortLabel || "").trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.shortLabel,
-  longLabel: String(input?.longLabel || "").trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.longLabel
+  shortLabel: String(input?.shortLabel || "").trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY$1.shortLabel,
+  longLabel: String(input?.longLabel || "").trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY$1.longLabel
 });
 const normaliseUnitCode$4 = (value) => String(value || "").trim().toUpperCase();
 const getSctTerminology = (config, unitCode) => {
@@ -11569,26 +11569,26 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
           settingsLink("platform-task-profiles", "Take me there", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task profile, training requirement, or event data." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full mission/task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission/task profile, training requirement, or event data." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Mission / task profile" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Tile label" })
             ] }),
             taskTileLabelProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No mission/task profiles are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Mission Profiles", description: "Regular unit flight mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Task name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
-        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task profiles", value: "No task profiles are configured for this unit.", muted: true }) }),
+        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission profiles", value: "No mission profiles are configured for this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build defaults are configured under Training & Standards.", action: settingsLink("sct-events", "Take me there"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: "Continuation and currency event rows are edited in one place." })
@@ -28111,7 +28111,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode: activeUnitCode2 = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode: activeUnitCode2 = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -31994,7 +31994,7 @@ const AddFlightTileModal = ({
     personDropdownColumnState.clear();
   }, []);
   const resolvedSctTerminology = reactExports.useMemo(
-    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
+    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY$1),
     [sctTerminology]
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
@@ -36009,7 +36009,7 @@ const MyDashboard = ({
   selectedStaffName,
   onSelectStaffName,
   onUnreadMessageCountChange,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   currentLocationCode
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
@@ -38631,14 +38631,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " task profile"
+            " mission/task profile"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task profile manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission/task profile" : "No mission/task profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission/task profile manually." : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -38719,7 +38719,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Task Profile", hint: request.tasking || "Select or type task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission / Task Profile", hint: request.tasking || "Select or type mission/task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -41057,7 +41057,7 @@ const PrioritiesView = ({
   );
   const renderSavedSpecialEvents = () => {
     if (displayedStandardMissionProfiles.length === 0) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved task profiles for this unit context." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved mission/task profiles for this unit context." });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
@@ -41093,7 +41093,7 @@ const PrioritiesView = ({
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200", children: isOpen ? "v" : ">" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Task Profile" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Mission Profile" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70", children: unitLabel })
                 ] })
               ]
@@ -41133,7 +41133,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these Task Profile changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these mission profile changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -41160,7 +41160,7 @@ const PrioritiesView = ({
               renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Task name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Task Profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Mission Profile" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-200/70", children: shortTitle || "No short title" })
             ] })),
             renderStandardMissionTile("Unit / Aircraft", /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -42097,7 +42097,7 @@ const PrioritiesView = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Specific Currency Requests" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Continuation / Currency Requests" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest("flight"), className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "+ Add",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -42643,7 +42643,7 @@ const PrioritiesViewWithMenu = (props) => {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
       { label: "Directed Tasks", target: ".tasking-events-card" },
-      { label: "Specific Currency Requests", target: ".specific-currency-card" },
+      { label: "Continuation / Currency Requests", target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
     "deployments": [
@@ -50942,7 +50942,7 @@ const InstructorProfileFlyout = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   trainingReportDisplayName = "Training Report"
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
@@ -62178,7 +62178,7 @@ const SettingsView = ({
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
   emergencyFreezeAuthority,
@@ -62194,8 +62194,8 @@ const SettingsView = ({
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const canEditEmergencyAuthority = ["Super Admin", "Admin"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
-  const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
-  const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
+  const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel;
+  const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY$1.longLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
@@ -65984,7 +65984,7 @@ const normaliseStandardMissionProfiles = (source) => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Task Profile ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || "").slice(0, 8),
       description: String(row?.description || ""),
       resourceType,
@@ -66989,7 +66989,7 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   callsign: "The label for the operational callsign recorded against the event. For formation sorties this helps connect the report to the correct formation element.",
   unit: "The label for the unit context attached to the report. This keeps reports separated correctly across organisations, locations and operational units.",
   date: "The label for the date the event/report applies to. This date is used for training history, recency and report ordering.",
-  assessor: "The label for the person completing or signing the report. Organisations may call this QFI, instructor, assessor, supervisor, check pilot or another local term."
+  assessor: "The label for the person completing or signing the report. Organisations may call this instructor, assessor, supervisor, check pilot or another local term."
 };
 const TRAINING_REPORT_OVERALL_FIELD_INFO = {
   result: "The label for the mission status outcome. If no mission status options are enabled, reports default to Complete. If options are enabled, only those configured options are shown.",
@@ -67465,6 +67465,7 @@ const PlatformConfigurationSettings = ({
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
+  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -69977,7 +69978,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
       compositeProfileId: combinedContext ? baseId : "",
       aircraftTypeCode,
-      missionName: `Task Profile ${missionIndex}`,
+      missionName: `Mission Profile ${missionIndex}`,
       shortTitle: `TASK${missionIndex}`.slice(0, 8),
       description: "",
       resourceType: "Flight",
@@ -71129,7 +71130,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Mission / Task Profiles",
-          subtitle: "Model-specific mission and tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed.",
+          subtitle: "Model-specific mission/task profile lists used by Directed Tasks. Users can still type a profile manually if the assigned profile is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71149,7 +71150,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed mission and task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed mission/task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
@@ -71453,7 +71454,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           subtitle: "Define reusable mission profiles for regular Fixed Crew-style unit flights.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Task" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Profile" })
           ] }) : null
         }
       ),
@@ -71463,7 +71464,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             "Active unit context: ",
             activeStandardMissionUnitLabel || "No unit selected"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New mission profiles default to the unit home location and unit default callsign. Values can be manually edited per task." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New mission profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled." })
         ] }),
         standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Reusable Flight Mission Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
@@ -71477,7 +71478,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "TASK" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Task" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Profile" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
@@ -71491,19 +71492,19 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Task Identity" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and task notes." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Mission Profile Identity" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Task Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onCommit: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftTextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Task Timing & Route" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Default route and timing values can be changed when a task is scheduled." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Timing & Route" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Default route and timing values can be changed when scheduled." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71539,7 +71540,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                             onChange: (event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })
                           }
                         ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation task" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation profile" })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "No. Aircraft", value: profile.formationAircraft, disabled: !canEditSection("platform-standard-missions") || !profile.isFormation, onChange: (value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) }) })
@@ -71901,8 +71902,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Currency Profiles",
-          subtitle: "Currency profile presets for Specific Currency Requests. Profiles store crew, CONFIG and currency against the selected aircraft.",
+          title: continuationCurrencyEventsLabel,
+          subtitle: "Continuation and currency event defaults. Profiles store crew, CONFIG and currency against the selected aircraft.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71942,9 +71943,9 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Currency Profiles" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-                "Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for ",
+                "Profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for ",
                 displayCrewCompositionAircraftCode || "the selected aircraft",
                 "."
               ] })
@@ -75635,12 +75636,12 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Reusable flight mission profiles for regular unit tasking",
+  "standard-missions": "Reusable flight mission profiles for regular unit scheduling",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Mission and task profile lists by operational model",
+  "platform-task-profiles": "Mission/task profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -75892,9 +75893,9 @@ const SettingsViewWithMenu = (props) => {
   const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
-  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
-  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events` : sectionLabels[section];
-  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} and currency event defaults` : sectionDescriptions[section];
+  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
+  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel} / Currency Events` : sectionLabels[section];
+  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel} and currency event defaults` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -83163,7 +83164,7 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode: activeUnitCode2 = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode: activeUnitCode2 = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
@@ -90726,20 +90727,20 @@ const DfpSidePanelTimeline = ({
             type: "button",
             onClick: () => setShowAssistTaskForm((value) => !value),
             className: "rounded border border-cyan-400/50 px-2 py-1 text-[10px] font-semibold text-cyan-100",
-            children: showAssistTaskForm ? "Hide Task Details" : "+ Add Task"
+            children: showAssistTaskForm ? "Hide Mission Details" : "+ Add Mission"
           }
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Task Profile",
+            "Mission / Task Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission/task profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual task profile",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type task profile manually" })
+            "Manual mission/task profile",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission/task profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
@@ -93373,7 +93374,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       duplicateCrewMemberships: [],
       queueSourceAudit: null,
       sctCrewTrace: {
-        purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Specific Currency Requests.`,
+        purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Continuation / Currency Requests.`,
         requestInputs: [],
         priorityInputs: [],
         activeDfpInputs: [],
@@ -104239,7 +104240,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const matchingQueue = (sctTrace.queueInputs || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.id === event.id);
       const matchingPlacements = (sctTrace.placementsForSctEvents || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.eventId === event.id);
       const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.eventId === event.id);
-      let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.`;
+      let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Continuation / Currency Requests.`;
       if (request && !selectedCrew) {
         likelyReason = `The ${buildContinuationShortLabel} request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.`;
       } else if (request && matchingQueue.length === 0) {
@@ -105839,7 +105840,7 @@ const App = () => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Task Profile ${index + 1}`).trim(),
+      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
       shortTitle: String(row?.shortTitle || "").trim().slice(0, 8),
       description: String(row?.description || "").trim(),
       resourceType: ["Flight", "FTD", "CPT", "Ground"].includes(String(row?.resourceType || row?.type || "Flight")) ? String(row?.resourceType || row?.type || "Flight") : "Flight",

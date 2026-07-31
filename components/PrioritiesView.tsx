@@ -633,19 +633,19 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} task profile
+                  {operationalModelLabel} mission/task profile
                 </span>
               </button>
             ))
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching task profile' : 'No task profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching mission/task profile' : 'No mission/task profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? 'Keep typing to enter this task profile manually.'
-                  : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.`}
+                  ? 'Keep typing to enter this mission/task profile manually.'
+                  : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.`}
               </span>
             </div>
           )}
@@ -767,7 +767,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Task Profile" hint={request.tasking || 'Select or type task profile'}>
+            <TaskingFieldPanel label="Mission / Task Profile" hint={request.tasking || 'Select or type mission/task profile'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}
@@ -3655,7 +3655,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No saved task profiles for this unit context.
+          No saved mission/task profiles for this unit context.
         </div>
       );
     }
@@ -3703,7 +3703,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {isOpen ? 'v' : '>'}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Task Profile'}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Mission Profile'}</span>
                     <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70">{unitLabel}</span>
                   </span>
                 </button>
@@ -3746,7 +3746,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="border-t border-slate-800 px-4 pb-4 pt-3">
                   {pendingStandardMissionSaveId === profile.id && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3">
-                      <p className="text-sm font-semibold text-amber-100">Save these Task Profile changes permanently, or today only?</p>
+                      <p className="text-sm font-semibold text-amber-100">Save these mission profile changes permanently, or today only?</p>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -3774,7 +3774,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       </div>
                     ) : (
                       <div>
-                        <span className="block">{missionName || 'Unnamed Task Profile'}</span>
+                        <span className="block">{missionName || 'Unnamed Mission Profile'}</span>
                         <span className="mt-1 block text-xs text-cyan-200/70">{shortTitle || 'No short title'}</span>
                       </div>
                     ))}
@@ -4777,7 +4777,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
         <div className="specific-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-sky-400">Specific Currency Requests</h2>
+              <h2 className="text-xl font-semibold text-sky-400">Continuation / Currency Requests</h2>
               <button onClick={() => onAddSctRequest('flight')} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
                 <span>+ Add<br />Request</span>
               </button>
@@ -5261,7 +5261,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional Currency Events</h2>
             <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
             {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
-              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority currency events. Add specific currency requests with MEDIUM or LOW priority in the Specific Currency Requests section above.</p>
+              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority currency events. Add continuation or currency requests with MEDIUM or LOW priority in the Continuation / Currency Requests section above.</p>
             )}
 
               {/* Currency Flights - MEDIUM/LOW */}

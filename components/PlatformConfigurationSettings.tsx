@@ -443,7 +443,7 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
       compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Task Profile ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
       description: String(row?.description || ''),
       resourceType,
@@ -1713,7 +1713,7 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
   callsign: 'The label for the operational callsign recorded against the event. For formation sorties this helps connect the report to the correct formation element.',
   unit: 'The label for the unit context attached to the report. This keeps reports separated correctly across organisations, locations and operational units.',
   date: 'The label for the date the event/report applies to. This date is used for training history, recency and report ordering.',
-  assessor: 'The label for the person completing or signing the report. Organisations may call this QFI, instructor, assessor, supervisor, check pilot or another local term.',
+  assessor: 'The label for the person completing or signing the report. Organisations may call this instructor, assessor, supervisor, check pilot or another local term.',
 };
 
 const TRAINING_REPORT_OVERALL_FIELD_INFO: Record<string, string> = {
@@ -2278,6 +2278,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null,
   );
+  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
@@ -5427,7 +5428,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode,
-      missionName: `Task Profile ${missionIndex}`,
+      missionName: `Mission Profile ${missionIndex}`,
       shortTitle: `TASK${missionIndex}`.slice(0, 8),
       description: '',
       resourceType: 'Flight',
@@ -6819,7 +6820,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Mission / Task Profiles"
-          subtitle="Model-specific mission and tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed."
+          subtitle="Model-specific mission/task profile lists used by Directed Tasks. Users can still type a profile manually if the assigned profile is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6841,7 +6842,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the directed mission and task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
+            Set the directed mission/task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -7114,7 +7115,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Task</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Profile</button>
             </div>
           ) : null}
         />
@@ -7128,7 +7129,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New mission profiles default to the unit home location and unit default callsign. Values can be manually edited per task.
+                  New mission profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
@@ -7150,7 +7151,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'TASK'}</span>
-                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Task'}</h4>
+                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Profile'}</h4>
                             <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
                           </div>
                           <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
@@ -7168,12 +7169,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Task Identity</div>
-                                <div className={resourceSectionPanelHintClass}>Name, short tile title and task notes.</div>
+                                <div className={resourceSectionPanelTitleClass}>Mission Profile Identity</div>
+                                <div className={resourceSectionPanelHintClass}>Name, short tile title and notes.</div>
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-[1fr_150px]">
-                              <DraftField label="Task Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <DraftField label="Profile Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
                               <DraftField label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onCommit={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
@@ -7184,8 +7185,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Task Timing & Route</div>
-                                <div className={resourceSectionPanelHintClass}>Default route and timing values can be changed when a task is scheduled.</div>
+                                <div className={resourceSectionPanelTitleClass}>Timing & Route</div>
+                                <div className={resourceSectionPanelHintClass}>Default route and timing values can be changed when scheduled.</div>
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-3 [&>label]:grid [&>label]:grid-rows-[40px_42px] [&>label]:items-start">
@@ -7216,7 +7217,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     disabled={!canEditSection('platform-standard-missions')}
                                     onChange={(event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })}
                                   />
-                                  <span className="text-sm font-semibold text-gray-200">Formation task</span>
+                                  <span className="text-sm font-semibold text-gray-200">Formation profile</span>
                                 </label>
                               </div>
                               <NumberField label="No. Aircraft" value={profile.formationAircraft} disabled={!canEditSection('platform-standard-missions') || !profile.isFormation} onChange={(value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) })} />
@@ -7625,8 +7626,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
-          title="Currency Profiles"
-          subtitle="Currency profile presets for Specific Currency Requests. Profiles store crew, CONFIG and currency against the selected aircraft."
+          title={continuationCurrencyEventsLabel}
+          subtitle="Continuation and currency event defaults. Profiles store crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
             <button
               type="button"
@@ -7670,8 +7671,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div id="platform-currency-profile-records" className={resourceSectionPanelClass}>
             <div className={resourceSectionPanelHeaderClass}>
               <div>
-                <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Currency Profiles</h4>
-                <p className={resourceSectionPanelHintClass}>Profiles prefill Specific Currency Requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
+                <p className={resourceSectionPanelHintClass}>Profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
                 <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
