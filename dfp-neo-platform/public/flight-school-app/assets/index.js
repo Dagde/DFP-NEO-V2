@@ -3150,6 +3150,37 @@ const stopEditableKeyPropagation = (event) => {
     event.stopPropagation();
   }
 };
+const insertEditableTextAtCursor = (field, text, onChange, maxLength) => {
+  if (field.disabled || field.readOnly) return false;
+  const currentValue = field.value || "";
+  const selectionStart = field.selectionStart ?? currentValue.length;
+  const selectionEnd = field.selectionEnd ?? selectionStart;
+  const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
+  const limitedValue = typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
+  const nextCursor = Math.min(selectionStart + text.length, limitedValue.length);
+  if (limitedValue === currentValue && selectionStart === selectionEnd) return false;
+  onChange(limitedValue);
+  window.requestAnimationFrame(() => {
+    field.setSelectionRange(nextCursor, nextCursor);
+  });
+  return true;
+};
+const handleEditableTextKeyDownCapture = (event, onChange, maxLength) => {
+  if ((event.key === " " || event.code === "Space" || event.key === "Spacebar") && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
+    return;
+  }
+  stopEditableKeyPropagation(event);
+};
+const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
+  const inputEvent = event.nativeEvent;
+  if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
+  event.preventDefault();
+  event.stopPropagation();
+  insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
+};
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [
     "Transit",
@@ -21580,6 +21611,99 @@ const TraineeLmpView = ({
     ] })
   ] });
 };
+const DraftTextInput$2 = ({
+  value,
+  onCommit,
+  className,
+  maxLength,
+  placeholder
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const updateDraftValue = (nextValue) => {
+    setDraftValue(typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue);
+  };
+  const commitDraftValue = () => {
+    const nextValue = typeof maxLength === "number" ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    onCommit(nextValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "text",
+      value: isEditing ? draftValue : value || "",
+      maxLength,
+      placeholder,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => updateDraftValue(event.target.value),
+      className
+    }
+  );
+};
+const DraftTextArea$1 = ({
+  value,
+  onCommit,
+  className,
+  rows,
+  placeholder,
+  normaliseOnCommit,
+  minHeight
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : value || "";
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    const nextValue = normaliseOnCommit ? normaliseOnCommit(draftValue) : draftValue;
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    onCommit(nextValue);
+  };
+  const autoSize = (field) => {
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: displayedValue,
+      rows,
+      placeholder,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraftValue),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraftValue),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: (event) => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+        autoSize(event.currentTarget);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => {
+        setDraftValue(event.target.value);
+        autoSize(event.currentTarget);
+      },
+      ref: (el) => {
+        if (el) autoSize(el);
+      },
+      className,
+      style: minHeight ? { minHeight } : void 0
+    }
+  );
+};
 const PT051_STRUCTURE$1 = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
@@ -21889,12 +22013,6 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
     const rawResourceId = String(resourceId || "").trim();
     if (!rawResourceId) return "N/A";
     return stripResourceLineNumber$1(formatResourceLabel2?.(rawResourceId) || rawResourceId) || "N/A";
-  };
-  const stopEditableKeyPropagation2 = (event2) => {
-    const target = event2.target;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable) {
-      event2.stopPropagation();
-    }
   };
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
@@ -22576,7 +22694,7 @@ This action cannot be undone.`;
     "div",
     {
       className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto",
-      onKeyDownCapture: stopEditableKeyPropagation2,
+      onKeyDownCapture: stopEditableKeyPropagation,
       style: embeddedInProfile ? { zoom: 0.88, width: "100%" } : void 0,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700 sticky top-0 z-10", children: [
@@ -22872,7 +22990,7 @@ This action cannot be undone.`;
                                 extraEventHours: value === "" ? void 0 : Number(value)
                               });
                             },
-                            onKeyDown: stopEditableKeyPropagation2,
+                            onKeyDown: stopEditableKeyPropagation,
                             className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
                           }
                         ),
@@ -22937,7 +23055,7 @@ This action cannot be undone.`;
                                 extraHours: value === "" ? void 0 : Number(value)
                               });
                             },
-                            onKeyDown: stopEditableKeyPropagation2,
+                            onKeyDown: stopEditableKeyPropagation,
                             className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
                           }
                         ),
@@ -23120,34 +23238,23 @@ This action cannot be undone.`;
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.weather }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
+                  DraftTextArea$1,
                   {
                     value: commentFields["Weather"],
-                    onChange: (e) => handleCommentFieldChange("Weather", e.target.value),
+                    onCommit: (value) => handleCommentFieldChange("Weather", value),
                     rows: 1,
                     className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                    style: { minHeight: "42px" },
-                    onInput: (e) => {
-                      e.currentTarget.style.height = "auto";
-                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                    },
-                    ref: (el) => {
-                      if (el) {
-                        el.style.height = "auto";
-                        el.style.height = el.scrollHeight + "px";
-                      }
-                    }
+                    minHeight: "42px"
                   }
                 )
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.nest }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
+                  DraftTextInput$2,
                   {
-                    type: "text",
                     value: commentFields["NEST"],
-                    onChange: (e) => handleCommentFieldChange("NEST", e.target.value),
+                    onCommit: (value) => handleCommentFieldChange("NEST", value),
                     maxLength: 8,
                     className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
                   }
@@ -23158,46 +23265,26 @@ This action cannot be undone.`;
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.profile }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
+                  DraftTextArea$1,
                   {
                     value: commentFields["Profile"],
-                    onChange: (e) => handleCommentFieldChange("Profile", e.target.value),
+                    onCommit: (value) => handleCommentFieldChange("Profile", value),
                     rows: 4,
                     className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                    style: { minHeight: "100px" },
-                    onInput: (e) => {
-                      e.currentTarget.style.height = "auto";
-                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                    },
-                    ref: (el) => {
-                      if (el) {
-                        el.style.height = "auto";
-                        el.style.height = el.scrollHeight + "px";
-                      }
-                    }
+                    minHeight: "100px"
                   }
                 )
               ] }, "Profile"),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.overall }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
+                  DraftTextArea$1,
                   {
                     value: commentFields["Overall"],
-                    onChange: (e) => handleCommentFieldChange("Overall", e.target.value),
+                    onCommit: (value) => handleCommentFieldChange("Overall", value),
                     rows: 6,
                     className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                    style: { minHeight: "150px" },
-                    onInput: (e) => {
-                      e.currentTarget.style.height = "auto";
-                      e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                    },
-                    ref: (el) => {
-                      if (el) {
-                        el.style.height = "auto";
-                        el.style.height = el.scrollHeight + "px";
-                      }
-                    }
+                    minHeight: "150px"
                   }
                 )
               ] }, "Overall")
@@ -23231,24 +23318,14 @@ This action cannot be undone.`;
                     const score = assessment.scores.find((s) => s.element === element);
                     const commentCell = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "textarea",
+                        DraftTextArea$1,
                         {
                           value: score?.comment || "",
-                          onChange: (e) => handleCommentChange(element, e.target.value),
+                          onCommit: (value) => handleCommentChange(element, value),
                           rows: 1,
                           placeholder: "Comments...",
                           className: "w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden",
-                          style: { minHeight: "42px" },
-                          onInput: (e) => {
-                            e.currentTarget.style.height = "auto";
-                            e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                          },
-                          ref: (el) => {
-                            if (el) {
-                              el.style.height = "auto";
-                              el.style.height = el.scrollHeight + "px";
-                            }
-                          }
+                          minHeight: "42px"
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -23295,12 +23372,11 @@ This action cannot be undone.`;
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 whitespace-pre-wrap text-sm text-gray-100", children: forwardedPreFlightNotes })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
+                  DraftTextArea$1,
                   {
                     value: buildTrainingReportNotes(),
-                    onChange: (e) => handleCommentFieldChange("Notes", e.target.value),
-                    onKeyDownCapture: stopEditableKeyPropagation2,
-                    onKeyDown: stopEditableKeyPropagation2,
+                    onCommit: (value) => handleCommentFieldChange("Notes", value),
+                    normaliseOnCommit: (value) => stripGeneratedFollowUpNotes$1(value, getFollowUpNotesPrefix()),
                     rows: 5,
                     className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
                     placeholder: "Record what was missed, not completed, or should be carried into the next event."
@@ -58196,6 +58272,101 @@ const stripGeneratedFollowUpNotes = (value, generatedPrefix = "") => {
   });
   return cleanedLines.join("\n").replace(/^\s+/, "");
 };
+const DraftTextInput$1 = ({
+  value,
+  onCommit,
+  onDraftChange,
+  className,
+  maxLength,
+  placeholder,
+  disabled = false,
+  onFocus,
+  onClick,
+  onBlur
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const updateDraftValue = (nextValue) => {
+    const limitedValue = typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
+    setDraftValue(limitedValue);
+    onDraftChange?.(limitedValue);
+  };
+  const commitDraftValue = () => {
+    const limitedValue = typeof maxLength === "number" ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(limitedValue);
+    setIsEditing(false);
+    onCommit(limitedValue);
+    onBlur?.();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      value: isEditing ? draftValue : value || "",
+      disabled,
+      maxLength,
+      placeholder,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+        onFocus?.();
+      },
+      onClick,
+      onBlur: commitDraftValue,
+      onChange: (event) => updateDraftValue(event.target.value),
+      className
+    }
+  );
+};
+const DraftTextArea = ({
+  value,
+  onCommit,
+  onDraftChange,
+  className,
+  rows,
+  placeholder,
+  normaliseOnCommit
+}) => {
+  const [draftValue, setDraftValue] = reactExports.useState(value || "");
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : value || "";
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(value || "");
+  }, [isEditing, value]);
+  const updateDraftValue = (nextValue) => {
+    setDraftValue(nextValue);
+    onDraftChange?.(nextValue);
+  };
+  const commitDraftValue = () => {
+    const nextValue = normaliseOnCommit ? normaliseOnCommit(draftValue) : draftValue;
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    onCommit(nextValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      value: displayedValue,
+      rows,
+      placeholder,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setDraftValue(value || "");
+        setIsEditing(true);
+      },
+      onBlur: commitDraftValue,
+      onChange: (event) => updateDraftValue(event.target.value),
+      className
+    }
+  );
+};
 const formatHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue.toFixed(1) : "";
@@ -58342,11 +58513,11 @@ const AirCombatTrainingReportModal = ({
   const renderEventDataField = (label, value, onChange, fallback = "-") => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
+      DraftTextInput$1,
       {
         value,
-        onChange: (event) => {
-          onChange(event.target.value);
+        onCommit: onChange,
+        onDraftChange: () => {
           setSaveStatus("Unsaved");
         },
         className: editInputClass
@@ -58357,14 +58528,14 @@ const AirCombatTrainingReportModal = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.event }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: isEditMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
+        DraftTextInput$1,
         {
           value: eventCode2,
           onFocus: () => setShowRecentEventPicker(true),
           onClick: () => setShowRecentEventPicker(true),
           onBlur: () => window.setTimeout(() => setShowRecentEventPicker(false), 120),
-          onChange: (event) => {
-            setEventCodeField(event.target.value);
+          onCommit: setEventCodeField,
+          onDraftChange: () => {
             setSaveStatus("Unsaved");
           },
           className: editInputClass
@@ -58496,12 +58667,6 @@ const AirCombatTrainingReportModal = ({
     if (grade === "4") return "accent-lime-400";
     return "accent-emerald-500";
   };
-  const stopEditableKeyPropagation2 = (event) => {
-    const target = event.target;
-    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target?.isContentEditable) {
-      event.stopPropagation();
-    }
-  };
   const saveReport = async () => {
     setIsSaving(true);
     setSaveStatus("Saving...");
@@ -58565,7 +58730,7 @@ const AirCombatTrainingReportModal = ({
       setIsSaving(false);
     }
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4", onKeyDownCapture: stopEditableKeyPropagation2, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[95] flex items-center justify-center bg-black/75 p-4", onKeyDownCapture: stopEditableKeyPropagation, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex max-h-[92vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-lg border border-gray-600 bg-gray-900 shadow-2xl", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end bg-gray-800 px-5 pt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-3xl leading-none text-gray-400 hover:text-white", children: "x" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 bg-gray-800 px-5 pb-4 pt-2", children: [
@@ -58704,11 +58869,18 @@ const AirCombatTrainingReportModal = ({
                 renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || "", setCallsignField),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.assessor }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: instructorName, onChange: (event) => {
-                    setInstructorName(event.target.value);
-                    updateCommentSection("assessor", event.target.value);
-                    setSaveStatus("Unsaved");
-                  }, className: "w-[calc(100%+20px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" }) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    DraftTextInput$1,
+                    {
+                      value: instructorName,
+                      onCommit: (nextValue) => {
+                        setInstructorName(nextValue);
+                        updateCommentSection("assessor", nextValue);
+                      },
+                      onDraftChange: () => setSaveStatus("Unsaved"),
+                      className: "w-[calc(100%+20px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500"
+                    }
+                  ) })
                 ] })
               ]
             }
@@ -58769,7 +58941,7 @@ const AirCombatTrainingReportModal = ({
                             });
                             setSaveStatus("Unsaved");
                           },
-                          onKeyDown: stopEditableKeyPropagation2,
+                          onKeyDown: stopEditableKeyPropagation,
                           className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
                         }
                       ),
@@ -58840,7 +59012,7 @@ const AirCombatTrainingReportModal = ({
                             });
                             setSaveStatus("Unsaved");
                           },
-                          onKeyDown: stopEditableKeyPropagation2,
+                          onKeyDown: stopEditableKeyPropagation,
                           className: "h-full w-full rounded bg-transparent py-1 pl-2 pr-6 text-center text-sm font-semibold text-white focus:outline-none"
                         }
                       ),
@@ -58997,13 +59169,11 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.assessor }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+                DraftTextInput$1,
                 {
                   value: commentSections.assessor,
-                  onChange: (event) => {
-                    updateCommentSection("assessor", event.target.value);
-                    setSaveStatus("Unsaved");
-                  },
+                  onCommit: (value) => updateCommentSection("assessor", value),
+                  onDraftChange: () => setSaveStatus("Unsaved"),
                   className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 }
               )
@@ -59011,13 +59181,11 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.weather }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "textarea",
+                DraftTextArea,
                 {
                   value: commentSections.weather,
-                  onChange: (event) => {
-                    updateCommentSection("weather", event.target.value);
-                    setSaveStatus("Unsaved");
-                  },
+                  onCommit: (value) => updateCommentSection("weather", value),
+                  onDraftChange: () => setSaveStatus("Unsaved"),
                   rows: 1,
                   className: "mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 }
@@ -59026,13 +59194,11 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.nest }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+                DraftTextInput$1,
                 {
                   value: commentSections.nest,
-                  onChange: (event) => {
-                    updateCommentSection("nest", event.target.value);
-                    setSaveStatus("Unsaved");
-                  },
+                  onCommit: (value) => updateCommentSection("nest", value),
+                  onDraftChange: () => setSaveStatus("Unsaved"),
                   maxLength: 8,
                   className: "mt-1 w-full rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 }
@@ -59042,13 +59208,11 @@ const AirCombatTrainingReportModal = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.profile }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
+              DraftTextArea,
               {
                 value: commentSections.profile,
-                onChange: (event) => {
-                  updateCommentSection("profile", event.target.value);
-                  setSaveStatus("Unsaved");
-                },
+                onCommit: (value) => updateCommentSection("profile", value),
+                onDraftChange: () => setSaveStatus("Unsaved"),
                 rows: 4,
                 className: "mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               }
@@ -59057,13 +59221,11 @@ const AirCombatTrainingReportModal = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.overall }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "textarea",
+              DraftTextArea,
               {
                 value: commentSections.overall,
-                onChange: (event) => {
-                  updateCommentSection("overall", event.target.value);
-                  setSaveStatus("Unsaved");
-                },
+                onCommit: (value) => updateCommentSection("overall", value),
+                onDraftChange: () => setSaveStatus("Unsaved"),
                 rows: 5,
                 className: "mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               }
@@ -59094,13 +59256,11 @@ const AirCombatTrainingReportModal = ({
                   reportTemplate.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: formatGradeNumber(grade) })
                 ] }) }) }, grade)),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
+                  DraftTextArea,
                   {
                     value: getElementScore(element).comment,
-                    onChange: (event) => {
-                      updateElementScore(element, { comment: event.target.value });
-                      setSaveStatus("Unsaved");
-                    },
+                    onCommit: (value) => updateElementScore(element, { comment: value }),
+                    onDraftChange: () => setSaveStatus("Unsaved"),
                     rows: 1,
                     className: "w-full resize-none overflow-hidden rounded border border-gray-600 bg-gray-800 p-2 text-sm text-gray-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500",
                     placeholder: "Comments...",
@@ -59114,15 +59274,12 @@ const AirCombatTrainingReportModal = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: commentFields.notes }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "textarea",
+                DraftTextArea,
                 {
                   value: buildNotesWithFollowUp(),
-                  onChange: (event) => {
-                    updateCommentSection("notes", stripGeneratedFollowUpNotes(event.target.value, getFollowUpNotesPrefix()));
-                    setSaveStatus("Unsaved");
-                  },
-                  onKeyDownCapture: stopEditableKeyPropagation2,
-                  onKeyDown: stopEditableKeyPropagation2,
+                  onCommit: (value) => updateCommentSection("notes", value),
+                  onDraftChange: () => setSaveStatus("Unsaved"),
+                  normaliseOnCommit: (value) => stripGeneratedFollowUpNotes(value, getFollowUpNotesPrefix()),
                   rows: 5,
                   className: "w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
                   placeholder: "Record what was missed, not completed, or should be carried into the next event."
@@ -69979,6 +70136,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       setLicenseActionLoading(false);
     }
   };
+  const updateLicenseImportDraft = (value) => {
+    setLicenseImportText(value);
+    setLicenseImportMessage("");
+    setLicenseImportError("");
+  };
   const importSignedLicense = async () => {
     if (!canEdit) return;
     if (!licenseImportText.trim()) {
@@ -72798,11 +72960,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             {
               className: `${fieldClass} min-h-[110px] font-mono text-xs`,
               value: licenseImportText,
-              onChange: (event) => {
-                setLicenseImportText(event.target.value);
-                setLicenseImportMessage("");
-                setLicenseImportError("");
-              },
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateLicenseImportDraft),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateLicenseImportDraft),
+              onKeyDown: stopEditableKeyPropagation,
+              onChange: (event) => updateLicenseImportDraft(event.target.value),
               placeholder: 'Paste signed licence JSON, for example {"schema":"dfp-neo-license/v1",...}',
               disabled: !canEditSection("platform-licensing") && !licenseImportText
             }
@@ -74570,37 +74731,6 @@ const FieldLabel = ({ label, info, noWrap = false }) => /* @__PURE__ */ jsxRunti
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: noWrap ? "whitespace-nowrap" : void 0, children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
 ] });
-const insertEditableTextAtCursor = (field, text, onChange, maxLength) => {
-  if (field.disabled || field.readOnly) return false;
-  const currentValue = field.value || "";
-  const selectionStart = field.selectionStart ?? currentValue.length;
-  const selectionEnd = field.selectionEnd ?? selectionStart;
-  const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
-  const limitedValue = typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
-  const nextCursor = Math.min(selectionStart + text.length, limitedValue.length);
-  if (limitedValue === currentValue && selectionStart === selectionEnd) return false;
-  onChange(limitedValue);
-  window.requestAnimationFrame(() => {
-    field.setSelectionRange(nextCursor, nextCursor);
-  });
-  return true;
-};
-const handleEditableTextKeyDownCapture = (event, onChange, maxLength) => {
-  if ((event.key === " " || event.code === "Space" || event.key === "Spacebar") && !event.metaKey && !event.ctrlKey && !event.altKey) {
-    event.preventDefault();
-    event.stopPropagation();
-    insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
-    return;
-  }
-  stopEditableKeyPropagation(event);
-};
-const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
-  const inputEvent = event.nativeEvent;
-  if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
-  event.preventDefault();
-  event.stopPropagation();
-  insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
-};
 const Field = ({
   inputId,
   label,
@@ -75101,26 +75231,38 @@ const UserSearchSelect = ({
   onChange
 }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
-  const query = search.trim().toLowerCase();
+  const [draftSearch, setDraftSearch] = reactExports.useState(search || "");
+  const query = draftSearch.trim().toLowerCase();
   const filteredUsers = users.filter((user) => {
     if (!query) return true;
     return [user.name, user.username, user.email].some((field) => field.toLowerCase().includes(query));
   }).slice(0, 30);
+  reactExports.useEffect(() => {
+    if (!isOpen) setDraftSearch(search || "");
+  }, [isOpen, search]);
+  const updateSearchDraft = (nextSearch) => {
+    setDraftSearch(nextSearch);
+    onSearchChange(nextSearch);
+    setIsOpen(true);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {
         className: fieldClass,
-        value: search,
+        value: draftSearch,
         disabled,
         placeholder: "Search by name...",
         autoComplete: "off",
-        onChange: (event) => {
-          onSearchChange(event.target.value);
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateSearchDraft),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateSearchDraft),
+        onKeyDown: stopEditableKeyPropagation,
+        onChange: (event) => updateSearchDraft(event.target.value),
+        onFocus: () => {
+          setDraftSearch(search || "");
           setIsOpen(true);
         },
-        onFocus: () => setIsOpen(true),
         onBlur: () => window.setTimeout(() => setIsOpen(false), 120)
       }
     ),
@@ -75133,6 +75275,7 @@ const UserSearchSelect = ({
         onClick: () => {
           onChange(user.id);
           onSearchChange("");
+          setDraftSearch("");
           setIsOpen(false);
         },
         children: [

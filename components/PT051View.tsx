@@ -16,6 +16,7 @@ import {
 } from '../utils/trainingReportTerminology';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { loadPlatformConfigFromDB } from '../utils/platformConfigService';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface TrainingReportViewProps {
     trainee: Trainee;
@@ -42,6 +43,121 @@ interface TrainingReportViewProps {
     formatResourceLabel?: (resourceId: string) => string;
     embeddedInProfile?: boolean;
 }
+
+const DraftTextInput = ({
+    value,
+    onCommit,
+    className,
+    maxLength,
+    placeholder,
+}: {
+    value: string;
+    onCommit: (value: string) => void;
+    className: string;
+    maxLength?: number;
+    placeholder?: string;
+}) => {
+    const [draftValue, setDraftValue] = useState(value || '');
+    const [isEditing, setIsEditing] = useState(false);
+
+    useEffect(() => {
+        if (!isEditing) setDraftValue(value || '');
+    }, [isEditing, value]);
+
+    const updateDraftValue = (nextValue: string) => {
+        setDraftValue(typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue);
+    };
+
+    const commitDraftValue = () => {
+        const nextValue = typeof maxLength === 'number' ? draftValue.slice(0, maxLength) : draftValue;
+        setDraftValue(nextValue);
+        setIsEditing(false);
+        onCommit(nextValue);
+    };
+
+    return (
+        <input
+            type="text"
+            value={isEditing ? draftValue : value || ''}
+            maxLength={maxLength}
+            placeholder={placeholder}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={() => {
+                setDraftValue(value || '');
+                setIsEditing(true);
+            }}
+            onBlur={commitDraftValue}
+            onChange={(event) => updateDraftValue(event.target.value)}
+            className={className}
+        />
+    );
+};
+
+const DraftTextArea = ({
+    value,
+    onCommit,
+    className,
+    rows,
+    placeholder,
+    normaliseOnCommit,
+    minHeight,
+}: {
+    value: string;
+    onCommit: (value: string) => void;
+    className: string;
+    rows?: number;
+    placeholder?: string;
+    normaliseOnCommit?: (value: string) => string;
+    minHeight?: string;
+}) => {
+    const [draftValue, setDraftValue] = useState(value || '');
+    const [isEditing, setIsEditing] = useState(false);
+    const displayedValue = isEditing ? draftValue : value || '';
+
+    useEffect(() => {
+        if (!isEditing) setDraftValue(value || '');
+    }, [isEditing, value]);
+
+    const commitDraftValue = () => {
+        const nextValue = normaliseOnCommit ? normaliseOnCommit(draftValue) : draftValue;
+        setDraftValue(nextValue);
+        setIsEditing(false);
+        onCommit(nextValue);
+    };
+
+    const autoSize = (field: HTMLTextAreaElement) => {
+        field.style.height = 'auto';
+        field.style.height = `${field.scrollHeight}px`;
+    };
+
+    return (
+        <textarea
+            value={displayedValue}
+            rows={rows}
+            placeholder={placeholder}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraftValue)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraftValue)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={(event) => {
+                setDraftValue(value || '');
+                setIsEditing(true);
+                autoSize(event.currentTarget);
+            }}
+            onBlur={commitDraftValue}
+            onChange={(event) => {
+                setDraftValue(event.target.value);
+                autoSize(event.currentTarget);
+            }}
+            ref={(el) => {
+                if (el) autoSize(el);
+            }}
+            className={className}
+            style={minHeight ? { minHeight } : undefined}
+        />
+    );
+};
 
 const PT051_STRUCTURE = [
   { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
@@ -449,17 +565,6 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         const rawResourceId = String(resourceId || '').trim();
         if (!rawResourceId) return 'N/A';
         return stripResourceLineNumber(formatResourceLabel?.(rawResourceId) || rawResourceId) || 'N/A';
-    };
-    const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
-        const target = event.target as HTMLElement | null;
-        if (
-            target instanceof HTMLInputElement ||
-            target instanceof HTMLTextAreaElement ||
-            target instanceof HTMLSelectElement ||
-            target?.isContentEditable
-        ) {
-            event.stopPropagation();
-        }
     };
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
     const { checkAndWarn } = useSystemFreeze();
@@ -1809,30 +1914,19 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.weather}</label>
-                            <textarea
+                            <DraftTextArea
                                 value={commentFields['Weather']}
-                                onChange={(e) => handleCommentFieldChange('Weather', e.target.value)}
+                                onCommit={(value) => handleCommentFieldChange('Weather', value)}
                                 rows={1}
                                 className="mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
-                                style={{ minHeight: '42px' }}
-                                onInput={(e) => {
-                                    e.currentTarget.style.height = 'auto';
-                                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                }}
-                                ref={(el) => {
-                                    if (el) {
-                                        el.style.height = 'auto';
-                                        el.style.height = el.scrollHeight + 'px';
-                                    }
-                                }}
+                                minHeight="42px"
                             />
                         </div>
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.nest}</label>
-                             <input
-                                type="text"
+                             <DraftTextInput
                                 value={commentFields['NEST']}
-                                onChange={(e) => handleCommentFieldChange('NEST', e.target.value)}
+                                onCommit={(value) => handleCommentFieldChange('NEST', value)}
                                 maxLength={8}
                                 className="mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
                             />
@@ -1842,42 +1936,22 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                     <div className="space-y-6">
                         <div key={'Profile'} className="relative">
                             <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.profile}</label>
-                            <textarea
+                            <DraftTextArea
                                 value={commentFields['Profile']}
-                                onChange={(e) => handleCommentFieldChange('Profile', e.target.value)}
+                                onCommit={(value) => handleCommentFieldChange('Profile', value)}
                                 rows={4}
                                 className="mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
-                                style={{ minHeight: '100px' }}
-                                onInput={(e) => {
-                                    e.currentTarget.style.height = 'auto';
-                                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                }}
-                                ref={(el) => {
-                                    if (el) {
-                                        el.style.height = 'auto';
-                                        el.style.height = el.scrollHeight + 'px';
-                                    }
-                                }}
+                                minHeight="100px"
                             />
                         </div>
                          <div key={'Overall'} className="relative">
                             <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.overall}</label>
-                            <textarea
+                            <DraftTextArea
                                 value={commentFields['Overall']}
-                                onChange={(e) => handleCommentFieldChange('Overall', e.target.value)}
+                                onCommit={(value) => handleCommentFieldChange('Overall', value)}
                                 rows={6}
                                 className="mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
-                                style={{ minHeight: '150px' }}
-                                onInput={(e) => {
-                                    e.currentTarget.style.height = 'auto';
-                                    e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                }}
-                                ref={(el) => {
-                                    if (el) {
-                                        el.style.height = 'auto';
-                                        el.style.height = el.scrollHeight + 'px';
-                                    }
-                                }}
+                                minHeight="150px"
                             />
                         </div>
                     </div>
@@ -1921,23 +1995,13 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                         const score = assessment.scores.find(s => s.element === element);
                                         const commentCell = () => (
                                             <td className="relative py-3 pl-3 pr-2 align-middle">
-                                                <textarea
+                                                <DraftTextArea
                                                     value={score?.comment || ''}
-                                                    onChange={(e) => handleCommentChange(element, e.target.value)}
+                                                    onCommit={(value) => handleCommentChange(element, value)}
                                                     rows={1}
                                                     placeholder="Comments..."
                                                     className="w-full bg-gray-800 border border-gray-600 rounded p-2 pr-8 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
-                                                    style={{ minHeight: '42px' }}
-                                                    onInput={(e) => {
-                                                        e.currentTarget.style.height = 'auto';
-                                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                                                    }}
-                                                    ref={(el) => {
-                                                        if (el) {
-                                                            el.style.height = 'auto';
-                                                            el.style.height = el.scrollHeight + 'px';
-                                                        }
-                                                    }}
+                                                    minHeight="42px"
                                                 />
                                                 <button
                                                   onClick={() => handleOpenPhraseSelector(element)}
@@ -1993,11 +2057,10 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                     <div className="mt-2 whitespace-pre-wrap text-sm text-gray-100">{forwardedPreFlightNotes}</div>
                                 </div>
                             )}
-                            <textarea
+                            <DraftTextArea
                                 value={buildTrainingReportNotes()}
-                                onChange={(e) => handleCommentFieldChange('Notes', e.target.value)}
-                                onKeyDownCapture={stopEditableKeyPropagation}
-                                onKeyDown={stopEditableKeyPropagation}
+                                onCommit={(value) => handleCommentFieldChange('Notes', value)}
+                                normaliseOnCommit={(value) => stripGeneratedFollowUpNotes(value, getFollowUpNotesPrefix())}
                                 rows={5}
                                 className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                 placeholder="Record what was missed, not completed, or should be carried into the next event."

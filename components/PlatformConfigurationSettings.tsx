@@ -102,7 +102,7 @@ import {
 } from '../utils/setupTestMode';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import type { CurrencyRequirement, FormationCallsign, MasterCurrency, SyllabusItemDetail } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
@@ -5623,6 +5623,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
   };
 
+  const updateLicenseImportDraft = (value: string) => {
+    setLicenseImportText(value);
+    setLicenseImportMessage('');
+    setLicenseImportError('');
+  };
+
   const importSignedLicense = async () => {
     if (!canEdit) return;
     if (!licenseImportText.trim()) {
@@ -8695,11 +8701,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <textarea
               className={`${fieldClass} min-h-[110px] font-mono text-xs`}
               value={licenseImportText}
-              onChange={(event) => {
-                setLicenseImportText(event.target.value);
-                setLicenseImportMessage('');
-                setLicenseImportError('');
-              }}
+              onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateLicenseImportDraft)}
+              onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateLicenseImportDraft)}
+              onKeyDown={stopEditableKeyPropagation}
+              onChange={(event) => updateLicenseImportDraft(event.target.value)}
               placeholder='Paste signed licence JSON, for example {"schema":"dfp-neo-license/v1",...}'
               disabled={!canEditSection('platform-licensing') && !licenseImportText}
             />
@@ -10525,53 +10530,6 @@ const FieldLabel = ({ label, info, noWrap = false }: { label: string; info?: str
   </span>
 );
 
-const insertEditableTextAtCursor = (
-  field: HTMLInputElement | HTMLTextAreaElement,
-  text: string,
-  onChange: (value: string) => void,
-  maxLength?: number,
-): boolean => {
-  if (field.disabled || field.readOnly) return false;
-  const currentValue = field.value || '';
-  const selectionStart = field.selectionStart ?? currentValue.length;
-  const selectionEnd = field.selectionEnd ?? selectionStart;
-  const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
-  const limitedValue = typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue;
-  const nextCursor = Math.min(selectionStart + text.length, limitedValue.length);
-  if (limitedValue === currentValue && selectionStart === selectionEnd) return false;
-  onChange(limitedValue);
-  window.requestAnimationFrame(() => {
-    field.setSelectionRange(nextCursor, nextCursor);
-  });
-  return true;
-};
-
-const handleEditableTextKeyDownCapture = (
-  event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
-  onChange: (value: string) => void,
-  maxLength?: number,
-) => {
-  if ((event.key === ' ' || event.code === 'Space' || event.key === 'Spacebar') && !event.metaKey && !event.ctrlKey && !event.altKey) {
-    event.preventDefault();
-    event.stopPropagation();
-    insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
-    return;
-  }
-  stopEditableKeyPropagation(event);
-};
-
-const handleEditableTextBeforeInput = (
-  event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>,
-  onChange: (value: string) => void,
-  maxLength?: number,
-) => {
-  const inputEvent = event.nativeEvent as InputEvent;
-  if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
-  event.preventDefault();
-  event.stopPropagation();
-  insertEditableTextAtCursor(event.currentTarget, ' ', onChange, maxLength);
-};
-
 const Field = ({
   inputId,
   label,
@@ -11176,7 +11134,8 @@ const UserSearchSelect = ({
   onChange: (value: string) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const query = search.trim().toLowerCase();
+  const [draftSearch, setDraftSearch] = useState(search || '');
+  const query = draftSearch.trim().toLowerCase();
   const filteredUsers = users
     .filter((user) => {
       if (!query) return true;
@@ -11184,20 +11143,33 @@ const UserSearchSelect = ({
     })
     .slice(0, 30);
 
+  useEffect(() => {
+    if (!isOpen) setDraftSearch(search || '');
+  }, [isOpen, search]);
+
+  const updateSearchDraft = (nextSearch: string) => {
+    setDraftSearch(nextSearch);
+    onSearchChange(nextSearch);
+    setIsOpen(true);
+  };
+
   return (
     <label className="relative block">
       <span className={labelClass}>{label}</span>
       <input
         className={fieldClass}
-        value={search}
+        value={draftSearch}
         disabled={disabled}
         placeholder="Search by name..."
         autoComplete="off"
-        onChange={(event) => {
-          onSearchChange(event.target.value);
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateSearchDraft)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateSearchDraft)}
+        onKeyDown={stopEditableKeyPropagation}
+        onChange={(event) => updateSearchDraft(event.target.value)}
+        onFocus={() => {
+          setDraftSearch(search || '');
           setIsOpen(true);
         }}
-        onFocus={() => setIsOpen(true)}
         onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
       />
       {isOpen && !disabled && (
@@ -11214,6 +11186,7 @@ const UserSearchSelect = ({
                 onClick={() => {
                   onChange(user.id);
                   onSearchChange('');
+                  setDraftSearch('');
                   setIsOpen(false);
                 }}
               >

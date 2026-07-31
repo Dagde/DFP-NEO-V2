@@ -7,6 +7,7 @@ import {
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { appendTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface AirCombatTrainingReportModalProps {
   staff: Instructor;
@@ -148,6 +149,128 @@ const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): strin
     return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
   });
   return cleanedLines.join('\n').replace(/^\s+/, '');
+};
+
+const DraftTextInput = ({
+  value,
+  onCommit,
+  onDraftChange,
+  className,
+  maxLength,
+  placeholder,
+  disabled = false,
+  onFocus,
+  onClick,
+  onBlur,
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+  onDraftChange?: (value: string) => void;
+  className: string;
+  maxLength?: number;
+  placeholder?: string;
+  disabled?: boolean;
+  onFocus?: () => void;
+  onClick?: () => void;
+  onBlur?: () => void;
+}) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const updateDraftValue = (nextValue: string) => {
+    const limitedValue = typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue;
+    setDraftValue(limitedValue);
+    onDraftChange?.(limitedValue);
+  };
+
+  const commitDraftValue = () => {
+    const limitedValue = typeof maxLength === 'number' ? draftValue.slice(0, maxLength) : draftValue;
+    setDraftValue(limitedValue);
+    setIsEditing(false);
+    onCommit(limitedValue);
+    onBlur?.();
+  };
+
+  return (
+    <input
+      value={isEditing ? draftValue : value || ''}
+      disabled={disabled}
+      maxLength={maxLength}
+      placeholder={placeholder}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, maxLength)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, maxLength)}
+      onKeyDown={stopEditableKeyPropagation}
+      onFocus={() => {
+        setDraftValue(value || '');
+        setIsEditing(true);
+        onFocus?.();
+      }}
+      onClick={onClick}
+      onBlur={commitDraftValue}
+      onChange={(event) => updateDraftValue(event.target.value)}
+      className={className}
+    />
+  );
+};
+
+const DraftTextArea = ({
+  value,
+  onCommit,
+  onDraftChange,
+  className,
+  rows,
+  placeholder,
+  normaliseOnCommit,
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+  onDraftChange?: (value: string) => void;
+  className: string;
+  rows?: number;
+  placeholder?: string;
+  normaliseOnCommit?: (value: string) => string;
+}) => {
+  const [draftValue, setDraftValue] = useState(value || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const displayedValue = isEditing ? draftValue : value || '';
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(value || '');
+  }, [isEditing, value]);
+
+  const updateDraftValue = (nextValue: string) => {
+    setDraftValue(nextValue);
+    onDraftChange?.(nextValue);
+  };
+
+  const commitDraftValue = () => {
+    const nextValue = normaliseOnCommit ? normaliseOnCommit(draftValue) : draftValue;
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    onCommit(nextValue);
+  };
+
+  return (
+    <textarea
+      value={displayedValue}
+      rows={rows}
+      placeholder={placeholder}
+      onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue)}
+      onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue)}
+      onKeyDown={stopEditableKeyPropagation}
+      onFocus={() => {
+        setDraftValue(value || '');
+        setIsEditing(true);
+      }}
+      onBlur={commitDraftValue}
+      onChange={(event) => updateDraftValue(event.target.value)}
+      className={className}
+    />
+  );
 };
 
 const formatHours = (value?: number): string => {
@@ -345,10 +468,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
       <dt className="text-sm font-medium text-gray-400">{label}</dt>
       <dd className="mt-1 text-sm font-semibold text-white">
         {isEditMode ? (
-          <input
+          <DraftTextInput
             value={value}
-            onChange={(event) => {
-              onChange(event.target.value);
+            onCommit={onChange}
+            onDraftChange={() => {
               setSaveStatus('Unsaved');
             }}
             className={editInputClass}
@@ -365,13 +488,13 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
       <dd className="mt-1 text-sm font-semibold text-white">
         {isEditMode ? (
           <>
-            <input
+            <DraftTextInput
               value={eventCode}
               onFocus={() => setShowRecentEventPicker(true)}
               onClick={() => setShowRecentEventPicker(true)}
               onBlur={() => window.setTimeout(() => setShowRecentEventPicker(false), 120)}
-              onChange={(event) => {
-                setEventCodeField(event.target.value);
+              onCommit={setEventCodeField}
+              onDraftChange={() => {
                 setSaveStatus('Unsaved');
               }}
               className={editInputClass}
@@ -528,17 +651,6 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     if (grade === '3') return 'accent-yellow-400';
     if (grade === '4') return 'accent-lime-400';
     return 'accent-emerald-500';
-  };
-  const stopEditableKeyPropagation = (event: React.KeyboardEvent<HTMLElement>) => {
-    const target = event.target as HTMLElement | null;
-    if (
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLSelectElement ||
-      target?.isContentEditable
-    ) {
-      event.stopPropagation();
-    }
   };
   const saveReport = async () => {
     setIsSaving(true);
@@ -712,7 +824,20 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                 <div><dt className="text-sm font-medium text-gray-400">{overviewFields.timing}</dt><dd className="mt-1 text-sm font-semibold text-white">{formatDecimalTime(startTime)} - {formatDecimalTime(endTime)}</dd></div>
                 {renderEventDataField(overviewFields.resource, isEditMode ? resourceIdField : displayResourceId, setResourceIdField)}
                 {renderEventDataField(overviewFields.callsign, callsignField || activeSourceEvent?.callsign || staff.callsign || '', setCallsignField)}
-                <div><dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt><dd className="mt-1"><input value={instructorName} onChange={(event) => { setInstructorName(event.target.value); updateCommentSection('assessor', event.target.value); setSaveStatus('Unsaved'); }} className="w-[calc(100%+20px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500" /></dd></div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-400">{overviewFields.assessor}</dt>
+                  <dd className="mt-1">
+                    <DraftTextInput
+                      value={instructorName}
+                      onCommit={(nextValue) => {
+                        setInstructorName(nextValue);
+                        updateCommentSection('assessor', nextValue);
+                      }}
+                      onDraftChange={() => setSaveStatus('Unsaved')}
+                      className="w-[calc(100%+20px)] rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm font-semibold text-white focus:ring-1 focus:ring-sky-500"
+                    />
+                  </dd>
+                </div>
               </dl>
 
               <div className="relative rounded-lg border border-gray-600 p-4 lg:col-span-2 lg:-ml-[44px] lg:w-[calc(100%+44px)]">
@@ -953,26 +1078,29 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]">
               <div>
                 <label className="block text-sm font-medium text-gray-400">{commentFields.assessor}</label>
-                <input
+                <DraftTextInput
                   value={commentSections.assessor}
-                  onChange={(event) => { updateCommentSection('assessor', event.target.value); setSaveStatus('Unsaved'); }}
+                  onCommit={(value) => updateCommentSection('assessor', value)}
+                  onDraftChange={() => setSaveStatus('Unsaved')}
                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400">{commentFields.weather}</label>
-                <textarea
+                <DraftTextArea
                   value={commentSections.weather}
-                  onChange={(event) => { updateCommentSection('weather', event.target.value); setSaveStatus('Unsaved'); }}
+                  onCommit={(value) => updateCommentSection('weather', value)}
+                  onDraftChange={() => setSaveStatus('Unsaved')}
                   rows={1}
                   className="mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400">{commentFields.nest}</label>
-                <input
+                <DraftTextInput
                   value={commentSections.nest}
-                  onChange={(event) => { updateCommentSection('nest', event.target.value); setSaveStatus('Unsaved'); }}
+                  onCommit={(value) => updateCommentSection('nest', value)}
+                  onDraftChange={() => setSaveStatus('Unsaved')}
                   maxLength={8}
                   className="mt-1 w-full rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
@@ -981,18 +1109,20 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
 
             <div>
               <label className="block text-sm font-medium text-gray-400">{commentFields.profile}</label>
-              <textarea
+              <DraftTextArea
                 value={commentSections.profile}
-                onChange={(event) => { updateCommentSection('profile', event.target.value); setSaveStatus('Unsaved'); }}
+                onCommit={(value) => updateCommentSection('profile', value)}
+                onDraftChange={() => setSaveStatus('Unsaved')}
                 rows={4}
                 className="mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-400">{commentFields.overall}</label>
-              <textarea
+              <DraftTextArea
                 value={commentSections.overall}
-                onChange={(event) => { updateCommentSection('overall', event.target.value); setSaveStatus('Unsaved'); }}
+                onCommit={(value) => updateCommentSection('overall', value)}
+                onDraftChange={() => setSaveStatus('Unsaved')}
                 rows={5}
                 className="mt-1 w-full resize-none rounded border border-gray-600 bg-gray-700 p-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
@@ -1037,9 +1167,10 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                         </td>
                       ))}
                       <td className="relative py-3 pl-3 pr-2 align-middle">
-                        <textarea
+                        <DraftTextArea
                           value={getElementScore(element).comment}
-                          onChange={(event) => { updateElementScore(element, { comment: event.target.value }); setSaveStatus('Unsaved'); }}
+                          onCommit={(value) => updateElementScore(element, { comment: value })}
+                          onDraftChange={() => setSaveStatus('Unsaved')}
                           rows={1}
                           className="w-full resize-none overflow-hidden rounded border border-gray-600 bg-gray-800 p-2 text-sm text-gray-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                           placeholder="Comments..."
@@ -1055,11 +1186,11 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
           <fieldset className="rounded-lg border border-gray-700 p-4">
             <legend className="px-2 text-sm font-semibold text-gray-300">{commentFields.notes}</legend>
             <div className="space-y-3">
-              <textarea
+              <DraftTextArea
                 value={buildNotesWithFollowUp()}
-                onChange={(event) => { updateCommentSection('notes', stripGeneratedFollowUpNotes(event.target.value, getFollowUpNotesPrefix())); setSaveStatus('Unsaved'); }}
-                onKeyDownCapture={stopEditableKeyPropagation}
-                onKeyDown={stopEditableKeyPropagation}
+                onCommit={(value) => updateCommentSection('notes', value)}
+                onDraftChange={() => setSaveStatus('Unsaved')}
+                normaliseOnCommit={(value) => stripGeneratedFollowUpNotes(value, getFollowUpNotesPrefix())}
                 rows={5}
                 className="w-full resize-y rounded border border-gray-600 bg-gray-800 p-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 placeholder="Record what was missed, not completed, or should be carried into the next event."
