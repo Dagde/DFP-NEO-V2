@@ -108759,11 +108759,19 @@ const App = () => {
     return `${h.toString().padStart(2, "0")}${m.toString().padStart(2, "0")}`;
   };
   const getApiBaseUrl = () => getAppApiBase();
+  const logAvailabilityDebug = (...args) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage?.getItem("dfp_availability_debug") === "true") {
+        console.log(...args);
+      }
+    } catch {
+    }
+  };
   const postAvailabilityEvent = async (availableCount, changeType, totalAircraftOverride, notesOverride, timestampOverride) => {
     const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    console.log(`
+    logAvailabilityDebug(`
 ${"=".repeat(60)}`);
-    console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
+    logAvailabilityDebug(`[AV] postAvailabilityEvent START ${requestId}`);
     const apiBase = getApiBaseUrl();
     const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
     const windowStart = formatWindowTime(flyingStartTime);
@@ -108771,7 +108779,7 @@ ${"=".repeat(60)}`);
     const today = /* @__PURE__ */ new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const ts = /* @__PURE__ */ new Date();
-    console.log(`[AV] 📋 Event details:`, {
+    logAvailabilityDebug(`[AV] Event details:`, {
       requestId,
       type: changeType,
       date: dateStr,
@@ -108796,10 +108804,10 @@ ${"=".repeat(60)}`);
       // Send explicit timezone offset (hours) — more reliable than inferring from local clock
       clientTimezoneOffsetHours: timezoneOffset
     };
-    console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
-    console.log(`[AV] 🌐 API URL: ${apiBase}/aircraft-availability-events`);
+    logAvailabilityDebug(`[AV] Request body:`, JSON.stringify(requestBody, null, 2));
+    logAvailabilityDebug(`[AV] API URL: ${apiBase}/aircraft-availability-events`);
     try {
-      console.log(`[AV] 🚀 Starting fetch...`);
+      logAvailabilityDebug(`[AV] Starting fetch...`);
       const fetchStart = Date.now();
       const res = await fetch(`${apiBase}/aircraft-availability-events`, {
         method: "POST",
@@ -108808,24 +108816,24 @@ ${"=".repeat(60)}`);
         body: JSON.stringify(requestBody)
       });
       const fetchDuration = Date.now() - fetchStart;
-      console.log(`[AV] ⏱️ Fetch completed in ${fetchDuration}ms`);
-      console.log(`[AV] 📥 Response status: ${res.status} ${res.statusText}`);
-      console.log(`[AV] 📥 Response headers:`, Object.fromEntries(res.headers.entries()));
+      logAvailabilityDebug(`[AV] Fetch completed in ${fetchDuration}ms`);
+      logAvailabilityDebug(`[AV] Response status: ${res.status} ${res.statusText}`);
+      logAvailabilityDebug(`[AV] Response headers:`, Object.fromEntries(res.headers.entries()));
       if (res.ok) {
         const data = await res.json();
-        console.log(`[AV] ✅ Response data:`, data);
+        logAvailabilityDebug(`[AV] Response data:`, data);
         if (data.skipped) {
-          console.log(`[AV] ⏭️ Event skipped: ${data.reason}`);
+          logAvailabilityDebug(`[AV] Event skipped: ${data.reason}`);
         } else {
-          console.log(`[AV] ✅ Event recorded successfully!`);
+          logAvailabilityDebug(`[AV] Event recorded successfully!`);
         }
-        console.log(`${"=".repeat(60)}
+        logAvailabilityDebug(`${"=".repeat(60)}
 `);
         return { success: true, data };
       } else {
         const errText = await res.text();
         console.error(`[AV] ❌ Request failed: ${res.status} ${errText}`);
-        console.log(`${"=".repeat(60)}
+        logAvailabilityDebug(`${"=".repeat(60)}
 `);
         return { success: false, error: `${res.status}: ${errText}` };
       }
@@ -108834,7 +108842,7 @@ ${"=".repeat(60)}`);
       console.error(`[AV] ❌ Error type:`, err?.constructor?.name);
       console.error(`[AV] ❌ Error message:`, err?.message);
       console.error(`[AV] ❌ Error stack:`, err?.stack);
-      console.log(`${"=".repeat(60)}
+      logAvailabilityDebug(`${"=".repeat(60)}
 `);
       return { success: false, error: String(err) };
     }
@@ -108913,10 +108921,7 @@ ${"=".repeat(60)}`);
         return { error: String(e), url };
       }
     };
-    console.log("🔧 Debug helpers available:");
-    console.log("  - window.testAvailabilityAPI() - Test posting an event");
-    console.log("  - window.debugAvailabilityDB() - Check database status");
-    console.log("  - window.forceInsertAvailability(count) - Force insert a test record");
+    logAvailabilityDebug("[AV] Debug helpers available: window.testAvailabilityAPI(), window.debugAvailabilityDB(), window.forceInsertAvailability(count)");
   }, [sessionUser?.userId, availableAircraftCount, flyingStartTime, flyingEndTime]);
   const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = reactExports.useState(false);
   const loadedAvailabilityRef = reactExports.useRef(null);
@@ -108939,12 +108944,12 @@ ${"=".repeat(60)}`);
           const data = await res.json();
           if (data.success && data.availableCount !== void 0) {
             if (!data.isDefault) {
-              console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode2}: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
+              logAvailabilityDebug(`[AV] Restored availability from database for ${school} - ${activeUnitCode2}: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
               setAvailableAircraftCount(data.availableCount);
               loadedAvailabilityRef.current = data.availableCount;
               availabilityLoadedFromEventsRef.current = true;
             } else {
-              console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+              logAvailabilityDebug(`[AV] No saved availability found, using default: 15`);
               setAvailableAircraftCount(data.availableCount ?? 15);
               loadedAvailabilityRef.current = 15;
               availabilityLoadedFromEventsRef.current = false;
@@ -108962,10 +108967,10 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     if (!sessionUser?.userId || !hasLoadedPersistedAvailability) return;
     const runStartup = async () => {
-      console.log("[AV] 🚀 Startup: recording initial availability state");
+      logAvailabilityDebug("[AV] Startup: recording initial availability state");
       await new Promise((resolve) => setTimeout(resolve, 1e3));
       const availabilityToRecord = loadedAvailabilityRef.current ?? availableAircraftCount;
-      console.log(`[AV] Startup: using availability ${availabilityToRecord} (ref: ${loadedAvailabilityRef.current}, state: ${availableAircraftCount})`);
+      logAvailabilityDebug(`[AV] Startup: using availability ${availabilityToRecord} (ref: ${loadedAvailabilityRef.current}, state: ${availableAircraftCount})`);
       await postAvailabilityEvent(
         availabilityToRecord,
         "startup",
@@ -108976,7 +108981,7 @@ ${"=".repeat(60)}`);
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
       const windowStart = formatWindowTime(flyingStartTime);
       const windowEnd = formatWindowTime(flyingEndTime);
-      console.log(`[AV] Running recovery check for ${todayStr}`);
+      logAvailabilityDebug(`[AV] Running recovery check for ${todayStr}`);
       try {
         const apiBase = getApiBaseUrl();
         const recovRes = await fetch(`${apiBase}/aircraft-availability-recalculate`, {
@@ -108995,9 +109000,9 @@ ${"=".repeat(60)}`);
         if (recovRes.ok) {
           const recovData = await recovRes.json();
           if (recovData.skipped) {
-            console.log(`[AV] Recovery: summary for ${todayStr} is recent, no rebuild needed`);
+            logAvailabilityDebug(`[AV] Recovery: summary for ${todayStr} is recent, no rebuild needed`);
           } else {
-            console.log(`[AV] Recovery: rebuilt daily summary for ${todayStr}`, recovData.record);
+            logAvailabilityDebug(`[AV] Recovery: rebuilt daily summary for ${todayStr}`, recovData.record);
           }
         }
       } catch (err) {
@@ -109014,7 +109019,7 @@ ${"=".repeat(60)}`);
       const windowStartMin = Math.floor(flyingStartTime) * 60 + Math.round(flyingStartTime % 1 * 60);
       const windowEndMin = Math.floor(flyingEndTime) * 60 + Math.round(flyingEndTime % 1 * 60);
       if (currentMinutes >= windowStartMin && currentMinutes < windowStartMin + 1) {
-        console.log(`[AV] ⏰ Flying window START reached (${formatWindowTime(flyingStartTime)})`);
+        logAvailabilityDebug(`[AV] Flying window START reached (${formatWindowTime(flyingStartTime)})`);
         postAvailabilityEvent(
           availableAircraftCount,
           "window_start",
@@ -109023,7 +109028,7 @@ ${"=".repeat(60)}`);
         );
       }
       if (currentMinutes >= windowEndMin && currentMinutes < windowEndMin + 1) {
-        console.log(`[AV] ⏰ Flying window END reached (${formatWindowTime(flyingEndTime)})`);
+        logAvailabilityDebug(`[AV] Flying window END reached (${formatWindowTime(flyingEndTime)})`);
         postAvailabilityEvent(
           availableAircraftCount,
           "window_end",
@@ -120984,16 +120989,16 @@ ${error instanceof Error ? error.message : String(error)}`,
             onAvailabilityChange: (record) => {
               if (record.snapshots.length === 0) return;
               const lastSnapshot = record.snapshots[record.snapshots.length - 1];
-              console.log(`[AV] 📋 onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
+              logAvailabilityDebug(`[AV] onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
             },
             onUserAvailabilityChange: async (count) => {
               if (isViewingPastDfp) {
                 denyPastDfpEdit("change aircraft availability");
                 return;
               }
-              console.log(`[AV] 🔥 onUserAvailabilityChange: user dragged line to ${count}`);
+              logAvailabilityDebug(`[AV] onUserAvailabilityChange: user dragged line to ${count}`);
               if (!sessionUser?.userId) {
-                console.log("[AV] ⚠️ No session user, skipping DB post");
+                logAvailabilityDebug("[AV] No session user, skipping DB post");
                 return;
               }
               await postAvailabilityEvent(
@@ -121002,7 +121007,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 configuredAirframeCount,
                 `Aircraft availability updated via overlay: ${count}`
               );
-              console.log(`[AV] ✅ DB event posted for user drag: ${count}`);
+              logAvailabilityDebug(`[AV] DB event posted for user drag: ${count}`);
             },
             isVisualAdjustMode,
             visualAdjustEvent,

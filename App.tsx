@@ -26398,7 +26398,7 @@ const App: React.FC = () => {
 
         // Save to database if count changed and user is logged in
         if (count !== previousCount && sessionUser?.userId) {
-            console.log(`[AV] ✈️ Aircraft count changed: ${previousCount} → ${count}, saving to database`);
+            logAvailabilityDebug(`[AV] Aircraft count changed: ${previousCount} -> ${count}, saving to database`);
             await postAvailabilityEvent(
                 count,
                 'change',
@@ -26708,6 +26708,16 @@ const App: React.FC = () => {
     // Helper: get the correct API base URL for cross-origin deployments
     const getApiBaseUrl = (): string => getAppApiBase();
 
+    const logAvailabilityDebug = (...args: any[]) => {
+        try {
+            if (typeof window !== 'undefined' && window.localStorage?.getItem('dfp_availability_debug') === 'true') {
+                console.log(...args);
+            }
+        } catch {
+            // Debug logging must never affect availability tracking.
+        }
+    };
+
     // Helper: post an aircraft availability event to the database
     const postAvailabilityEvent = async (
         availableCount: number,
@@ -26717,8 +26727,8 @@ const App: React.FC = () => {
         timestampOverride?: Date
     ): Promise<{ success: boolean; data?: any; error?: string }> => {
         const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        console.log(`\n${'='.repeat(60)}`);
-        console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
+        logAvailabilityDebug(`\n${'='.repeat(60)}`);
+        logAvailabilityDebug(`[AV] postAvailabilityEvent START ${requestId}`);
 
         const apiBase = getApiBaseUrl();
         const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
@@ -26728,7 +26738,7 @@ const App: React.FC = () => {
         const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         const ts = timestampOverride ?? new Date();
 
-        console.log(`[AV] 📋 Event details:`, {
+        logAvailabilityDebug(`[AV] Event details:`, {
             requestId,
             type: changeType,
             date: dateStr,
@@ -26755,11 +26765,11 @@ const App: React.FC = () => {
             clientTimezoneOffsetHours: timezoneOffset,
         };
 
-        console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
-        console.log(`[AV] 🌐 API URL: ${apiBase}/aircraft-availability-events`);
+        logAvailabilityDebug(`[AV] Request body:`, JSON.stringify(requestBody, null, 2));
+        logAvailabilityDebug(`[AV] API URL: ${apiBase}/aircraft-availability-events`);
 
         try {
-            console.log(`[AV] 🚀 Starting fetch...`);
+            logAvailabilityDebug(`[AV] Starting fetch...`);
             const fetchStart = Date.now();
 
             const res = await fetch(`${apiBase}/aircraft-availability-events`, {
@@ -26770,24 +26780,24 @@ const App: React.FC = () => {
             });
 
             const fetchDuration = Date.now() - fetchStart;
-            console.log(`[AV] ⏱️ Fetch completed in ${fetchDuration}ms`);
-            console.log(`[AV] 📥 Response status: ${res.status} ${res.statusText}`);
-            console.log(`[AV] 📥 Response headers:`, Object.fromEntries(res.headers.entries()));
+            logAvailabilityDebug(`[AV] Fetch completed in ${fetchDuration}ms`);
+            logAvailabilityDebug(`[AV] Response status: ${res.status} ${res.statusText}`);
+            logAvailabilityDebug(`[AV] Response headers:`, Object.fromEntries(res.headers.entries()));
 
             if (res.ok) {
                 const data = await res.json();
-                console.log(`[AV] ✅ Response data:`, data);
+                logAvailabilityDebug(`[AV] Response data:`, data);
                 if (data.skipped) {
-                    console.log(`[AV] ⏭️ Event skipped: ${data.reason}`);
+                    logAvailabilityDebug(`[AV] Event skipped: ${data.reason}`);
                 } else {
-                    console.log(`[AV] ✅ Event recorded successfully!`);
+                    logAvailabilityDebug(`[AV] Event recorded successfully!`);
                 }
-                console.log(`${'='.repeat(60)}\n`);
+                logAvailabilityDebug(`${'='.repeat(60)}\n`);
                 return { success: true, data };
             } else {
                 const errText = await res.text();
                 console.error(`[AV] ❌ Request failed: ${res.status} ${errText}`);
-                console.log(`${'='.repeat(60)}\n`);
+                logAvailabilityDebug(`${'='.repeat(60)}\n`);
                 return { success: false, error: `${res.status}: ${errText}` };
             }
         } catch (err) {
@@ -26795,7 +26805,7 @@ const App: React.FC = () => {
             console.error(`[AV] ❌ Error type:`, (err as Error)?.constructor?.name);
             console.error(`[AV] ❌ Error message:`, (err as Error)?.message);
             console.error(`[AV] ❌ Error stack:`, (err as Error)?.stack);
-            console.log(`${'='.repeat(60)}\n`);
+            logAvailabilityDebug(`${'='.repeat(60)}\n`);
             return { success: false, error: String(err) };
         }
     };
@@ -26882,10 +26892,7 @@ const App: React.FC = () => {
             }
         };
 
-        console.log('🔧 Debug helpers available:');
-        console.log('  - window.testAvailabilityAPI() - Test posting an event');
-        console.log('  - window.debugAvailabilityDB() - Check database status');
-        console.log('  - window.forceInsertAvailability(count) - Force insert a test record');
+        logAvailabilityDebug('[AV] Debug helpers available: window.testAvailabilityAPI(), window.debugAvailabilityDB(), window.forceInsertAvailability(count)');
     }, [sessionUser?.userId, availableAircraftCount, flyingStartTime, flyingEndTime]);
 
     // Track whether we've loaded the persisted availability
@@ -26922,13 +26929,13 @@ const App: React.FC = () => {
                         // (even from previous days) so availability survives restarts without leaking
                         // changes between units.
                         if (!data.isDefault) {
-                            console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode}: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
+                            logAvailabilityDebug(`[AV] Restored availability from database for ${school} - ${activeUnitCode}: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
                             setAvailableAircraftCount(data.availableCount);
                             // Store in ref for immediate use in startup
                             loadedAvailabilityRef.current = data.availableCount;
                             availabilityLoadedFromEventsRef.current = true;
                         } else {
-                            console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                            logAvailabilityDebug(`[AV] No saved availability found, using default: 15`);
                             setAvailableAircraftCount(data.availableCount ?? 15);
                             loadedAvailabilityRef.current = 15; // Explicit default
                             availabilityLoadedFromEventsRef.current = false;
@@ -26953,14 +26960,14 @@ const App: React.FC = () => {
         if (!sessionUser?.userId || !hasLoadedPersistedAvailability) return;
 
         const runStartup = async () => {
-            console.log('[AV] 🚀 Startup: recording initial availability state');
+            logAvailabilityDebug('[AV] Startup: recording initial availability state');
 
             // 1. Fire startup event (1s delay to allow state to settle)
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             // Use the ref value if available (avoids async state issue), otherwise fall back to state
             const availabilityToRecord = loadedAvailabilityRef.current ?? availableAircraftCount;
-            console.log(`[AV] Startup: using availability ${availabilityToRecord} (ref: ${loadedAvailabilityRef.current}, state: ${availableAircraftCount})`);
+            logAvailabilityDebug(`[AV] Startup: using availability ${availabilityToRecord} (ref: ${loadedAvailabilityRef.current}, state: ${availableAircraftCount})`);
 
             await postAvailabilityEvent(
                 availabilityToRecord,
@@ -26975,7 +26982,7 @@ const App: React.FC = () => {
             const windowStart = formatWindowTime(flyingStartTime);
             const windowEnd   = formatWindowTime(flyingEndTime);
 
-            console.log(`[AV] Running recovery check for ${todayStr}`);
+            logAvailabilityDebug(`[AV] Running recovery check for ${todayStr}`);
             try {
                 const apiBase = getApiBaseUrl();
                 const recovRes = await fetch(`${apiBase}/aircraft-availability-recalculate`, {
@@ -26994,9 +27001,9 @@ const App: React.FC = () => {
                 if (recovRes.ok) {
                     const recovData = await recovRes.json();
                     if (recovData.skipped) {
-                        console.log(`[AV] Recovery: summary for ${todayStr} is recent, no rebuild needed`);
+                        logAvailabilityDebug(`[AV] Recovery: summary for ${todayStr} is recent, no rebuild needed`);
                     } else {
-                        console.log(`[AV] Recovery: rebuilt daily summary for ${todayStr}`, recovData.record);
+                        logAvailabilityDebug(`[AV] Recovery: rebuilt daily summary for ${todayStr}`, recovData.record);
                     }
                 }
             } catch (err) {
@@ -27020,7 +27027,7 @@ const App: React.FC = () => {
 
             // Fire window_start event at exact flying window start (within 1-min window)
             if (currentMinutes >= windowStartMin && currentMinutes < windowStartMin + 1) {
-                console.log(`[AV] ⏰ Flying window START reached (${formatWindowTime(flyingStartTime)})`);
+                logAvailabilityDebug(`[AV] Flying window START reached (${formatWindowTime(flyingStartTime)})`);
                 postAvailabilityEvent(
                     availableAircraftCount,
                     'window_start',
@@ -27030,7 +27037,7 @@ const App: React.FC = () => {
             }
             // Fire window_end event at exact flying window end (within 1-min window)
             if (currentMinutes >= windowEndMin && currentMinutes < windowEndMin + 1) {
-                console.log(`[AV] ⏰ Flying window END reached (${formatWindowTime(flyingEndTime)})`);
+                logAvailabilityDebug(`[AV] Flying window END reached (${formatWindowTime(flyingEndTime)})`);
                 postAvailabilityEvent(
                     availableAircraftCount,
                     'window_end',
@@ -41840,7 +41847,7 @@ appliedUpdates.forEach(update => {
                                // DB posting only happens via onUserAvailabilityChange (user drag).
                                if (record.snapshots.length === 0) return;
                                const lastSnapshot = record.snapshots[record.snapshots.length - 1];
-                               console.log(`[AV] 📋 onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
+                               logAvailabilityDebug(`[AV] onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
                            }}
                            onUserAvailabilityChange={async (count: number) => {
                                if (isViewingPastDfp) {
@@ -41849,9 +41856,9 @@ appliedUpdates.forEach(update => {
                                }
                                // Called ONLY when the user physically drags the line.
                                // This is the ONLY place that posts to the DB.
-                               console.log(`[AV] 🔥 onUserAvailabilityChange: user dragged line to ${count}`);
+                               logAvailabilityDebug(`[AV] onUserAvailabilityChange: user dragged line to ${count}`);
                                if (!sessionUser?.userId) {
-                                   console.log('[AV] ⚠️ No session user, skipping DB post');
+                                   logAvailabilityDebug('[AV] No session user, skipping DB post');
                                    return;
                                }
                                await postAvailabilityEvent(
@@ -41860,7 +41867,7 @@ appliedUpdates.forEach(update => {
                                    configuredAirframeCount,
                                    `Aircraft availability updated via overlay: ${count}`
                                );
-                               console.log(`[AV] ✅ DB event posted for user drag: ${count}`);
+                               logAvailabilityDebug(`[AV] DB event posted for user drag: ${count}`);
                            }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
