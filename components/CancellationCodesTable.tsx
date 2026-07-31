@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CancellationCode, CancellationCodeCategory, CancellationCodeAppliesTo } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 
 interface CancellationCodesTableProps {
   codes: CancellationCode[];
@@ -247,7 +247,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                     type="text"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    onKeyDownCapture={stopEditableKeyPropagation}
+                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4)}
+                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4)}
                     onKeyDown={stopEditableKeyPropagation}
                     maxLength={4}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
@@ -271,7 +272,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                     type="text"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    onKeyDownCapture={stopEditableKeyPropagation}
+                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value }))}
+                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value }))}
                     onKeyDown={stopEditableKeyPropagation}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                     placeholder="Description"
@@ -324,7 +326,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         type="text"
                         value={formData.code}
                         onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                        onKeyDownCapture={stopEditableKeyPropagation}
+                        onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4)}
+                        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4)}
                         onKeyDown={stopEditableKeyPropagation}
                         maxLength={4}
                         className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
@@ -347,7 +350,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         type="text"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        onKeyDownCapture={stopEditableKeyPropagation}
+                        onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value }))}
+                        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value }))}
                         onKeyDown={stopEditableKeyPropagation}
                         className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                       />

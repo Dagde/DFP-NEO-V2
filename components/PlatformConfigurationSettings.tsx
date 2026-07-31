@@ -1575,7 +1575,7 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit profiles need per-unit copies',
-      `${missingCompositeClones} unit-scoped task profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped reusable flight task profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
       'Open Reusable Flight Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
       { section: 'platform-standard-missions', label: 'Reusable Flight Task Profiles', focusSubsectionId: 'platform-standard-missions' }

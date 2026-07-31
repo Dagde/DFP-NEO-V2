@@ -962,7 +962,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     exportCommentFieldLabels.assessor,
                     exportAssessorLabel,
                     instructorLabel,
-                    'QFI',
                     'Instructor',
                     'Report Instructor',
                     'Assessor',

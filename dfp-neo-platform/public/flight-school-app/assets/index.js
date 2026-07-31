@@ -60691,7 +60691,8 @@ const CancellationCodesTable = ({
               type: "text",
               value: formData.code,
               onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
-              onKeyDownCapture: stopEditableKeyPropagation,
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
               onKeyDown: stopEditableKeyPropagation,
               maxLength: 4,
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
@@ -60718,7 +60719,8 @@ const CancellationCodesTable = ({
               type: "text",
               value: formData.description,
               onChange: (e) => setFormData({ ...formData, description: e.target.value }),
-              onKeyDownCapture: stopEditableKeyPropagation,
+              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value })),
+              onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value })),
               onKeyDown: stopEditableKeyPropagation,
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
               placeholder: "Description"
@@ -60771,7 +60773,8 @@ const CancellationCodesTable = ({
                   type: "text",
                   value: formData.code,
                   onChange: (e) => setFormData({ ...formData, code: e.target.value.toUpperCase() }),
-                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
+                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, code: value.toUpperCase() }), 4),
                   onKeyDown: stopEditableKeyPropagation,
                   maxLength: 4,
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
@@ -60797,7 +60800,8 @@ const CancellationCodesTable = ({
                   type: "text",
                   value: formData.description,
                   onChange: (e) => setFormData({ ...formData, description: e.target.value }),
-                  onKeyDownCapture: stopEditableKeyPropagation,
+                  onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setFormData({ ...formData, description: value })),
+                  onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setFormData({ ...formData, description: value })),
                   onKeyDown: stopEditableKeyPropagation,
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                 }
@@ -66862,7 +66866,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} unit-scoped task profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped reusable flight task profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
       "Open Reusable Flight Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
       { section: "platform-standard-missions", label: "Reusable Flight Task Profiles", focusSubsectionId: "platform-standard-missions" }
@@ -81493,7 +81497,6 @@ const TrainingRecordsExportView = ({
           exportCommentFieldLabels.assessor,
           exportAssessorLabel,
           instructorLabel,
-          "QFI",
           "Instructor",
           "Report Instructor",
           "Assessor"
