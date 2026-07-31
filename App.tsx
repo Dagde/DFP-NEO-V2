@@ -1861,7 +1861,7 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'flying', label: 'Flying Window' },
         { id: 'resources', label: 'Resources Available' },
         { id: 'training', label: 'Training Priority' },
-        { id: 'taskings', label: 'Directed Tasks' },
+        { id: 'taskings', label: 'Directed Events' },
         { id: 'currency', label: 'Currency events' },
         { id: 'crew', label: 'Crew' },
         { id: 'course', label: 'Course events' },
@@ -2300,7 +2300,7 @@ const DfpSidePanelTimeline: React.FC<{
             taskingAircraftIndex: index + 1,
             taskingAircraftCount: aircraftCount,
             dateCreated: new Date().toISOString(),
-            notes: `NEO Assist directed task request: ${tasking}`,
+            notes: `NEO Assist directed event request: ${tasking}`,
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -2950,10 +2950,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (wizardStep === 8) {
             return questionShell(
-                'Which saved directed tasks must be scheduled?',
+                'Which saved directed events must be scheduled?',
                 wizardTaskRows.length
-                    ? <p>Select tasks from Highest Priority Events and the Directed Tasks section, then continue.</p>
-                    : <p>No saved directed tasks are waiting in NEO Assist.</p>,
+                    ? <p>Select events from Highest Priority Events and the Directed Events section, then continue.</p>
+                    : <p>No saved directed events are waiting in NEO Assist.</p>,
                 wizardTaskRows.length ? wizardTaskRows.map(request => (
                     <button
                         key={request.selectionId}
@@ -3025,7 +3025,7 @@ const DfpSidePanelTimeline: React.FC<{
                     'Should normal Fixed Crew training be included?',
                     enabledStreams.length
                         ? <p>Current routine training allocation has <strong>{enabledStreams.length}</strong> active course/package streams and totals <strong>100%</strong>.</p>
-                        : <p>Routine Fixed Crew course/package training is currently off, so directed task and currency events will drive the build.</p>,
+                        : <p>Routine Fixed Crew course/package training is currently off, so directed event and currency events will drive the build.</p>,
                     <>
                         <button type="button" className={wizardChoiceClass} onClick={useRoutineTraining}>Yes, use normal training</button>
                         <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, directed events only</button>
@@ -3707,7 +3707,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Directed Tasks</p>
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Directed Events</p>
                             <p className="mt-2 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
                             <p className="mt-0.5 text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
@@ -3835,7 +3835,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <p className="mb-2 font-semibold text-cyan-100">Priority order</p>
                                 <div className="space-y-1">
                                     {[
-                                        ['01', 'Mandatory directed tasks', `${scheduledTaskCount} scheduled`],
+                                        ['01', 'Mandatory directed events', `${scheduledTaskCount} scheduled`],
                                         ['02', 'Directed currency', `${scheduledCurrencyCount} scheduled`],
                                         ['03', 'Training packages', `${airCombatSchedulingWeights.trainingPackages}% training share`],
                                         ['04', 'Course events', `${airCombatSchedulingWeights.courses}% training share`],
@@ -3903,7 +3903,7 @@ const DfpSidePanelTimeline: React.FC<{
         if (activeAssistSection === 'taskings') {
             const localRows = visibleAssistTaskRequests.map(request => ({
                 id: request.id,
-                tasking: request.tasking || 'Directed task',
+                tasking: request.tasking || 'Directed event',
                 date: request.date,
                 takeoff: request.takeoff,
                 duration: request.duration,
@@ -3922,7 +3922,7 @@ const DfpSidePanelTimeline: React.FC<{
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
-                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No directed tasks entered.</p>}
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No directed events entered.</p>}
                         {rows.map(row => (
                             <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
                                 <span className="min-w-0 truncate">
@@ -3999,14 +3999,14 @@ const DfpSidePanelTimeline: React.FC<{
                     {showAssistTaskForm && (
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Mission / Task Profile
+                                Mission Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
-                                    <option value="">Select mission/task profile</option>
+                                    <option value="">Select mission profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
-                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission/task profile
-                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission/task profile manually" />
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission profile
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
@@ -18834,7 +18834,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             scheduleAirCombatTrainingPriorityEvents('night');
         }
         if (airCombatDayTaskingEvents.length > 0) {
-            recordProgress({ message: 'Scheduling Air Combat mandatory directed task events...', percentage: 45 });
+            recordProgress({ message: 'Scheduling Air Combat mandatory directed events...', percentage: 45 });
             scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
         }
         if (airCombatDayCurrencyEvents.length > 0) {
@@ -20716,7 +20716,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const conclusions: string[] = [];
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
         if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.');
-        if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat directed task events matched the build date.');
+        if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat directed events matched the build date.');
         const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
         if (crewRoleShortfalls.length > 0) {
             conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || 'selected unit'}: ${crewRoleShortfalls.map((shortfall: any) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(', ')}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
@@ -44603,14 +44603,14 @@ appliedUpdates.forEach(update => {
                                                     if (nextTaskingRequests.length !== taskingRequests.length) {
                                                         localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                                                         window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                                                        console.log(`[PostFlight] Directed task request cleared after ${data.result}:`, completedTaskingRequestId);
+                                                        console.log(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
                                                     }
                                                 }
                                                 setHighestPriorityEvents(prev =>
                                                     prev.filter(event => event.taskingRequestId !== completedTaskingRequestId)
                                                 );
                                             } catch (taskingCleanupErr) {
-                                                console.warn('[PostFlight] Failed to clear completed directed task request after post-flight result:', taskingCleanupErr);
+                                                console.warn('[PostFlight] Failed to clear completed directed event request after post-flight result:', taskingCleanupErr);
                                             }
                                         }
                                     }

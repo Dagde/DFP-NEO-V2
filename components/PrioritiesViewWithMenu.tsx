@@ -150,7 +150,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         {
             id: 'directed-events' as const,
             step: '04',
-            label: 'Directed Tasks',
+            label: 'Directed Events',
             shortLabel: 'Exceptions',
             description: 'Manage currency requests and high-priority events.',
         },
@@ -165,7 +165,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const fixedCrewPlannerSections = {
         'events-builder': [
             { label: 'Highest Priority Table', target: '.highest-priority-events-card' },
-            { label: 'Directed Tasks', target: '.tasking-events-card' },
+            { label: 'Directed Events', target: '.tasking-events-card' },
             { label: 'Continuation / Currency Requests', target: '.specific-currency-card' },
             { label: 'Saved Special Events', target: '.saved-special-events-card' },
         ],
@@ -187,7 +187,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 step: '01',
                 label: 'Events Builder',
                 shortLabel: 'Events',
-                description: 'Manage priority events, directed task and currency requests.',
+                description: 'Manage priority events, directed event and currency requests.',
             },
         ]
         : activeFixedCrewTab === 'deployments'

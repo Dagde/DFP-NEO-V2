@@ -633,19 +633,19 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} mission/task profile
+                  {operationalModelLabel} mission profile
                 </span>
               </button>
             ))
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching mission/task profile' : 'No mission/task profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching mission profile' : 'No mission profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? 'Keep typing to enter this mission/task profile manually.'
-                  : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.`}
+                  ? 'Keep typing to enter this mission profile manually.'
+                  : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.`}
               </span>
             </div>
           )}
@@ -730,7 +730,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   <div className="space-y-3 pb-24">
     {taskingRequests.length === 0 && (
       <div className="rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500">
-        No directed task requests configured.
+        No directed event requests configured.
       </div>
     )}
     {taskingRequests.map(request => {
@@ -741,7 +741,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map(entry => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || 'New directed task request';
+      const taskingHeaderTitle = request.tasking.trim() || 'New directed event request';
       const taskingHeaderDate = request.date || 'Date TBA';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
       return (
@@ -754,7 +754,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           >
             <span className="min-w-0">
               <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
-              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Task</span>
+              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Event</span>
             </span>
             <span className="flex shrink-0 items-center gap-2 text-right">
               <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
@@ -767,7 +767,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Mission / Task Profile" hint={request.tasking || 'Select or type mission/task profile'}>
+            <TaskingFieldPanel label="Mission Profile" hint={request.tasking || 'Select or type mission profile'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}
@@ -2523,7 +2523,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ignored: false,
     };
     setTaskingRequests(prev => [...prev, nextRequest]);
-    logAudit('Priorities', 'Add', 'Added directed task request row', `Directed task request ${nextRequest.id}`);
+    logAudit('Priorities', 'Add', 'Added directed event request row', `Directed event request ${nextRequest.id}`);
   };
 
   const isTaskingPriorityEventForRequest = (event: ScheduleEvent, requestId: string) => (
@@ -2615,7 +2615,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
     const schedulerPriority: TaskingSchedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
     const notes = [
-      `Directed task request: ${tasking}`,
+      `Directed event request: ${tasking}`,
       `Date: ${request.date || 'Any build date'}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
@@ -2633,7 +2633,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       instructor: '',
       student: '',
       pilot: '',
-      group: aircraftCount > 1 ? `Task ${index + 1} of ${aircraftCount}` : 'Task',
+      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : 'Directed Event',
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
@@ -2683,21 +2683,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests(prev => prev.map(item => item.id === id ? nextRequest : item));
-    logAudit('Priorities', 'Edit', 'Set directed task scheduler priority', `${request.tasking || 'Untitled directed task'}: ${schedulerPriority}`);
+    logAudit('Priorities', 'Edit', 'Set directed event scheduler priority', `${request.tasking || 'Untitled directed event'}: ${schedulerPriority}`);
   };
 
   const removeTaskingRequest = (id: string) => {
     const removed = taskingRequests.find(request => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests(prev => prev.filter(request => request.id !== id));
-    logAudit('Priorities', 'Delete', 'Removed directed task request', removed?.tasking || id);
+    logAudit('Priorities', 'Delete', 'Removed directed event request', removed?.tasking || id);
   };
 
   const saveTaskingRequest = (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
     updateTaskingRequest(id, { saved: true, submitted: false, ignored: false });
-    logAudit('Priorities', 'Save', 'Saved directed task request', `${request.tasking || 'Untitled directed task'} on ${request.date || 'any build date'}`);
+    logAudit('Priorities', 'Save', 'Saved directed event request', `${request.tasking || 'Untitled directed event'} on ${request.date || 'any build date'}`);
   };
 
   const submitTaskingRequest = async (id: string) => {
@@ -2710,7 +2710,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildTaskingPriorityEvents(request);
     onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
-    logAudit('Priorities', 'Submit', 'Submitted directed task request', `${request.tasking || 'Untitled directed task'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
+    logAudit('Priorities', 'Submit', 'Submitted directed event request', `${request.tasking || 'Untitled directed event'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
   };
 
   const ignoreTaskingRequest = (id: string) => {
@@ -2718,7 +2718,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (!request) return;
     removeTaskingPriorityEvents(id);
     updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
-    logAudit('Priorities', 'Ignore', 'Ignored directed task request', `${request.tasking || 'Untitled directed task'} on ${request.date || 'any build date'}`);
+    logAudit('Priorities', 'Ignore', 'Ignored directed event request', `${request.tasking || 'Untitled directed event'} on ${request.date || 'any build date'}`);
   };
 
   useEffect(() => {
@@ -3655,7 +3655,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No saved mission/task profiles for this unit context.
+          No saved mission profiles for this unit context.
         </div>
       );
     }
@@ -3767,9 +3767,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   )}
 
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {renderStandardMissionTile('Task', isEditing ? (
+                    {renderStandardMissionTile('Mission', isEditing ? (
                       <div className="space-y-2">
-                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Task name')}
+                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Mission name')}
                         {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
                       </div>
                     ) : (
@@ -3941,7 +3941,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       remedial: events.filter(event => getPriorityEventGroup(event) === 'remedial'),
     };
     const groups: Array<{ key: 'tasking' | 'currency' | 'remedial'; label: string; events: ScheduleEvent[] }> = [
-      { key: 'tasking', label: 'Directed Tasks', events: groupedEvents.tasking },
+      { key: 'tasking', label: 'Directed Events', events: groupedEvents.tasking },
       { key: 'currency', label: 'Currency', events: groupedEvents.currency },
       { key: 'remedial', label: 'Remedial', events: groupedEvents.remedial },
     ];
@@ -4139,7 +4139,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
                                         {priorityAllocationModel === 'air_combat'
-                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed task and currency requests are attempted."
+                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted."
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
                                                 : 'Set how Flight School training capacity is shared across active courses for this locality.'}
@@ -4744,13 +4744,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <div className="section-directed-events space-y-6">
         <div className="directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
-            <h2 className="mt-1 text-xl font-semibold text-white">Directed Tasks</h2>
+            <h2 className="mt-1 text-xl font-semibold text-white">Directed Events</h2>
             <p className="mt-1 text-sm text-slate-300">Review hard requests and build exceptions after the normal course weighting is set.</p>
         </div>
 
         <div className="tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-sky-400">Directed Tasks</h2>
+              <h2 className="text-xl font-semibold text-sky-400">Directed Events</h2>
               <button onClick={addTaskingRequest} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
                 <span>+ Add<br />Request</span>
               </button>

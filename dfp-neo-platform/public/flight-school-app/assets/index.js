@@ -11561,7 +11561,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Task Tile Labels", description: "Short display names for task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Mission Tile Labels", description: "Short display names for mission tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
             Object.keys(taskAbbreviations || {}).length,
             " configured"
@@ -11569,19 +11569,19 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
           settingsLink("platform-task-profiles", "Take me there", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full mission/task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission/task profile, training requirement, or event data." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full mission profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission profile, training requirement, or event data." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Mission - CAS." })
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Mission / task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Mission profile" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Tile label" })
             ] }),
             taskTileLabelProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No mission/task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No mission profiles are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Mission Profiles", description: "Regular unit flight mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
@@ -38631,14 +38631,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " mission/task profile"
+            " mission profile"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission/task profile" : "No mission/task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission/task profile manually." : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission profile" : "No mission profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission profile manually." : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -38684,7 +38684,7 @@ const TaskingRequestTable = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
-    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
+    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed event requests configured." }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -38693,7 +38693,7 @@ const TaskingRequestTable = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || "New directed task request";
+      const taskingHeaderTitle = request.tasking.trim() || "New directed event request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
@@ -38707,7 +38707,7 @@ const TaskingRequestTable = ({
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Task" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Event" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
@@ -38719,7 +38719,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission / Task Profile", hint: request.tasking || "Select or type mission/task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission Profile", hint: request.tasking || "Select or type mission profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -40190,7 +40190,7 @@ const PrioritiesView = ({
       ignored: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
-    logAudit("Priorities", "Add", "Added directed task request row", `Directed task request ${nextRequest.id}`);
+    logAudit("Priorities", "Add", "Added directed event request row", `Directed event request ${nextRequest.id}`);
   };
   const isTaskingPriorityEventForRequest = (event, requestId) => event.taskingRequestId === requestId || String(event.id || "").startsWith(`tasking-${requestId}-`);
   const taskingPriorityEventMatchesActiveScope = (event) => {
@@ -40246,7 +40246,7 @@ const PrioritiesView = ({
     const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
     const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
     const notes = [
-      `Directed task request: ${tasking}`,
+      `Directed event request: ${tasking}`,
       `Date: ${request.date || "Any build date"}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
@@ -40263,7 +40263,7 @@ const PrioritiesView = ({
       instructor: "",
       student: "",
       pilot: "",
-      group: aircraftCount > 1 ? `Task ${index + 1} of ${aircraftCount}` : "Task",
+      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : "Directed Event",
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
@@ -40312,13 +40312,13 @@ const PrioritiesView = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests((prev) => prev.map((item) => item.id === id ? nextRequest : item));
-    logAudit("Priorities", "Edit", "Set directed task scheduler priority", `${request.tasking || "Untitled directed task"}: ${schedulerPriority}`);
+    logAudit("Priorities", "Edit", "Set directed event scheduler priority", `${request.tasking || "Untitled directed event"}: ${schedulerPriority}`);
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
-    logAudit("Priorities", "Delete", "Removed directed task request", removed?.tasking || id);
+    logAudit("Priorities", "Delete", "Removed directed event request", removed?.tasking || id);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -41057,7 +41057,7 @@ const PrioritiesView = ({
   );
   const renderSavedSpecialEvents = () => {
     if (displayedStandardMissionProfiles.length === 0) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved mission/task profiles for this unit context." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved mission profiles for this unit context." });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
@@ -41156,8 +41156,8 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
-            renderStandardMissionTile("Task", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Task name"),
+            renderStandardMissionTile("Mission", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Mission name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Mission Profile" }),
@@ -41308,7 +41308,7 @@ const PrioritiesView = ({
       remedial: events.filter((event) => getPriorityEventGroup(event) === "remedial")
     };
     const groups = [
-      { key: "tasking", label: "Directed Tasks", events: groupedEvents.tasking },
+      { key: "tasking", label: "Directed Events", events: groupedEvents.tasking },
       { key: "currency", label: "Currency", events: groupedEvents.currency },
       { key: "remedial", label: "Remedial", events: groupedEvents.remedial }
     ];
@@ -41454,7 +41454,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : "Flight School Course Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed task and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -42061,12 +42061,12 @@ const PrioritiesView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-directed-events space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fourth Input" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Tasks" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Events" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Directed Tasks" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Directed Events" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "+ Add",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -42629,7 +42629,7 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "directed-events",
       step: "04",
-      label: "Directed Tasks",
+      label: "Directed Events",
       shortLabel: "Exceptions",
       description: "Manage currency requests and high-priority events."
     }
@@ -42642,7 +42642,7 @@ const PrioritiesViewWithMenu = (props) => {
   const fixedCrewPlannerSections = {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
-      { label: "Directed Tasks", target: ".tasking-events-card" },
+      { label: "Directed Events", target: ".tasking-events-card" },
       { label: "Continuation / Currency Requests", target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
@@ -42662,7 +42662,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "01",
       label: "Events Builder",
       shortLabel: "Events",
-      description: "Manage priority events, directed task and currency requests."
+      description: "Manage priority events, directed event and currency requests."
     }
   ] : activeFixedCrewTab === "deployments" ? [
     {
@@ -48722,7 +48722,7 @@ const AirCombatIntelligenceTab = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Directed Tasks", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked directed task requests", accent: "text-orange-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Directed Events", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked directed event requests", accent: "text-orange-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Currency", value: numberLabel(analysis.currencyEvents.length), subtext: "Currency marked events", accent: "text-fuchsia-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Assessment events" : "Night", value: numberLabel(isFixedCrewLike ? analysis.assessmentEvents.length : analysis.nightEvents.length), subtext: isFixedCrewLike ? "Events requiring a training report/assessment" : "Night-coded events on this DFP", accent: "text-indigo-200" })
         ] })
@@ -65459,7 +65459,7 @@ const AppearanceSettings = ({
         {
           value: "event_type",
           label: "Event Type",
-          description: "Courses, packages, directed tasks, currency, and other event types each use their own colour.",
+          description: "Courses, packages, directed events, currency, and other event types each use their own colour.",
           swatches: ["bg-cyan-500/70", "bg-violet-500/70", "bg-sky-500/70", "bg-green-500/70"]
         },
         {
@@ -66434,6 +66434,11 @@ const formatDateLabel = (value) => {
   if (!parsed) return "Not set";
   return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
 };
+const formatCommercialLicenceDisplayName = (license) => {
+  const rawName = String(license?.licenseName || license?.licenseKey || "").trim();
+  const neutralName = rawName.replace(/^RAAF\s+/i, "").replace(/\s+Evaluation Licen[cs]e$/i, " Initial Licence").trim();
+  return neutralName || "Licence";
+};
 const getLicenceStatusSummary = (license) => {
   const status = String(license.status || "ACTIVE").toUpperCase();
   const today = /* @__PURE__ */ new Date();
@@ -66865,11 +66870,11 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit profiles need per-unit copies",
       `${missingCompositeClones} unit-scoped reusable flight mission profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Reusable Flight Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
+      "Open Reusable Flight Mission Profiles, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.",
       { section: "platform-standard-missions", label: "Reusable Flight Mission Profiles", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Task profiles, alternate crew profiles and currency events have per-unit records where needed.", "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Mission profiles, alternate crew profiles and continuation/currency events have per-unit records where needed.", "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -66944,12 +66949,13 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     add("WARNING", "Licensing", "No active licence record", "Operational deployments should have at least one active licence record.", "licence-none", void 0, { focusSubsectionId: "platform-license-records" });
   } else {
     activeLicences.forEach((license) => {
-      const licenseName = license.licenseName || license.licenseKey || "Licence";
+      const licenseName = formatCommercialLicenceDisplayName(license);
+      const licenseKey = toIdentifier(license.licenseKey || license.id || licenseName);
       const validUntil = parseDateOnly(license.validUntil);
       if (validUntil && validUntil < today) {
-        add("CRITICAL", "Licensing", `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseName}-expired`, void 0, { focusSubsectionId: "platform-license-records" });
+        add("CRITICAL", "Licensing", `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseKey || licenseName}-expired`, void 0, { focusSubsectionId: "platform-license-records" });
       } else if (!validUntil) {
-        add("WARNING", "Licensing", `${licenseName} has no expiry date`, "This may be acceptable for a perpetual licence, but it should be deliberate and recorded.", `licence-${licenseName}-no-expiry`, void 0, { focusSubsectionId: "platform-license-records" });
+        add("WARNING", "Licensing", `${licenseName} has no expiry date`, "This may be acceptable for a perpetual licence, but it should be deliberate and recorded.", `licence-${licenseKey || licenseName}-no-expiry`, void 0, { focusSubsectionId: "platform-license-records" });
       }
     });
     if (!items.some((item) => item.area === "Licensing" && item.severity === "CRITICAL")) {
@@ -71129,8 +71135,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Mission / Task Profiles",
-          subtitle: "Model-specific mission/task profile lists used by Directed Tasks. Users can still type a profile manually if the assigned profile is not listed.",
+          title: "Mission Profiles",
+          subtitle: "Model-specific mission profile lists used by Directed Events. Users can still type a profile manually if the assigned profile is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71150,14 +71156,14 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed mission/task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model mission and tasking profiles." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model mission profiles." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
@@ -71171,13 +71177,13 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One mission or task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One mission profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
         }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-task-tile-abbreviations", className: "mt-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Task Tile Abbreviations" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-2 text-sm font-bold text-white", children: "Unit Mission Tile Abbreviations" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
             const unitIndex = config.units.findIndex((candidate) => candidate === unit);
             const abbreviations = unit.settings?.taskProfileAbbreviations || {};
@@ -71600,7 +71606,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Required Roles" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this task must include when scheduled." : "Only used when Custom Crew is selected." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this profile must include when scheduled." : "Only used when Custom Crew is selected." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", className: platformActionButtonClass, children: "Add Role" })
                   ] }),
@@ -75496,7 +75502,7 @@ const sectionLabels = {
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Mission / Task Profiles",
+  "platform-task-profiles": "Mission Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -75641,7 +75647,7 @@ const sectionDescriptions = {
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Mission/task profile lists by operational model",
+  "platform-task-profiles": "Mission profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -88775,7 +88781,7 @@ const DfpSidePanelTimeline = ({
     { id: "flying", label: "Flying Window" },
     { id: "resources", label: "Resources Available" },
     { id: "training", label: "Training Priority" },
-    { id: "taskings", label: "Directed Tasks" },
+    { id: "taskings", label: "Directed Events" },
     { id: "currency", label: "Currency events" },
     { id: "crew", label: "Crew" },
     { id: "course", label: "Course events" },
@@ -89156,7 +89162,7 @@ const DfpSidePanelTimeline = ({
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
-      notes: `NEO Assist directed task request: ${tasking}`,
+      notes: `NEO Assist directed event request: ${tasking}`,
       priority: "High",
       aircraftConfigId: request.aircraftConfigId,
       acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -89703,8 +89709,8 @@ const DfpSidePanelTimeline = ({
     }
     if (wizardStep === 8) {
       return questionShell(
-        "Which saved directed tasks must be scheduled?",
-        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select tasks from Highest Priority Events and the Directed Tasks section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved directed tasks are waiting in NEO Assist." }),
+        "Which saved directed events must be scheduled?",
+        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select events from Highest Priority Events and the Directed Events section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved directed events are waiting in NEO Assist." }),
         wizardTaskRows.length ? wizardTaskRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -89792,7 +89798,7 @@ const DfpSidePanelTimeline = ({
             " active course/package streams and totals ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
             "."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed task and currency events will drive the build." }),
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed event and currency events will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed events only" }),
@@ -90424,7 +90430,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-cyan-50", children: "Operational build priority" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Directed Tasks" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Directed Events" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-cyan-100/60", children: [
               scheduledTaskCount,
@@ -90557,7 +90563,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-              ["01", "Mandatory directed tasks", `${scheduledTaskCount} scheduled`],
+              ["01", "Mandatory directed events", `${scheduledTaskCount} scheduled`],
               ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
               ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
               ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
@@ -90631,7 +90637,7 @@ const DfpSidePanelTimeline = ({
     if (activeAssistSection === "taskings") {
       const localRows = visibleAssistTaskRequests.map((request) => ({
         id: request.id,
-        tasking: request.tasking || "Directed task",
+        tasking: request.tasking || "Directed event",
         date: request.date,
         takeoff: request.takeoff,
         duration: request.duration,
@@ -90649,7 +90655,7 @@ const DfpSidePanelTimeline = ({
       const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, ignored: false, source: "remote" }))];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed tasks entered." }),
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed events entered." }),
           rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
@@ -90732,15 +90738,15 @@ const DfpSidePanelTimeline = ({
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Mission / Task Profile",
+            "Mission Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission/task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual mission/task profile",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission/task profile manually" })
+            "Manual mission profile",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
@@ -102931,7 +102937,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleAirCombatTrainingPriorityEvents("night");
     }
     if (airCombatDayTaskingEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory directed task events...", percentage: 45 });
+      recordProgress({ message: "Scheduling Air Combat mandatory directed events...", percentage: 45 });
       scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
     }
     if (airCombatDayCurrencyEvents.length > 0) {
@@ -104304,7 +104310,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const conclusions = [];
     if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
     if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.");
-    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed task events matched the build date.");
+    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed events matched the build date.");
     const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
     if (crewRoleShortfalls.length > 0) {
       conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || "selected unit"}: ${crewRoleShortfalls.map((shortfall) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(", ")}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
@@ -124045,14 +124051,14 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          console.log(`[PostFlight] Directed task request cleared after ${data.result}:`, completedTaskingRequestId);
+                          console.log(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
                         (prev) => prev.filter((event) => event.taskingRequestId !== completedTaskingRequestId)
                       );
                     } catch (taskingCleanupErr) {
-                      console.warn("[PostFlight] Failed to clear completed directed task request after post-flight result:", taskingCleanupErr);
+                      console.warn("[PostFlight] Failed to clear completed directed event request after post-flight result:", taskingCleanupErr);
                     }
                   }
                 }

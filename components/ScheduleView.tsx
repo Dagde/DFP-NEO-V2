@@ -2128,19 +2128,19 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'training') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Task Tile Labels" description="Short display names for task tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Take me there', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
+                    <UnitSettingsGroup title="Mission Tile Labels" description="Short display names for mission tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Take me there', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
                         <div className="border-t border-white/10 px-4 py-3">
                             <p className="text-sm leading-6 text-slate-300">
-                                Use this when a full mission/task profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission/task profile, training requirement, or event data.
+                                Use this when a full mission profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission profile, training requirement, or event data.
                             </p>
                             <p className="mt-2 text-xs leading-5 text-cyan-100/75">
-                                Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS.
+                                Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Mission - CAS.
                             </p>
                         </div>
                         {taskTileLabelProfiles.length > 0 ? (
                             <div className="mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20">
                                 <div className="grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]">
-                                    <span>Mission / task profile</span>
+                                    <span>Mission profile</span>
                                     <span>Tile label</span>
                                 </div>
                                 {taskTileLabelProfiles.map((profile) => (
@@ -2150,7 +2150,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                        ) : <UnitSettingsReadRow label="Task tile labels" value="No mission/task profiles are configured for this operating model." muted />}
+                        ) : <UnitSettingsReadRow label="Mission tile labels" value="No mission profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Reusable Flight Mission Profiles" description="Regular unit flight mission profiles scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (

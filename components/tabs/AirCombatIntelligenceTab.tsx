@@ -283,7 +283,7 @@ const AirCombatIntelligenceTab: React.FC<AirCombatIntelligenceTabProps> = ({
             />
           </div>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <StatCard label="Directed Tasks" value={numberLabel(analysis.taskingEvents.length)} subtext="Marked directed task requests" accent="text-orange-200" />
+            <StatCard label="Directed Events" value={numberLabel(analysis.taskingEvents.length)} subtext="Marked directed event requests" accent="text-orange-200" />
             <StatCard label="Currency" value={numberLabel(analysis.currencyEvents.length)} subtext="Currency marked events" accent="text-fuchsia-200" />
             <StatCard label={isFixedCrewLike ? 'Assessment events' : 'Night'} value={numberLabel(isFixedCrewLike ? analysis.assessmentEvents.length : analysis.nightEvents.length)} subtext={isFixedCrewLike ? 'Events requiring a training report/assessment' : 'Night-coded events on this DFP'} accent="text-indigo-200" />
           </div>

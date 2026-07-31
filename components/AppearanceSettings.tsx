@@ -218,7 +218,7 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                             {
                                 value: 'event_type' as const,
                                 label: 'Event Type',
-                                description: 'Courses, packages, directed tasks, currency, and other event types each use their own colour.',
+                                description: 'Courses, packages, directed events, currency, and other event types each use their own colour.',
                                 swatches: ['bg-cyan-500/70', 'bg-violet-500/70', 'bg-sky-500/70', 'bg-green-500/70'],
                             },
                             {

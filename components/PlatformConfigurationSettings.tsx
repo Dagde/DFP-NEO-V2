@@ -1016,6 +1016,15 @@ const formatDateLabel = (value: any): string => {
   return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: '2-digit' });
 };
 
+const formatCommercialLicenceDisplayName = (license: any): string => {
+  const rawName = String(license?.licenseName || license?.licenseKey || '').trim();
+  const neutralName = rawName
+    .replace(/^RAAF\s+/i, '')
+    .replace(/\s+Evaluation Licen[cs]e$/i, ' Initial Licence')
+    .trim();
+  return neutralName || 'Licence';
+};
+
 const getLicenceStatusSummary = (license: any) => {
   const status = String(license.status || 'ACTIVE').toUpperCase();
   const today = new Date();
@@ -1577,11 +1586,11 @@ const buildConfigurationHealth = (
       'Combined-unit profiles need per-unit copies',
       `${missingCompositeClones} unit-scoped reusable flight mission profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Reusable Flight Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
+      'Open Reusable Flight Mission Profiles, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.',
       { section: 'platform-standard-missions', label: 'Reusable Flight Mission Profiles', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Task profiles, alternate crew profiles and currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Mission profiles, alternate crew profiles and continuation/currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -1663,12 +1672,13 @@ const buildConfigurationHealth = (
     add('WARNING', 'Licensing', 'No active licence record', 'Operational deployments should have at least one active licence record.', 'licence-none', undefined, { focusSubsectionId: 'platform-license-records' });
   } else {
     activeLicences.forEach((license) => {
-      const licenseName = license.licenseName || license.licenseKey || 'Licence';
+      const licenseName = formatCommercialLicenceDisplayName(license);
+      const licenseKey = toIdentifier(license.licenseKey || license.id || licenseName);
       const validUntil = parseDateOnly(license.validUntil);
       if (validUntil && validUntil < today) {
-        add('CRITICAL', 'Licensing', `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseName}-expired`, undefined, { focusSubsectionId: 'platform-license-records' });
+        add('CRITICAL', 'Licensing', `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseKey || licenseName}-expired`, undefined, { focusSubsectionId: 'platform-license-records' });
       } else if (!validUntil) {
-        add('WARNING', 'Licensing', `${licenseName} has no expiry date`, 'This may be acceptable for a perpetual licence, but it should be deliberate and recorded.', `licence-${licenseName}-no-expiry`, undefined, { focusSubsectionId: 'platform-license-records' });
+        add('WARNING', 'Licensing', `${licenseName} has no expiry date`, 'This may be acceptable for a perpetual licence, but it should be deliberate and recorded.', `licence-${licenseKey || licenseName}-no-expiry`, undefined, { focusSubsectionId: 'platform-license-records' });
       }
     });
     if (!items.some((item) => item.area === 'Licensing' && item.severity === 'CRITICAL')) {
@@ -6819,8 +6829,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Mission / Task Profiles"
-          subtitle="Model-specific mission/task profile lists used by Directed Tasks. Users can still type a profile manually if the assigned profile is not listed."
+          title="Mission Profiles"
+          subtitle="Model-specific mission profile lists used by Directed Events. Users can still type a profile manually if the assigned profile is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6842,7 +6852,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the directed mission/task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
+            Set the mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6854,7 +6864,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model mission and tasking profiles.'
+                          ? 'Use this for Fighter / Strike model mission profiles.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
@@ -6867,14 +6877,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One mission or task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One mission profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
             })}
           </div>
           <div id="platform-task-tile-abbreviations" className="mt-5">
-            <h4 className="mb-2 text-sm font-bold text-white">Unit Task Tile Abbreviations</h4>
+            <h4 className="mb-2 text-sm font-bold text-white">Unit Mission Tile Abbreviations</h4>
             <div className="grid gap-4 lg:grid-cols-2">
               {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
@@ -7296,7 +7306,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
                                 <div className={resourceSectionPanelTitleClass}>Required Roles</div>
-                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this task must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
+                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this profile must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
                               </div>
                               <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
                             </div>
