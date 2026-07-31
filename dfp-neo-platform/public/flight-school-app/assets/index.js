@@ -71380,8 +71380,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and mission notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Mission Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onChange: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Mission Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onCommit: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
                 ] }),
@@ -71401,7 +71401,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         info: "Standard Missions are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
@@ -71437,7 +71437,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Crew & Callsign" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Select acceptable crew compositions and any explicit role requirements." })
                   ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Default Callsign Prefix", value: profile.defaultCallsignPrefix || defaultMissionCallsign, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value }), info: "Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Default Callsign Prefix", value: profile.defaultCallsignPrefix || defaultMissionCallsign, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { defaultCallsignPrefix: value }), info: "Defaults from the unit callsign settings. This is the prefix only; sortie number selection comes later when scheduled." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-800 bg-gray-950/70 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-xs font-black uppercase tracking-wide text-cyan-100", children: "Crew Composition" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
@@ -72385,12 +72385,12 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100", children: aircraftConfig.label }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            Field,
+                            DraftField,
                             {
                               label: "Definition",
                               value: aircraftConfig.definition,
                               disabled: !canEditResourcePools || isBaseConfig,
-                              onChange: (value) => updateAircraftConfiguration(index, configIndex, value)
+                              onCommit: (value) => updateAircraftConfiguration(index, configIndex, value)
                             }
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
