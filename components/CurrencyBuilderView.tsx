@@ -163,7 +163,7 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({
     const unlockForEdit = async () => {
         const password = await showDarkPrompt({
             title: 'Edit Currency Builder',
-            message: 'Enter your password to edit currency profiles.',
+            message: 'Enter your password to edit currency definitions.',
             inputLabel: 'Password',
             inputType: 'password',
             inputPlaceholder: 'Enter password',

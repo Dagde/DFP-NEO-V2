@@ -6734,7 +6734,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'currencies') {
             return promptShell(
-                <p>Create the currency profiles this unit will use. The full Currency Builder can still be refined after setup, but these profiles give the unit useful defaults immediately.</p>,
+                <p>Create the continuation/currency event profiles this unit will use. The full event setup can still be refined after setup, but these profiles give the unit useful defaults immediately.</p>,
                 renderCurrencyEditor(),
             );
         }
@@ -6758,7 +6758,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff-currency-events') {
             return promptShell(
-                <p>Set up common staff currency event templates for this unit. These become reusable starting points for standard staff checks and currency events.</p>,
+                <p>Set up common continuation and currency event templates for this unit. These become reusable starting points for staff checks and currency events.</p>,
                 renderStandardCurrencyEventsEditor(),
             );
         }

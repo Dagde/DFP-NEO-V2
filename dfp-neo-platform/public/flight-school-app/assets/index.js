@@ -6782,7 +6782,7 @@ This replaces the current ${targetLabel} currency/recency list.`, "Import Curren
   const unlockForEdit = async () => {
     const password = await showDarkPrompt({
       title: "Edit Currency Builder",
-      message: "Enter your password to edit currency profiles.",
+      message: "Enter your password to edit currency definitions.",
       inputLabel: "Password",
       inputType: "password",
       inputPlaceholder: "Enter password",
@@ -15628,7 +15628,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     }
     if (visibleStep.id === "currencies") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create the currency profiles this unit will use. The full Currency Builder can still be refined after setup, but these profiles give the unit useful defaults immediately." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create the continuation/currency event profiles this unit will use. The full event setup can still be refined after setup, but these profiles give the unit useful defaults immediately." }),
         renderCurrencyEditor()
       );
     }
@@ -15652,7 +15652,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     }
     if (visibleStep.id === "staff-currency-events") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common staff currency event templates for this unit. These become reusable starting points for standard staff checks and currency events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common continuation and currency event templates for this unit. These become reusable starting points for staff checks and currency events." }),
         renderStandardCurrencyEventsEditor()
       );
     }
@@ -71559,7 +71559,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: continuationCurrencyEventsLabel,
-          subtitle: "Continuation and currency event defaults. Profiles store crew, CONFIG and currency against the selected aircraft.",
+          subtitle: "Continuation and currency event defaults. Event profiles store crew, CONFIG and currency against the selected aircraft.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71601,7 +71601,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-                "Profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for ",
+                "Event profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for ",
                 displayCrewCompositionAircraftCode || "the selected aircraft",
                 "."
               ] })
@@ -71612,7 +71612,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               "Profile"
             ] }) }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No currency profiles configured." }) : displayCurrencyProfiles.map((profile) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No continuation/currency event profiles configured." }) : displayCurrencyProfiles.map((profile) => {
             const crewOptions = Array.from(new Set([
               ...currencyProfileCrewOptions
             ].map((option) => String(option || "").trim()).filter(Boolean)));

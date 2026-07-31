@@ -7638,7 +7638,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
-          subtitle="Continuation and currency event defaults. Profiles store crew, CONFIG and currency against the selected aircraft."
+          subtitle="Continuation and currency event defaults. Event profiles store crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
             <button
               type="button"
@@ -7683,7 +7683,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
-                <p className={resourceSectionPanelHintClass}>Profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                <p className={resourceSectionPanelHintClass}>Event profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
                 <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
@@ -7693,7 +7693,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             <div className="space-y-3">
               {displayCurrencyProfiles.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No currency profiles configured.</div>
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No continuation/currency event profiles configured.</div>
               ) : displayCurrencyProfiles.map((profile) => {
                 const crewOptions = Array.from(new Set([
                   ...currencyProfileCrewOptions,
