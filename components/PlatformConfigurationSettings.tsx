@@ -6830,8 +6830,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Task Profiles"
-          subtitle="Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
+          title="Task / Mission Profiles"
+          subtitle="Model-specific mission or tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button

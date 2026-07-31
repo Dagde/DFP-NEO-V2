@@ -35,7 +35,11 @@ import {
     withFixedCrewCoursePackageBriefingTimes,
 } from '../utils/fixedCrewTraining';
 import { SYLLABUS_COURSE_SHELL_NOTE, isSyllabusCourseShell } from '../utils/syllabusCourseShell';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import {
+    handleEditableTextBeforeInput,
+    handleEditableTextKeyDownCapture,
+    stopEditableKeyPropagation,
+} from '../utils/editableKeyEvents';
 import type { PlatformMasterLmpCatalogueEntry } from '../utils/platformConfigService';
 import { showDarkAlert } from './DarkMessageModal';
 
@@ -260,31 +264,82 @@ const withAirCombatLinkedEventNote = (item: SyllabusItemDetail, linkedEventCode:
 };
 
 // Reusable components for edit mode
-const EditableField: React.FC<{ label: string; value: string | number; onChange: (value: string | number) => void; type?: string; step?: number; }> = ({ label, value, onChange, type = 'text', step }) => (
-    <div className="bg-gray-700/50 p-3 rounded-lg">
-        <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</label>
-        <input
-            type={type}
-            step={step}
-            value={value}
-            onChange={(e) => onChange(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
-            className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-        />
-    </div>
-);
+const EditableField: React.FC<{ label: string; value: string | number; onChange: (value: string | number) => void; type?: string; step?: number; }> = ({ label, value, onChange, type = 'text', step }) => {
+    const [draft, setDraft] = useState(String(value ?? ''));
+    const [focused, setFocused] = useState(false);
 
-const EditableList: React.FC<{ title: string; items: string[]; onChange: (items: string[]) => void; }> = ({ title, items, onChange }) => (
-    <div>
-        <h3 className="text-md font-semibold text-sky-400 mb-2">{title}</h3>
-        <textarea
-            value={(items || []).join('\n')}
-            onChange={(e) => onChange(e.target.value.split('\n'))}
-            rows={4}
-            className="block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-            placeholder="One item per line"
-        />
-    </div>
-);
+    useEffect(() => {
+        if (!focused) setDraft(String(value ?? ''));
+    }, [focused, value]);
+
+    const commitDraft = () => {
+        setFocused(false);
+        if (type === 'number') {
+            const nextValue = parseFloat(draft) || 0;
+            if (nextValue !== Number(value || 0)) onChange(nextValue);
+            return;
+        }
+        if (draft !== String(value ?? '')) onChange(draft);
+    };
+
+    return (
+        <div className="bg-gray-700/50 p-3 rounded-lg">
+            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</label>
+            <input
+                type={type}
+                step={step}
+                value={focused ? draft : String(value ?? '')}
+                onBeforeInput={type === 'number' ? undefined : (event) => handleEditableTextBeforeInput(event, setDraft)}
+                onKeyDownCapture={type === 'number' ? stopEditableKeyPropagation : (event) => handleEditableTextKeyDownCapture(event, setDraft)}
+                onKeyDown={stopEditableKeyPropagation}
+                onFocus={() => {
+                    setFocused(true);
+                    setDraft(String(value ?? ''));
+                }}
+                onBlur={commitDraft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+            />
+        </div>
+    );
+};
+
+const EditableList: React.FC<{ title: string; items: string[]; onChange: (items: string[]) => void; }> = ({ title, items, onChange }) => {
+    const formatItems = (value: string[]) => (value || []).join('\n');
+    const [draft, setDraft] = useState(formatItems(items || []));
+    const [focused, setFocused] = useState(false);
+
+    useEffect(() => {
+        if (!focused) setDraft(formatItems(items || []));
+    }, [focused, items]);
+
+    const commitDraft = () => {
+        setFocused(false);
+        const currentValue = formatItems(items || []);
+        if (draft !== currentValue) onChange(draft.split('\n'));
+    };
+
+    return (
+        <div>
+            <h3 className="text-md font-semibold text-sky-400 mb-2">{title}</h3>
+            <textarea
+                value={focused ? draft : formatItems(items || [])}
+                onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
+                onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+                onKeyDown={stopEditableKeyPropagation}
+                onFocus={() => {
+                    setFocused(true);
+                    setDraft(formatItems(items || []));
+                }}
+                onBlur={commitDraft}
+                onChange={(event) => setDraft(event.target.value)}
+                rows={4}
+                className="block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                placeholder="One item per line"
+            />
+        </div>
+    );
+};
 
 const AircraftConfigInfoIcon: React.FC<{ definitions: AircraftConfigurationDefinition[] }> = ({ definitions }) => (
     <span className="group relative inline-flex">

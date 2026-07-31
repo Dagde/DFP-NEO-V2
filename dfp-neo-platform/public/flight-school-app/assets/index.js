@@ -11135,21 +11135,55 @@ const UnitSettingsReadRow = ({ label, value, muted = false }) => /* @__PURE__ */
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${muted ? "text-slate-400" : "text-slate-100"}`, children: value || "Not set" })
 ] });
-const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, placeholder = "" }) => disabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-wrap", children: value || "Not set" }), muted: !value }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `${unitSettingsRowClass} md:items-start`, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${unitSettingsLabelClass} md:pt-2`, children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "textarea",
-    {
-      className: `${unitSettingsInputClass} min-h-[118px] resize-y leading-5`,
-      value: value || "",
-      placeholder,
-      disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(event.target.value)
-    }
-  )
-] });
+const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, placeholder = "" }) => {
+  const [draft, setDraft] = reactExports.useState(value || "");
+  const [focused, setFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!focused) setDraft(value || "");
+  }, [focused, value]);
+  const commitDraft = () => {
+    setFocused(false);
+    if (draft !== (value || "")) onChange(draft);
+  };
+  if (disabled) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "whitespace-pre-wrap", children: value || "Not set" }), muted: !value });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `${unitSettingsRowClass} md:items-start`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `${unitSettingsLabelClass} md:pt-2`, children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "textarea",
+      {
+        className: `${unitSettingsInputClass} min-h-[118px] resize-y leading-5`,
+        value: focused ? draft : value || "",
+        placeholder,
+        disabled,
+        onBeforeInput: (event) => {
+          const inputEvent = event.nativeEvent;
+          if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
+          event.preventDefault();
+          event.stopPropagation();
+          insertUnitSettingsTextAtCursor(event.currentTarget, " ", setDraft);
+        },
+        onKeyDownCapture: (event) => {
+          if ((event.key === " " || event.code === "Space" || event.key === "Spacebar") && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            insertUnitSettingsTextAtCursor(event.currentTarget, " ", setDraft);
+            return;
+          }
+          stopEditableKeyPropagation(event);
+        },
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setFocused(true);
+          setDraft(value || "");
+        },
+        onBlur: commitDraft,
+        onChange: (event) => setDraft(event.target.value)
+      }
+    )
+  ] });
+};
 const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig2), [platformConfig2]);
@@ -20768,7 +20802,18 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, selectedAnchorItem, ai
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Tile Label" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: label, maxLength: INSERT_EVENT_LABEL_MAX_LENGTH, onChange: (event) => setLabel(event.target.value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+            value: label,
+            maxLength: INSERT_EVENT_LABEL_MAX_LENGTH,
+            onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setLabel(value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)), INSERT_EVENT_LABEL_MAX_LENGTH),
+            onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setLabel(value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)), INSERT_EVENT_LABEL_MAX_LENGTH),
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (event) => setLabel(event.target.value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH))
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
           label.length,
           "/",
@@ -38323,7 +38368,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task or mission profiles yet. Add them in Settings > Platform & Deployment > Task / Mission Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -54670,32 +54715,77 @@ const withAirCombatLinkedEventNote = (item, linkedEventCode) => {
   const notes = [visibleNotes, normalizedLinkedEvent ? `[Linked Event: ${normalizedLinkedEvent}]` : ""].filter(Boolean).join("\n").trim();
   return { ...item, notes: notes || void 0 };
 };
-const EditableField = ({ label, value, onChange, type = "text", step }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-lg", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      type,
-      step,
-      value,
-      onChange: (e) => onChange(type === "number" ? parseFloat(e.target.value) || 0 : e.target.value),
-      className: "mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+const EditableField = ({ label, value, onChange, type = "text", step }) => {
+  const [draft, setDraft] = reactExports.useState(String(value ?? ""));
+  const [focused, setFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!focused) setDraft(String(value ?? ""));
+  }, [focused, value]);
+  const commitDraft = () => {
+    setFocused(false);
+    if (type === "number") {
+      const nextValue = parseFloat(draft) || 0;
+      if (nextValue !== Number(value || 0)) onChange(nextValue);
+      return;
     }
-  )
-] });
-const EditableList = ({ title, items, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "textarea",
-    {
-      value: (items || []).join("\n"),
-      onChange: (e) => onChange(e.target.value.split("\n")),
-      rows: 4,
-      className: "block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
-      placeholder: "One item per line"
-    }
-  )
-] });
+    if (draft !== String(value ?? "")) onChange(draft);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        type,
+        step,
+        value: focused ? draft : String(value ?? ""),
+        onBeforeInput: type === "number" ? void 0 : (event) => handleEditableTextBeforeInput(event, setDraft),
+        onKeyDownCapture: type === "number" ? stopEditableKeyPropagation : (event) => handleEditableTextKeyDownCapture(event, setDraft),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setFocused(true);
+          setDraft(String(value ?? ""));
+        },
+        onBlur: commitDraft,
+        onChange: (event) => setDraft(event.target.value),
+        className: "mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+      }
+    )
+  ] });
+};
+const EditableList = ({ title, items, onChange }) => {
+  const formatItems = (value) => (value || []).join("\n");
+  const [draft, setDraft] = reactExports.useState(formatItems(items || []));
+  const [focused, setFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!focused) setDraft(formatItems(items || []));
+  }, [focused, items]);
+  const commitDraft = () => {
+    setFocused(false);
+    const currentValue = formatItems(items || []);
+    if (draft !== currentValue) onChange(draft.split("\n"));
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "textarea",
+      {
+        value: focused ? draft : formatItems(items || []),
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraft),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraft),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setFocused(true);
+          setDraft(formatItems(items || []));
+        },
+        onBlur: commitDraft,
+        onChange: (event) => setDraft(event.target.value),
+        rows: 4,
+        className: "block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
+        placeholder: "One item per line"
+      }
+    )
+  ] });
+};
 const AircraftConfigInfoIcon = ({ definitions }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
@@ -65152,6 +65242,43 @@ const AppearanceSettings = ({
     ] })
   ] });
 };
+const FormationCallsignDraftInput = ({ value, onCommit, className, placeholder, maxLength, transform = (nextValue) => nextValue }) => {
+  const normaliseValue = (nextValue) => {
+    const transformed = transform(nextValue);
+    return typeof maxLength === "number" ? transformed.slice(0, maxLength) : transformed;
+  };
+  const [draft, setDraft] = reactExports.useState(() => normaliseValue(value || ""));
+  const [focused, setFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!focused) setDraft(normaliseValue(value || ""));
+  }, [focused, value]);
+  const updateDraft = (nextValue) => setDraft(normaliseValue(nextValue));
+  const commitDraft = () => {
+    const nextValue = normaliseValue(draft);
+    setDraft(nextValue);
+    setFocused(false);
+    if (nextValue !== normaliseValue(value || "")) onCommit(nextValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "text",
+      value: focused ? draft : normaliseValue(value || ""),
+      placeholder,
+      maxLength,
+      onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraft, maxLength),
+      onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength),
+      onKeyDown: stopEditableKeyPropagation,
+      onFocus: () => {
+        setFocused(true);
+        setDraft(normaliseValue(value || ""));
+      },
+      onBlur: commitDraft,
+      onChange: (event) => updateDraft(event.target.value),
+      className
+    }
+  );
+};
 const FormationCallsignsSection = ({
   callsigns,
   onUpdateCallsigns,
@@ -65328,20 +65455,19 @@ const FormationCallsignsSection = ({
             );
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/30", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+                FormationCallsignDraftInput,
                 {
-                  type: "text",
                   value: callsign.name,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "name", e.target.value),
+                  onCommit: (value) => handleUpdateCallsign(actualIndex, "name", value),
                   className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                 }
               ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+                FormationCallsignDraftInput,
                 {
-                  type: "text",
                   value: callsign.code,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "code", e.target.value.toUpperCase()),
+                  onCommit: (value) => handleUpdateCallsign(actualIndex, "code", value),
+                  transform: (value) => value.toUpperCase(),
                   className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                 }
               ) }),
@@ -65370,11 +65496,11 @@ const FormationCallsignsSection = ({
                 }
               ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
+                FormationCallsignDraftInput,
                 {
-                  type: "text",
                   value: callsign.locationCode,
-                  onChange: (e) => handleUpdateCallsign(actualIndex, "locationCode", e.target.value.toUpperCase()),
+                  onCommit: (value) => handleUpdateCallsign(actualIndex, "locationCode", value),
+                  transform: (value) => value.toUpperCase(),
                   className: "w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs",
                   maxLength: 3
                 }
@@ -65398,6 +65524,9 @@ const FormationCallsignsSection = ({
               {
                 type: "text",
                 value: newCallsign.name,
+                onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setNewCallsign({ ...newCallsign, name: value })),
+                onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setNewCallsign({ ...newCallsign, name: value })),
+                onKeyDown: stopEditableKeyPropagation,
                 onChange: (e) => setNewCallsign({ ...newCallsign, name: e.target.value }),
                 placeholder: "Name",
                 className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
@@ -65408,6 +65537,9 @@ const FormationCallsignsSection = ({
               {
                 type: "text",
                 value: newCallsign.code,
+                onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setNewCallsign({ ...newCallsign, code: value.toUpperCase() })),
+                onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setNewCallsign({ ...newCallsign, code: value.toUpperCase() })),
+                onKeyDown: stopEditableKeyPropagation,
                 onChange: (e) => setNewCallsign({ ...newCallsign, code: e.target.value.toUpperCase() }),
                 placeholder: "Code",
                 className: "bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
@@ -65442,6 +65574,9 @@ const FormationCallsignsSection = ({
               {
                 type: "text",
                 value: newCallsign.locationCode,
+                onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setNewCallsign({ ...newCallsign, locationCode: value.toUpperCase().slice(0, 3) }), 3),
+                onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setNewCallsign({ ...newCallsign, locationCode: value.toUpperCase().slice(0, 3) }), 3),
+                onKeyDown: stopEditableKeyPropagation,
                 onChange: (e) => setNewCallsign({ ...newCallsign, locationCode: e.target.value.toUpperCase() }),
                 placeholder: "Code",
                 maxLength: 3,
@@ -70787,8 +70922,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Task Profiles",
-          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
+          title: "Task / Mission Profiles",
+          subtitle: "Model-specific mission or tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -75176,7 +75311,7 @@ const sectionLabels = {
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Task Profiles",
+  "platform-task-profiles": "Task / Mission Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",

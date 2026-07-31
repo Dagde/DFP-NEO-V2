@@ -22,6 +22,11 @@ import {
     type AircraftCrewResourceKind,
     type AircraftSeatRole,
 } from '../utils/aircraftCrewComposition';
+import {
+    handleEditableTextBeforeInput,
+    handleEditableTextKeyDownCapture,
+    stopEditableKeyPropagation,
+} from '../utils/editableKeyEvents';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -496,7 +501,15 @@ export const InsertEventModal: React.FC<{
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tile Label</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={label} maxLength={INSERT_EVENT_LABEL_MAX_LENGTH} onChange={(event) => setLabel(event.target.value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH))} />
+                        <input
+                            className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+                            value={label}
+                            maxLength={INSERT_EVENT_LABEL_MAX_LENGTH}
+                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setLabel(value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)), INSERT_EVENT_LABEL_MAX_LENGTH)}
+                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setLabel(value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)), INSERT_EVENT_LABEL_MAX_LENGTH)}
+                            onKeyDown={stopEditableKeyPropagation}
+                            onChange={(event) => setLabel(event.target.value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH))}
+                        />
                         <span className="block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label.length}/{INSERT_EVENT_LABEL_MAX_LENGTH}</span>
                     </label>
                     <label className="space-y-1">

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FormationCallsign } from '../types';
-import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import {
+    handleEditableTextBeforeInput,
+    handleEditableTextKeyDownCapture,
+    stopEditableKeyPropagation,
+} from '../utils/editableKeyEvents';
 
 interface FormationCallsignsSectionProps {
     callsigns: FormationCallsign[];
@@ -13,6 +17,53 @@ interface FormationCallsignsSectionProps {
     onRequestUnlock?: () => Promise<boolean>;
     onAuditLog?: (entry: any) => void;
 }
+
+const FormationCallsignDraftInput: React.FC<{
+    value: string;
+    onCommit: (value: string) => void;
+    className: string;
+    placeholder?: string;
+    maxLength?: number;
+    transform?: (value: string) => string;
+}> = ({ value, onCommit, className, placeholder, maxLength, transform = (nextValue) => nextValue }) => {
+    const normaliseValue = (nextValue: string) => {
+        const transformed = transform(nextValue);
+        return typeof maxLength === 'number' ? transformed.slice(0, maxLength) : transformed;
+    };
+    const [draft, setDraft] = useState(() => normaliseValue(value || ''));
+    const [focused, setFocused] = useState(false);
+
+    useEffect(() => {
+        if (!focused) setDraft(normaliseValue(value || ''));
+    }, [focused, value]);
+
+    const updateDraft = (nextValue: string) => setDraft(normaliseValue(nextValue));
+    const commitDraft = () => {
+        const nextValue = normaliseValue(draft);
+        setDraft(nextValue);
+        setFocused(false);
+        if (nextValue !== normaliseValue(value || '')) onCommit(nextValue);
+    };
+
+    return (
+        <input
+            type="text"
+            value={focused ? draft : normaliseValue(value || '')}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft, maxLength)}
+            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength)}
+            onKeyDown={stopEditableKeyPropagation}
+            onFocus={() => {
+                setFocused(true);
+                setDraft(normaliseValue(value || ''));
+            }}
+            onBlur={commitDraft}
+            onChange={(event) => updateDraft(event.target.value)}
+            className={className}
+        />
+    );
+};
 
 const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
     callsigns,
@@ -221,18 +272,17 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                         return (
                                             <tr key={index} className="border-b border-gray-700 hover:bg-gray-700/30">
                                                 <td className="px-3 py-2">
-                                                    <input
-                                                        type="text"
+                                                    <FormationCallsignDraftInput
                                                         value={callsign.name}
-                                                        onChange={(e) => handleUpdateCallsign(actualIndex, 'name', e.target.value)}
+                                                        onCommit={(value) => handleUpdateCallsign(actualIndex, 'name', value)}
                                                         className="w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                                                     />
                                                 </td>
                                                 <td className="px-3 py-2">
-                                                    <input
-                                                        type="text"
+                                                    <FormationCallsignDraftInput
                                                         value={callsign.code}
-                                                        onChange={(e) => handleUpdateCallsign(actualIndex, 'code', e.target.value.toUpperCase())}
+                                                        onCommit={(value) => handleUpdateCallsign(actualIndex, 'code', value)}
+                                                        transform={(value) => value.toUpperCase()}
                                                         className="w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                                                     />
                                                 </td>
@@ -261,10 +311,10 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                                     </select>
                                                 </td>
                                                 <td className="px-3 py-2">
-                                                    <input
-                                                        type="text"
+                                                    <FormationCallsignDraftInput
                                                         value={callsign.locationCode}
-                                                        onChange={(e) => handleUpdateCallsign(actualIndex, 'locationCode', e.target.value.toUpperCase())}
+                                                        onCommit={(value) => handleUpdateCallsign(actualIndex, 'locationCode', value)}
+                                                        transform={(value) => value.toUpperCase()}
                                                         className="w-full bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
                                                         maxLength={3}
                                                     />
@@ -293,6 +343,9 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                 <input
                                     type="text"
                                     value={newCallsign.name}
+                                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setNewCallsign({ ...newCallsign, name: value }))}
+                                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setNewCallsign({ ...newCallsign, name: value }))}
+                                    onKeyDown={stopEditableKeyPropagation}
                                     onChange={(e) => setNewCallsign({ ...newCallsign, name: e.target.value })}
                                     placeholder="Name"
                                     className="bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
@@ -300,6 +353,9 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                 <input
                                     type="text"
                                     value={newCallsign.code}
+                                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setNewCallsign({ ...newCallsign, code: value.toUpperCase() }))}
+                                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setNewCallsign({ ...newCallsign, code: value.toUpperCase() }))}
+                                    onKeyDown={stopEditableKeyPropagation}
                                     onChange={(e) => setNewCallsign({ ...newCallsign, code: e.target.value.toUpperCase() })}
                                     placeholder="Code"
                                     className="bg-gray-700 border-gray-600 rounded px-2 py-1 text-white text-xs"
@@ -327,6 +383,9 @@ const FormationCallsignsSection: React.FC<FormationCallsignsSectionProps> = ({
                                 <input
                                     type="text"
                                     value={newCallsign.locationCode}
+                                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setNewCallsign({ ...newCallsign, locationCode: value.toUpperCase().slice(0, 3) }), 3)}
+                                    onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setNewCallsign({ ...newCallsign, locationCode: value.toUpperCase().slice(0, 3) }), 3)}
+                                    onKeyDown={stopEditableKeyPropagation}
                                     onChange={(e) => setNewCallsign({ ...newCallsign, locationCode: e.target.value.toUpperCase() })}
                                     placeholder="Code"
                                     maxLength={3}

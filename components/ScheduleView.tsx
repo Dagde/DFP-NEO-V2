@@ -1345,7 +1345,7 @@ const getRelevantResourcePoolsForUnit = (platformConfig: any, unit: any): any[] 
 };
 
 const insertUnitSettingsTextAtCursor = (
-    field: HTMLInputElement,
+    field: HTMLInputElement | HTMLTextAreaElement,
     text: string,
     onChange: (value: string) => void,
 ): boolean => {
@@ -1507,22 +1507,58 @@ const UnitSettingsTextAreaRow: React.FC<{
     onChange: (value: string) => void;
     disabled?: boolean;
     placeholder?: string;
-}> = ({ label, value, onChange, disabled = false, placeholder = '' }) => (
-    disabled ? (
-        <UnitSettingsReadRow label={label} value={<span className="whitespace-pre-wrap">{value || 'Not set'}</span>} muted={!value} />
-    ) : <label className={`${unitSettingsRowClass} md:items-start`}>
-        <span className={`${unitSettingsLabelClass} md:pt-2`}>{label}</span>
-        <textarea
-            className={`${unitSettingsInputClass} min-h-[118px] resize-y leading-5`}
-            value={value || ''}
-            placeholder={placeholder}
-            disabled={disabled}
-            onKeyDownCapture={stopEditableKeyPropagation}
-            onKeyDown={stopEditableKeyPropagation}
-            onChange={(event) => onChange(event.target.value)}
-        />
-    </label>
-);
+}> = ({ label, value, onChange, disabled = false, placeholder = '' }) => {
+    const [draft, setDraft] = useState(value || '');
+    const [focused, setFocused] = useState(false);
+
+    useEffect(() => {
+        if (!focused) setDraft(value || '');
+    }, [focused, value]);
+
+    const commitDraft = () => {
+        setFocused(false);
+        if (draft !== (value || '')) onChange(draft);
+    };
+
+    if (disabled) {
+        return <UnitSettingsReadRow label={label} value={<span className="whitespace-pre-wrap">{value || 'Not set'}</span>} muted={!value} />;
+    }
+
+    return (
+        <label className={`${unitSettingsRowClass} md:items-start`}>
+            <span className={`${unitSettingsLabelClass} md:pt-2`}>{label}</span>
+            <textarea
+                className={`${unitSettingsInputClass} min-h-[118px] resize-y leading-5`}
+                value={focused ? draft : value || ''}
+                placeholder={placeholder}
+                disabled={disabled}
+                onBeforeInput={(event) => {
+                    const inputEvent = event.nativeEvent as InputEvent;
+                    if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    insertUnitSettingsTextAtCursor(event.currentTarget, ' ', setDraft);
+                }}
+                onKeyDownCapture={(event) => {
+                    if ((event.key === ' ' || event.code === 'Space' || event.key === 'Spacebar') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        insertUnitSettingsTextAtCursor(event.currentTarget, ' ', setDraft);
+                        return;
+                    }
+                    stopEditableKeyPropagation(event);
+                }}
+                onKeyDown={stopEditableKeyPropagation}
+                onFocus={() => {
+                    setFocused(true);
+                    setDraft(value || '');
+                }}
+                onBlur={commitDraft}
+                onChange={(event) => setDraft(event.target.value)}
+            />
+        </label>
+    );
+};
 
 const OrganisationMyUnitSettings: React.FC<{
     platformConfig?: any;
