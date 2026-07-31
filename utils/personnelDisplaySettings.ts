@@ -353,7 +353,8 @@ const splitRankGroup = (rankGroup?: string | null): string[] =>
 const normaliseRankGroup = (rankGroup: string): string => splitRankGroup(rankGroup).join(' = ');
 
 const uniqueRankList = (value: unknown, fallback: string[]): string[] => {
-  const source = Array.isArray(value) ? value : fallback;
+  const hasExplicitList = Array.isArray(value);
+  const source = hasExplicitList ? value : fallback;
   const seen = new Set<string>();
   const ranks = source
     .map((rank) => String(rank || '').trim())
@@ -366,7 +367,7 @@ const uniqueRankList = (value: unknown, fallback: string[]): string[] => {
     })
     .map(normaliseRankGroup)
     .filter(Boolean);
-  return ranks.length ? ranks : fallback;
+  return ranks.length ? ranks : (hasExplicitList ? [] : fallback);
 };
 
 const normaliseCivilianTitles = (value: unknown): string[] => {
@@ -570,7 +571,7 @@ export const getRankOptionsForGroup = (
   group: PersonnelGroup = 'staff',
 ): string[] => {
   const configuredRanks = flattenRankOrder(getRankOrderForGroup(settings, group));
-  return configuredRanks.length ? configuredRanks : flattenRankOrder(DEFAULT_STAFF_RANK_ORDER);
+  return configuredRanks;
 };
 
 export const getRankOptionGroupsForGroup = (

@@ -2821,8 +2821,9 @@ const normaliseQualification = (entry, index) => {
 };
 const normaliseStaffQualificationCatalogue = (source) => {
   const deletedDefaultIds = normaliseStringList$1(source?.deletedDefaultIds);
-  const configured = Array.isArray(source?.qualifications) ? source.qualifications : [];
-  const defaultQualifications = DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
+  const hasExplicitQualificationList = Array.isArray(source?.qualifications);
+  const configured = hasExplicitQualificationList ? source.qualifications : [];
+  const defaultQualifications = hasExplicitQualificationList && configured.length === 0 && deletedDefaultIds.length === 0 ? [] : DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter((entry) => !deletedDefaultIds.includes(entry.id));
   const configuredDefinitions = configured.map(normaliseQualification).filter((entry) => Boolean(entry));
   const byKey = /* @__PURE__ */ new Map();
   [...defaultQualifications, ...configuredDefinitions].forEach((entry, index) => {
@@ -4117,7 +4118,8 @@ const rankKey = (rank) => String(rank || "").trim().toUpperCase();
 const splitRankGroup = (rankGroup) => String(rankGroup || "").split(/[=|]/).map((rank) => rank.trim()).filter(Boolean);
 const normaliseRankGroup = (rankGroup) => splitRankGroup(rankGroup).join(" = ");
 const uniqueRankList = (value, fallback) => {
-  const source = Array.isArray(value) ? value : fallback;
+  const hasExplicitList = Array.isArray(value);
+  const source = hasExplicitList ? value : fallback;
   const seen = /* @__PURE__ */ new Set();
   const ranks = source.map((rank) => String(rank || "").trim()).filter(Boolean).filter((rank) => {
     const keys = splitRankGroup(rank).map(rankKey).filter(Boolean);
@@ -4125,7 +4127,7 @@ const uniqueRankList = (value, fallback) => {
     unseenKeys.forEach((key) => seen.add(key));
     return unseenKeys.length > 0;
   }).map(normaliseRankGroup).filter(Boolean);
-  return ranks.length ? ranks : fallback;
+  return ranks.length ? ranks : hasExplicitList ? [] : fallback;
 };
 const normaliseCivilianTitles = (value) => {
   const source = Array.isArray(value) ? value : DEFAULT_CIVILIAN_TITLES;
@@ -4272,7 +4274,7 @@ const flattenRankOrder = (rankOrder = []) => {
 };
 const getRankOptionsForGroup = (settings, group = "staff") => {
   const configuredRanks = flattenRankOrder(getRankOrderForGroup(settings, group));
-  return configuredRanks.length ? configuredRanks : flattenRankOrder(DEFAULT_STAFF_RANK_ORDER);
+  return configuredRanks;
 };
 const getRankOptionGroupsForGroup = (settings, group = "staff") => {
   const safe2 = normalisePersonnelDisplaySettings(settings);

@@ -710,7 +710,7 @@ async function ensureSyllabusTablesExist(db) {
         "resourcesPhysical"    TEXT[] NOT NULL DEFAULT '{}',
         "resourceNumber"       INTEGER NOT NULL DEFAULT 1,
         "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[],
-        "assessedElements"     TEXT[] NOT NULL DEFAULT ARRAY['Airmanship','Preparation','Technique']::text[],
+        "assessedElements"     TEXT[] NOT NULL DEFAULT '{}',
         "assessmentRequired"   BOOLEAN NOT NULL DEFAULT false,
         "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
         "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
@@ -741,7 +741,8 @@ async function ensureSyllabusTablesExist(db) {
     `);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "resourceNumber" INTEGER NOT NULL DEFAULT 1`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "acceptableAircraftConfigs" TEXT[] NOT NULL DEFAULT ARRAY['ANY']::text[]`);
-    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessedElements" TEXT[] NOT NULL DEFAULT ARRAY['Airmanship','Preparation','Technique']::text[]`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessedElements" TEXT[] NOT NULL DEFAULT '{}'`);
+    await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ALTER COLUMN "assessedElements" SET DEFAULT '{}'`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "assessmentRequired" BOOLEAN NOT NULL DEFAULT false`);
     await db.$executeRawUnsafe(`ALTER TABLE "SyllabusItem" ADD COLUMN IF NOT EXISTS "unit" TEXT`);
     await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
@@ -6774,7 +6775,7 @@ app.post('/api/syllabus', async (req, res) => {
       finalCourses, itemData.methodOfDelivery || [], itemData.methodOfAssessment || [],
       itemData.resourcesPhysical || [], Math.max(0, Math.round(Number(itemData.resourceNumber ?? (itemData.resourcesPhysical?.length ? 1 : 0)) || 0)),
       Array.isArray(itemData.acceptableAircraftConfigs) && itemData.acceptableAircraftConfigs.length ? itemData.acceptableAircraftConfigs : ['ANY'],
-      Array.isArray(itemData.assessedElements) && itemData.assessedElements.length ? itemData.assessedElements : ['Airmanship', 'Preparation', 'Technique'],
+      Array.isArray(itemData.assessedElements) ? itemData.assessedElements : [],
       itemData.assessmentRequired === true,
       itemData.resourcesHuman || [],
       itemData.eventDetailsCommon || [], itemData.eventDetailsSortie || [],
@@ -6846,7 +6847,7 @@ app.put('/api/syllabus/:id', async (req, res) => {
         return Array.isArray(body[f]) && body[f].length ? body[f] : ['ANY'];
       }
       if (f === 'assessedElements') {
-        return Array.isArray(body[f]) && body[f].length ? body[f] : ['Airmanship', 'Preparation', 'Technique'];
+        return Array.isArray(body[f]) ? body[f] : [];
       }
       return body[f];
     });

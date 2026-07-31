@@ -184,9 +184,11 @@ const normaliseQualification = (entry: any, index: number): StaffQualificationDe
 
 export const normaliseStaffQualificationCatalogue = (source?: any): StaffQualificationCatalogue => {
   const deletedDefaultIds = normaliseStringList(source?.deletedDefaultIds);
-  const configured = Array.isArray(source?.qualifications) ? source.qualifications : [];
-  const defaultQualifications = DEFAULT_STAFF_QUALIFICATIONS.qualifications
-    .filter(entry => !deletedDefaultIds.includes(entry.id));
+  const hasExplicitQualificationList = Array.isArray(source?.qualifications);
+  const configured = hasExplicitQualificationList ? source.qualifications : [];
+  const defaultQualifications = hasExplicitQualificationList && configured.length === 0 && deletedDefaultIds.length === 0
+    ? []
+    : DEFAULT_STAFF_QUALIFICATIONS.qualifications.filter(entry => !deletedDefaultIds.includes(entry.id));
   const configuredDefinitions = configured
     .map(normaliseQualification)
     .filter((entry): entry is StaffQualificationDefinition => Boolean(entry));
