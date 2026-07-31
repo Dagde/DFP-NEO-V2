@@ -150,7 +150,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         {
             id: 'directed-events' as const,
             step: '04',
-            label: 'Directed Events',
+            label: 'Directed Tasks',
             shortLabel: 'Exceptions',
             description: 'Manage currency requests and high-priority events.',
         },

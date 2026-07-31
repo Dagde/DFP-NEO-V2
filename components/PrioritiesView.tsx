@@ -4743,7 +4743,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <div className="section-directed-events space-y-6">
         <div className="directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
-            <h2 className="mt-1 text-xl font-semibold text-white">Directed Events</h2>
+            <h2 className="mt-1 text-xl font-semibold text-white">Directed Tasks</h2>
             <p className="mt-1 text-sm text-slate-300">Review hard requests and build exceptions after the normal course weighting is set.</p>
         </div>
 

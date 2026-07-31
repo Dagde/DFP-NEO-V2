@@ -41979,7 +41979,7 @@ const PrioritiesView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-directed-events space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fourth Input" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Tasks" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
@@ -42547,7 +42547,7 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "directed-events",
       step: "04",
-      label: "Directed Events",
+      label: "Directed Tasks",
       shortLabel: "Exceptions",
       description: "Manage currency requests and high-priority events."
     }
@@ -70960,7 +70960,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Task Profiles",
-          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
+          subtitle: "Model-specific tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -89548,7 +89548,7 @@ const DfpSidePanelTimeline = ({
     if (wizardStep === 8) {
       return questionShell(
         "Which saved directed tasks must be scheduled?",
-        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select tasks from Highest Priority Events and the Directed Events section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved directed tasks are waiting in NEO Assist." }),
+        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select tasks from Highest Priority Events and the Directed Tasks section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved directed tasks are waiting in NEO Assist." }),
         wizardTaskRows.length ? wizardTaskRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {

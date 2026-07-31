@@ -2952,7 +2952,7 @@ const DfpSidePanelTimeline: React.FC<{
             return questionShell(
                 'Which saved directed tasks must be scheduled?',
                 wizardTaskRows.length
-                    ? <p>Select tasks from Highest Priority Events and the Directed Events section, then continue.</p>
+                    ? <p>Select tasks from Highest Priority Events and the Directed Tasks section, then continue.</p>
                     : <p>No saved directed tasks are waiting in NEO Assist.</p>,
                 wizardTaskRows.length ? wizardTaskRows.map(request => (
                     <button
