@@ -5971,7 +5971,9 @@ app.get('/api/version', (req, res) => {
 // GET /api/debug/courses - Show distinct courses and their unit values in DB
 app.get('/api/debug/courses', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const trainees = await db.trainee.findMany({
       select: { course: true, unit: true, location: true, name: true },
       orderBy: { course: 'asc' }
@@ -6002,7 +6004,9 @@ app.get('/api/debug/courses', async (req, res) => {
 // GET /api/debug/trainees/:course - Show trainees for a specific course
 app.get('/api/debug/trainees/:course', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { course } = req.params;
     const trainees = await db.trainee.findMany({
       where: { course: course },
@@ -6018,7 +6022,9 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
 // GET /api/debug/solo-syllabus - Show solo syllabus items from DB (BGF11, BGF18 + sortieType='Solo')
 app.get('/api/debug/solo-syllabus', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const rows = await db.$queryRawUnsafe(`
       SELECT id, code, "eventDescription", "sortieType", "type", "isActive"
       FROM "SyllabusItem"
@@ -6036,7 +6042,9 @@ app.get('/api/debug/solo-syllabus', async (req, res) => {
 // GET /api/debug/snapshots - Show all saved DailySnapshot records (id, date, event count, savedAt)
 app.get('/api/debug/snapshots', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const rows = await db.$queryRawUnsafe(`
       SELECT id, date, "savedAt", "savedBy",
              jsonb_array_length("scheduleEvents") AS "eventCount"
@@ -6052,11 +6060,10 @@ app.get('/api/debug/snapshots', async (req, res) => {
 // POST /api/admin/fix-academics-courses - Manually trigger the Academics courses[] migration
 // GET /api/admin/fix-academics-courses?secret=dfp-fix-2026 - same but via GET for easy browser use
 app.get('/api/admin/fix-academics-courses', async (req, res) => {
-  if (req.query.secret !== 'dfp-fix-2026') {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const rows = await db.$queryRawUnsafe(`
       SELECT id, code, module, courses
       FROM "SyllabusItem"
@@ -6088,7 +6095,9 @@ app.get('/api/admin/fix-academics-courses', async (req, res) => {
 // GET /api/debug/academics - Diagnostic: show all Academics-type syllabus items and their courses[] field
 app.get('/api/debug/academics', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const rows = await db.$queryRawUnsafe(`
       SELECT id, code, module, type, courses, "isActive"
       FROM "SyllabusItem"
@@ -6117,7 +6126,9 @@ app.get('/api/debug/academics', async (req, res) => {
 // ============================================================
 app.get('/api/debug/check-table-structure', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const tableName = req.query.table || 'AircraftAvailabilityHistory';
     // Get column names for the specified table
     const columns = await db.$queryRawUnsafe(`
@@ -6134,7 +6145,9 @@ app.get('/api/debug/check-table-structure', async (req, res) => {
 
 app.get('/api/debug/check-daily-average', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const targetDate = req.query.date || '2026-05-02';
     
     // Check AircraftAvailabilityHistory record for target date
