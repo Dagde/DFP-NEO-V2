@@ -5,9 +5,9 @@ export interface AircraftNumberSettings {
 }
 
 export const DEFAULT_AIRCRAFT_NUMBER_SETTINGS: AircraftNumberSettings = {
-  usePrefix: true,
-  prefixes: ['A54'],
-  defaultPrefix: 'A54',
+  usePrefix: false,
+  prefixes: [],
+  defaultPrefix: '',
 };
 
 const cleanToken = (value: unknown): string => (

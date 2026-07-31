@@ -8924,24 +8924,37 @@ async function seedCommercialConfigIfEmpty(db) {
     `, locationCode, unitCode, unitName, JSON.stringify({ sourceUnitName: unitName }), now);
   }
 
+  const legacyAircraftLabel = String(settings.aircraftLabel || settings.aircraftType || '').trim();
+  const seedAircraftName = legacyAircraftLabel || 'Aircraft';
+  const seedAircraftCode = String(settings.aircraftTypeCode || seedAircraftName || 'AIRCRAFT')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .slice(0, 12)
+    .toUpperCase() || 'AIRCRAFT';
+  const seedAircraftPrefixes = Array.isArray(settings.aircraftNumberPrefixes)
+    ? settings.aircraftNumberPrefixes.map((prefix) => String(prefix || '').trim()).filter(Boolean)
+    : [];
+  const seedAircraftDefaultPrefix = seedAircraftPrefixes.includes(String(settings.aircraftNumberDefaultPrefix || '').trim())
+    ? String(settings.aircraftNumberDefaultPrefix || '').trim()
+    : (seedAircraftPrefixes[0] || '');
+
   await db.$executeRawUnsafe(`
     INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
-    VALUES (gen_random_uuid()::text, 'PC-21', 'PC-21', 'Training', 'ACTIVE', $1::jsonb, $2::timestamp, $2::timestamp)
+    VALUES (gen_random_uuid()::text, $1, $2, 'Training', 'ACTIVE', $3::jsonb, $4::timestamp, $4::timestamp)
     ON CONFLICT ("code") DO NOTHING
-  `, JSON.stringify({ source: 'Current V2 default aircraft type' }), now);
+  `, seedAircraftCode, seedAircraftName, JSON.stringify({ source: legacyAircraftLabel ? 'Legacy app settings aircraft type' : 'Commercial setup starter aircraft type' }), now);
 
   for (const locationName of locationNames) {
     const locationCode = locationIdentityFor(locationName).code;
     await db.$executeRawUnsafe(`
       INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, 'PC-21', $2, $3, 'Shared', 'ACTIVE', $4::jsonb, $5::timestamp, $5::timestamp)
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, $2, $3, $4, 'Shared', 'ACTIVE', $5::jsonb, $6::timestamp, $6::timestamp)
       ON CONFLICT ("code") DO NOTHING
-    `, locationCode, `${locationCode}-PC21-POOL`, `${locationName} PC-21 Resource Pool`, JSON.stringify({
+    `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} Resource Pool`, JSON.stringify({
       applyToV2Runtime: true,
-      aircraftLabel: 'PC-21',
-      aircraftNumberUsePrefix: true,
-      aircraftNumberPrefixes: ['A54'],
-      aircraftNumberDefaultPrefix: 'A54',
+      aircraftLabel: seedAircraftName,
+      aircraftNumberUsePrefix: seedAircraftPrefixes.length > 0,
+      aircraftNumberPrefixes: seedAircraftPrefixes,
+      aircraftNumberDefaultPrefix: seedAircraftDefaultPrefix,
       ftdLabel: 'FTD',
       cptLabel: 'CPT',
       aircraft: Number(settings.availableAircraftCount ?? 24),

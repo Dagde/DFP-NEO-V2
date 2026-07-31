@@ -3334,9 +3334,9 @@ const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES)
   return resourceId;
 };
 const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
-  usePrefix: true,
-  prefixes: ["A54"],
-  defaultPrefix: "A54"
+  usePrefix: false,
+  prefixes: [],
+  defaultPrefix: ""
 };
 const cleanToken = (value) => typeof value === "string" ? value.trim() : "";
 const uniqueNonEmpty = (values) => Array.from(new Set(values.map(cleanToken).filter(Boolean)));
