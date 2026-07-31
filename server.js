@@ -4332,151 +4332,22 @@ app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
 // MUST be defined BEFORE /api/trainees/:id to avoid route conflicts
 // ============================================================
 
-// POST /api/fix-bif-ftd-dependencies - Fix BIF FTD dependencies
-// Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
-// Rule 2: If BIF1 is complete, mark BIF FTD3 complete
-// Rule 3: Remove asterisk versions (BIF FTD1*, BIF FTD3*) from completedEventIds
+// POST /api/fix-bif-ftd-dependencies - legacy course-specific maintenance endpoint
 app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
-  const maintenanceSecret = requireConfiguredSecret('DFP_NEO_MAINTENANCE_SECRET', 'dfp-neo-maintenance-development-only');
-  const providedSecret = req.headers['x-maintenance-secret'] || req.query.secret;
-  if (providedSecret !== maintenanceSecret) {
-    return res.status(401).json({ error: 'Unauthorized maintenance request' });
-  }
-
-  try {
-    const db = await getPrisma();
-    console.log('[BIF FTD Fix] Starting BIF FTD dependency fix...');
-
-    // Get all trainees on ADF courses (BPC+IPC)
-    const trainees = await db.trainee.findMany({
-      where: {
-        isActive: true,
-        course: {
-          startsWith: 'ADF'
-        }
-      },
-      include: {
-        individualLMP: true
-      }
-    });
-
-    console.log(`[BIF FTD Fix] Found ${trainees.length} active trainees on ADF courses (BPC+IPC)`);
-
-    let ftd1Fixed = 0;
-    let ftd3Fixed = 0;
-    let asterisksRemoved = 0;
-    const details = [];
-
-    for (const trainee of trainees) {
-      if (!trainee.individualLMP) continue;
-
-      const completedEventIds = trainee.individualLMP.completedEventIds || [];
-      const newCompletedIds = [...completedEventIds];
-      let changed = false;
-
-      // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
-      if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
-        newCompletedIds.push('BIF FTD1');
-        changed = true;
-        ftd1Fixed++;
-        details.push(`${trainee.fullName}: Marking BIF FTD1 complete (BIF FTD2 is complete)`);
-      }
-
-      // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
-      if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
-        newCompletedIds.push('BIF FTD3');
-        changed = true;
-        ftd3Fixed++;
-        details.push(`${trainee.fullName}: Marking BIF FTD3 complete (BIF1 is complete)`);
-      }
-
-      // Rule 3: Remove asterisk versions if non-asterisk versions exist
-      const originalLength = newCompletedIds.length;
-      const filtered = newCompletedIds.filter(id => {
-        // Remove BIF FTD1* if BIF FTD1 exists, remove BIF FTD3* if BIF FTD3 exists
-        if (id === 'BIF FTD1*' && newCompletedIds.includes('BIF FTD1')) return false;
-        if (id === 'BIF FTD3*' && newCompletedIds.includes('BIF FTD3')) return false;
-        return true;
-      });
-      
-      if (filtered.length !== originalLength) {
-        newCompletedIds.splice(0, newCompletedIds.length, ...filtered);
-        changed = true;
-        asterisksRemoved++;
-        details.push(`${trainee.fullName}: Removed asterisk versions from completedEventIds`);
-      }
-
-      if (changed) {
-        await db.individualLMP.update({
-          where: { traineeId: trainee.id },
-          data: {
-            completedEventIds: newCompletedIds,
-            updatedAt: new Date()
-          }
-        });
-      }
-    }
-
-    console.log(`[BIF FTD Fix] Complete: BIF FTD1=${ftd1Fixed}, BIF FTD3=${ftd3Fixed}, Asterisks removed=${asterisksRemoved}`);
-    res.json({
-      success: true,
-      ftd1Fixed,
-      ftd3Fixed,
-      asterisksRemoved,
-      totalTrainees: trainees.length,
-      details
-    });
-  } catch (error) {
-    console.error('[BIF FTD Fix] Error:', error);
-    res.status(500).json({ error: 'Failed to fix BIF FTD dependencies', details: error.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Legacy maintenance endpoint disabled',
+    message: 'Use configuration-aware Individual LMP maintenance tools instead.',
+  });
 });
 
-// POST /api/fix-pt051-scores - Remove asterisks from training report Score records
-// This fixes the display in the Performance History table
+// POST /api/fix-pt051-scores - legacy training-report maintenance endpoint
 app.post('/api/fix-pt051-scores', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    console.log('[Training Report Fix] Starting training report Score fix...');
-
-    // Get all Score records with BIF FTD1* or BIF FTD3*
-    const scoresToFix = await db.score.findMany({
-      where: {
-        event: {
-          in: ['BIF FTD1*', 'BIF FTD3*']
-        }
-      }
-    });
-
-    console.log(`[Training Report Fix] Found ${scoresToFix.length} training report Score records with asterisks`);
-
-    let updatedCount = 0;
-    const details = [];
-
-    for (const score of scoresToFix) {
-      const oldEvent = score.event;
-      const newEvent = oldEvent.replace('*', '');
-      
-      await db.score.update({
-        where: { id: score.id },
-        data: { event: newEvent }
-      });
-      
-      updatedCount++;
-      details.push(`Updated score for ${score.traineeFullName}: ${oldEvent} → ${newEvent}`);
-    }
-
-    console.log(`[Training Report Fix] Complete: Updated ${updatedCount} training report Score records`);
-    res.json({
-      success: true,
-      updatedCount,
-      totalScores: scoresToFix.length,
-      details
-    });
-  } catch (error) {
-    console.error('[Training Report Fix] Error:', error);
-    res.status(500).json({ error: 'Failed to fix training report Score records', details: error.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Legacy maintenance endpoint disabled',
+    message: 'Use configuration-aware training report maintenance tools instead.',
+  });
 });
 
 // ============================================================
@@ -5930,8 +5801,7 @@ app.get('/api/debug/snapshots', async (req, res) => {
   }
 });
 
-// POST /api/admin/fix-academics-courses - Manually trigger the Academics courses[] migration
-// GET /api/admin/fix-academics-courses?secret=dfp-fix-2026 - same but via GET for easy browser use
+// GET /api/admin/fix-academics-courses - Manually trigger the Academics courses[] migration.
 app.get('/api/admin/fix-academics-courses', async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
