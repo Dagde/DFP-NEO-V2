@@ -7253,7 +7253,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   const modeHint = mode === 'STANDARD'
                                     ? 'Use the aircraft standard crew.'
                                     : mode === 'ALTERNATE'
-                                      ? 'Use one alternate task crew.'
+                                      ? 'Use one alternate mission crew.'
                                       : 'Use the manual role list below.';
                                   return (
                                     <button
@@ -7341,7 +7341,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
           title="Crew Composition"
-          subtitle="Aircraft-specific role labels, standard crew and alternate task crew makeups for Air Combat, Fixed Crew and Pooled Crew."
+          subtitle="Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew."
           action={canEdit ? (
             <button
               type="button"
@@ -7956,7 +7956,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         label="TAS (KTAS)"
                         value={aircraft.defaultTasKtas ?? null}
                         disabled={!canEditResourcePools}
-                        info="Used for route/time planning when a task or event does not specify a custom speed."
+                        info="Used for route/time planning when a mission or event does not specify a custom speed."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
                       />
                       <TasField

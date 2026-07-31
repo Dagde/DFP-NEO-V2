@@ -615,7 +615,7 @@ const TaskingProfileInput: React.FC<{
           onChange(event.target.value);
           setIsOpen(true);
         }}
-        placeholder="Task profile"
+        placeholder="Mission profile"
         className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       />
       {showSuggestions && (
@@ -2603,7 +2603,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => (
       profile.trim().toLowerCase() === tasking.toLowerCase()
     ))?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || 'Task';
+    const taskingDisplayLabel = abbreviation || tasking || 'Mission';
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));

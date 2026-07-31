@@ -2961,7 +2961,7 @@ const DfpSidePanelTimeline: React.FC<{
                         className={wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.selectionId))}
                         onClick={() => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds)}
                     >
-                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Task'} at {formatCompactTime(request.takeoff)}
+                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Mission'} at {formatCompactTime(request.takeoff)}
                     </button>
                 )).concat(
                     <button

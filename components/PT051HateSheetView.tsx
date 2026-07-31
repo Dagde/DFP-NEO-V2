@@ -2,6 +2,14 @@ import React from 'react';
 import { Trainee } from '../types';
 import { Score } from '../types';
 import { Pt051Assessment } from '../types';
+import {
+  DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+  getTrainingReportCompletionResultOptions,
+  normaliseTrainingReportTemplate,
+  normaliseTrainingReportTerminology,
+  type TrainingReportTemplate,
+  type TrainingReportTerminology,
+} from '../utils/trainingReportTerminology';
 
 interface PT051HateSheetViewProps {
   trainee: Trainee;
@@ -9,13 +17,16 @@ interface PT051HateSheetViewProps {
   assessments: Pt051Assessment[];
   onSelectLmpScore: (score: Score) => void;
   reportName?: string;
+  trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
+  trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
 }
 
-const getMissionStatusDisplayLabel = (status?: string | null): string => {
+const getMissionStatusDisplayLabel = (
+  status: string | null | undefined,
+  missionStatusLabelMap: Map<string, string>,
+): string => {
   const code = String(status || '').trim().toUpperCase();
-  if (code === 'DCO') return 'Complete';
-  if (code === 'DPCO') return 'Partially Complete';
-  if (code === 'DNCO') return 'Not Complete';
+  if (code) return missionStatusLabelMap.get(code) || status || '';
   return status || '';
 };
 
@@ -25,7 +36,22 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
   assessments,
   onSelectLmpScore,
   reportName = 'Report',
+  trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+  trainingReportTemplate = null,
 }) => {
+  const reportTerminology = React.useMemo(
+    () => normaliseTrainingReportTerminology(trainingReportTerminology),
+    [trainingReportTerminology],
+  );
+  const reportTemplate = React.useMemo(
+    () => normaliseTrainingReportTemplate(trainingReportTemplate, reportTerminology),
+    [trainingReportTemplate, reportTerminology],
+  );
+  const missionStatusLabelMap = React.useMemo(
+    () => new Map(getTrainingReportCompletionResultOptions(reportTemplate).map(option => [option.code, option.label])),
+    [reportTemplate],
+  );
+
   return (
     <div className="hate-sheet-view" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <div className="trainee-header" style={{ marginBottom: '20px', borderBottom: '2px solid #ccc', paddingBottom: '10px' }}>
@@ -69,7 +95,7 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
                     <div><strong>Grade:</strong> {assessment.overallGrade}</div>
                   )}
                   {assessment.dcoResult && (
-                    <div><strong>Mission Status:</strong> {getMissionStatusDisplayLabel(assessment.dcoResult)}</div>
+                    <div><strong>{reportTemplate.modules.overallAssessment.fields.result}:</strong> {getMissionStatusDisplayLabel(assessment.dcoResult, missionStatusLabelMap)}</div>
                   )}
                   {assessment.overallComments && (
                     <div style={{ marginTop: '5px' }}><strong>Comments:</strong> {assessment.overallComments}</div>

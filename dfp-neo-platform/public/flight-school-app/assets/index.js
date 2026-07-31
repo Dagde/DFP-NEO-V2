@@ -38614,7 +38614,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Task profile",
+        placeholder: "Mission profile",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -40234,7 +40234,7 @@ const PrioritiesView = ({
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === tasking.toLowerCase())?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || "Task";
+    const taskingDisplayLabel = abbreviation || tasking || "Mission";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -65465,7 +65465,7 @@ const AppearanceSettings = ({
         {
           value: "crew",
           label: "Crew Group",
-          description: "Each crew group uses a different colour so whole-crew tasking is easier to scan.",
+          description: "Each crew group uses a different colour so whole-crew scheduling is easier to scan.",
           swatches: ["bg-sky-500/70", "bg-green-500/70", "bg-violet-500/70", "bg-amber-500/70"]
         }
       ].map((option) => {
@@ -71565,7 +71565,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
                       const selected = crewMode === mode;
                       const modeLabel = mode === "STANDARD" ? "Standard Crew" : mode === "ALTERNATE" ? "Alternate Crew" : "Custom Crew";
-                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate task crew." : "Use the manual role list below.";
+                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate mission crew." : "Use the manual role list below.";
                       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "button",
                         {
@@ -71627,7 +71627,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Crew Composition",
-          subtitle: "Aircraft-specific role labels, standard crew and alternate task crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
+          subtitle: "Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -72237,7 +72237,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       label: "TAS (KTAS)",
                       value: aircraft.defaultTasKtas ?? null,
                       disabled: !canEditResourcePools,
-                      info: "Used for route/time planning when a task or event does not specify a custom speed.",
+                      info: "Used for route/time planning when a mission or event does not specify a custom speed.",
                       onChange: (value) => updateRow("aircraftTypes", index, { defaultTasKtas: value })
                     }
                   ),
@@ -89719,7 +89719,7 @@ const DfpSidePanelTimeline = ({
             onClick: () => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds),
             children: [
               request.alreadyInHighest ? "Confirm " : "Schedule ",
-              request.tasking || "Task",
+              request.tasking || "Mission",
               " at ",
               formatCompactTime(request.takeoff)
             ]
