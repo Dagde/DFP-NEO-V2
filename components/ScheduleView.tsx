@@ -1594,7 +1594,7 @@ const OrganisationMyUnitSettings: React.FC<{
     const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
     const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
-    const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) && organisationSettings.permissionProfiles.length > 0
+    const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles)
         ? organisationSettings.permissionProfiles
         : DEFAULT_PLATFORM_PERMISSION_PROFILES;
     const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile: any) => [String(profile.id || '').trim(), profile.name || profile.id]));
@@ -2152,7 +2152,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ) : <UnitSettingsReadRow label="Mission tile labels" value="No mission profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Standard Mission Profiles" description="Regular unit mission profiles scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
+                    <UnitSettingsGroup title="Reusable Mission Profiles" description="Regular unit mission profiles scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />

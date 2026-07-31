@@ -134,7 +134,8 @@ const getDefaultAssessmentCategory = (element: string): string => (
 
 const buildExportAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
     const seen = new Set<string>();
-    const selectedElements = (Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS)
+    const hasConfiguredElements = Array.isArray(elements);
+    const selectedElements = (hasConfiguredElements ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS)
         .map(element => String(element || '').trim())
         .filter(Boolean)
         .filter(element => {
@@ -158,7 +159,9 @@ const buildExportAssessmentStructure = (elements?: string[], phraseBank?: Phrase
         .map(category => ({ category, elements: grouped.get(category) || [] }))
         .filter(category => category.elements.length > 0);
 
-    return structure.length > 0 ? structure : [{ category: 'Core Dimensions', elements: DEFAULT_EXPORT_ASSESSED_ELEMENTS }];
+    return structure.length > 0
+        ? structure
+        : (hasConfiguredElements ? [] : [{ category: 'Core Dimensions', elements: DEFAULT_EXPORT_ASSESSED_ELEMENTS }]);
 };
 
 interface ExportTemplate {

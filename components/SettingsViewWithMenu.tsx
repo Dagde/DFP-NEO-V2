@@ -280,7 +280,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'validation': 'Cancellation Codes',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
-    'standard-missions': 'Standard Mission Profiles',
+    'standard-missions': 'Reusable Mission Profiles',
     'currency-profiles': 'Continuation & Currency Events',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',

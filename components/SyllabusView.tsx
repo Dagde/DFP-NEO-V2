@@ -120,11 +120,11 @@ const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
         if (!clean || SCORING_MATRIX_NON_ASSESSABLE_KEYS.has(key) || seen.has(key)) return;
         seen.set(key, clean);
     };
-    DEFAULT_ASSESSED_ELEMENTS.forEach(add);
     const configuredElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
     if (Array.isArray(configuredElements)) {
         configuredElements.forEach(add);
     } else {
+        DEFAULT_ASSESSED_ELEMENTS.forEach(add);
         SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
         Object.keys(phraseBank || {}).forEach(key => {
             if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY) add(key);
@@ -135,13 +135,13 @@ const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
 
 const normaliseAssessedElements = (elements?: string[], availableElements: string[] = []): string[] => {
     const available = new Set(availableElements.map(item => item.toLowerCase()));
-    const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
+    const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS;
     const selected = source
         .map(item => String(item || '').trim())
         .filter(Boolean)
         .filter((item, index, arr) => arr.findIndex(candidate => candidate.toLowerCase() === item.toLowerCase()) === index)
         .filter(item => available.size === 0 || available.has(item.toLowerCase()));
-    return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
+    return selected;
 };
 
 const AssessedElementsWindow: React.FC<{
@@ -161,7 +161,7 @@ const AssessedElementsWindow: React.FC<{
         const next = isSelected
             ? selected.filter(item => item.toLowerCase() !== element.toLowerCase())
             : [...selected, element];
-        onChange(next.length > 0 ? next : DEFAULT_ASSESSED_ELEMENTS);
+        onChange(next);
     };
 
     return (

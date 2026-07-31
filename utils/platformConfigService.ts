@@ -634,7 +634,7 @@ export const getPlatformPermissionProfiles = (
         .filter((profile): profile is PlatformPermissionProfile => Boolean(profile))
     : [];
 
-  return normalisedProfiles.length > 0
+  return Array.isArray(profileConfig)
     ? normalisedProfiles
     : DEFAULT_PLATFORM_PERMISSION_PROFILES;
 };

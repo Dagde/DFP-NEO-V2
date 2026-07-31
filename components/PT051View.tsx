@@ -137,7 +137,7 @@ const pushTrainingReportNotesDiag = (stage: string, payload: Record<string, any>
 };
 
 const normaliseAssessedElements = (elements?: string[]): string[] => {
-    const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
+    const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS;
     const seen = new Set<string>();
     const selected = source
         .map(element => String(element || '').trim())
@@ -148,7 +148,7 @@ const normaliseAssessedElements = (elements?: string[]): string[] => {
             seen.add(key);
             return true;
         });
-    return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
+    return selected;
 };
 
 const getDefaultElementGroup = (element: string): string => (
@@ -174,7 +174,9 @@ const buildAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) 
         .map(category => ({ category, elements: grouped.get(category) || [] }))
         .filter(category => category.elements.length > 0);
 
-    return categories.length > 0 ? categories : [{ category: 'Core Dimensions', elements: DEFAULT_ASSESSED_ELEMENTS }];
+    return categories.length > 0
+        ? categories
+        : (Array.isArray(elements) ? [] : [{ category: 'Core Dimensions', elements: DEFAULT_ASSESSED_ELEMENTS }]);
 };
 
 const InfoField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (

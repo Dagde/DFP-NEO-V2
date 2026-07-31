@@ -381,7 +381,7 @@ const normaliseCivilianTitles = (value: unknown): string[] => {
       seen.add(key);
       return true;
     });
-  return titles.length ? titles : DEFAULT_CIVILIAN_TITLES;
+  return titles.length ? titles : (Array.isArray(value) ? [] : DEFAULT_CIVILIAN_TITLES);
 };
 
 const preserveEditableTextSetting = (value: unknown, fallback: string): string => {

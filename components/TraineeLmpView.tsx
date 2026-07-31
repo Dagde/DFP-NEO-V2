@@ -661,7 +661,7 @@ const formatLmpDurationLabel = (item: SyllabusItemDetail): string =>
 const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 
 const getAssessedElements = (item: SyllabusItemDetail): string[] => (
-    Array.isArray(item.assessedElements) && item.assessedElements.length > 0
+    Array.isArray(item.assessedElements)
         ? item.assessedElements
         : DEFAULT_ASSESSED_ELEMENTS
 );

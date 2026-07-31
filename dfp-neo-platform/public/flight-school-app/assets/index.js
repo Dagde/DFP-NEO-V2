@@ -2429,7 +2429,7 @@ const getPlatformPermissionProfiles = (config) => {
       permissions
     };
   }).filter((profile) => Boolean(profile)) : [];
-  return normalisedProfiles.length > 0 ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  return Array.isArray(profileConfig) ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
 };
 const uniqueValues$1 = (values) => Array.from(new Set(values));
 const getExplicitPermissionProfileIds = (rows) => uniqueValues$1(
@@ -4136,7 +4136,7 @@ const normaliseCivilianTitles = (value) => {
     seen.add(key);
     return true;
   });
-  return titles.length ? titles : DEFAULT_CIVILIAN_TITLES;
+  return titles.length ? titles : Array.isArray(value) ? [] : DEFAULT_CIVILIAN_TITLES;
 };
 const preserveEditableTextSetting = (value, fallback) => {
   if (value === void 0 || value === null) return fallback;
@@ -11173,7 +11173,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
   getCrewPositionLabelMap(crewPositionTerminology);
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
-  const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) && organisationSettings.permissionProfiles.length > 0 ? organisationSettings.permissionProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) ? organisationSettings.permissionProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
   const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile) => [String(profile.id || "").trim(), profile.name || profile.id]));
   const platformUsers = platformConfig2?.platformUsers || [];
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
@@ -11550,7 +11550,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
             ] }, profile))
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No mission profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Mission Profiles", description: "Regular unit mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Mission Profiles", description: "Regular unit mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Mission name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
@@ -20993,7 +20993,7 @@ const formatLmpSortieLabel = (item, resourceDisplayNames) => {
 };
 const formatLmpDurationLabel = (item) => `${formatHours$1(item.duration)}h`;
 const DEFAULT_ASSESSED_ELEMENTS$2 = ["Airmanship", "Preparation", "Technique"];
-const getAssessedElements = (item) => Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : DEFAULT_ASSESSED_ELEMENTS$2;
+const getAssessedElements = (item) => Array.isArray(item.assessedElements) ? item.assessedElements : DEFAULT_ASSESSED_ELEMENTS$2;
 const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -21652,7 +21652,7 @@ const pushTrainingReportNotesDiag$1 = (stage, payload = {}) => {
   }
 };
 const normaliseAssessedElements$1 = (elements) => {
-  const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
+  const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS$1;
   const seen = /* @__PURE__ */ new Set();
   const selected = source.map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
     const key = element.toLowerCase();
@@ -21660,7 +21660,7 @@ const normaliseAssessedElements$1 = (elements) => {
     seen.add(key);
     return true;
   });
-  return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS$1;
+  return selected;
 };
 const getDefaultElementGroup = (element) => PT051_STRUCTURE$1.find(
   (category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase())
@@ -21677,7 +21677,7 @@ const buildAssessmentStructure = (elements, phraseBank) => {
     grouped.set(category, [...grouped.get(category) || [], element]);
   });
   const categories = categoryOrder.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
-  return categories.length > 0 ? categories : [{ category: "Core Dimensions", elements: DEFAULT_ASSESSED_ELEMENTS$1 }];
+  return categories.length > 0 ? categories : Array.isArray(elements) ? [] : [{ category: "Core Dimensions", elements: DEFAULT_ASSESSED_ELEMENTS$1 }];
 };
 const formatTime$6 = (time) => {
   const hours = Math.floor(time);
@@ -54847,11 +54847,11 @@ const getScoringMatrixElementOptions = (phraseBank) => {
     if (!clean || SCORING_MATRIX_NON_ASSESSABLE_KEYS.has(key) || seen.has(key)) return;
     seen.set(key, clean);
   };
-  DEFAULT_ASSESSED_ELEMENTS.forEach(add);
   const configuredElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$2];
   if (Array.isArray(configuredElements)) {
     configuredElements.forEach(add);
   } else {
+    DEFAULT_ASSESSED_ELEMENTS.forEach(add);
     SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
     Object.keys(phraseBank || {}).forEach((key) => {
       if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$2) add(key);
@@ -54861,9 +54861,9 @@ const getScoringMatrixElementOptions = (phraseBank) => {
 };
 const normaliseAssessedElements = (elements, availableElements = []) => {
   const available = new Set(availableElements.map((item) => item.toLowerCase()));
-  const source = Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_ASSESSED_ELEMENTS;
+  const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS;
   const selected = source.map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index).filter((item) => available.size === 0 || available.has(item.toLowerCase()));
-  return selected.length > 0 ? selected : DEFAULT_ASSESSED_ELEMENTS;
+  return selected;
 };
 const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing, onChange, onAddElement, showAssessmentRequired = false, assessmentRequired = false, onAssessmentRequiredChange }) => {
   const selected = normaliseAssessedElements(selectedElements, availableElements);
@@ -54871,7 +54871,7 @@ const AssessedElementsWindow = ({ selectedElements, availableElements, isEditing
   const toggle = (element) => {
     const isSelected = selectedSet.has(element.toLowerCase());
     const next = isSelected ? selected.filter((item) => item.toLowerCase() !== element.toLowerCase()) : [...selected, element];
-    onChange(next.length > 0 ? next : DEFAULT_ASSESSED_ELEMENTS);
+    onChange(next);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Assessed Elements" }),
@@ -66498,7 +66498,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
       return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
     }
     if (lowerTitle.includes("profiles")) {
-      return { section: "platform-standard-missions", label: "Standard Mission Profiles" };
+      return { section: "platform-standard-missions", label: "Reusable Mission Profiles" };
     }
   }
   return null;
@@ -66699,8 +66699,8 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit profiles need per-unit copies",
       `${missingCompositeClones} unit-scoped mission, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Standard Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
-      { section: "platform-standard-missions", label: "Standard Mission Profiles", focusSubsectionId: "platform-standard-missions" }
+      "Open Reusable Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
+      { section: "platform-standard-missions", label: "Reusable Mission Profiles", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
     add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Mission profiles, alternate crew profiles and currency events have per-unit records where needed.", "unit-separation-profiles-ok");
@@ -69100,7 +69100,7 @@ This permanently removes the organisation record from platform configuration and
   };
   const permissionProfiles = reactExports.useMemo(() => {
     const profiles = config.organisations[0]?.settings?.permissionProfiles;
-    return Array.isArray(profiles) && profiles.length > 0 ? profiles : DEFAULT_PERMISSION_PROFILES;
+    return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
   }, [config.organisations]);
   const configurationHealth = reactExports.useMemo(
     () => buildConfigurationHealth(config, permissionProfiles, readinessPercent, operationalReadinessPercent),
@@ -71278,15 +71278,15 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Standard Mission Profiles",
-          subtitle: "Define reusable Fixed Crew mission profiles for regular unit flights.",
+          title: "Reusable Mission Profiles",
+          subtitle: "Define reusable mission profiles for regular Fixed Crew-style unit flights.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Mission" })
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Standard Mission Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Mission Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
@@ -71294,7 +71294,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New profiles default to the unit home location and unit default callsign. Values can be manually edited per mission." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Standard Mission Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Reusable Mission Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -71342,7 +71342,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Standard Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Reusable Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -75338,7 +75338,7 @@ const sectionLabels = {
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
-  "standard-missions": "Standard Mission Profiles",
+  "standard-missions": "Reusable Mission Profiles",
   "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
@@ -80720,7 +80720,8 @@ const SCORING_MATRIX_ELEMENT_GROUPS_KEY = "__scoringMatrixElementGroups";
 const getDefaultAssessmentCategory = (element) => DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.find((category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase()))?.category || "Additional Elements";
 const buildExportAssessmentStructure = (elements, phraseBank) => {
   const seen = /* @__PURE__ */ new Set();
-  const selectedElements = (Array.isArray(elements) && elements.length > 0 ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS).map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
+  const hasConfiguredElements = Array.isArray(elements);
+  const selectedElements = (hasConfiguredElements ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS).map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
     const key = element.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
@@ -80736,7 +80737,7 @@ const buildExportAssessmentStructure = (elements, phraseBank) => {
     grouped.set(category, [...grouped.get(category) || [], element]);
   });
   const structure = categories.map((category) => ({ category, elements: grouped.get(category) || [] })).filter((category) => category.elements.length > 0);
-  return structure.length > 0 ? structure : [{ category: "Core Dimensions", elements: DEFAULT_EXPORT_ASSESSED_ELEMENTS }];
+  return structure.length > 0 ? structure : hasConfiguredElements ? [] : [{ category: "Core Dimensions", elements: DEFAULT_EXPORT_ASSESSED_ELEMENTS }];
 };
 const TrainingRecordsExportView = ({
   traineesData,
@@ -109646,7 +109647,7 @@ ${"=".repeat(60)}`);
         const savedUnits = saved2.units?.length ? saved2.units : units;
         const savedUnitLocations = saved2.unitLocations || unitLocations;
         const savedLocationOpAreas = saved2.locationOpAreas || locationOpAreas;
-        const configuredUnitTypes = Array.isArray(platformConfig2?.unitTypes) && platformConfig2.unitTypes.length > 0 ? platformConfig2.unitTypes : ["Training"];
+        const configuredUnitTypes = Array.isArray(platformConfig2?.unitTypes) ? platformConfig2.unitTypes : ["Training"];
         const resolveLegacyLocationCode = (locationValue) => {
           const raw = String(locationValue || "").trim();
           if (!raw) return "";
@@ -109675,7 +109676,7 @@ ${"=".repeat(60)}`);
             name: code,
             organisationCode: "DEFAULT",
             locationCode,
-            unitType: configuredUnitTypes[0] || "Training",
+            unitType: configuredUnitTypes[0] || "",
             status: "ACTIVE",
             settings: {
               source: "legacy-settings",
