@@ -634,19 +634,19 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} task or mission profile
+                  {operationalModelLabel} mission or task profile
                 </span>
               </button>
             ))
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching task or mission profile' : 'No task or mission profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching mission or task profile' : 'No mission or task profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? 'Keep typing to enter this task manually.'
-                  : `${operationalModelLabel} has no saved task or mission profiles yet. Add them in Settings > Platform & Deployment > Task / Mission Profiles, or type manually.`}
+                  ? 'Keep typing to enter this mission or task manually.'
+                  : `${operationalModelLabel} has no saved mission or task profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.`}
               </span>
             </div>
           )}
@@ -768,7 +768,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Task / Mission Profile" hint={request.tasking || 'Select or type task or mission profile'}>
+            <TaskingFieldPanel label="Mission / Task Profile" hint={request.tasking || 'Select or type mission or task profile'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}
@@ -3656,7 +3656,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No saved task or mission profiles for this unit context.
+          No saved mission or task profiles for this unit context.
         </div>
       );
     }
@@ -3747,7 +3747,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="border-t border-slate-800 px-4 pb-4 pt-3">
                   {pendingStandardMissionSaveId === profile.id && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3">
-                      <p className="text-sm font-semibold text-amber-100">Save these task or mission profile changes permanently, or today only?</p>
+                      <p className="text-sm font-semibold text-amber-100">Save these mission or task profile changes permanently, or today only?</p>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
