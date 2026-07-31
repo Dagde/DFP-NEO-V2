@@ -2148,7 +2148,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                        ) : <UnitSettingsReadRow label="Mission tile labels" value="No task profiles are configured for this operating model." muted />}
+                        ) : <UnitSettingsReadRow label="Task tile labels" value="No task profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Reusable Flight Profiles" description="Regular unit flight templates scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (

@@ -11561,7 +11561,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Profiles", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
