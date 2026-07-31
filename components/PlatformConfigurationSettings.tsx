@@ -4284,7 +4284,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (!canEdit) return;
     const contextUnit = activePlatformUnit || config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))] || null;
     const contextUnitSettings = contextUnit?.settings || {};
-    const defaultLocation = contextUnit?.locationCode || config.locations[0]?.code || 'ESL';
+    const defaultLocation = contextUnit?.locationCode || config.locations[0]?.code || '';
     const newUnitId = createClientRecordId('unit');
     const nextUnitIndex = config.units.length;
     const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
@@ -4436,7 +4436,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addResourcePool = () => {
     const selectedUnit = config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))];
-    const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || 'ESL';
+    const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || '';
     const defaultUnitCode = selectedUnit?.code || '';
     const newPoolId = createClientRecordId('pool');
     pendingResourcePoolScrollIdRef.current = newPoolId;
@@ -4482,16 +4482,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               applyToV2Runtime: true,
               aircraftLabel: defaultAircraftLabel,
               aircraftNumberUsePrefix: true,
-              aircraftNumberPrefixes: ['A54'],
-              aircraftNumberDefaultPrefix: 'A54',
+              aircraftNumberPrefixes: [],
+              aircraftNumberDefaultPrefix: '',
               aircraftConfigurations: [],
               ftdLabel: 'FTD',
               cptLabel: 'CPT',
-              aircraft: 24,
-              ftd: 5,
-              cpt: 4,
-              standby: 4,
-              ground: 6,
+              aircraft: 0,
+              ftd: 0,
+              cpt: 0,
+              standby: 0,
+              ground: 0,
             },
           },
         ],

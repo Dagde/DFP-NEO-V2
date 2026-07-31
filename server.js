@@ -1282,7 +1282,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
     normalise: (row) => ({
       id: row.id || null,
       organisationCode: row.organisationCode || 'DEFAULT',
-      locationCode: row.locationCode || 'ESL',
+      locationCode: row.locationCode || '',
       code: row.code || '',
       name: row.name || '',
       unitType: row.unitType || 'Training',
@@ -2802,7 +2802,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $6,
           "settings" = $7::jsonb,
           "updatedAt" = $8::timestamp
-      `, unit.organisationCode || 'DEFAULT', unit.locationCode || 'ESL', unit.code, unit.name, unit.unitType || unitTypes[0] || 'Training', unit.status || 'ACTIVE', toJson(unit.settings), now);
+      `, unit.organisationCode || 'DEFAULT', unit.locationCode || '', unit.code, unit.name, unit.unitType || unitTypes[0] || 'Training', unit.status || 'ACTIVE', toJson(unit.settings), now);
     }
 
     for (const aircraftType of aircraftTypes) {
