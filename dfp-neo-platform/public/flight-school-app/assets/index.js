@@ -42560,7 +42560,7 @@ const PrioritiesViewWithMenu = (props) => {
   const fixedCrewPlannerSections = {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
-      { label: "Mission Section", target: ".tasking-events-card" },
+      { label: "Directed Tasks", target: ".tasking-events-card" },
       { label: "Specific Currency Requests", target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
@@ -66615,7 +66615,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
         "WARNING",
         "Locations",
         `${locationCode} daylight data incomplete`,
-        defaultProfile ? "The app can currently fall back to a built-in Australian base profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations." : "Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.",
+        defaultProfile ? "The app can currently fall back to a system daylight profile for this known location, but the location should store its own latitude, longitude and IANA timezone for offline daylight calculations." : "Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.",
         `location-${locationCode}-solar`,
         void 0,
         { focusLocationCode: locationCode }
@@ -71307,8 +71307,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "MISSION" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Mission" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "TASK" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Task" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
@@ -71370,7 +71370,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                             onChange: (event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })
                           }
                         ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation mission" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation task" })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "No. Aircraft", value: profile.formationAircraft, disabled: !canEditSection("platform-standard-missions") || !profile.isFormation, onChange: (value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) }) })
@@ -71430,7 +71430,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Required Roles" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this mission must include when scheduled." : "Only used when Custom Crew is selected." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this task must include when scheduled." : "Only used when Custom Crew is selected." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", className: platformActionButtonClass, children: "Add Role" })
                   ] }),
@@ -72061,7 +72061,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       label: "TAS (KTAS)",
                       value: aircraft.defaultTasKtas ?? null,
                       disabled: !canEditResourcePools,
-                      info: "Used for route/time planning when a mission or event does not specify a custom speed.",
+                      info: "Used for route/time planning when a task or event does not specify a custom speed.",
                       onChange: (value) => updateRow("aircraftTypes", index, { defaultTasKtas: value })
                     }
                   ),

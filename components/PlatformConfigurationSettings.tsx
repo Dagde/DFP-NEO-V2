@@ -1471,7 +1471,7 @@ const buildConfigurationHealth = (
         'Locations',
         `${locationCode} daylight data incomplete`,
         defaultProfile
-          ? 'The app can currently fall back to a built-in Australian base profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations.'
+          ? 'The app can currently fall back to a system daylight profile for this known location, but the location should store its own latitude, longitude and IANA timezone for offline daylight calculations.'
           : 'Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.',
         `location-${locationCode}-solar`,
         undefined,
@@ -7143,8 +7143,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-800 bg-gray-950/70 px-4 py-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'MISSION'}</span>
-                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Mission'}</h4>
+                            <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'TASK'}</span>
+                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Task'}</h4>
                             <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
                           </div>
                           <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
@@ -7210,7 +7210,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     disabled={!canEditSection('platform-standard-missions')}
                                     onChange={(event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })}
                                   />
-                                  <span className="text-sm font-semibold text-gray-200">Formation mission</span>
+                                  <span className="text-sm font-semibold text-gray-200">Formation task</span>
                                 </label>
                               </div>
                               <NumberField label="No. Aircraft" value={profile.formationAircraft} disabled={!canEditSection('platform-standard-missions') || !profile.isFormation} onChange={(value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) })} />
@@ -7289,7 +7289,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
                                 <div className={resourceSectionPanelTitleClass}>Required Roles</div>
-                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this mission must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
+                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this task must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
                               </div>
                               <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
                             </div>
@@ -7939,7 +7939,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         label="TAS (KTAS)"
                         value={aircraft.defaultTasKtas ?? null}
                         disabled={!canEditResourcePools}
-                        info="Used for route/time planning when a mission or event does not specify a custom speed."
+                        info="Used for route/time planning when a task or event does not specify a custom speed."
                         onChange={(value) => updateRow('aircraftTypes', index, { defaultTasKtas: value })}
                       />
                       <TasField
