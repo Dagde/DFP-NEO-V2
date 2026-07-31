@@ -3702,7 +3702,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {isOpen ? 'v' : '>'}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Standard Mission'}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Mission Profile'}</span>
                     <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70">{unitLabel}</span>
                   </span>
                 </button>
@@ -3745,7 +3745,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="border-t border-slate-800 px-4 pb-4 pt-3">
                   {pendingStandardMissionSaveId === profile.id && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3">
-                      <p className="text-sm font-semibold text-amber-100">Save these Standard Mission changes permanently, or today only?</p>
+                      <p className="text-sm font-semibold text-amber-100">Save these Mission Profile changes permanently, or today only?</p>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -3773,7 +3773,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                       </div>
                     ) : (
                       <div>
-                        <span className="block">{missionName || 'Unnamed Standard Mission'}</span>
+                        <span className="block">{missionName || 'Unnamed Mission Profile'}</span>
                         <span className="mt-1 block text-xs text-cyan-200/70">{shortTitle || 'No short title'}</span>
                       </div>
                     ))}

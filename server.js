@@ -8875,7 +8875,7 @@ async function seedCommercialConfigIfEmpty(db) {
   const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
   const settings = settingsRows?.[0]?.data || {};
   const now = new Date().toISOString();
-  const locationNames = Array.isArray(settings.locations) && settings.locations.length > 0 ? settings.locations : ['East Sale'];
+  const locationNames = Array.isArray(settings.locations) && settings.locations.length > 0 ? settings.locations : ['Base'];
   const abbreviations = settings.locationAbbreviations || {};
   const units = Array.isArray(settings.units) && settings.units.length > 0 ? settings.units : ['Training Unit'];
   const unitLocations = settings.unitLocations || {};

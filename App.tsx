@@ -22644,7 +22644,7 @@ const App: React.FC = () => {
                 compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
                 compositeProfileId: String(row?.compositeProfileId || '').trim(),
                 aircraftTypeCode: String(row?.aircraftTypeCode || '').trim().toUpperCase(),
-                missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`).trim(),
+                missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
                 shortTitle: String(row?.shortTitle || '').trim().slice(0, 8),
                 description: String(row?.description || '').trim(),
                 resourceType: (['Flight', 'FTD', 'CPT', 'Ground'].includes(String(row?.resourceType || row?.type || 'Flight')) ? String(row?.resourceType || row?.type || 'Flight') : 'Flight') as StandardMissionProfile['resourceType'],

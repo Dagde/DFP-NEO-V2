@@ -41050,7 +41050,7 @@ const PrioritiesView = ({
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200", children: isOpen ? "v" : ">" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Standard Mission" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Mission Profile" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70", children: unitLabel })
                 ] })
               ]
@@ -41090,7 +41090,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these Standard Mission changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these Mission Profile changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -41117,7 +41117,7 @@ const PrioritiesView = ({
               renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Mission name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Standard Mission" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Mission Profile" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-200/70", children: shortTitle || "No short title" })
             ] })),
             renderStandardMissionTile("Unit / Aircraft", /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -65934,7 +65934,7 @@ const normaliseStandardMissionProfiles = (source) => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || "").slice(0, 8),
       description: String(row?.description || ""),
       resourceType,
@@ -66813,7 +66813,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} Standard Mission, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} Mission Profile, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
       "Open Crew Composition, press Edit, then Save. Saving that section creates the missing per-unit copies while preserving the combined-unit profile group.",
       { section: "crew-composition", label: "Crew Composition", focusSubsectionId: "platform-crew-composition" }
@@ -69927,7 +69927,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
       compositeProfileId: combinedContext ? baseId : "",
       aircraftTypeCode,
-      missionName: `Standard Mission ${missionIndex}`,
+      missionName: `Mission Profile ${missionIndex}`,
       shortTitle: `MISSION${missionIndex}`.slice(0, 8),
       description: "",
       resourceType: "Flight",
@@ -105716,7 +105716,7 @@ const App = () => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Standard Mission ${index + 1}`).trim(),
+      missionName: String(row?.missionName || row?.name || `Mission Profile ${index + 1}`).trim(),
       shortTitle: String(row?.shortTitle || "").trim().slice(0, 8),
       description: String(row?.description || "").trim(),
       resourceType: ["Flight", "FTD", "CPT", "Ground"].includes(String(row?.resourceType || row?.type || "Flight")) ? String(row?.resourceType || row?.type || "Flight") : "Flight",
