@@ -6873,7 +6873,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </p>
                     </div>
                     <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
-                      {profiles.length} profiles
+                      {profiles.length} task{profiles.length === 1 ? '' : 's'}
                     </span>
                   </div>
                   <TextAreaField

@@ -70994,7 +70994,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
-                " profiles"
+                " task",
+                profiles.length === 1 ? "" : "s"
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
