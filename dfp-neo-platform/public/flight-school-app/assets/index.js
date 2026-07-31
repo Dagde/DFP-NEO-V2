@@ -3551,9 +3551,9 @@ const getAircraftCrewResourceKindForEvent = (event) => {
   return "flight";
 };
 const getAircraftCrewCompositionForEvent = (composition, event) => filterAircraftCrewCompositionForResource(composition, getAircraftCrewResourceKindForEvent(event));
-const getAircraftTypeCrewComposition = (platformConfig, aircraftTypeCode) => {
+const getAircraftTypeCrewComposition = (platformConfig2, aircraftTypeCode) => {
   const normalisedCode = String(aircraftTypeCode || "").trim().toUpperCase();
-  const aircraftType = (platformConfig?.aircraftTypes || []).find((candidate) => String(candidate?.code || "").trim().toUpperCase() === normalisedCode);
+  const aircraftType = (platformConfig2?.aircraftTypes || []).find((candidate) => String(candidate?.code || "").trim().toUpperCase() === normalisedCode);
   return normaliseAircraftCrewComposition(aircraftType?.crewComposition);
 };
 const DEFAULT_CREW_POSITION_TERMINOLOGY = {
@@ -6709,7 +6709,7 @@ const CurrencyBuilderView = ({
   onBack,
   masterCurrencies,
   currencyRequirements,
-  activeUnitCode,
+  activeUnitCode: activeUnitCode2,
   importUnitOptions = [],
   onSave,
   onDelete,
@@ -6783,7 +6783,7 @@ const CurrencyBuilderView = ({
   const handleImportFromUnit = () => {
     if (!isEditUnlocked || !importSourceUnit || !onImportFromUnit) return;
     const sourceLabel = importUnitOptions.find((option) => option.unitCode === importSourceUnit)?.label || importSourceUnit;
-    const targetLabel = activeUnitCode || "this unit";
+    const targetLabel = activeUnitCode2 || "this unit";
     if (!window.confirm(`Import currency and recency definitions from ${sourceLabel} into ${targetLabel}?
 
 This replaces the current ${targetLabel} currency/recency list.`)) return;
@@ -6827,7 +6827,7 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Currency Builder" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
           "Define primitive and composite currency rules",
-          activeUnitCode ? ` for ${activeUnitCode}` : "",
+          activeUnitCode2 ? ` for ${activeUnitCode2}` : "",
           "."
         ] })
       ] }),
@@ -6881,7 +6881,7 @@ This replaces the current ${targetLabel} currency/recency list.`)) return;
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("primitive"), disabled: !isEditUnlocked, className: "flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "+ Primitive" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleAddCurrency("composite"), disabled: !isEditUnlocked, className: "flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold disabled:cursor-not-allowed disabled:bg-gray-700 disabled:text-gray-400", children: "+ Composite" })
           ] }),
-          activeUnitCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2", children: [
+          activeUnitCode2 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-sky-500/30 bg-sky-950/20 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-[10px] font-semibold uppercase tracking-wide text-sky-300", children: [
               "Import from unit",
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -7360,12 +7360,12 @@ const Dropdown$2 = ({ label, value, onChange, children, id }) => /* @__PURE__ */
   )
 ] });
 const normaliseContextValue = (value) => String(value || "").trim().toLowerCase();
-const resolveActiveLocationOption = (locationOptions, activeLocationCode, platformConfig) => {
+const resolveActiveLocationOption = (locationOptions, activeLocationCode, platformConfig2) => {
   const active = String(activeLocationCode || "").trim();
   if (!active) return locationOptions[0] || "";
   const candidates = /* @__PURE__ */ new Set([active]);
   const activeKey = normaliseContextValue(active);
-  const platformLocation = (platformConfig?.locations || []).find((loc) => {
+  const platformLocation = (platformConfig2?.locations || []).find((loc) => {
     const values = [loc.code, loc.iataCode, loc.name];
     return values.some((value) => normaliseContextValue(value) === activeKey);
   });
@@ -7377,16 +7377,16 @@ const resolveActiveLocationOption = (locationOptions, activeLocationCode, platfo
   const candidateKeys = new Set(Array.from(candidates).map(normaliseContextValue));
   return locationOptions.find((option) => candidateKeys.has(normaliseContextValue(option))) || active || locationOptions[0] || "";
 };
-const buildUnitOptions = (unitOptions, activeUnitCode) => {
-  const active = String(activeUnitCode || "").trim();
+const buildUnitOptions = (unitOptions, activeUnitCode2) => {
+  const active = String(activeUnitCode2 || "").trim();
   const deduped = Array.from(new Set(unitOptions.filter(Boolean)));
   if (active && !deduped.some((unit) => normaliseContextValue(unit) === normaliseContextValue(active))) {
     return [active, ...deduped];
   }
   return deduped;
 };
-const resolveActiveUnitOption = (unitOptions, activeUnitCode) => {
-  const active = String(activeUnitCode || "").trim();
+const resolveActiveUnitOption = (unitOptions, activeUnitCode2) => {
+  const active = String(activeUnitCode2 || "").trim();
   if (!active) return unitOptions[0] || "";
   return unitOptions.find((unit) => normaliseContextValue(unit) === normaliseContextValue(active)) || active || unitOptions[0] || "";
 };
@@ -7405,19 +7405,19 @@ const AddCourseFlyout = ({
   locations = [],
   units = [],
   activeLocationCode = "",
-  activeUnitCode = "",
-  platformConfig = null,
+  activeUnitCode: activeUnitCode2 = "",
+  platformConfig: platformConfig2 = null,
   serviceDefinitions = []
 }) => {
   const locationOptions = reactExports.useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
-  const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
+  const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode2), [units, activeUnitCode2]);
   const defaultLocation = reactExports.useMemo(
-    () => resolveActiveLocationOption(locationOptions, activeLocationCode, platformConfig),
-    [locationOptions, activeLocationCode, platformConfig]
+    () => resolveActiveLocationOption(locationOptions, activeLocationCode, platformConfig2),
+    [locationOptions, activeLocationCode, platformConfig2]
   );
   const defaultUnit = reactExports.useMemo(
-    () => resolveActiveUnitOption(unitOptions, activeUnitCode),
-    [unitOptions, activeUnitCode]
+    () => resolveActiveUnitOption(unitOptions, activeUnitCode2),
+    [unitOptions, activeUnitCode2]
   );
   const [courseName, setCourseName] = reactExports.useState("");
   const [startDate, setStartDate] = reactExports.useState("");
@@ -10261,10 +10261,10 @@ const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
   return `${year}-${month}-${day}`;
 };
 const DEFAULT_UNIT_TYPES$1 = ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"];
-const normaliseUnitTypeOptions = (platformConfig) => {
+const normaliseUnitTypeOptions = (platformConfig2) => {
   const seen = /* @__PURE__ */ new Set();
-  const sourceValues = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : DEFAULT_UNIT_TYPES$1;
-  const usedValues = Array.isArray(platformConfig?.units) ? platformConfig.units.map((unit) => unit?.unitType) : [];
+  const sourceValues = Array.isArray(platformConfig2?.unitTypes) ? platformConfig2.unitTypes : DEFAULT_UNIT_TYPES$1;
+  const usedValues = Array.isArray(platformConfig2?.units) ? platformConfig2.units.map((unit) => unit?.unitType) : [];
   return [...sourceValues, ...usedValues].map((value) => String(value || "").trim()).filter((value) => {
     if (!value) return false;
     const key = value.toUpperCase();
@@ -10292,14 +10292,14 @@ const normaliseOrgChartKey = (value) => normaliseOrgChartValue(value).toLowerCas
 const ORGANISATION_LABEL_ALIASES = {
   "air movements group": "Air Mobility Group"
 };
-const getActiveOrganisation = (platformConfig) => (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0] || null;
+const getActiveOrganisation = (platformConfig2) => (platformConfig2?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0] || null;
 const getOrganisationStructureRootLabel = (activeOrganisation, levels) => {
   const levelZeroOptions = Array.isArray(levels[0]?.options) ? levels[0].options : [];
   return normaliseOrgChartValue(levelZeroOptions[0]) || normaliseOrgChartValue(activeOrganisation?.name || activeOrganisation?.code) || normaliseOrgChartValue(levels[0]?.name) || "Organisation";
 };
-const getOrganisationRepairMaps = (platformConfig, levels) => {
+const getOrganisationRepairMaps = (platformConfig2, levels) => {
   const repairMaps = /* @__PURE__ */ new Map();
-  const activeOrganisation = getActiveOrganisation(platformConfig);
+  const activeOrganisation = getActiveOrganisation(platformConfig2);
   const structure = activeOrganisation?.settings?.organisationStructure || {};
   const rootLabel = getOrganisationStructureRootLabel(activeOrganisation, levels);
   const structuralReferencesByLevel = /* @__PURE__ */ new Map();
@@ -10317,7 +10317,7 @@ const getOrganisationRepairMaps = (platformConfig, levels) => {
     const startsAtRoot = normaliseOrgChartKey(path[0]) === normaliseOrgChartKey(rootLabel);
     path.forEach((part, pathIndex) => addReference(structuralReferencesByLevel, startsAtRoot ? pathIndex : pathIndex + 1, part));
   });
-  (platformConfig?.units || []).forEach((unit) => {
+  (platformConfig2?.units || []).forEach((unit) => {
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
     const path = rawPath.map(normaliseOrgChartValue).filter(Boolean);
     const startsAtRoot = normaliseOrgChartKey(path[0]) === normaliseOrgChartKey(rootLabel);
@@ -10386,8 +10386,8 @@ const addOrganisationChartPath = (root2, path, levelNames, unitCode) => {
     }
   }
 };
-const buildOrganisationChart = (platformConfig) => {
-  const activeOrganisation = getActiveOrganisation(platformConfig);
+const buildOrganisationChart = (platformConfig2) => {
+  const activeOrganisation = getActiveOrganisation(platformConfig2);
   if (!activeOrganisation) return null;
   const structure = activeOrganisation?.settings?.organisationStructure || {};
   const levels = Array.isArray(structure.levels) ? structure.levels : [];
@@ -10401,7 +10401,7 @@ const buildOrganisationChart = (platformConfig) => {
     children: []
   };
   const rootKey = root2.label.toLowerCase();
-  const repairMaps = getOrganisationRepairMaps(platformConfig, levels);
+  const repairMaps = getOrganisationRepairMaps(platformConfig2, levels);
   const relationshipPaths = Array.isArray(structure.relationshipPaths) ? structure.relationshipPaths : [];
   relationshipPaths.forEach((rawPath) => {
     const path = (Array.isArray(rawPath) ? rawPath : String(rawPath || "").split(">")).map(normaliseOrgChartValue).filter(Boolean);
@@ -10411,7 +10411,7 @@ const buildOrganisationChart = (platformConfig) => {
     addOrganisationChartPath(root2, displayPath, levelNames);
   });
   const activeOrganisationCode = normaliseOrgChartValue(activeOrganisation.code).toLowerCase();
-  (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!activeOrganisationCode || normaliseOrgChartValue(unit?.organisationCode).toLowerCase() === activeOrganisationCode)).forEach((unit) => {
+  (platformConfig2?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!activeOrganisationCode || normaliseOrgChartValue(unit?.organisationCode).toLowerCase() === activeOrganisationCode)).forEach((unit) => {
     const unitCode = normaliseOrgChartValue(unit?.code || unit?.name);
     if (!unitCode) return;
     const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
@@ -11040,17 +11040,17 @@ const getUnitParentOrganisationPath = (unit) => {
   const rawPath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
   return rawPath.map((item) => String(item || "").trim()).filter(Boolean);
 };
-const getResolvedUnitParentOrganisationPath = (platformConfig, unit) => {
+const getResolvedUnitParentOrganisationPath = (platformConfig2, unit) => {
   const path = getUnitParentOrganisationPath(unit);
-  const activeOrganisation = getActiveOrganisation(platformConfig);
+  const activeOrganisation = getActiveOrganisation(platformConfig2);
   const levels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-  const repairMaps = getOrganisationRepairMaps(platformConfig, levels);
+  const repairMaps = getOrganisationRepairMaps(platformConfig2, levels);
   return path.map((part, pathIndex) => getCanonicalOrganisationLabel(levels, repairMaps, pathIndex + 1, part)).filter(Boolean);
 };
-const getRelevantResourcePoolsForUnit = (platformConfig, unit) => {
+const getRelevantResourcePoolsForUnit = (platformConfig2, unit) => {
   const unitCode = normaliseUnitSettingsIdentifier(unit?.code);
   const locationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
-  return (platformConfig?.resourcePools || []).filter((pool) => {
+  return (platformConfig2?.resourcePools || []).filter((pool) => {
     if (String(pool?.status || "ACTIVE").toUpperCase() === "INACTIVE") return false;
     const poolUnitCode = normaliseUnitSettingsIdentifier(pool?.unitCode);
     const poolLocationCode = normaliseUnitSettingsIdentifier(pool?.locationCode);
@@ -11180,33 +11180,33 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
     }
   )
 ] });
-const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
+const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
-  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
-  const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
-  const units = platformConfig?.units || [];
-  const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
+  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig2), [platformConfig2]);
+  const activeUnitCode2 = normaliseUnitSettingsIdentifier(unitCode);
+  const units = platformConfig2?.units || [];
+  const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode2) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
   unit ? units.findIndex((candidate) => candidate === unit) : -1;
   const unitHasTrainees = unit?.settings?.hasTrainees !== false;
-  const locations = platformConfig?.locations || [];
-  const modules = platformConfig?.modules || [];
-  const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig, unit) : [];
+  const locations = platformConfig2?.locations || [];
+  const modules = platformConfig2?.modules || [];
+  const resourcePools = unit ? getRelevantResourcePoolsForUnit(platformConfig2, unit) : [];
   const primaryResourcePool = resourcePools[0] || null;
   const primaryResourcePoolFocusKey = primaryResourcePool ? String(primaryResourcePool.id || primaryResourcePool.code || primaryResourcePool.name || "").trim() : "";
-  const unitModules = platformConfig?.unitModules || [];
-  (platformConfig?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
+  const unitModules = platformConfig2?.unitModules || [];
+  (platformConfig2?.schedulingRuleSets || []).filter((ruleSet) => String(ruleSet?.isActive ?? true) !== "false" && (!ruleSet?.unitCode || normaliseUnitSettingsIdentifier(ruleSet.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
   const location = locations.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === normaliseUnitSettingsIdentifier(unit?.locationCode));
-  const parentPath = getResolvedUnitParentOrganisationPath(platformConfig, unit);
+  const parentPath = getResolvedUnitParentOrganisationPath(platformConfig2, unit);
   const operationalModel = getUnitOperationalModel(unit);
   const modelOptionLabels = Object.fromEntries(OPERATIONAL_MODEL_OPTIONS.map((option) => [option.value, option.label]));
   const taskAbbreviations = unit?.settings?.taskProfileAbbreviations || {};
-  const validTaskAbbreviations = getTaskProfileAbbreviationsForUnit(platformConfig, unit?.code);
-  const taskProfilesForUnit = getTaskProfilesForModel(platformConfig, operationalModel);
+  const validTaskAbbreviations = getTaskProfileAbbreviationsForUnit(platformConfig2, unit?.code);
+  const taskProfilesForUnit = getTaskProfilesForModel(platformConfig2, operationalModel);
   const taskTileLabelProfiles = Array.from(new Set([
     ...taskProfilesForUnit,
     ...Object.keys(validTaskAbbreviations || {})
   ].map((profile) => String(profile || "").trim()).filter(Boolean)));
-  const activeOrganisation = getActiveOrganisation(platformConfig);
+  const activeOrganisation = getActiveOrganisation(platformConfig2);
   const organisationSettings = activeOrganisation?.settings || {};
   const resourceSharingGroups = Array.isArray(organisationSettings.resourceSharingGroups) && organisationSettings.resourceSharingGroups.length > 0 ? organisationSettings.resourceSharingGroups : Array.isArray(organisationSettings.selectedUnits) && organisationSettings.selectedUnits.length > 0 ? [{ id: "legacy-resource-sharing", name: `${organisationSettings.selectedUnits.join("+")} Shared Resources`, selectedUnits: organisationSettings.selectedUnits, allocationMode: organisationSettings.allocationMode }] : [];
   const staffSharingGroups = Array.isArray(organisationSettings.staffSharingGroups) && organisationSettings.staffSharingGroups.length > 0 ? organisationSettings.staffSharingGroups : Array.isArray(organisationSettings.staffSharingUnits) && organisationSettings.staffSharingUnits.length > 0 ? [{ id: "legacy-staff-sharing", name: `${organisationSettings.staffSharingUnits.join("+")} Staff Sharing`, selectedUnits: organisationSettings.staffSharingUnits }] : [];
@@ -11220,13 +11220,13 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
   const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) && organisationSettings.permissionProfiles.length > 0 ? organisationSettings.permissionProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
   const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile) => [String(profile.id || "").trim(), profile.name || profile.id]));
-  const platformUsers = platformConfig?.platformUsers || [];
+  const platformUsers = platformConfig2?.platformUsers || [];
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
   const unitCallsignSettings = normaliseUnitCallsignSettings(organisationSettings.unitCallsignSettings || null);
   const trainingReportTerminology = normaliseTrainingReportTerminology(unit?.settings?.trainingReportTerminology || organisationSettings.trainingReportTerminology || null);
   const trainingReportTemplate = normaliseTrainingReportTemplate(unit?.settings?.trainingReportTemplate || organisationSettings.trainingReportTemplate || null);
   const aircraftTypeCodes = Array.from(new Set(resourcePools.map((pool) => String(pool.aircraftTypeCode || "").trim().toUpperCase()).filter(Boolean)));
-  const aircraftTypesForUnit = (platformConfig?.aircraftTypes || []).filter((aircraft) => aircraftTypeCodes.includes(String(aircraft.code || "").trim().toUpperCase()));
+  const aircraftTypesForUnit = (platformConfig2?.aircraftTypes || []).filter((aircraft) => aircraftTypeCodes.includes(String(aircraft.code || "").trim().toUpperCase()));
   const primaryAircraftTypeCode = aircraftTypesForUnit[0]?.code || aircraftTypeCodes[0] || "";
   const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)) && profile.operationalModels.includes(operationalModel));
   const currencyProfiles = crewCompositionSettings.currencyProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)));
@@ -11234,7 +11234,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const masterLmpAccessRules = Array.isArray(organisationSettings.masterLmpAccess) ? organisationSettings.masterLmpAccess : [];
   const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule) => !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
   const unitHomeLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
-  const userAccessForUnit = (platformConfig?.userAccess || []).filter((access) => {
+  const userAccessForUnit = (platformConfig2?.userAccess || []).filter((access) => {
     const accessUnitCode = normaliseUnitSettingsIdentifier(access?.unitCode);
     const accessLocationCode = normaliseUnitSettingsIdentifier(access?.locationCode);
     if (accessUnitCode) return accessUnitCode === normaliseUnitSettingsIdentifier(unit?.code);
@@ -11283,7 +11283,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     groups[key].count += 1;
     return groups;
   }, {}));
-  (platformConfig?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
+  (platformConfig2?.licenses || []).filter((license) => String(license?.status || "ACTIVE").toUpperCase() === "ACTIVE");
   const unitCallsignEntries = unitCallsignSettings.entries.filter((entry) => normaliseUnitSettingsIdentifier(entry.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
   const unitFormationCallsigns = formationCallsigns.filter((callsign) => normaliseUnitSettingsIdentifier(callsign.unit) === normaliseUnitSettingsIdentifier(unit?.code));
   const buildRules = buildRuleSettings || {};
@@ -11746,9 +11746,9 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     ] })
   ] });
 };
-const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
+const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
-  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
+  const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig2), [platformConfig2]);
   const [wizardStep, setWizardStep] = reactExports.useState(() => {
     if (typeof window === "undefined") return 0;
     const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -11912,11 +11912,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       }))
     });
   }, [uploadedCourseLmpItems]);
-  const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
-  const currentUnit = (platformConfig?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)) || (platformConfig?.units || [])[0];
+  const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
+  const currentUnit = (platformConfig2?.units || []).find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === normaliseUnitSettingsIdentifier(unitCode)) || (platformConfig2?.units || [])[0];
   const activeWizardLocationCode = String(locationCode || currentUnit?.locationCode || "").trim().toUpperCase();
   const currentUnitLocationKey = normaliseUnitSettingsIdentifier(currentUnit?.locationCode || activeWizardLocationCode);
-  const currentLocation = (platformConfig?.locations || []).find((location) => [
+  const currentLocation = (platformConfig2?.locations || []).find((location) => [
     location?.code,
     location?.iataCode,
     location?.icao,
@@ -11926,9 +11926,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     location?.settings?.legacyCode,
     ...Array.isArray(location?.aliases) ? location.aliases : [],
     ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
-  ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) || (platformConfig?.locations || [])[0];
+  ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) || (platformConfig2?.locations || [])[0];
   const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
-  const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeLocations = (platformConfig2?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const wizardLocationProfiles = Array.from(new Map([
     ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile),
     ...activeLocations.map(normaliseWizardLocationProfile)
@@ -11949,10 +11949,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     iata: activeWizardLocationProfile?.iata || "",
     name: activeWizardLocationProfile?.name || activeWizardLocationCode || ""
   };
-  const activeUnits = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
-  const activeAircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
-  const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
-  const activeUserAccess = (platformConfig?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeUnits = (platformConfig2?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeAircraftTypes = (platformConfig2?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeResourcePools = (platformConfig2?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeUserAccess = (platformConfig2?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
   const activeMasterLmpAccess = Array.isArray(activeOrganisation?.settings?.masterLmpAccess) ? activeOrganisation.settings.masterLmpAccess.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
   const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
@@ -12531,7 +12531,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       setSaveMessage("This screen is not connected to the platform configuration in this session.");
       return;
     }
-    onUpdatePlatformConfig((current) => updater(current || platformConfig || {}));
+    onUpdatePlatformConfig((current) => updater(current || platformConfig2 || {}));
     setSaveMessage(message);
   };
   const updatePrimaryOrganisationWithSettings = (baseConfig, settingsUpdater) => {
@@ -13850,7 +13850,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const renderUnitModulesEditor = () => {
     const configuredRows = parseWizardPipeRows(unitModulesDraft, ["module", "enabled"]);
     const moduleNames = Array.from(new Set([
-      ...(platformConfig?.modules || []).map((module) => String(module?.name || module?.code || "").trim()),
+      ...(platformConfig2?.modules || []).map((module) => String(module?.name || module?.code || "").trim()),
       "DFP",
       "NEO Build",
       "Program Schedule",
@@ -14762,7 +14762,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const unitRows = parseWizardUnitRows(unitsTodayDraft);
     if (onUpdatePlatformConfig && (locationRows.length > 0 || unitRows.length > 0)) {
       onUpdatePlatformConfig((current) => {
-        const baseConfig = current || platformConfig || {};
+        const baseConfig = current || platformConfig2 || {};
         const existingLocations = Array.isArray(baseConfig.locations) ? baseConfig.locations : [];
         const existingUnits = Array.isArray(baseConfig.units) ? baseConfig.units : [];
         const nextLocations = [...existingLocations];
@@ -15846,8 +15846,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     ] })
   ] });
 };
-const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
-  const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig), [platformConfig]);
+const OrganisationSlideoutDiagram = ({ platformConfig: platformConfig2, unitCode, locationCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2 = false, onSaveSetupTestPersonnel, isOpen = false, onInitialSetupWizardActiveChange }) => {
+  const chart = reactExports.useMemo(() => buildOrganisationChart(platformConfig2), [platformConfig2]);
   const [selectedNodeId, setSelectedNodeId] = reactExports.useState(null);
   const [activeView, setActiveView] = reactExports.useState("structure");
   reactExports.useEffect(() => {
@@ -15869,7 +15869,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
   const handleSelectNode = reactExports.useCallback((node) => {
     setSelectedNodeId((current) => current === node.id ? null : node.id);
   }, []);
-  const unitCount = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
+  const unitCount = (platformConfig2?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").length;
   const levelHeights = chart ? getOrganisationChartLevelHeights(chart) : /* @__PURE__ */ new Map();
   const chartMetrics = chart ? getOrganisationChartVisibleMetrics(chart, levelHeights, focusedPath, selectedPathIds) : { width: 560, height: 320 };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `h-full overflow-y-auto px-5 py-4 text-slate-100 ${activeView === "structure" ? "overflow-x-auto" : "overflow-x-hidden"}`, children: [
@@ -15980,7 +15980,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
     ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-h-[320px] items-center justify-center rounded border border-cyan-400/20 bg-slate-950/55 p-6 text-center text-xs text-slate-400", children: "No organisation structure has been configured." }) : activeView === "unitSettings" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       OrganisationMyUnitSettings,
       {
-        platformConfig,
+        platformConfig: platformConfig2,
         unitCode,
         formationCallsigns,
         buildRuleSettings,
@@ -15990,7 +15990,7 @@ const OrganisationSlideoutDiagram = ({ platformConfig, unitCode, locationCode, f
     ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       InitialSetupWizard,
       {
-        platformConfig,
+        platformConfig: platformConfig2,
         unitCode,
         locationCode,
         onUpdatePlatformConfig,
@@ -16063,7 +16063,7 @@ const ScheduleView = ({
   isReadOnly = false,
   onExternalEventDrop,
   diagnosticHighlightedEventIds = /* @__PURE__ */ new Set(),
-  platformConfig,
+  platformConfig: platformConfig2,
   onUpdatePlatformConfig,
   onNavigateToSettingsSection,
   isSetupTestMode: isSetupTestMode2 = false,
@@ -16095,12 +16095,12 @@ const ScheduleView = ({
   const scheduleGridRef = reactExports.useRef(null);
   const flightLinePoolContext = reactExports.useMemo(() => {
     const cleanUnitCode = normaliseUnitSettingsIdentifier(unitCode);
-    const units = Array.isArray(platformConfig?.units) ? platformConfig.units : [];
+    const units = Array.isArray(platformConfig2?.units) ? platformConfig2.units : [];
     const activeUnit = units.find((unit) => normaliseUnitSettingsIdentifier(unit?.code) === cleanUnitCode);
     const unitForPool = activeUnit || { code: unitCode, locationCode };
-    const pools = getRelevantResourcePoolsForUnit(platformConfig, unitForPool);
+    const pools = getRelevantResourcePoolsForUnit(platformConfig2, unitForPool);
     const pool = pools[0] || null;
-    const poolIndex = Array.isArray(platformConfig?.resourcePools) && pool ? platformConfig.resourcePools.findIndex((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "")) : -1;
+    const poolIndex = Array.isArray(platformConfig2?.resourcePools) && pool ? platformConfig2.resourcePools.findIndex((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "")) : -1;
     const settings = pool?.settings || {};
     const rawAircraftCount = Number(airframeCount ?? settings.aircraft ?? 5);
     const aircraftCount = Number.isFinite(rawAircraftCount) ? Math.max(0, Math.floor(rawAircraftCount)) : 5;
@@ -16121,7 +16121,7 @@ const ScheduleView = ({
       availableNumbers,
       unavailableNumbers
     };
-  }, [airframeCount, locationCode, platformConfig, unitCode]);
+  }, [airframeCount, locationCode, platformConfig2, unitCode]);
   const sortFlightLineAircraftNumbers = reactExports.useCallback((values) => [...values].sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })), []);
   const flightLineBaseUnavailableNumbers = flightLineLocalUnavailableNumbers || flightLinePoolContext.unavailableNumbers;
   const flightLineEffectiveUnavailableNumbers = reactExports.useMemo(() => {
@@ -17263,7 +17263,7 @@ const ScheduleView = ({
             className: `absolute left-0 top-0 h-full pointer-events-none border-r border-cyan-400/25 bg-slate-950/96 shadow-[18px_0_36px_rgba(0,0,0,0.38)] backdrop-blur transition-transform duration-300 ease-out ${showResourceUnderlayPanel ? "translate-x-0" : "-translate-x-full"}`,
             style: { width: "min(calc(clamp(360px, 40vw, 680px) + 400px), calc(100vw - 420px))" },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `h-full overflow-auto border-r border-white/5 bg-gradient-to-b from-slate-900/70 to-slate-950/80 ${showResourceUnderlayPanel ? "pointer-events-auto" : "pointer-events-none"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(OrganisationSlideoutDiagram, { platformConfig: platformConfig2, unitCode, locationCode, formationCallsigns, buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection, isSetupTestMode: isSetupTestMode2, onSaveSetupTestPersonnel, isOpen: showResourceUnderlayPanel, onInitialSetupWizardActiveChange }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "button",
                 {
@@ -23570,7 +23570,7 @@ const TraineeProfileFlyout = ({
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
-  platformConfig = null,
+  platformConfig: platformConfig2 = null,
   staffQualificationCatalogue,
   operationalModel = "flight_school",
   crewPositionTerminology
@@ -23611,9 +23611,9 @@ const TraineeProfileFlyout = ({
   const contentScrollRef = reactExports.useRef(null);
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const activeTrainingReportUnitCode = trainee.unit || "";
-  const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
+  const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig2, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
   const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
-  const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
+  const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig2, activeTrainingReportUnitCode, phraseBank);
   reactExports.useEffect(() => {
     if (activeTab !== "review") return;
     setReviewLogbookLoading(true);
@@ -24065,7 +24065,7 @@ const TraineeProfileFlyout = ({
   const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
-    normaliseMasterLmpCatalogue(platformConfig).forEach((entry) => {
+    normaliseMasterLmpCatalogue(platformConfig2).forEach((entry) => {
       const code = String(entry.code || entry.name || "").trim();
       if (code && code !== "Staff CAT") courseCodes.add(code);
     });
@@ -24073,19 +24073,19 @@ const TraineeProfileFlyout = ({
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails, trainee.unit, unit]);
+  }, [platformConfig2, syllabusDetails, trainee.unit, unit]);
   const academicLmpCourses = reactExports.useMemo(() => {
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, allAcademicLmpCourses, {
       unitCode: unit || trainee.unit,
       operationalModel: "flight_school"
     }, "Assign");
     return allowed.sort();
-  }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
+  }, [allAcademicLmpCourses, platformConfig2, trainee.unit, unit]);
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
@@ -26753,7 +26753,7 @@ const CourseRosterView = ({
   personnelDisplaySettings,
   trainingReportTerminology,
   trainingReportTemplate,
-  platformConfig = null,
+  platformConfig: platformConfig2 = null,
   staffQualificationCatalogue,
   operationalModel = "flight_school",
   crewPositionTerminology
@@ -27072,7 +27072,7 @@ const CourseRosterView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         trainingReportTerminology,
-        platformConfig,
+        platformConfig: platformConfig2,
         staffQualificationCatalogue,
         operationalModel,
         crewPositionTerminology,
@@ -28074,7 +28074,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode: activeUnitCode2 = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -28266,7 +28266,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   }), []);
   const isAirCombatSoloContinuation = isAirCombatModel && isContinuationTile && crew[0]?.flightType === "Solo";
   const displayedCrewRequirement = isAirCombatSoloContinuation ? airCombatSoloCrewRequirement : crewRequirement;
-  const activeUnitNormalised = String(activeUnitCode || "").trim().toUpperCase();
+  const activeUnitNormalised = String(activeUnitCode2 || "").trim().toUpperCase();
   const activeUnitMemberCodes = reactExports.useMemo(() => activeUnitNormalised.split("+").map((unit) => normaliseFixedCrewUnitCode(unit)).filter(Boolean), [activeUnitNormalised]);
   const staffMatchesActiveFixedCrewUnit = (staff, crewKey) => {
     const staffUnit = normaliseFixedCrewUnitCode(staff.unit);
@@ -28292,18 +28292,18 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   };
   const resolveFixedCrewStaffAircraftRole = (staff) => {
     const rawRole = String(staff?.role || "").trim();
-    const normalisedRole = normaliseFixedCrewStaffRole(rawRole, staff?.unit || activeUnitCode);
+    const normalisedRole = normaliseFixedCrewStaffRole(rawRole, staff?.unit || activeUnitCode2);
     return resolveFixedCrewAircraftRole(normalisedRole) || resolveFixedCrewAircraftRole(rawRole);
   };
   const getFixedCrewStaffRoleLabel = (staff) => {
     const aircraftRole = resolveFixedCrewStaffAircraftRole(staff);
-    const rawRole = normaliseFixedCrewStaffRole(staff?.role, staff?.unit || activeUnitCode);
+    const rawRole = normaliseFixedCrewStaffRole(staff?.role, staff?.unit || activeUnitCode2);
     if (!aircraftRole) return rawRole.toUpperCase() === "AWO" ? "AWO" : "Unconfigured role";
     return getCrewPositionDisplayLabel(aircraftRole, crewPositionTerminology, aircraftRole);
   };
   const normaliseFixedCrewStaffRoleKey = (staff) => {
     const aircraftRole = resolveFixedCrewStaffAircraftRole(staff);
-    const rawRole = normaliseFixedCrewStaffRole(staff?.role, staff?.unit || activeUnitCode);
+    const rawRole = normaliseFixedCrewStaffRole(staff?.role, staff?.unit || activeUnitCode2);
     const entry = findCrewPositionEntry(aircraftRole || rawRole, crewPositionTerminology);
     return String(entry?.genericName || aircraftRole || rawRole || "").trim().toUpperCase();
   };
@@ -28777,9 +28777,9 @@ ${swapNote}` : swapNote
     return { grouped, sortedUnits };
   }, [instructorList, traineesData, instructorsData, personnelDisplaySettings]);
   const activeEventUnitCodes = reactExports.useMemo(() => {
-    const rawUnit = String(activeUnitCode || event.unitCode || event.unit || "").trim().toUpperCase();
+    const rawUnit = String(activeUnitCode2 || event.unitCode || event.unit || "").trim().toUpperCase();
     return rawUnit.split("+").map((unit) => unit.trim()).filter(Boolean);
-  }, [activeUnitCode, event]);
+  }, [activeUnitCode2, event]);
   const isStaffPilotRole = (staff) => String(staff?.role || "").trim().toLowerCase() === "pilot";
   const airCombatPilotsByUnit = reactExports.useMemo(() => {
     const grouped = {};
@@ -29043,7 +29043,7 @@ ${swapNote}` : swapNote
       const normalise = (value) => String(value || "").trim().toUpperCase();
       const currentLocationKey = normalise(currentLocation);
       const activeUnits = new Set(
-        String(activeUnitCode || "").split("+").map(normalise).filter(Boolean)
+        String(activeUnitCode2 || "").split("+").map(normalise).filter(Boolean)
       );
       const filtered = formationCallsigns.filter((cs) => {
         const callsignUnit = normalise(cs.unit);
@@ -29056,7 +29056,7 @@ ${swapNote}` : swapNote
       return filtered.length > 0 ? filtered : null;
     }
     return null;
-  }, [activeUnitCode, formationCallsigns, currentLocation]);
+  }, [activeUnitCode2, formationCallsigns, currentLocation]);
   const formationTypes = reactExports.useMemo(() => {
     if (filteredCallsigns) {
       return filteredCallsigns.map((cs) => cs.code);
@@ -29064,12 +29064,12 @@ ${swapNote}` : swapNote
     return [];
   }, [filteredCallsigns]);
   const unitCallsignEntries = reactExports.useMemo(
-    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode || school),
-    [activeUnitCode, school, unitCallsignSettings]
+    () => getUnitCallsignEntries(unitCallsignSettings, activeUnitCode2 || school),
+    [activeUnitCode2, school, unitCallsignSettings]
   );
   const defaultUnitCallsign = reactExports.useMemo(
-    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode || school),
-    [activeUnitCode, school, unitCallsignSettings]
+    () => getDefaultUnitCallsign(unitCallsignSettings, activeUnitCode2 || school),
+    [activeUnitCode2, school, unitCallsignSettings]
   );
   const callsignNumberOptions = reactExports.useMemo(
     () => Array.from({ length: 101 }, (_, value) => ({ value, label: formatUnitCallsignNumber(value) })),
@@ -31942,7 +31942,7 @@ const AddFlightTileModal = ({
   aircraftCrewComposition = DEFAULT_AIRCRAFT_CREW_COMPOSITION,
   crewCompositionSettings,
   operationalModel,
-  activeUnitCode = "",
+  activeUnitCode: activeUnitCode2 = "",
   activeUnitCodes = [],
   unitCallsignSettings,
   staffQualificationCatalogue,
@@ -32021,11 +32021,11 @@ const AddFlightTileModal = ({
   }, [eventsForDate, initialEvent]);
   const normaliseFixedCrewUnitCode2 = (value) => String(value || "").trim().toUpperCase();
   const activeFixedCrewUnitCodes = reactExports.useMemo(() => {
-    const rawUnits = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
+    const rawUnits = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode2 || "").split("+");
     return Array.from(new Set(
       rawUnits.map((unit) => normaliseFixedCrewUnitCode2(unit)).filter(Boolean)
     ));
-  }, [activeUnitCode, activeUnitCodes]);
+  }, [activeUnitCode2, activeUnitCodes]);
   const activeFixedCrewUnitCodeSet = reactExports.useMemo(
     () => new Set(activeFixedCrewUnitCodes),
     [activeFixedCrewUnitCodes]
@@ -32119,12 +32119,12 @@ const AddFlightTileModal = ({
     }).sort(compareFixedCrewMemberDisplay) : [];
   };
   const getFixedCrewPicCandidatesForGroup = (groupKey) => fixedCrewPicQualification ? getFixedCrewMembersForGroup(groupKey).filter((staff) => normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], staffQualificationCatalogue, false).includes(fixedCrewPicQualification.id)) : [];
-  const activeCallsignUnitCodes = reactExports.useMemo(() => isFixedCrewModel && activeFixedCrewUnitCodes.length > 0 ? activeFixedCrewUnitCodes : [normaliseFixedCrewUnitCode2(activeUnitCode)].filter(Boolean), [activeFixedCrewUnitCodes, activeUnitCode, isFixedCrewModel]);
+  const activeCallsignUnitCodes = reactExports.useMemo(() => isFixedCrewModel && activeFixedCrewUnitCodes.length > 0 ? activeFixedCrewUnitCodes : [normaliseFixedCrewUnitCode2(activeUnitCode2)].filter(Boolean), [activeFixedCrewUnitCodes, activeUnitCode2, isFixedCrewModel]);
   const activeFixedCrewCompositeCodes = reactExports.useMemo(() => new Set([
-    String(activeUnitCode || "").trim().toUpperCase(),
+    String(activeUnitCode2 || "").trim().toUpperCase(),
     activeFixedCrewUnitCodes.join("+"),
     activeFixedCrewUnitCodes.join("/")
-  ].filter(Boolean)), [activeFixedCrewUnitCodes, activeUnitCode]);
+  ].filter(Boolean)), [activeFixedCrewUnitCodes, activeUnitCode2]);
   const fixedCrewCurrencyProfileOptions = reactExports.useMemo(() => {
     const profiles = getContinuationEventCurrencyProfiles(sctEvents);
     return profiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((profile) => {
@@ -32207,7 +32207,7 @@ const AddFlightTileModal = ({
   const locationFullName = currentLocationName || school;
   const filteredFormationCallsigns = reactExports.useMemo(() => {
     const currentLocation = String(locationFullName || "").trim().toUpperCase();
-    const activeFormationUnits = new Set((activeUnitCodes.length > 0 ? activeUnitCodes : [activeUnitCode]).map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
+    const activeFormationUnits = new Set((activeUnitCodes.length > 0 ? activeUnitCodes : [activeUnitCode2]).map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean));
     return (formationCallsigns || []).filter((fc) => {
       const callsignLocation = String(fc.location || "").trim().toUpperCase();
       const callsignLocationCode = String(fc.locationCode || "").trim().toUpperCase();
@@ -32216,7 +32216,7 @@ const AddFlightTileModal = ({
       const matchesUnit = activeFormationUnits.size === 0 || !callsignUnit || activeFormationUnits.has(callsignUnit);
       return matchesLocation && matchesUnit;
     });
-  }, [activeUnitCode, activeUnitCodes, formationCallsigns, locationFullName]);
+  }, [activeUnitCode2, activeUnitCodes, formationCallsigns, locationFullName]);
   const formationTypes = reactExports.useMemo(() => {
     return filteredFormationCallsigns.map((cs) => cs.code);
   }, [filteredFormationCallsigns]);
@@ -38939,7 +38939,7 @@ const PrioritiesView = ({
   taskProfileAbbreviations = {},
   operationalModel = "flight_school",
   operationalModelLabel = "Flight School Model",
-  activeUnitCode,
+  activeUnitCode: activeUnitCode2,
   activeUnitCodes = [],
   airCombatSchedulingWeights,
   onUpdateAirCombatSchedulingWeights,
@@ -38994,11 +38994,11 @@ const PrioritiesView = ({
     [airCombatSchedulingWeights]
   );
   const activeUnitCodeSet = reactExports.useMemo(() => {
-    const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
+    const codes = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode2 || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
-  }, [activeUnitCode, activeUnitCodes]);
+  }, [activeUnitCode2, activeUnitCodes]);
   const activeTaskingUnitCodes = reactExports.useMemo(() => Array.from(activeUnitCodeSet), [activeUnitCodeSet]);
-  const activeTaskingUnitCode = activeTaskingUnitCodes.join("+") || normaliseTaskingUnitCode(activeUnitCode);
+  const activeTaskingUnitCode = activeTaskingUnitCodes.join("+") || normaliseTaskingUnitCode(activeUnitCode2);
   const getTaskingRequestScopeCodes = (request) => {
     const explicitCodes = Array.isArray(request?.unitCodes) ? request.unitCodes.map(normaliseTaskingUnitCode).filter(Boolean) : [];
     const unitCode = normaliseTaskingUnitCode(request?.unitCode);
@@ -39015,9 +39015,9 @@ const PrioritiesView = ({
     const settings = normaliseCrewCompositionSettings(crewCompositionSettings || null);
     const contextCodes = Array.from(activeUnitCodeSet);
     const activeAircraftTypeCode = String(aircraftTypeCode || "").trim().toUpperCase();
-    const activeGroupLabels = contextCodes.length > 0 ? contextCodes : [normaliseTaskingUnitCode(activeUnitCode) || normaliseTaskingUnitCode(school) || "Unit"];
+    const activeGroupLabels = contextCodes.length > 0 ? contextCodes : [normaliseTaskingUnitCode(activeUnitCode2) || normaliseTaskingUnitCode(school) || "Unit"];
     const compositeCodes = new Set([
-      normaliseTaskingUnitCode(activeUnitCode),
+      normaliseTaskingUnitCode(activeUnitCode2),
       contextCodes.join("+"),
       contextCodes.join("/")
     ].filter(Boolean));
@@ -39064,7 +39064,7 @@ const PrioritiesView = ({
       })),
       ...alternatePresets
     ];
-  }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
+  }, [activeUnitCode2, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
   reactExports.useEffect(() => {
     setTemporaryStandardMissionOverrides({});
     setPendingStandardMissionSaveId(null);
@@ -39159,8 +39159,8 @@ const PrioritiesView = ({
   const activeCallsignUnitCodes = reactExports.useMemo(() => {
     const contextCodes = Array.from(activeUnitCodeSet);
     if (contextCodes.length > 0) return contextCodes;
-    return String(activeUnitCode || school || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
-  }, [activeUnitCode, activeUnitCodeSet, school]);
+    return String(activeUnitCode2 || school || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+  }, [activeUnitCode2, activeUnitCodeSet, school]);
   const unitCallsignEntries = reactExports.useMemo(() => {
     const seen = /* @__PURE__ */ new Set();
     return activeCallsignUnitCodes.flatMap((unitCode) => getUnitCallsignEntries(unitCallsignSettings, unitCode)).filter((entry) => {
@@ -39188,7 +39188,7 @@ const PrioritiesView = ({
     const contextCodes = Array.from(activeUnitCodeSet);
     const activeAircraftTypeCode = String(aircraftTypeCode || "").trim().toUpperCase();
     const activeCompositeCodes = new Set([
-      normaliseTaskingUnitCode(activeUnitCode),
+      normaliseTaskingUnitCode(activeUnitCode2),
       contextCodes.join("+"),
       contextCodes.join("/")
     ].filter(Boolean));
@@ -39210,7 +39210,7 @@ const PrioritiesView = ({
       seen.add(key);
       return true;
     });
-  }, [activeUnitCode, activeUnitCodeSet, aircraftTypeCode, continuationEvents]);
+  }, [activeUnitCode2, activeUnitCodeSet, aircraftTypeCode, continuationEvents]);
   const sctEvents = reactExports.useMemo(() => {
     const profileNames = currencyProfilesForContext.map((profile) => String(profile.name || profile.currency || "").trim()).filter(Boolean);
     return Array.from(new Set(profileNames));
@@ -39242,7 +39242,7 @@ const PrioritiesView = ({
     instructorsData.forEach((staff) => {
       const crewValue = String(staff.crew || "").trim();
       if (!crewValue) return;
-      const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+      const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode2 || school);
       if (activeUnitCodeSet.size > 0 && unitCode && !activeUnitCodeSet.has(unitCode)) return;
       const crewCore = crewValue.replace(/^CREW\s*/i, "").trim().toUpperCase();
       if (!crewCore) return;
@@ -39264,7 +39264,7 @@ const PrioritiesView = ({
       ...group,
       members: group.members.slice().sort((a, b) => a.name.localeCompare(b.name, void 0, { sensitivity: "base" }))
     })).sort((a, b) => a.unitCode.localeCompare(b.unitCode, void 0, { sensitivity: "base" }) || a.crewValue.localeCompare(b.crewValue, void 0, { numeric: true, sensitivity: "base" }));
-  }, [activeUnitCode, activeUnitCodeSet, instructorsData, school]);
+  }, [activeUnitCode2, activeUnitCodeSet, instructorsData, school]);
   const fixedCrewRequestCrewGroupsByUnit = reactExports.useMemo(() => fixedCrewRequestCrewGroups.reduce((map, group) => {
     const unitKey = group.unitCode || "Unit";
     if (!map.has(unitKey)) map.set(unitKey, []);
@@ -39276,10 +39276,10 @@ const PrioritiesView = ({
     return normaliseAssignedQualificationIds(staff.preferences?.qualifications || [], normalisedStaffQualificationCatalogue, false).includes(fixedCrewPicQualification.id);
   };
   const allPicQualifiedStaff = reactExports.useMemo(() => instructorsData.filter((staff) => staffHasPicQualification(staff)).filter((staff) => {
-    const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    const unitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode2 || school);
     return activeUnitCodeSet.size === 0 || !unitCode || activeUnitCodeSet.has(unitCode);
   }).sort((a, b) => a.name.localeCompare(b.name, void 0, { sensitivity: "base" })), [
-    activeUnitCode,
+    activeUnitCode2,
     activeUnitCodeSet,
     fixedCrewPicQualification,
     instructorsData,
@@ -39289,7 +39289,7 @@ const PrioritiesView = ({
   const getStaffCurrencyPicOptions = (staff) => {
     if (staffHasPicQualification(staff)) return [staff];
     const crewValue = String(staff.crew || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
-    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode2 || school);
     if (!crewValue || staff.isAdminStaff || staff.isDeputyFlightCommander) return allPicQualifiedStaff;
     const crewGroup = fixedCrewRequestCrewGroups.find((group) => group.crewValue === crewValue && (!staffUnitCode || group.unitCode === staffUnitCode));
     const crewPicCandidates = (crewGroup?.members || []).filter((candidate) => staffHasPicQualification(candidate));
@@ -39302,7 +39302,7 @@ const PrioritiesView = ({
   };
   const getStaffCurrencyFixedCrewGroup = (staff) => {
     const crewValue = String(staff.crew || "").replace(/^CREW\s*/i, "").trim().toUpperCase();
-    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+    const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode2 || school);
     if (!crewValue) return void 0;
     return fixedCrewRequestCrewGroups.find((group) => group.crewValue === crewValue && (!staffUnitCode || group.unitCode === staffUnitCode));
   };
@@ -39371,7 +39371,7 @@ const PrioritiesView = ({
       const kind = getFixedCrewTrainingKindForLmpType(item.lmpType);
       const code = getFixedCrewTrainingCodeFromItem(item);
       if (!code) return;
-      const key = getFixedCrewTrainingKey(kind, code, item.location || school, itemUnit || activeUnitCode || school);
+      const key = getFixedCrewTrainingKey(kind, code, item.location || school, itemUnit || activeUnitCode2 || school);
       const existing = grouped.get(key);
       if (existing) {
         existing.eventCount += 1;
@@ -39384,7 +39384,7 @@ const PrioritiesView = ({
         code,
         title: getFixedCrewTrainingTitleFromItem(item),
         locationCode: String(item.location || school || "").trim().toUpperCase(),
-        unitCode: itemUnit || String(activeUnitCode || "").trim().toUpperCase(),
+        unitCode: itemUnit || String(activeUnitCode2 || "").trim().toUpperCase(),
         weight: savedStream?.weight ?? 10,
         enabled: savedStream?.enabled ?? true,
         eventCount: 1
@@ -39399,7 +39399,7 @@ const PrioritiesView = ({
       if (rightSavedOrder !== void 0) return 1;
       return right.weight - left.weight || left.kind.localeCompare(right.kind) || left.code.localeCompare(right.code, void 0, { numeric: true });
     });
-  }, [activeUnitCode, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
+  }, [activeUnitCode2, activeUnitCodeSet, fixedCrewTrainingPriorities, isFixedCrewModel, school, syllabusDetails]);
   const flightSchoolPriorityStreams = reactExports.useMemo(() => normalisePriorityAllocationItemsToStep(coursePriorities.map((course) => ({
     key: course,
     kind: "course",
@@ -40587,7 +40587,7 @@ const PrioritiesView = ({
       const requestAvailabilityWindow = getRequestAvailabilityWindow(req);
       const selectedCrewUnavailableSummary = selectedCrewGroup ? summariseCrewUnavailability(selectedCrewGroup.members, requestAvailabilityWindow) : "";
       const otherPicCandidates = selectedCrewGroup ? allPicQualifiedStaff.filter((staff) => !selectedCrewPicNames.has(staff.name)).filter((staff) => {
-        const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode || school);
+        const staffUnitCode = normaliseTaskingUnitCode(staff.unit || activeUnitCode2 || school);
         return !selectedCrewGroup.unitCode || staffUnitCode === selectedCrewGroup.unitCode;
       }).filter((staff) => !String(staff.crew || "").trim()) : [];
       const aircraftCount = Math.max(1, Math.floor(Number(req.aircraftCount) || 1));
@@ -41019,7 +41019,7 @@ const PrioritiesView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
       const isEditing = editingStandardMissionId === profile.id;
-      const unitLabel = profile.unitCode || profile.compositeUnitCode || activeUnitCode || "Unit";
+      const unitLabel = profile.unitCode || profile.compositeUnitCode || activeUnitCode2 || "Unit";
       const missionName = String(getStandardMissionDraftValue(profile, "missionName") || "").trim();
       const shortTitle = String(getStandardMissionDraftValue(profile, "shortTitle") || "").trim();
       const resourceType = getStandardMissionDraftValue(profile, "resourceType");
@@ -41432,7 +41432,7 @@ const PrioritiesView = ({
               )
             ] })
           ] }),
-          displayedPriorityAllocationStreams.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300", children: priorityAllocationModel === "air_combat" ? `No Air Combat course or training package assignments were found for ${activeUnitCode || school}. Assign staff to unit courses/packages and they will appear here.` : priorityAllocationModel === "fixed_crew" ? `No Fixed Crew course or training package events were found for ${activeUnitCode || school}. Add visible Master LMP courses or Training Packages for this unit and they will appear here.` : `No courses found for ${locationDisplayName}. Courses will appear here once trainees are loaded for this locality.` }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+          displayedPriorityAllocationStreams.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/70 bg-slate-950/60 p-3 text-sm text-slate-300", children: priorityAllocationModel === "air_combat" ? `No Air Combat course or training package assignments were found for ${activeUnitCode2 || school}. Assign staff to unit courses/packages and they will appear here.` : priorityAllocationModel === "fixed_crew" ? `No Fixed Crew course or training package events were found for ${activeUnitCode2 || school}. Add visible Master LMP courses or Training Packages for this unit and they will appear here.` : `No courses found for ${locationDisplayName}. Courses will appear here once trainees are loaded for this locality.` }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative px-2 pb-14 pt-10", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {
@@ -55206,7 +55206,7 @@ const formatMasterLmpHours = (value) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}h` : "0.0h";
 };
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], aircraftCrewComposition, crewPositionTerminology, instructorsData = [], activeUnitCode: activeUnitCode2 = "", isAirCombatModel = false, operationalModel = "flight_school", staffQualificationCatalogue, scoringMatrixElements = DEFAULT_ASSESSED_ELEMENTS, onAddScoringMatrixElement, linkedEventOptions = [], linkedEventOverrides = {}, onLinkedEventChange }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -55714,7 +55714,7 @@ const SyllabusView = ({
   aircraftCrewComposition,
   crewPositionTerminology,
   activeLocationCode = "",
-  activeUnitCode = "",
+  activeUnitCode: activeUnitCode2 = "",
   trainingPackageTemplates = [],
   instructorsData = [],
   onUpdateInstructor,
@@ -55752,7 +55752,7 @@ const SyllabusView = ({
   const usesPackageTab = activeOperationalModel === "air_combat" || isFixedCrewModel;
   const normaliseUnitTabCode = (value) => String(value || "").trim().toUpperCase();
   const fixedCrewUnitTabs = reactExports.useMemo(() => Array.from(new Set(sharedUnitTabs.map(normaliseUnitTabCode).filter(Boolean))), [sharedUnitTabs]);
-  const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => fixedCrewUnitTabs[0] || normaliseUnitTabCode(activeUnitCode));
+  const [activeUnitTab, setActiveUnitTab] = reactExports.useState(() => fixedCrewUnitTabs[0] || normaliseUnitTabCode(activeUnitCode2));
   reactExports.useEffect(() => {
     if (!isFixedCrewModel || fixedCrewUnitTabs.length === 0) return;
     if (!fixedCrewUnitTabs.includes(activeUnitTab)) {
@@ -55760,7 +55760,7 @@ const SyllabusView = ({
     }
   }, [activeUnitTab, fixedCrewUnitTabs, isFixedCrewModel]);
   const shouldShowUnitTabs = isFixedCrewModel && fixedCrewUnitTabs.length > 1;
-  const effectiveActiveUnitCode = shouldShowUnitTabs ? activeUnitTab : activeUnitCode;
+  const effectiveActiveUnitCode = shouldShowUnitTabs ? activeUnitTab : activeUnitCode2;
   const shouldScopeCreatedItemsToActiveUnit = isTrainingPackagesTab || activeOperationalModel !== "flight_school";
   const packageFoundationLabel = isFixedCrewModel ? "Fixed Crew" : isAirCombatModel ? "Air Combat" : "Staff";
   const packageFoundationDescription = isFixedCrewModel ? "Fixed Crew staff progression packages are scoped to the selected unit. They start as package shells until events are uploaded or added." : "Air Combat staff training packages are scoped to the selected unit. They start as package shells until events are uploaded or added.";
@@ -55846,7 +55846,7 @@ const SyllabusView = ({
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
       activeLocationCode,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       effectiveActiveUnitCode,
       activeTab,
       selectedCourseType,
@@ -56047,7 +56047,7 @@ const SyllabusView = ({
     activeLmpType,
     activeOperationalModel,
     activeTab,
-    activeUnitCode,
+    activeUnitCode2,
     courseLMPs,
     courseTitleMap,
     effectiveActiveUnitCode,
@@ -62136,7 +62136,7 @@ const SettingsView = ({
   qualificationOptions = [],
   currentUserQualificationIds = [],
   aircraftConfigurationDefinitions = [],
-  activeUnitCode = "",
+  activeUnitCode: activeUnitCode2 = "",
   activeUnitCodes = [],
   activeCompositeUnitCode = "",
   activeAircraftTypeCode = ""
@@ -62204,9 +62204,9 @@ const SettingsView = ({
     ]).values());
   }, [aircraftConfigurationDefinitions]);
   const activeUnitCodeList = reactExports.useMemo(() => Array.from(new Set([
-    activeUnitCode,
+    activeUnitCode2,
     ...Array.isArray(activeUnitCodes) ? activeUnitCodes : []
-  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode, activeUnitCodes]);
+  ].map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean))), [activeUnitCode2, activeUnitCodes]);
   const activeContinuationAircraftTypeCode = reactExports.useMemo(() => String(activeAircraftTypeCode || "").trim().toUpperCase(), [activeAircraftTypeCode]);
   const applyContinuationEventDefaults = (event) => ({
     ...event,
@@ -64225,8 +64225,8 @@ const createEmptyResourceSharingGroup = (index) => ({
   enabled: true
 });
 const normaliseContextCode = (value) => String(value || "").trim().toUpperCase();
-const getSelectedContextCodes = (activeUnitCode, activeUnitCodes) => {
-  const sourceCodes = Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split(/[+,/]/);
+const getSelectedContextCodes = (activeUnitCode2, activeUnitCodes) => {
+  const sourceCodes = Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode2 || "").split(/[+,/]/);
   return Array.from(new Set(sourceCodes.map(normaliseContextCode).filter(Boolean)));
 };
 const getNormalisedVisibilityPolicy = (policy) => {
@@ -64304,7 +64304,7 @@ const normaliseResourceSharingGroups = (savedSettings) => {
 };
 const OrganisationSettings = ({
   units,
-  activeUnitCode,
+  activeUnitCode: activeUnitCode2,
   activeUnitCodes,
   unitContexts = [],
   settingsVisibilityPolicy,
@@ -64332,8 +64332,8 @@ const OrganisationSettings = ({
   const [remainderUnitIndex, setRemainderUnitIndex] = reactExports.useState(initialActiveResourceSharingGroup.remainderUnitIndex);
   const [isEditingSharingSettings, setIsEditingSharingSettings] = reactExports.useState(false);
   const activeContextUnitCodes = reactExports.useMemo(
-    () => getSelectedContextCodes(activeUnitCode, activeUnitCodes),
-    [activeUnitCode, activeUnitCodes]
+    () => getSelectedContextCodes(activeUnitCode2, activeUnitCodes),
+    [activeUnitCode2, activeUnitCodes]
   );
   const unitContextMap = reactExports.useMemo(() => {
     const nextMap = /* @__PURE__ */ new Map();
@@ -65236,7 +65236,7 @@ const OrganisationSettings = ({
 };
 const AppearanceSettings = ({
   activeOperationalModel,
-  activeUnitCode,
+  activeUnitCode: activeUnitCode2,
   fixedCrewTileColourMode = "event_type",
   onUpdateFixedCrewTileColourMode
 }) => {
@@ -65400,7 +65400,7 @@ const AppearanceSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-bold text-white", children: "Fixed Crew DFP Tile Colours" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-gray-400", children: [
             "Unit scope: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: activeUnitCode || "Active unit" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: activeUnitCode2 || "Active unit" })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-cyan-100", children: "Fixed Crew" })
@@ -66962,7 +66962,7 @@ const PlatformConfigurationSettings = ({
   scrollTarget,
   sectionOnly = false,
   canUsePlatformPermission,
-  activeUnitCode = "",
+  activeUnitCode: activeUnitCode2 = "",
   activeUnitCodes = [],
   activeCompositeUnitCode = "",
   activeOperationalModel = "",
@@ -67442,7 +67442,7 @@ const PlatformConfigurationSettings = ({
   );
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
-  const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
+  const activeTrainingReportUnitCode = String(activeUnitCode2 || "").includes("+") ? String(activeUnitCode2 || "").split("+")[0]?.trim() : String(activeUnitCode2 || "").trim();
   const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
   const activeTrainingReportUnitIndex = activeTrainingReportUnit ? config.units.findIndex((unit) => unit === activeTrainingReportUnit) : -1;
   const activeTrainingReportUnitLabel = activeTrainingReportUnit ? `${activeTrainingReportUnit.code}${activeTrainingReportUnit.name && activeTrainingReportUnit.name !== activeTrainingReportUnit.code ? ` - ${activeTrainingReportUnit.name}` : ""}` : "No unit selected";
@@ -70154,11 +70154,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
   const parseUnitContextCodes = (value) => String(value || "").split(/[+/]/).map(normaliseUnitCode2).filter(Boolean);
   const activeContextUnitCodes = (Array.isArray(activeUnitCodes) && activeUnitCodes.length > 0 ? activeUnitCodes.map(normaliseUnitCode2).filter(Boolean) : [
     ...parseUnitContextCodes(activeCompositeUnitCode),
-    ...parseUnitContextCodes(activeUnitCode)
+    ...parseUnitContextCodes(activeUnitCode2)
   ]).filter((value, index, values) => values.indexOf(value) === index);
   const getActiveScopedUnitCodes = () => activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activePrimaryUnitCode].filter(Boolean);
   const activePrimaryUnitCode = activeContextUnitCodes[0] || String(config.units.find(isActiveRecord)?.code || config.units[0]?.code || "").trim().toUpperCase();
-  const activeStandardMissionUnitCode = activeContextUnitCodes.length > 1 ? activeContextUnitCodes.join("+") : String(activeCompositeUnitCode || activeUnitCode || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
+  const activeStandardMissionUnitCode = activeContextUnitCodes.length > 1 ? activeContextUnitCodes.join("+") : String(activeCompositeUnitCode || activeUnitCode2 || activePrimaryUnitCode).trim().toUpperCase() || activePrimaryUnitCode;
   const activeStandardMissionUnitLabel = activeContextUnitCodes.length > 1 ? activeContextUnitCodes.join("/") : activeStandardMissionUnitCode;
   const isProfileInActiveUnitContext = (profile) => {
     const profileUnitCode = normaliseUnitCode2(profile.unitCode);
@@ -72598,7 +72598,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Applied Filter Context" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unit Context", value: activeSettingsVisibilityUnitCodes.join(" + ") || activeUnitCode || "No active unit" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unit Context", value: activeSettingsVisibilityUnitCodes.join(" + ") || activeUnitCode2 || "No active unit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Location", value: activeSettingsVisibilityLocationCode || "No active location" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Aircraft Type", value: activeSettingsVisibilityAircraftTypes.join(", ") || "No aircraft type" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -80081,7 +80081,7 @@ const EditCourseFlyout = ({
   locations = [],
   units = [],
   syllabusDetails = [],
-  platformConfig = null,
+  platformConfig: platformConfig2 = null,
   onClose,
   onSave
 }) => {
@@ -80091,7 +80091,7 @@ const EditCourseFlyout = ({
   const [unit, setUnit] = reactExports.useState(initialUnit);
   const [lmpType, setLmpType] = reactExports.useState(initialLmpType || "");
   const [academicLmpType, setAcademicLmpType] = reactExports.useState(initialAcademicLmpType || "");
-  const activeMasterLmpCatalogue = reactExports.useMemo(() => (platformConfig?.masterLmpCatalogue || []).filter((entry) => String(entry?.status || "ACTIVE").toUpperCase() !== "INACTIVE"), [platformConfig]);
+  const activeMasterLmpCatalogue = reactExports.useMemo(() => (platformConfig2?.masterLmpCatalogue || []).filter((entry) => String(entry?.status || "ACTIVE").toUpperCase() !== "INACTIVE"), [platformConfig2]);
   const lmpDescriptionByCode = reactExports.useMemo(() => activeMasterLmpCatalogue.reduce((map, entry) => {
     const code = normaliseLmpCode(entry?.code || entry?.name);
     if (!code) return map;
@@ -80105,12 +80105,12 @@ const EditCourseFlyout = ({
         s.courses.forEach((c) => courseCodes.add(c));
       }
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
     return uniqueSortedValues([academicLmpType, ...allowed]);
-  }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+  }, [academicLmpType, platformConfig2, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     activeMasterLmpCatalogue.forEach((entry) => {
@@ -80121,12 +80121,12 @@ const EditCourseFlyout = ({
       if (s.type === "Academics" || s.lmpType === "Staff CAT") return;
       (s.courses || []).forEach((c) => courseCodes.add(c));
     });
-    const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
+    const allowed = filterMasterLmpCodesForAccess(platformConfig2, Array.from(courseCodes), {
       unitCode: unit,
       operationalModel: "flight_school"
     }, "Assign");
     return uniqueSortedValues([lmpType, initialLmpType, ...allowed]);
-  }, [activeMasterLmpCatalogue, initialLmpType, lmpType, platformConfig, syllabusDetails, unit]);
+  }, [activeMasterLmpCatalogue, initialLmpType, lmpType, platformConfig2, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -80356,9 +80356,9 @@ const CoursesManagementView = ({
   locations = [],
   units = [],
   activeLocationCode = "",
-  activeUnitCode = "",
+  activeUnitCode: activeUnitCode2 = "",
   syllabusDetails = [],
-  platformConfig = null,
+  platformConfig: platformConfig2 = null,
   serviceDefinitions = []
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
@@ -80593,8 +80593,8 @@ const CoursesManagementView = ({
         locations,
         units,
         activeLocationCode,
-        activeUnitCode,
-        platformConfig,
+        activeUnitCode: activeUnitCode2,
+        platformConfig: platformConfig2,
         serviceDefinitions
       }
     ),
@@ -80611,7 +80611,7 @@ const CoursesManagementView = ({
         locations,
         units,
         syllabusDetails,
-        platformConfig,
+        platformConfig: platformConfig2,
         onClose: () => {
           setShowEditFlyout(false);
           setCourseToEdit(null);
@@ -82505,8 +82505,8 @@ const TrainingRecordsView = ({
   locations = [],
   units = [],
   activeLocationCode = "",
-  activeUnitCode = "",
-  platformConfig = null,
+  activeUnitCode: activeUnitCode2 = "",
+  platformConfig: platformConfig2 = null,
   serviceDefinitions = [],
   resourceDisplayNames,
   instructorLabel = "Instructor",
@@ -82559,9 +82559,9 @@ const TrainingRecordsView = ({
           locations,
           units,
           activeLocationCode,
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           syllabusDetails,
-          platformConfig,
+          platformConfig: platformConfig2,
           serviceDefinitions
         }
       ),
@@ -83041,7 +83041,7 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode: activeUnitCode2 = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
@@ -83052,12 +83052,12 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
     const profiles = getContinuationEventCurrencyProfiles(sctEventsProp);
     const contextCodes = Array.from(new Set([
       ...activeUnitCodes,
-      ...splitUnitCode(activeUnitCode),
+      ...splitUnitCode(activeUnitCode2),
       instructor.unit
     ].map(normaliseUnitCode2).filter(Boolean)));
     const activeAircraftTypeCode = normaliseUnitCode2(aircraftTypeCode);
     const activeCompositeCodes = new Set([
-      normaliseUnitCode2(activeUnitCode),
+      normaliseUnitCode2(activeUnitCode2),
       contextCodes.join("+"),
       contextCodes.join("/")
     ].filter(Boolean));
@@ -83072,7 +83072,7 @@ const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvent
       const profileCompositeParts = splitUnitCode(profileCompositeCode);
       return profileCompositeParts.length > 0 && profileCompositeParts.every((code) => contextCodes.includes(code));
     });
-  }, [activeUnitCode, activeUnitCodes, aircraftTypeCode, instructor.unit, sctEventsProp]);
+  }, [activeUnitCode2, activeUnitCodes, aircraftTypeCode, instructor.unit, sctEventsProp]);
   const sctEvents = reactExports.useMemo(() => continuationProfiles.map((profile) => profile.name).filter(Boolean), [continuationProfiles]);
   const currencyOptions = reactExports.useMemo(() => {
     const seen = /* @__PURE__ */ new Set();
@@ -87660,7 +87660,7 @@ const DfpSidePanelTimeline = ({
   staffListNames,
   formatResourceLabel: formatResourceLabel2,
   operationalModel,
-  activeUnitCode,
+  activeUnitCode: activeUnitCode2,
   activeAircraftType,
   staffQualificationCatalogue,
   unitCallsignSettings,
@@ -87721,10 +87721,10 @@ const DfpSidePanelTimeline = ({
   const [assistTaskConfigId, setAssistTaskConfigId] = reactExports.useState(BASE_AIRCRAFT_CONFIG.id);
   const [assistTaskMandatory, setAssistTaskMandatory] = reactExports.useState(true);
   const assistTaskingUnitCodes = reactExports.useMemo(() => {
-    const codes = String(activeUnitCode || "").split(/[+/]/).map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+    const codes = String(activeUnitCode2 || "").split(/[+/]/).map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
     return codes;
-  }, [activeUnitCode]);
-  const assistTaskingUnitCode = assistTaskingUnitCodes.join("+") || String(activeUnitCode || "").trim().toUpperCase();
+  }, [activeUnitCode2]);
+  const assistTaskingUnitCode = assistTaskingUnitCodes.join("+") || String(activeUnitCode2 || "").trim().toUpperCase();
   const getAssistTaskingScopeCodes = (request) => {
     const explicitCodes = Array.isArray(request?.unitCodes) ? request.unitCodes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean) : [];
     const unitCode = String(request?.unitCode || "").trim().toUpperCase();
@@ -88058,7 +88058,7 @@ const DfpSidePanelTimeline = ({
     setSelectedCrewName("");
     setSelectedCrewNames([]);
   };
-  const activeAssistUnitCode = String(activeUnitCode || "").trim().toUpperCase();
+  const activeAssistUnitCode = String(activeUnitCode2 || "").trim().toUpperCase();
   const activeAssistCallsignUnitCodes = reactExports.useMemo(() => {
     const directCodes = activeAssistUnitCode.split(/[+\/,]/).map((code) => code.trim().toUpperCase()).filter(Boolean);
     return directCodes.length > 0 ? directCodes : [String(locationCode || "").trim().toUpperCase()].filter(Boolean);
@@ -91443,33 +91443,33 @@ const getConfiguredLocationTokens = (location) => {
   ].map(normaliseLocationMatchToken).filter(Boolean);
   return Array.from(new Set(directTokens));
 };
-const getConfiguredLocationAliasesForValue = (platformConfig, value) => {
+const getConfiguredLocationAliasesForValue = (platformConfig2, value) => {
   const token = normaliseLocationMatchToken(value);
   if (!token) return [];
-  const activeLocations = (platformConfig?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+  const activeLocations = (platformConfig2?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const matchedLocation = activeLocations.find((location) => getConfiguredLocationTokens(location).includes(token));
   return matchedLocation ? getConfiguredLocationTokens(matchedLocation) : [token];
 };
-const getConfiguredUnitLocationCode = (platformConfig, unitValue) => {
+const getConfiguredUnitLocationCode = (platformConfig2, unitValue) => {
   const unitCode = normalisePersonnelUnitCode(unitValue);
   if (!unitCode) return "";
-  const configuredUnit = (platformConfig?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").find((unit) => normalisePersonnelUnitCode(unit?.code || unit?.name) === unitCode);
+  const configuredUnit = (platformConfig2?.units || []).filter((unit) => String(unit?.status || "ACTIVE").toUpperCase() !== "INACTIVE").find((unit) => normalisePersonnelUnitCode(unit?.code || unit?.name) === unitCode);
   return String(configuredUnit?.locationCode || configuredUnit?.location || configuredUnit?.baseCode || "").trim();
 };
-const locationValueMatchesAliases = (platformConfig, value, activeAliases) => {
-  const valueAliases = getConfiguredLocationAliasesForValue(platformConfig, value);
+const locationValueMatchesAliases = (platformConfig2, value, activeAliases) => {
+  const valueAliases = getConfiguredLocationAliasesForValue(platformConfig2, value);
   return valueAliases.some((alias) => activeAliases.has(alias));
 };
-const personMatchesConfiguredLocation = (platformConfig, person, selectedLocation) => {
-  const activeAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig, selectedLocation));
+const personMatchesConfiguredLocation = (platformConfig2, person, selectedLocation) => {
+  const activeAliases = new Set(getConfiguredLocationAliasesForValue(platformConfig2, selectedLocation));
   if (activeAliases.size === 0) return true;
   const personLocation = person?.location;
   const personUnit = String(person?.unit || "").trim();
   if (!personLocation && !personUnit) return true;
-  if (personLocation && locationValueMatchesAliases(platformConfig, personLocation, activeAliases)) return true;
-  const configuredUnitLocationCode = getConfiguredUnitLocationCode(platformConfig, personUnit);
+  if (personLocation && locationValueMatchesAliases(platformConfig2, personLocation, activeAliases)) return true;
+  const configuredUnitLocationCode = getConfiguredUnitLocationCode(platformConfig2, personUnit);
   if (configuredUnitLocationCode) {
-    return locationValueMatchesAliases(platformConfig, configuredUnitLocationCode, activeAliases);
+    return locationValueMatchesAliases(platformConfig2, configuredUnitLocationCode, activeAliases);
   }
   return !personLocation;
 };
@@ -93048,6 +93048,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     _isNext: void 0,
     _traineeName: e.student || e.pilot || ""
   }));
+  const buildContinuationShortLabel = getSctTerminology(platformConfig, buildActiveUnitCode || activeUnitCode).shortLabel;
   const neoBuildDiag = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     buildDate,
@@ -93250,7 +93251,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       duplicateCrewMemberships: [],
       queueSourceAudit: null,
       sctCrewTrace: {
-        purpose: "Explains why a Fixed Crew SCT/currency tile shows one crew instead of the crew selected in Specific Currency Requests.",
+        purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Specific Currency Requests.`,
         requestInputs: [],
         priorityInputs: [],
         activeDfpInputs: [],
@@ -96097,7 +96098,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (isTaskingPriorityEvent(event)) {
       skippedCount++;
-      buildDebugLog(`  ↷ DEBUG QUEUED tasking priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
+      buildDebugLog(`  ↷ DEBUG QUEUED mission priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
       return;
     }
     if (isMandatoryRemedialFlight(event)) {
@@ -102807,7 +102808,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleAirCombatTrainingPriorityEvents("night");
     }
     if (airCombatDayTaskingEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory tasking...", percentage: 45 });
+      recordProgress({ message: "Scheduling Air Combat mandatory mission events...", percentage: 45 });
       scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
     }
     if (airCombatDayCurrencyEvents.length > 0) {
@@ -104116,11 +104117,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const matchingQueue = (sctTrace.queueInputs || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.id === event.id);
       const matchingPlacements = (sctTrace.placementsForSctEvents || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.eventId === event.id);
       const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.eventId === event.id);
-      let likelyReason = "No request found for this final SCT event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.";
+      let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.`;
       if (request && !selectedCrew) {
-        likelyReason = "The SCT request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.";
+        likelyReason = `The ${buildContinuationShortLabel} request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.`;
       } else if (request && matchingQueue.length === 0) {
-        likelyReason = "The SCT request existed, but no matching Fixed Crew queue item was found.";
+        likelyReason = `The ${buildContinuationShortLabel} request existed, but no matching Fixed Crew queue item was found.`;
       } else if (request && selectedCrew && finalCrew && selectedCrew !== finalCrew) {
         const placement = matchingPlacements[matchingPlacements.length - 1];
         if (placement?.requestedFixedCrewDisplay && placement?.crew && placement.requestedFixedCrewDisplay !== finalCrew) {
@@ -105020,7 +105021,7 @@ const App = () => {
   };
   const initialOperationalContext = reactExports.useMemo(() => getStoredOperationalContext(), []);
   const [school, setSchool] = reactExports.useState(initialOperationalContext.location);
-  const [activeUnitCode, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
+  const [activeUnitCode2, setActiveUnitCode] = reactExports.useState(initialOperationalContext.unit);
   const pushSetupTestPersonnelDiag = reactExports.useCallback((stage, details = {}) => {
     if (!setupTestProfile) return;
     const entry = {
@@ -105028,7 +105029,7 @@ const App = () => {
       stage,
       setupTestProfile,
       school,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       dataSourceSettings,
       details
     };
@@ -105041,8 +105042,8 @@ const App = () => {
     } catch (error) {
       console.log(`[SETUP-TEST-PERSONNEL] ${stage}`, entry, error);
     }
-  }, [activeUnitCode, dataSourceSettings, school, setupTestProfile]);
-  const [platformConfig, setPlatformConfig] = reactExports.useState(null);
+  }, [activeUnitCode2, dataSourceSettings, school, setupTestProfile]);
+  const [platformConfig2, setPlatformConfig] = reactExports.useState(null);
   const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const platformConfigSaveTimerRef = reactExports.useRef(null);
   const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
@@ -105064,7 +105065,7 @@ const App = () => {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
       school,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       settingsLoaded,
       platformConfigLoaded,
       fleetSharingEnabled: organisationSettings.fleetSharingEnabled,
@@ -105084,7 +105085,7 @@ const App = () => {
       } catch {
       }
     }
-  }, [activeUnitCode, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
+  }, [activeUnitCode2, organisationSettings.fleetSharingEnabled, platformConfigLoaded, school, settingsLoaded]);
   reactExports.useEffect(() => {
     pushContextSelectorDiag("restore:init", {
       storageKey: ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY,
@@ -105169,7 +105170,7 @@ const App = () => {
           stage: "app:platform-config-event-received",
           setupTestProfile,
           activeLocation: school,
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           details: {
             eventType: event.type,
             organisations: nextConfig.organisations?.length || 0,
@@ -105212,7 +105213,7 @@ const App = () => {
       window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
       window.removeEventListener(SETUP_TEST_PLATFORM_EVENT, handlePlatformConfigUpdated);
     };
-  }, [activeUnitCode, school, setupTestProfile]);
+  }, [activeUnitCode2, school, setupTestProfile]);
   const knownDfpLocationAliases = reactExports.useCallback((identifier) => {
     const rawIdentifier = String(identifier || "").trim();
     if (!rawIdentifier) return [];
@@ -105259,14 +105260,14 @@ const App = () => {
     return [...new Set([...directAliases, ...profileAliases].map((alias) => alias.toUpperCase()).filter(Boolean))];
   }, [knownDfpLocationAliases]);
   const baseSelectableLocationCodes = reactExports.useMemo(() => {
-    const activeLocations = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE");
-    const activeUnitLocationCodes = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
+    const activeLocations = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE");
+    const activeUnitLocationCodes = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").map((unit) => String(unit.locationCode || "").trim()).filter(Boolean);
     const configuredLocationsWithUnits = activeUnitLocationCodes.filter((unitLocationCode, index, allCodes) => {
       const normalisedUnitLocation = unitLocationCode.toUpperCase();
       if (allCodes.findIndex((code) => code.toUpperCase() === normalisedUnitLocation) !== index) return false;
       return activeLocations.some((location) => getLocationSelectorAliases(location).includes(normalisedUnitLocation));
     });
-    const configuredSelectableLocations = configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, []);
+    const configuredSelectableLocations = configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig2, []);
     if (!setupTestProfile) return configuredSelectableLocations;
     return Array.from(new Set([
       ...configuredSelectableLocations,
@@ -105276,14 +105277,14 @@ const App = () => {
       "YPEA",
       "YAMB"
     ].map((code) => String(code || "").trim()).filter(Boolean)));
-  }, [getLocationSelectorAliases, platformConfig, setupTestProfile]);
+  }, [getLocationSelectorAliases, platformConfig2, setupTestProfile]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const activeLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     const locationAliases = new Set(activeLocation ? getLocationSelectorAliases(activeLocation) : [normalisedLocationCode]);
     const normaliseUnitCode2 = (value) => String(value || "").trim().toUpperCase();
     const getSetupTestFallbackUnitsForLocation = () => [];
-    const configuredUnits = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
+    const configuredUnits = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").filter((unit) => locationAliases.has(String(unit.locationCode || "").trim().toUpperCase())).map((unit) => ({
       code: String(unit.code || "").trim(),
       name: String(unit.name || unit.code || "").trim(),
       model: getUnitOperationalModel(unit)
@@ -105333,7 +105334,7 @@ const App = () => {
       const setupTestFallbackUnits = getSetupTestFallbackUnitsForLocation().filter((unit) => !configuredCodeSet.has(normaliseUnitCode2(unit.code)));
       return [...configuredUnitsWithSharedContextLock, ...setupTestFallbackUnits, ...sharedContextOptions];
     }
-    const hasConfiguredPlatformUnits = (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE");
+    const hasConfiguredPlatformUnits = (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE");
     if (hasConfiguredPlatformUnits) return getSetupTestFallbackUnitsForLocation();
     const fallbackCodes = [];
     const fallbackUnits = fallbackCodes.map((code) => ({
@@ -105387,7 +105388,7 @@ const App = () => {
     organisationSettings.remainderUnitIndex,
     organisationSettings.resourceSharingGroups,
     organisationSettings.selectedUnits,
-    platformConfig,
+    platformConfig2,
     setupTestProfile,
     knownDfpLocationAliases
   ]);
@@ -105403,11 +105404,11 @@ const App = () => {
         name: unit.name,
         memberUnits: unit.memberUnits
       })),
-      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
+      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode2),
       resourceSharingGroups: organisationSettings.resourceSharingGroups,
       selectedUnits: organisationSettings.selectedUnits
     });
-  }, [activeLocationUnitOptions, activeUnitCode, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
+  }, [activeLocationUnitOptions, activeUnitCode2, organisationSettings.resourceSharingGroups, organisationSettings.selectedUnits, pushContextSelectorDiag]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) {
       pushContextSelectorDiag("validate:skip-platform-loading");
@@ -105417,26 +105418,26 @@ const App = () => {
       pushContextSelectorDiag("validate:skip-no-options");
       return;
     }
-    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode);
-    if (!activeUnitCode) {
+    const activeUnitOption = activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode2);
+    if (!activeUnitCode2) {
       pushContextSelectorDiag("validate:keep-no-unit-selected", {
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
       });
       return;
     }
     if (!activeUnitOption || activeUnitOption.disabled) {
-      if (String(activeUnitCode || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
+      if (String(activeUnitCode2 || "").includes("+") && !organisationSettings.fleetSharingEnabled) {
         pushContextSelectorDiag("validate:hold-shared-until-settings", {
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
         });
         return;
       }
-      if (setupTestProfile && activeUnitCode) {
-        const matchingLocationForActiveUnit = baseSelectableLocationCodes.find((locationCode) => String(locationCode || "").trim().toUpperCase() !== String(school || "").trim().toUpperCase() && getUnitOptionsForLocation(locationCode).some((unit) => unit.code === activeUnitCode && unit.disabled !== true));
+      if (setupTestProfile && activeUnitCode2) {
+        const matchingLocationForActiveUnit = baseSelectableLocationCodes.find((locationCode) => String(locationCode || "").trim().toUpperCase() !== String(school || "").trim().toUpperCase() && getUnitOptionsForLocation(locationCode).some((unit) => unit.code === activeUnitCode2 && unit.disabled !== true));
         if (matchingLocationForActiveUnit) {
           pushContextSelectorDiag("validate:move-location-for-setup-test-unit", {
-            activeUnitCode,
+            activeUnitCode: activeUnitCode2,
             fromLocation: school,
             toLocation: matchingLocationForActiveUnit,
             currentOptionCodes: activeLocationUnitOptions.map((unit) => unit.code)
@@ -105447,7 +105448,7 @@ const App = () => {
       }
       const nextUnitCode = "";
       pushContextSelectorDiag("validate:reset-unit", {
-        fromUnit: activeUnitCode,
+        fromUnit: activeUnitCode2,
         toUnit: nextUnitCode,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code),
         disabledOption: activeUnitOption?.disabled === true,
@@ -105456,23 +105457,23 @@ const App = () => {
       setActiveUnitCode(nextUnitCode);
     } else {
       pushContextSelectorDiag("validate:keep-unit", {
-        activeUnitCode,
+        activeUnitCode: activeUnitCode2,
         optionCodes: activeLocationUnitOptions.map((unit) => unit.code)
       });
     }
-  }, [activeLocationUnitOptions, activeUnitCode, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag, school, setupTestProfile]);
+  }, [activeLocationUnitOptions, activeUnitCode2, baseSelectableLocationCodes, getUnitOptionsForLocation, organisationSettings.fleetSharingEnabled, platformConfigLoaded, pushContextSelectorDiag, school, setupTestProfile]);
   reactExports.useEffect(() => {
     try {
       const payload = {
         location: school,
-        unit: activeUnitCode
+        unit: activeUnitCode2
       };
       localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
       pushContextSelectorDiag("persist:context", { payload });
     } catch (error) {
       pushContextSelectorDiag("persist:error", { error: String(error) });
     }
-  }, [school, activeUnitCode, pushContextSelectorDiag]);
+  }, [school, activeUnitCode2, pushContextSelectorDiag]);
   const pushSetupTestContextDiag = reactExports.useCallback((stage, details = {}) => {
     if (!setupTestProfile) return;
     const entry = {
@@ -105480,7 +105481,7 @@ const App = () => {
       stage,
       setupTestProfile,
       school,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       platformConfigLoaded,
       settingsLoaded,
       details
@@ -105494,35 +105495,35 @@ const App = () => {
     } catch (error) {
       console.log(`[SETUP-TEST-CONTEXT:APP] ${stage}`, entry, error);
     }
-  }, [activeUnitCode, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
+  }, [activeUnitCode2, platformConfigLoaded, school, settingsLoaded, setupTestProfile]);
   const activeUnitContext = reactExports.useMemo(
-    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode) || null,
-    [activeLocationUnitOptions, activeUnitCode]
+    () => activeLocationUnitOptions.find((unit) => unit.code === activeUnitCode2) || null,
+    [activeLocationUnitOptions, activeUnitCode2]
   );
   const activeContextUnitCodes = reactExports.useMemo(() => {
     const memberUnits = activeUnitContext?.memberUnits;
-    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode || "").split("+");
+    const rawUnits = Array.isArray(memberUnits) && memberUnits.length > 0 ? memberUnits : String(activeUnitCode2 || "").split("+");
     return Array.from(new Set(rawUnits.map((unit) => String(unit || "").trim().toUpperCase()).filter(Boolean)));
-  }, [activeUnitCode, activeUnitContext]);
+  }, [activeUnitCode2, activeUnitContext]);
   const activeContextUnitCodeSet = reactExports.useMemo(
     () => new Set(activeContextUnitCodes),
     [activeContextUnitCodes]
   );
   const activeUnitHasTrainees = reactExports.useMemo(() => {
     const normaliseActiveUnitCode = (value) => String(value || "").trim().toUpperCase();
-    const activeUnitKeys = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+    const activeUnitKeys = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode2 || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
     if (activeUnitKeys.length === 0) return false;
     const activeUnitKeySet = new Set(activeUnitKeys.map((unitCode) => normaliseActiveUnitCode(unitCode)));
-    const matchingUnits = (platformConfig?.units || []).filter((unit) => activeUnitKeySet.has(normaliseActiveUnitCode(unit?.code)));
+    const matchingUnits = (platformConfig2?.units || []).filter((unit) => activeUnitKeySet.has(normaliseActiveUnitCode(unit?.code)));
     if (matchingUnits.length === 0) return false;
     return matchingUnits.some((unit) => unit?.settings?.hasTrainees === true);
-  }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
+  }, [activeContextUnitCodes, activeUnitCode2, platformConfig2]);
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
-  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
+  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode2;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
   const fixedCrewSharedResourceUnitTabs = reactExports.useMemo(() => isFixedCrewLikeOperationalModel(activeOperationalModel) && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1 ? activeContextUnitCodes : [], [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
-  const activeFixedCrewTileColourUnitKey = reactExports.useMemo(() => String(activeContextUnitCodes[0] || activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeContextUnitCodes, activeUnitCode]);
+  const activeFixedCrewTileColourUnitKey = reactExports.useMemo(() => String(activeContextUnitCodes[0] || activeUnitCode2 || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeContextUnitCodes, activeUnitCode2]);
   const activeFixedCrewTileColourMode = reactExports.useMemo(() => getFixedCrewTileColourModeForUnit(fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey), [fixedCrewTileColourModeByUnit, activeFixedCrewTileColourUnitKey]);
   const handleUpdateFixedCrewTileColourMode = reactExports.useCallback((mode) => {
     const nextMode = normaliseFixedCrewTileColourMode(mode);
@@ -105532,12 +105533,12 @@ const App = () => {
     }));
   }, [activeFixedCrewTileColourUnitKey]);
   const activeTaskProfiles = reactExports.useMemo(
-    () => getTaskProfilesForModel(platformConfig, activeOperationalModel),
-    [activeOperationalModel, platformConfig]
+    () => getTaskProfilesForModel(platformConfig2, activeOperationalModel),
+    [activeOperationalModel, platformConfig2]
   );
   const activeTaskProfileAbbreviations = reactExports.useMemo(
-    () => getTaskProfileAbbreviationsForUnit(platformConfig, activeUnitCode),
-    [activeUnitCode, platformConfig]
+    () => getTaskProfileAbbreviationsForUnit(platformConfig2, activeUnitCode2),
+    [activeUnitCode2, platformConfig2]
   );
   const airCombatSchedulingWeights = reactExports.useMemo(
     () => normaliseAirCombatSchedulingWeights(organisationSettings.airCombatScheduling?.defaultWeights),
@@ -105556,24 +105557,24 @@ const App = () => {
   }, []);
   const activeOperationalContext = reactExports.useMemo(() => ({
     locationCode: school,
-    unitCode: activeUnitCode,
-    unitName: activeUnitContext?.name || activeUnitCode,
+    unitCode: activeUnitCode2,
+    unitName: activeUnitContext?.name || activeUnitCode2,
     unitCodes: activeContextUnitCodes,
     isSharedFleetContext: isSharedFleetOperationalContext,
     operationalModel: activeOperationalModel,
     operationalModelLabel: activeOperationalModelLabel
-  }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
+  }), [activeContextUnitCodes, activeOperationalModel, activeOperationalModelLabel, activeUnitCode2, activeUnitContext?.name, isSharedFleetOperationalContext, school]);
   const getOperationalModelForUnitCode = reactExports.useCallback((unitCode) => {
     const normalisedUnit = String(unitCode || "").trim().toUpperCase();
-    const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    const unit = (platformConfig2?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
     return unit ? getUnitOperationalModel(unit) : activeOperationalModel;
-  }, [activeOperationalModel, platformConfig]);
+  }, [activeOperationalModel, platformConfig2]);
   const getMasterLmpAccessContextForUnit = reactExports.useCallback((unitCode) => {
-    const normalisedUnit = String(unitCode || activeUnitCode || "").trim().toUpperCase();
-    const unit = (platformConfig?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
+    const normalisedUnit = String(unitCode || activeUnitCode2 || "").trim().toUpperCase();
+    const unit = (platformConfig2?.units || []).filter((candidate) => candidate.status !== "INACTIVE").find((candidate) => String(candidate.code || "").trim().toUpperCase() === normalisedUnit);
     const parentOrganisationPath = (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
     const locationCode = String(unit?.locationCode || school || "").trim().toUpperCase();
-    const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, normalisedUnit);
+    const resourcePool = getLocationResourcePool(platformConfig2, locationCode || school, normalisedUnit);
     const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || "").trim().toUpperCase();
     const aircraftTypeCode = String(resourcePool?.aircraftTypeCode || unitAircraftType || "").trim().toUpperCase();
     return {
@@ -105583,7 +105584,7 @@ const App = () => {
       parentOrganisationCode: parentOrganisationPath[parentOrganisationPath.length - 1] || null,
       operationalModel: unit ? getUnitOperationalModel(unit) : activeOperationalModel
     };
-  }, [activeOperationalModel, activeUnitCode, platformConfig, school]);
+  }, [activeOperationalModel, activeUnitCode2, platformConfig2, school]);
   const getSyllabusMasterLmpCodes = reactExports.useCallback((item) => {
     const courses2 = Array.isArray(item.courses) ? item.courses.filter(Boolean) : [];
     if (courses2.length > 0) return courses2;
@@ -105591,12 +105592,12 @@ const App = () => {
   }, []);
   const hasMasterLmpUnitAccess = reactExports.useCallback((lmpCode, unitCode, requiredAccess = "View") => {
     if (!platformConfigLoaded) return false;
-    const contextUnitCode = unitCode || activeUnitCode;
-    return hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
-  }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
+    const contextUnitCode = unitCode || activeUnitCode2;
+    return hasMasterLmpAccess(platformConfig2, lmpCode, getMasterLmpAccessContextForUnit(contextUnitCode), requiredAccess);
+  }, [activeUnitCode2, getMasterLmpAccessContextForUnit, platformConfig2, platformConfigLoaded]);
   const filterSyllabusForMasterLmpAccess = reactExports.useCallback((items, requiredAccess = "View", unitCode) => {
     const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode2(unitCode || activeUnitCode);
+    const activeUnit = normaliseContextCode2(unitCode || activeUnitCode2);
     const activeLocation = normaliseContextCode2(school);
     const activeModel = getOperationalModelForUnitCode(activeUnit);
     const itemMatchesActiveUnitContext = (item, options = {}) => {
@@ -105621,9 +105622,9 @@ const App = () => {
       }
       return lmpCodes.some((lmpCode) => hasMasterLmpUnitAccess(lmpCode, unitCode, requiredAccess));
     });
-  }, [activeUnitCode, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
+  }, [activeUnitCode2, getOperationalModelForUnitCode, getSyllabusMasterLmpCodes, hasMasterLmpUnitAccess, school]);
   const getFlightSchoolAssignableSyllabusForActiveScope = reactExports.useCallback((items, requiredAccess = "View") => {
-    const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode2];
     const seen = /* @__PURE__ */ new Set();
     return unitCodes.flatMap((unitCode) => filterSyllabusForMasterLmpAccess(items, requiredAccess, unitCode)).filter((item) => {
       const key = String(item.id || item.code || item.masterEventId || `${item.lmpType || ""}|${item.phase || ""}|${item.module || ""}`).trim();
@@ -105632,19 +105633,19 @@ const App = () => {
       seen.add(key);
       return true;
     });
-  }, [activeContextUnitCodes, activeUnitCode, filterSyllabusForMasterLmpAccess]);
+  }, [activeContextUnitCodes, activeUnitCode2, filterSyllabusForMasterLmpAccess]);
   const resolveMasterLmpUnitForTrainee = reactExports.useCallback((trainee, lmpType, requiredAccess = "Assign") => {
     const explicitUnit = String(trainee?.unit || "").trim();
     if (explicitUnit && hasMasterLmpUnitAccess(lmpType, explicitUnit, requiredAccess)) return explicitUnit;
-    const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
-    return unitCodes.find((unitCode) => hasMasterLmpUnitAccess(lmpType, unitCode, requiredAccess)) || explicitUnit || activeUnitCode;
-  }, [activeContextUnitCodes, activeUnitCode, hasMasterLmpUnitAccess]);
+    const unitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode2];
+    return unitCodes.find((unitCode) => hasMasterLmpUnitAccess(lmpType, unitCode, requiredAccess)) || explicitUnit || activeUnitCode2;
+  }, [activeContextUnitCodes, activeUnitCode2, hasMasterLmpUnitAccess]);
   const activePlatformResourcePool = reactExports.useMemo(
-    () => getLocationResourcePool(platformConfig, school, activeResourcePoolUnitCode),
-    [activeResourcePoolUnitCode, platformConfig, school]
+    () => getLocationResourcePool(platformConfig2, school, activeResourcePoolUnitCode),
+    [activeResourcePoolUnitCode, platformConfig2, school]
   );
   const activeRuntimeAircraftType = reactExports.useMemo(() => {
-    const aircraftTypes = (platformConfig?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
+    const aircraftTypes = (platformConfig2?.aircraftTypes || []).filter((aircraft) => String(aircraft?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
     const poolTypeCode = String(activePlatformResourcePool?.aircraftTypeCode || "").trim().toUpperCase();
     const poolAircraftType = aircraftTypes.find((aircraft) => String(aircraft?.code || "").trim().toUpperCase() === poolTypeCode) || null;
     if (activeOperationalModel === "air_combat") {
@@ -105659,27 +105660,27 @@ const App = () => {
       }
     }
     return poolAircraftType;
-  }, [activeOperationalModel, activePlatformResourcePool?.aircraftTypeCode, platformConfig]);
+  }, [activeOperationalModel, activePlatformResourcePool?.aircraftTypeCode, platformConfig2]);
   const activeRuntimeAircraftTypeCode = activeRuntimeAircraftType?.code || activePlatformResourcePool?.aircraftTypeCode || null;
   const activeAircraftCrewComposition = reactExports.useMemo(
-    () => getAircraftTypeCrewComposition(platformConfig, activeRuntimeAircraftTypeCode),
-    [activeRuntimeAircraftTypeCode, platformConfig]
+    () => getAircraftTypeCrewComposition(platformConfig2, activeRuntimeAircraftTypeCode),
+    [activeRuntimeAircraftTypeCode, platformConfig2]
   );
   const activeCrewPositionTerminology = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
     return normaliseCrewPositionTerminology(activeOrganisation?.settings?.crewPositionTerminology || null);
-  }, [platformConfig]);
+  }, [platformConfig2]);
   const activeCrewCompositionSettings = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
     return normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
-  }, [platformConfig]);
+  }, [platformConfig2]);
   const activeStandardMissionCrewOptions = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
     const source = activeOrganisation?.settings?.standardMissionProfiles;
     const rows = Array.isArray(source?.profiles) ? source.profiles : Array.isArray(source) ? source : [];
-    const activeCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean) : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+    const activeCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean) : String(activeUnitCode2 || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
     const activeCompositeCodes = new Set([
-      String(activeUnitCode || "").trim().toUpperCase(),
+      String(activeUnitCode2 || "").trim().toUpperCase(),
       activeCodes.join("+"),
       activeCodes.join("/")
     ].filter(Boolean));
@@ -105691,14 +105692,14 @@ const App = () => {
       return true;
     }).map((row) => String(row?.shortTitle || row?.missionName || row?.name || "").trim()).filter(Boolean);
     return Array.from(new Set(options));
-  }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
+  }, [activeContextUnitCodes, activeUnitCode2, platformConfig2]);
   const activeStandardMissionProfiles = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
     const source = activeOrganisation?.settings?.standardMissionProfiles;
     const rows = Array.isArray(source?.profiles) ? source.profiles : Array.isArray(source) ? source : [];
-    const activeCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean) : String(activeUnitCode || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
+    const activeCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean) : String(activeUnitCode2 || "").split("+").map((code) => String(code || "").trim().toUpperCase()).filter(Boolean);
     const activeCompositeCodes = new Set([
-      String(activeUnitCode || "").trim().toUpperCase(),
+      String(activeUnitCode2 || "").trim().toUpperCase(),
       activeCodes.join("+"),
       activeCodes.join("/")
     ].filter(Boolean));
@@ -105742,18 +105743,18 @@ const App = () => {
       seen.add(key);
       return true;
     }).sort((left, right) => left.unitCode.localeCompare(right.unitCode) || left.aircraftTypeCode.localeCompare(right.aircraftTypeCode) || left.missionName.localeCompare(right.missionName));
-  }, [activeContextUnitCodes, activeUnitCode, platformConfig, school]);
+  }, [activeContextUnitCodes, activeUnitCode2, platformConfig2, school]);
   const activeStaffQualificationCatalogue = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
     return normaliseStaffQualificationCatalogue(activeOrganisation?.settings?.staffQualificationCatalogue || null);
-  }, [platformConfig]);
+  }, [platformConfig2]);
   const activeUnitCallsignSettings = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig?.organisations?.[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0];
     return normaliseUnitCallsignSettings(activeOrganisation?.settings?.unitCallsignSettings || null);
-  }, [platformConfig]);
+  }, [platformConfig2]);
   const activeLocationSolarProfile = reactExports.useMemo(() => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
-    const configuredLocation = (platformConfig?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
+    const configuredLocation = (platformConfig2?.locations || []).find((location) => getLocationSelectorAliases(location).includes(normalisedSchool));
     const fallbackProfile = getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
     const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
     const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
@@ -105765,7 +105766,7 @@ const App = () => {
       longitude: longitude === null || longitude === "" ? null : Number(longitude),
       timezone: timezone ? String(timezone) : null
     };
-  }, [platformConfig, school]);
+  }, [platformConfig2, school]);
   const activeLocationDisplayName = activeLocationSolarProfile.name || school;
   const getSunTimesForDate = reactExports.useCallback((targetDate) => {
     const { latitude, longitude, timezone } = activeLocationSolarProfile;
@@ -105785,7 +105786,7 @@ const App = () => {
   }, [activeLocationSolarProfile]);
   const getSunTimesForAirfieldDate = reactExports.useCallback((targetDate, airfieldCode) => {
     const normalisedAirfield = String(airfieldCode || school || "").trim().toUpperCase();
-    const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedAirfield));
+    const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedAirfield));
     const fallbackProfile = getDefaultAirfieldSolarProfile(normalisedAirfield) || getDefaultAirfieldSolarProfile(configuredLocation?.code) || getDefaultAirfieldSolarProfile(configuredLocation?.name) || getDefaultAirfieldSolarProfile(school);
     const latitude = configuredLocation?.latitude ?? configuredLocation?.settings?.latitude ?? fallbackProfile?.latitude ?? null;
     const longitude = configuredLocation?.longitude ?? configuredLocation?.settings?.longitude ?? fallbackProfile?.longitude ?? null;
@@ -105803,7 +105804,7 @@ const App = () => {
       });
       return getSunTimesForDate(targetDate);
     }
-  }, [getLocationSelectorAliases, getSunTimesForDate, platformConfig, school]);
+  }, [getLocationSelectorAliases, getSunTimesForDate, platformConfig2, school]);
   const selectedDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
   const selectedDfpDaylightTimes = reactExports.useMemo(() => ({
     firstLight: selectedDfpSunTimes?.hasFirstLight ? selectedDfpSunTimes.firstLight : null,
@@ -105813,11 +105814,11 @@ const App = () => {
     const normaliseToken = (value) => String(value || "").trim().toUpperCase();
     const selectedAliases = knownDfpLocationAliases(school);
     const selectedAliasSet = new Set(selectedAliases.map(normaliseToken).filter(Boolean));
-    const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
+    const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliasSet.has(normaliseToken(alias))));
     const configuredAliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [];
     const expandedAliases = [school, ...selectedAliases, ...configuredAliases].flatMap((alias) => [alias, ...knownDfpLocationAliases(alias)]).map(normaliseToken).filter(Boolean);
     return new Set(expandedAliases);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig, school]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig2, school]);
   const isActiveLocationAlias = reactExports.useCallback((value) => {
     const directToken = String(value || "").trim().toUpperCase();
     if (!directToken) return false;
@@ -105830,16 +105831,16 @@ const App = () => {
     if (personLocation && isActiveLocationAlias(personLocation)) return true;
     const unitCode = normalisePersonnelUnitCode(personUnit);
     if (!unitCode) return !personLocation;
-    const configuredUnit = (platformConfig?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => normalisePersonnelUnitCode(unit.code || unit.name) === unitCode);
+    const configuredUnit = (platformConfig2?.units || []).filter((unit) => unit.status !== "INACTIVE").find((unit) => normalisePersonnelUnitCode(unit.code || unit.name) === unitCode);
     if (configuredUnit?.locationCode && isActiveLocationAlias(configuredUnit.locationCode)) return true;
     return !personLocation;
-  }, [isActiveLocationAlias, platformConfig]);
+  }, [isActiveLocationAlias, platformConfig2]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (activePlatformResourcePool) {
       console.log("[PlatformConfig] Active location resource context:", {
         school,
-        unit: activeUnitCode,
+        unit: activeUnitCode2,
         operationalModel: activeOperationalModel,
         pool: activePlatformResourcePool.code,
         poolType: activePlatformResourcePool.poolType,
@@ -105849,9 +105850,9 @@ const App = () => {
         settings: activePlatformResourcePool.settings
       });
     } else {
-      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode, operationalModel: activeOperationalModel });
+      console.log("[PlatformConfig] No platform resource pool found for active context; V2 settings remain authoritative.", { school, unit: activeUnitCode2, operationalModel: activeOperationalModel });
     }
-  }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode, platformConfigLoaded, school]);
+  }, [activePlatformResourcePool, activeOperationalModel, activeRuntimeAircraftTypeCode, activeUnitCode2, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const activeInstructors = allInstructorsData.filter(isRecordActive);
@@ -106253,7 +106254,7 @@ const App = () => {
       window.clearInterval(interval);
     };
   }, [dashboardNotificationUserName, isAuthenticated]);
-  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
+  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig2, [
     authUser?.id,
     authUser?.userId,
     authUser?.username,
@@ -106261,7 +106262,7 @@ const App = () => {
     sessionUser?.userId,
     sessionUser?.username,
     currentUserName
-  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
+  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig2, baseSelectableLocationCodes]);
   const hasRuntimePlatformWideAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase()) || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin;
   const selectableLocationCodes = reactExports.useMemo(
     () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
@@ -106301,8 +106302,8 @@ const App = () => {
         memberUnits: unit.memberUnits || [],
         isSharedFleetContext: unit.isSharedFleetContext === true
       })),
-      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode),
-      rawPlatformLocations: (platformConfig?.locations || []).map((location) => ({
+      activeUnitPresent: activeLocationUnitOptions.some((unit) => unit.code === activeUnitCode2),
+      rawPlatformLocations: (platformConfig2?.locations || []).map((location) => ({
         code: location.code,
         iataCode: location.iataCode,
         icao: location.icao,
@@ -106310,7 +106311,7 @@ const App = () => {
         status: location.status,
         aliases: getLocationSelectorAliases(location)
       })),
-      rawPlatformUnits: (platformConfig?.units || []).map((unit) => ({
+      rawPlatformUnits: (platformConfig2?.units || []).map((unit) => ({
         code: unit.code,
         name: unit.name,
         locationCode: unit.locationCode,
@@ -106327,18 +106328,18 @@ const App = () => {
     });
   }, [
     activeLocationUnitOptions,
-    activeUnitCode,
+    activeUnitCode2,
     baseSelectableLocationCodes,
     getLocationSelectorAliases,
     operationalContextOptions,
-    platformConfig,
+    platformConfig2,
     pushSetupTestContextDiag,
     selectableLocationCodes,
     setupTestProfile
   ]);
   const platformDataScopeQuery = reactExports.useMemo(() => {
     const scope = hasRuntimePlatformWideAccess ? { organisationCodes: [], locationCode: school, unitCodes: [], allUnits: true } : getPlatformDataScopeForLocation(platformAccessContext, school);
-    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode ? [activeUnitCode] : [];
+    const requestedUnitCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : activeUnitCode2 ? [activeUnitCode2] : [];
     const requestedUnitCodeSet = new Set(requestedUnitCodes.map((unitCode) => String(unitCode || "").trim().toUpperCase()));
     const scopedUnitCodes = requestedUnitCodes.length > 0 ? scope.allUnits || scope.unitCodes.length === 0 ? requestedUnitCodes : scope.unitCodes.filter((unitCode) => requestedUnitCodeSet.has(String(unitCode || "").trim().toUpperCase())) : scope.unitCodes;
     return buildPlatformDataScopeQuery({
@@ -106346,7 +106347,7 @@ const App = () => {
       unitCodes: scopedUnitCodes,
       allUnits: requestedUnitCodes.length === 0 && scope.allUnits
     });
-  }, [activeContextUnitCodes, activeUnitCode, hasRuntimePlatformWideAccess, platformAccessContext, school]);
+  }, [activeContextUnitCodes, activeUnitCode2, hasRuntimePlatformWideAccess, platformAccessContext, school]);
   const scopedApiPath = reactExports.useCallback((path, extraParams) => {
     const params = new URLSearchParams(platformDataScopeQuery);
     Object.entries(extraParams || {}).forEach(([key, value]) => {
@@ -106366,7 +106367,7 @@ const App = () => {
       stage,
       date,
       school,
-      unit: activeUnitCode,
+      unit: activeUnitCode2,
       activeView,
       details
     };
@@ -106467,7 +106468,7 @@ const App = () => {
       activeContext: {
         date,
         school,
-        unit: activeUnitCode,
+        unit: activeUnitCode2,
         activeView,
         setupTestProfile: setupTestProfile || null,
         isInitialSetupWizardActive,
@@ -106486,7 +106487,7 @@ const App = () => {
   function downloadDfpDataDiagReport() {
     const report = buildDfpDataDiagReport();
     const generatedStamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
+    const contextStamp = [school, activeUnitCode2, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
     const filename = `dfp-neo-load-diagnostics_${contextStamp || "app"}_${generatedStamp}.json`;
     try {
       const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -106504,14 +106505,14 @@ const App = () => {
   }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
-      platformLocations: (platformConfig?.locations || []).map((location) => ({
+      platformLocations: (platformConfig2?.locations || []).map((location) => ({
         code: location.code,
         iataCode: location.iataCode,
         name: location.name,
         status: location.status,
         aliases: getLocationSelectorAliases(location)
       })),
-      platformUnits: (platformConfig?.units || []).map((unit) => ({
+      platformUnits: (platformConfig2?.units || []).map((unit) => ({
         code: unit.code,
         locationCode: unit.locationCode,
         status: unit.status,
@@ -106532,7 +106533,7 @@ const App = () => {
     hasRuntimePlatformWideAccess,
     operationalContextOptions,
     platformAccessContext,
-    platformConfig,
+    platformConfig2,
     platformDataScopeQuery,
     selectableLocationCodes
   ]);
@@ -106542,21 +106543,21 @@ const App = () => {
     const normalisedSchool = String(school || "").trim().toUpperCase();
     const aliasMatchedLocation = selectableLocationCodes.find((locationCode) => {
       const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-      const configuredLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+      const configuredLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
       const aliases = configuredLocation ? getLocationSelectorAliases(configuredLocation) : [normalisedLocationCode];
       return aliases.includes(normalisedSchool);
     });
     if (aliasMatchedLocation) {
       const nextUnits = getUnitOptionsForLocation(aliasMatchedLocation);
       setSchool(aliasMatchedLocation);
-      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode)) {
+      if (nextUnits.length > 0 && !nextUnits.some((unit) => unit.code === activeUnitCode2)) {
         setActiveUnitCode(nextUnits[0].code);
       }
     } else {
       changeSchool(selectableLocationCodes[0]);
       setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
     }
-  }, [activeUnitCode, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig, platformConfigLoaded, selectableLocationCodes, school]);
+  }, [activeUnitCode2, getLocationSelectorAliases, getUnitOptionsForLocation, platformConfig2, platformConfigLoaded, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -106574,7 +106575,7 @@ const App = () => {
       stage,
       setupTestProfile,
       activeLocation: school,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       details
     };
     try {
@@ -106586,12 +106587,12 @@ const App = () => {
     } catch (error) {
       console.log(`[SETUP-TEST-LMP:APP] ${stage}`, entry, error);
     }
-  }, [activeUnitCode, school, setupTestProfile]);
+  }, [activeUnitCode2, school, setupTestProfile]);
   const visibleSyllabusDetails = reactExports.useMemo(() => {
     const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode2(activeUnitCode);
+    const activeUnit = normaliseContextCode2(activeUnitCode2);
     const activeUnits = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1 ? new Set(activeContextUnitCodes.map(normaliseContextCode2)) : /* @__PURE__ */ new Set([activeUnit]);
-    const baseVisibleItems = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1 ? activeContextUnitCodes.flatMap((unitCode) => filterSyllabusForMasterLmpAccess(syllabusDetails, "View", unitCode)) : filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode);
+    const baseVisibleItems = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 1 ? activeContextUnitCodes.flatMap((unitCode) => filterSyllabusForMasterLmpAccess(syllabusDetails, "View", unitCode)) : filterSyllabusForMasterLmpAccess(syllabusDetails, "View", activeUnitCode2);
     const seen = /* @__PURE__ */ new Set();
     return baseVisibleItems.filter((item) => {
       const key = item.id || `${item.code}|${item.unit || ""}|${item.lmpType || ""}`;
@@ -106605,30 +106606,30 @@ const App = () => {
       if (activeOperationalModel !== "air_combat") return false;
       return !packageUnit || packageUnit === activeUnit;
     });
-  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, filterSyllabusForMasterLmpAccess, syllabusDetails]);
+  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode2, filterSyllabusForMasterLmpAccess, syllabusDetails]);
   const accessibleMasterLmpCatalogueForSyllabus = reactExports.useMemo(() => {
     if (!platformConfigLoaded) return [];
-    const contextUnitCodes = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    const contextUnitCodes = isFixedCrewLikeOperationalModel(activeOperationalModel) && activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode2];
     const seen = /* @__PURE__ */ new Set();
-    return normaliseMasterLmpCatalogue(platformConfig).filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((entry) => {
+    return normaliseMasterLmpCatalogue(platformConfig2).filter((entry) => String(entry.status || "ACTIVE").toUpperCase() !== "INACTIVE").filter((entry) => {
       const code = String(entry.code || "").trim();
       if (!code) return false;
       const key = code.toUpperCase();
       if (seen.has(key)) return false;
-      const hasAccess = contextUnitCodes.some((unitCode) => hasMasterLmpAccess(platformConfig, code, getMasterLmpAccessContextForUnit(unitCode), "View"));
+      const hasAccess = contextUnitCodes.some((unitCode) => hasMasterLmpAccess(platformConfig2, code, getMasterLmpAccessContextForUnit(unitCode), "View"));
       if (hasAccess) seen.add(key);
       return hasAccess;
     });
-  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig, platformConfigLoaded]);
+  }, [activeContextUnitCodes, activeOperationalModel, activeUnitCode2, getMasterLmpAccessContextForUnit, platformConfig2, platformConfigLoaded]);
   reactExports.useEffect(() => {
     if (!setupTestProfile) return;
-    const activeOrganisation = (platformConfig?.organisations || [])[0];
+    const activeOrganisation = (platformConfig2?.organisations || [])[0];
     const rawCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue : [];
     const rawAccessRules = Array.isArray(activeOrganisation?.settings?.masterLmpAccess) ? activeOrganisation.settings.masterLmpAccess : [];
-    const normalisedCatalogue = normaliseMasterLmpCatalogue(platformConfig);
-    const normalisedAccessRules = normaliseMasterLmpAccessRules(platformConfig);
+    const normalisedCatalogue = normaliseMasterLmpCatalogue(platformConfig2);
+    const normalisedAccessRules = normaliseMasterLmpAccessRules(platformConfig2);
     const syllabusCourseCodes = Array.from(new Set(syllabusDetails.flatMap((item) => Array.isArray(item?.courses) ? item.courses : []).map((code) => String(code || "").trim()).filter(Boolean)));
-    const activeContextCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode];
+    const activeContextCodes = activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode2];
     const accessChecks = syllabusCourseCodes.slice(0, 30).map((lmpCode) => ({
       lmpCode,
       catalogueMatch: normalisedCatalogue.find((entry) => String(entry?.code || "").trim().toUpperCase() === lmpCode.toUpperCase()) || null,
@@ -106636,7 +106637,7 @@ const App = () => {
         unitCode,
         locationCode: school,
         operationalModel: getOperationalModelForUnitCode(unitCode),
-        hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(unitCode), "View"),
+        hasViewAccess: hasMasterLmpAccess(platformConfig2, lmpCode, getMasterLmpAccessContextForUnit(unitCode), "View"),
         matchingRules: normalisedAccessRules.filter((rule) => String(rule?.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase())
       }))
     }));
@@ -106651,7 +106652,7 @@ const App = () => {
           unitCode,
           locationCode: school,
           operationalModel: getOperationalModelForUnitCode(unitCode),
-          hasViewAccess: hasMasterLmpAccess(platformConfig, lmpCode, getMasterLmpAccessContextForUnit(unitCode), "View"),
+          hasViewAccess: hasMasterLmpAccess(platformConfig2, lmpCode, getMasterLmpAccessContextForUnit(unitCode), "View"),
           matchingRules: normalisedAccessRules.filter((rule) => String(rule?.lmpCode || "").trim().toUpperCase() === lmpCode.toUpperCase())
         }))
       }));
@@ -106680,7 +106681,7 @@ const App = () => {
       visibleSyllabusItems: visibleSyllabusDetails.length,
       activeOperationalModel,
       activeContextUnitCodes,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       activeLocation: school,
       rawOrganisationSettings: {
         organisationCode: activeOrganisation?.code,
@@ -106721,9 +106722,9 @@ const App = () => {
     accessibleMasterLmpCatalogueForSyllabus,
     activeContextUnitCodes,
     activeOperationalModel,
-    activeUnitCode,
+    activeUnitCode2,
     getOperationalModelForUnitCode,
-    platformConfig,
+    platformConfig2,
     platformConfigLoaded,
     pushSetupTestLmpDiag,
     school,
@@ -106733,7 +106734,7 @@ const App = () => {
   ]);
   const trainingPackageTemplatesForActiveModel = reactExports.useMemo(() => {
     const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
-    const activeUnit = normaliseContextCode2(activeUnitCode);
+    const activeUnit = normaliseContextCode2(activeUnitCode2);
     const getPackageUnitModel = (unitCode) => getOperationalModelForUnitCode(unitCode);
     return syllabusDetails.filter((item) => {
       if (item.lmpType !== "Staff CAT" || item.isActive === false || isSyllabusCourseShell(item)) return false;
@@ -106748,7 +106749,7 @@ const App = () => {
       }
       return false;
     });
-  }, [activeOperationalModel, activeUnitCode, getOperationalModelForUnitCode, syllabusDetails]);
+  }, [activeOperationalModel, activeUnitCode2, getOperationalModelForUnitCode, syllabusDetails]);
   reactExports.useEffect(() => {
     const loadSyllabus = async () => {
       const startedAt = performance.now();
@@ -106849,7 +106850,7 @@ const App = () => {
         setupTestProfile: setupTestProfile || null,
         platformConfigLoaded,
         activeOperationalModel,
-        activeUnitCode,
+        activeUnitCode: activeUnitCode2,
         school,
         syllabusItemsAtStart: syllabusDetails.length
       });
@@ -107285,7 +107286,7 @@ const App = () => {
             navyStart: countByConfiguredService(configuredServiceKeys[1]),
             armyStart: countByConfiguredService(configuredServiceKeys[2]),
             location: school,
-            unit: activeUnitCode,
+            unit: activeUnitCode2,
             status: "ACTIVE",
             lmpType: recoveredLmpType || void 0,
             academicLmpType: recoveredAcademicLmpType || void 0
@@ -107414,7 +107415,7 @@ const App = () => {
         setupTestProfile,
         reason: "Setup wizard test mode uses local browser setup records only and must not load real DFP snapshots.",
         activeLocation: school,
-        activeUnitCode
+        activeUnitCode: activeUnitCode2
       });
       return;
     }
@@ -107422,7 +107423,7 @@ const App = () => {
     const abortController = new AbortController();
     historicalLoadAbortRef.current = abortController;
     const requestedSchool = school;
-    const requestedUnit = activeUnitCode;
+    const requestedUnit = activeUnitCode2;
     const loadHistoricalData = async () => {
       const startedAt = performance.now();
       try {
@@ -107601,7 +107602,7 @@ const App = () => {
       cancelled = true;
       abortController.abort();
     };
-  }, [activeUnitCode, school, setupTestProfile]);
+  }, [activeUnitCode2, school, setupTestProfile]);
   reactExports.useEffect(() => {
     if (setupTestProfile) {
       setSnapshotDates([]);
@@ -107724,21 +107725,21 @@ const App = () => {
       }));
     }
     return events2.length;
-  }, [activeUnitCode]);
+  }, [activeUnitCode2]);
   const getDailySnapshotLocationAliases = React.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
-    const matchingLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
+    const matchingLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
     return [
       normalisedLocationCode,
       ...knownDfpLocationAliases(normalisedLocationCode),
       ...matchingLocation ? getLocationSelectorAliases(matchingLocation) : []
     ].map((alias) => String(alias || "").trim().toUpperCase()).filter((alias, index, aliases) => Boolean(alias) && aliases.indexOf(alias) === index);
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, platformConfig2]);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
     const loadStartedAt = performance.now();
     const { force = false, replace = false, schoolOverride, unitOverride, useCache = true, exactSnapshotKey = "" } = options;
     const snapshotSchool = schoolOverride ?? school;
-    const snapshotUnit = unitOverride ?? activeUnitCode;
+    const snapshotUnit = unitOverride ?? activeUnitCode2;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool, snapshotUnit);
     const snapshotLocationAliases = getDailySnapshotLocationAliases(snapshotSchool);
     const snapshotLocationAliasKeys = snapshotLocationAliases.map(normaliseDailySnapshotPart);
@@ -108001,7 +108002,7 @@ const App = () => {
     } finally {
       loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [activeUnitCode, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
+  }, [activeUnitCode2, applyDailySnapshot, getDailySnapshotLocationAliases, school]);
   reactExports.useEffect(() => {
     if (setupTestProfile || isInitialSetupWizardActive) {
       loadingSnapshotDates.current.clear();
@@ -108017,13 +108018,13 @@ const App = () => {
     }
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     void loadSnapshotForDate(date, { useCache: true });
-  }, [activeUnitCode, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
+  }, [activeUnitCode2, date, school, loadSnapshotForDate, isInitialSetupWizardActive, setupTestProfile]);
   reactExports.useEffect(() => {
     if (activeView !== "Program Schedule") {
       lastProgramScheduleMountKeyRef.current = "";
       return;
     }
-    const mountKey = `${date}|${school}|${activeUnitCode}`;
+    const mountKey = `${date}|${school}|${activeUnitCode2}`;
     const shouldRefreshOnEntry = lastProgramScheduleMountKeyRef.current !== mountKey;
     if (lastProgramScheduleMountKeyRef.current !== mountKey) {
       lastProgramScheduleMountKeyRef.current = mountKey;
@@ -108033,10 +108034,10 @@ const App = () => {
     if (setupTestProfile || isInitialSetupWizardActive || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const currentEvents = publishedSchedulesRef.current[date] || [];
     if (currentEvents.length > 0) return;
-    const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
+    const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode2);
     loadedSnapshotDates.current.delete(snapshotKey);
     void loadSnapshotForDate(date, { force: true, replace: true, useCache: true });
-  }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
+  }, [activeUnitCode2, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -108090,17 +108091,17 @@ const App = () => {
   const [fixedCrewTrainingPriorities, setFixedCrewTrainingPriorities] = reactExports.useState([]);
   const [traineeLMPs, setTraineeLMPs] = reactExports.useState(/* @__PURE__ */ new Map());
   const hasConfiguredCourseUnitScope = reactExports.useMemo(
-    () => (platformConfig?.units || []).some((unit) => unit.status !== "INACTIVE"),
-    [platformConfig]
+    () => (platformConfig2?.units || []).some((unit) => unit.status !== "INACTIVE"),
+    [platformConfig2]
   );
   const platformUnitCodes = reactExports.useMemo(() => Array.from(new Set(
-    (platformConfig?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => String(unit.code || "").trim()).filter(Boolean)
-  )).sort((left, right) => left.localeCompare(right, void 0, { numeric: true, sensitivity: "base" })), [platformConfig]);
-  const platformUnitContexts = reactExports.useMemo(() => (platformConfig?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => {
+    (platformConfig2?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => String(unit.code || "").trim()).filter(Boolean)
+  )).sort((left, right) => left.localeCompare(right, void 0, { numeric: true, sensitivity: "base" })), [platformConfig2]);
+  const platformUnitContexts = reactExports.useMemo(() => (platformConfig2?.units || []).filter((unit) => String(unit.status || "ACTIVE").toUpperCase() !== "INACTIVE").map((unit) => {
     const unitCode = String(unit?.code || "").trim().toUpperCase();
     const locationCode = String(unit?.locationCode || "").trim().toUpperCase();
     const parentOrganisationPath = (Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-")).map((part) => String(part || "").trim()).filter(Boolean);
-    const resourcePool = getLocationResourcePool(platformConfig, locationCode || school, unitCode);
+    const resourcePool = getLocationResourcePool(platformConfig2, locationCode || school, unitCode);
     const unitAircraftType = String(unit?.settings?.aircraftTypeCode || unit?.settings?.aircraftType || "").trim().toUpperCase();
     return {
       unitCode,
@@ -108109,11 +108110,11 @@ const App = () => {
       parentOrganisationCode: String(parentOrganisationPath[parentOrganisationPath.length - 1] || "").trim(),
       operationalModel: getUnitOperationalModel(unit)
     };
-  }).filter((context) => context.unitCode), [platformConfig, school]);
+  }).filter((context) => context.unitCode), [platformConfig2, school]);
   const platformSettingsVisibilityPolicy = reactExports.useMemo(() => {
-    const activeOrganisation = (platformConfig?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || (platformConfig?.organisations || [])[0];
+    const activeOrganisation = (platformConfig2?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || (platformConfig2?.organisations || [])[0];
     return activeOrganisation?.settings?.settingsVisibilityPolicy || null;
-  }, [platformConfig]);
+  }, [platformConfig2]);
   const getCourseUnitCodes = reactExports.useCallback((course) => {
     const rawUnit = String(course.unit || "").trim();
     if (!rawUnit) return [];
@@ -108188,7 +108189,7 @@ const App = () => {
         navyStart: 0,
         armyStart: 0,
         location: school,
-        unit: activeUnitCode,
+        unit: activeUnitCode2,
         status: "ACTIVE",
         lmpType: recoveredLmpType || void 0,
         academicLmpType: recoveredAcademicLmpType || void 0
@@ -108197,7 +108198,7 @@ const App = () => {
       seen.add(courseName);
     });
     return nextCourses;
-  }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, activeUnitCode, courseColors, normaliseCourseName, school, scopedCourses, traineesData]);
+  }, [activeFlightSchoolTraineeCourseNames, activeOperationalModel, activeUnitCode2, courseColors, normaliseCourseName, school, scopedCourses, traineesData]);
   const scopedCourseColors = reactExports.useMemo(() => {
     const entries = Object.entries(courseColors).filter(([courseName]) => scopedCourseNameSet.has(courseName));
     return Object.fromEntries(entries);
@@ -108363,7 +108364,7 @@ const App = () => {
   function normaliseDailySnapshotPart(value) {
     return String(value || "").trim().replace(/[^A-Za-z0-9_-]/g, "-");
   }
-  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode) {
+  function getDailySnapshotKey(targetDate, targetSchool = school, targetUnit = activeUnitCode2) {
     const safeUnit = normaliseDailySnapshotPart(targetUnit);
     const safeSchool = normaliseDailySnapshotPart(targetSchool);
     return safeUnit ? `${targetDate}__${safeSchool}__${safeUnit}` : `${targetDate}__${safeSchool}`;
@@ -108458,9 +108459,9 @@ const App = () => {
   const activeAircraftResourcePrefix = reactExports.useMemo(() => String(activeRuntimeAircraftTypeCode || resourceDisplayNames.aircraft || "Aircraft").trim() || "Aircraft", [activeRuntimeAircraftTypeCode, resourceDisplayNames.aircraft]);
   const activeNeoAircraftCapacityUnitKey = reactExports.useMemo(() => {
     const locationKey = String(school || "DEFAULT").trim().toUpperCase() || "DEFAULT";
-    const unitKey = String(activeUnitCode || "DEFAULT").trim().toUpperCase() || "DEFAULT";
+    const unitKey = String(activeUnitCode2 || "DEFAULT").trim().toUpperCase() || "DEFAULT";
     return `${locationKey}__${unitKey}`;
-  }, [activeUnitCode, school]);
+  }, [activeUnitCode2, school]);
   const aircraftNumberSettings = reactExports.useMemo(
     () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
     [activePlatformResourcePool]
@@ -108473,25 +108474,25 @@ const App = () => {
     ...aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0")
   ], [aircraftConfigurations]);
   const personnelDisplaySettings = reactExports.useMemo(
-    () => getPersonnelDisplaySettings(platformConfig),
-    [platformConfig]
+    () => getPersonnelDisplaySettings(platformConfig2),
+    [platformConfig2]
   );
-  const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode;
+  const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode2;
   const trainingReportTerminology = reactExports.useMemo(
-    () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
-    [activeTrainingReportUnitCode, platformConfig]
+    () => getUnitTrainingReportTerminology(platformConfig2, activeTrainingReportUnitCode),
+    [activeTrainingReportUnitCode, platformConfig2]
   );
   const trainingReportTemplate = reactExports.useMemo(
-    () => getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode),
-    [activeTrainingReportUnitCode, platformConfig]
+    () => getUnitTrainingReportTemplate(platformConfig2, activeTrainingReportUnitCode),
+    [activeTrainingReportUnitCode, platformConfig2]
   );
   const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || "Training Report";
   const getTrainingReportDisplayNameForUnit = reactExports.useCallback((unitCode) => {
     const reportUnitCode = unitCode || activeTrainingReportUnitCode;
-    const unitTemplate = getUnitTrainingReportTemplate(platformConfig, reportUnitCode);
-    const unitTerminology = getUnitTrainingReportTerminology(platformConfig, reportUnitCode);
+    const unitTemplate = getUnitTrainingReportTemplate(platformConfig2, reportUnitCode);
+    const unitTerminology = getUnitTrainingReportTerminology(platformConfig2, reportUnitCode);
     return unitTemplate.displayName || unitTerminology.name || configuredTrainingReportDisplayName;
-  }, [activeTrainingReportUnitCode, configuredTrainingReportDisplayName, platformConfig]);
+  }, [activeTrainingReportUnitCode, configuredTrainingReportDisplayName, platformConfig2]);
   const getConfiguredMissionStatusLabel = reactExports.useCallback((code) => {
     const cleanCode = String(code || "").trim().toUpperCase();
     if (!cleanCode) return "";
@@ -108499,8 +108500,8 @@ const App = () => {
     return String(configuredResult?.label || cleanCode).trim() || cleanCode;
   }, [trainingReportTemplate]);
   const activeTrainingReportPhraseBank = reactExports.useMemo(
-    () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
-    [activeTrainingReportUnitCode, phraseBank, platformConfig]
+    () => getUnitTrainingReportPhraseBank(platformConfig2, activeTrainingReportUnitCode, phraseBank),
+    [activeTrainingReportUnitCode, phraseBank, platformConfig2]
   );
   const savePlatformConfigDebounced = reactExports.useCallback((nextConfig) => {
     if (platformConfigSaveTimerRef.current) {
@@ -108580,14 +108581,14 @@ const App = () => {
           navyStart: 0,
           armyStart: 0,
           location: school,
-          unit: activeUnitCode,
+          unit: activeUnitCode2,
           status: "ACTIVE"
         });
         seen.add(normalisedName);
       });
       return nextCourses;
     });
-  }, [activeUnitCode, normaliseCourseName, school]);
+  }, [activeUnitCode2, normaliseCourseName, school]);
   const handleSaveSetupTestPersonnel = reactExports.useCallback((payload) => {
     if (!isSetupTestMode()) return;
     const existingPersonnel = readSetupTestPersonnel();
@@ -108704,8 +108705,8 @@ const App = () => {
     });
   }, [activeTrainingReportUnitCode, savePlatformConfigDebounced]);
   const insertEventTypes = reactExports.useMemo(
-    () => getInsertEventTypes(platformConfig),
-    [platformConfig]
+    () => getInsertEventTypes(platformConfig2),
+    [platformConfig2]
   );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
@@ -108781,10 +108782,10 @@ const App = () => {
       getLocalIsoDateForResourceRows(1)
     ].filter(Boolean)));
     const rowKeys = ["aircraft", "ftd", "cpt", "standby", "ground"];
-    const pools = Array.isArray(platformConfig?.resourcePools) ? platformConfig.resourcePools : [];
+    const pools = Array.isArray(platformConfig2?.resourcePools) ? platformConfig2.resourcePools : [];
     const activePoolKey = String(activePlatformResourcePool?.id || activePlatformResourcePool?.code || "").trim();
     const contextLocation = String(school || "").trim().toUpperCase();
-    const contextUnitCodes = String(activeUnitCode || "").split(/[+/]/).map((unit) => unit.trim().toUpperCase()).filter(Boolean);
+    const contextUnitCodes = String(activeUnitCode2 || "").split(/[+/]/).map((unit) => unit.trim().toUpperCase()).filter(Boolean);
     const contextPools = pools.filter((pool) => {
       const poolKey = String(pool?.id || pool?.code || "").trim();
       const poolLocation = String(pool?.locationCode || "").trim().toUpperCase();
@@ -108808,7 +108809,7 @@ const App = () => {
         browserToday: getLocalIsoDateForResourceRows(0),
         browserTomorrow: getLocalIsoDateForResourceRows(1),
         school,
-        activeUnitCode,
+        activeUnitCode: activeUnitCode2,
         activeView,
         activePoolKey: activePoolKey || null
       },
@@ -108851,7 +108852,7 @@ const App = () => {
     };
   }, [
     activePlatformResourcePool,
-    activeUnitCode,
+    activeUnitCode2,
     activeView,
     availableCptCount,
     availableFtdCount,
@@ -108863,17 +108864,17 @@ const App = () => {
     date,
     getLocalIsoDateForResourceRows,
     getResourceRowHistoryMatchForDiag,
-    platformConfig?.resourcePools,
+    platformConfig2?.resourcePools,
     school
   ]);
   const downloadDfpResourceRowsDiagnosticReport = reactExports.useCallback(() => {
     const report = buildDfpResourceRowsDiagnosticReport();
-    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
+    const contextStamp = [school, activeUnitCode2, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
     const filename = `dfp-resource-rows-diag_${contextStamp || "app"}_${getDiagnosticTimestamp(report.generatedAt)}.json`;
     if (!downloadJsonDiagnosticFile(filename, report)) {
       console.error("[DFP-RESOURCE-ROWS-DIAG] Could not download diagnostic report:", report);
     }
-  }, [activeUnitCode, buildDfpResourceRowsDiagnosticReport, date, school]);
+  }, [activeUnitCode2, buildDfpResourceRowsDiagnosticReport, date, school]);
   const currentAircraftConfigState = reactExports.useMemo(() => ({
     availableAircraftCount: Math.max(0, Math.floor(Number(neoAvailableAircraftCount) || 0)),
     aircraftConfigCapacities: neoAircraftConfigCapacities,
@@ -108935,7 +108936,7 @@ const App = () => {
     const minutes = totalMinutes % 60;
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   }, []);
-  const activeFlyingWindowExclusionUnitKey = reactExports.useMemo(() => String(activeUnitCode || school || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeUnitCode, school]);
+  const activeFlyingWindowExclusionUnitKey = reactExports.useMemo(() => String(activeUnitCode2 || school || "DEFAULT").trim().toUpperCase() || "DEFAULT", [activeUnitCode2, school]);
   const handleUpdateFlyingWindowExclusions = reactExports.useCallback((periods) => {
     const nextPeriods = Array.isArray(periods) ? periods : [];
     setFlyingWindowExclusions(nextPeriods);
@@ -108997,16 +108998,16 @@ const App = () => {
   const [unavailabilityNotifications, setUnavailabilityNotifications] = reactExports.useState([]);
   const [isPriorityEventCreation, setIsPriorityEventCreation] = reactExports.useState(false);
   const highestPriorityEventsStorageKey = reactExports.useMemo(
-    () => buildHighestPriorityEventsStorageKey(school, activeUnitCode),
-    [activeUnitCode, school]
+    () => buildHighestPriorityEventsStorageKey(school, activeUnitCode2),
+    [activeUnitCode2, school]
   );
   const skipNextHighestPriorityPersistRef = reactExports.useRef(false);
   const [highestPriorityEvents, setHighestPriorityEvents] = reactExports.useState(() => loadHighestPriorityEventsForUnitContext(initialOperationalContext.location, initialOperationalContext.unit));
   const [instructorPriority, setInstructorPriority] = reactExports.useState(DEFAULT_INSTRUCTOR_PRIORITY_CONFIG);
   reactExports.useEffect(() => {
     skipNextHighestPriorityPersistRef.current = true;
-    setHighestPriorityEvents(loadHighestPriorityEventsForUnitContext(school, activeUnitCode));
-  }, [activeUnitCode, highestPriorityEventsStorageKey, school]);
+    setHighestPriorityEvents(loadHighestPriorityEventsForUnitContext(school, activeUnitCode2));
+  }, [activeUnitCode2, highestPriorityEventsStorageKey, school]);
   reactExports.useEffect(() => {
     if (skipNextHighestPriorityPersistRef.current) {
       skipNextHighestPriorityPersistRef.current = false;
@@ -109261,7 +109262,7 @@ ${"=".repeat(60)}`);
       changeType,
       recordedBy: sessionUser?.userId ?? null,
       locationCode: school,
-      unitCode: activeUnitCode,
+      unitCode: activeUnitCode2,
       notes: notesOverride ?? null,
       flyingWindowStart: windowStart,
       flyingWindowEnd: windowEnd,
@@ -109396,13 +109397,13 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     if (!sessionUser?.userId) return;
     if (!settingsLoaded) return;
-    if (!school || !activeUnitCode) return;
+    if (!school || !activeUnitCode2) return;
     const fetchCurrentAvailability = async () => {
       try {
         const apiBase = getApiBaseUrl();
         const params = new URLSearchParams({
           locationCode: school,
-          unitCode: activeUnitCode
+          unitCode: activeUnitCode2
         });
         const res = await fetch(`${apiBase}/aircraft-availability-current?${params.toString()}`, {
           credentials: "include"
@@ -109411,7 +109412,7 @@ ${"=".repeat(60)}`);
           const data = await res.json();
           if (data.success && data.availableCount !== void 0) {
             if (!data.isDefault) {
-              console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode}: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
+              console.log(`[AV] 🔄 Restored availability from database for ${school} - ${activeUnitCode2}: ${data.availableCount} aircraft (from ${data.date || "unknown date"})`);
               setAvailableAircraftCount(data.availableCount);
               loadedAvailabilityRef.current = data.availableCount;
               availabilityLoadedFromEventsRef.current = true;
@@ -109430,7 +109431,7 @@ ${"=".repeat(60)}`);
       }
     };
     fetchCurrentAvailability();
-  }, [sessionUser?.userId, settingsLoaded, school, activeUnitCode]);
+  }, [sessionUser?.userId, settingsLoaded, school, activeUnitCode2]);
   reactExports.useEffect(() => {
     if (!sessionUser?.userId || !hasLoadedPersistedAvailability) return;
     const runStartup = async () => {
@@ -109460,7 +109461,7 @@ ${"=".repeat(60)}`);
             flyingWindowStart: windowStart,
             flyingWindowEnd: windowEnd,
             locationCode: school,
-            unitCode: activeUnitCode,
+            unitCode: activeUnitCode2,
             clientTimezoneOffsetHours: timezoneOffset
           })
         });
@@ -109570,9 +109571,9 @@ ${"=".repeat(60)}`);
   const [unitCurrencyDefinitions, setUnitCurrencyDefinitions] = reactExports.useState({});
   const [showCurrencySetup, setShowCurrencySetup] = reactExports.useState(false);
   const activeCurrencyUnitKey = reactExports.useMemo(() => {
-    const rawUnit = activeContextUnitCodes[0] || String(activeUnitCode || "").split("+")[0] || activeUnitCode;
+    const rawUnit = activeContextUnitCodes[0] || String(activeUnitCode2 || "").split("+")[0] || activeUnitCode2;
     return String(rawUnit || "").trim().toUpperCase();
-  }, [activeContextUnitCodes, activeUnitCode]);
+  }, [activeContextUnitCodes, activeUnitCode2]);
   reactExports.useEffect(() => {
     const activeUnitDefinitions = activeCurrencyUnitKey ? unitCurrencyDefinitions[activeCurrencyUnitKey] : null;
     setMasterCurrencies(activeUnitDefinitions?.masterCurrencies || fallbackMasterCurrencies);
@@ -109618,7 +109619,7 @@ ${"=".repeat(60)}`);
     const selectedAliases = new Set(
       [school, ...knownDfpLocationAliases(school)].map(normalise).filter(Boolean)
     );
-    const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliases.has(normalise(alias))));
+    const activeLocation = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).some((alias) => selectedAliases.has(normalise(alias))));
     const platformAreas = Array.isArray(activeLocation?.trainingAreas) ? activeLocation.trainingAreas.map((area) => String(area || "").trim()).filter(Boolean) : [];
     if (platformAreas.length > 0) return platformAreas;
     const matchingLegacyLocation = Object.keys(locationOpAreas || {}).find((locationName) => {
@@ -109626,7 +109627,7 @@ ${"=".repeat(60)}`);
       return aliases.map(normalise).some((alias) => selectedAliases.has(alias));
     });
     return matchingLegacyLocation ? locationOpAreas[matchingLegacyLocation] || [] : [];
-  }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig, school]);
+  }, [getLocationSelectorAliases, knownDfpLocationAliases, locationAbbreviations, locationOpAreas, platformConfig2, school]);
   const neoAssistCallsignOptions = reactExports.useMemo(() => {
     const unitSet = activeContextUnitCodeSet;
     const normalise = (value) => String(value || "").trim().toUpperCase();
@@ -109650,7 +109651,7 @@ ${"=".repeat(60)}`);
     const loadSettings = async () => {
       const startedAt = performance.now();
       pushDfpDataDiag("startup:settings:start", {
-        activeUnitCode,
+        activeUnitCode: activeUnitCode2,
         school
       });
       try {
@@ -109677,7 +109678,7 @@ ${"=".repeat(60)}`);
         const savedUnits = saved2.units?.length ? saved2.units : units;
         const savedUnitLocations = saved2.unitLocations || unitLocations;
         const savedLocationOpAreas = saved2.locationOpAreas || locationOpAreas;
-        const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes) && platformConfig.unitTypes.length > 0 ? platformConfig.unitTypes : ["Training"];
+        const configuredUnitTypes = Array.isArray(platformConfig2?.unitTypes) && platformConfig2.unitTypes.length > 0 ? platformConfig2.unitTypes : ["Training"];
         const resolveLegacyLocationCode = (locationValue) => {
           const raw = String(locationValue || "").trim();
           if (!raw) return "";
@@ -109752,7 +109753,7 @@ ${"=".repeat(60)}`);
             ]
           };
         };
-        const loadedPlatformConfigForLocation = mergeLegacyPlatformConfig(platformConfig);
+        const loadedPlatformConfigForLocation = mergeLegacyPlatformConfig(platformConfig2);
         setPlatformConfig((prev) => mergeLegacyPlatformConfig(prev));
         if (saved2.eventLimits) setEventLimits(normaliseEventLimitsForDutySupSessions(saved2.eventLimits));
         if (saved2.preferredDutyPeriod != null) setPreferredDutyPeriod(saved2.preferredDutyPeriod);
@@ -110377,13 +110378,13 @@ ${"=".repeat(60)}`);
     if (activeFixedCrewTileColourMode !== "crew") {
       return buildFixedCrewTileColourKey(eventsForDate, activeFixedCrewTileColourMode);
     }
-    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode2 || "").trim().toUpperCase()].filter(Boolean));
     const crewReferenceEvents = instructorsData.filter((staff) => {
       const staffUnit = String(staff.unit || "").trim().toUpperCase();
       return !staff.isAdminStaff && String(staff.crew || "").trim() && (activeUnits.size === 0 || activeUnits.has(staffUnit));
     }).map((staff) => ({ fixedCrewGroup: staff.crew }));
     return buildFixedCrewTileColourKey(crewReferenceEvents.length > 0 ? crewReferenceEvents : eventsForDate, activeFixedCrewTileColourMode);
-  }, [activeContextUnitCodeSet, activeFixedCrewTileColourMode, activeOperationalModel, activeUnitCode, eventsForDate, instructorsData]);
+  }, [activeContextUnitCodeSet, activeFixedCrewTileColourMode, activeOperationalModel, activeUnitCode2, eventsForDate, instructorsData]);
   const nextDayEventsForStaffTraineeSchedule = reactExports.useMemo(() => {
     return nextDayBuildEvents.map(decorateEventWithForwardedPreFlightNotes);
   }, [decorateEventWithForwardedPreFlightNotes, nextDayBuildEvents]);
@@ -110596,7 +110597,7 @@ ${"=".repeat(60)}`);
   }, [getDiagnosticEventBookingWindow, getDiagnosticEventPersonnel, normaliseDiagnosticPersonName, parseDiagnosticTime, staffAvailabilityDiagnosticDate, staffAvailabilityDiagnosticEvents]);
   const staffAvailabilityRoleRows = reactExports.useMemo(() => {
     const diagnosticTime = staffAvailabilityPointer.time;
-    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode2 || "").trim().toUpperCase()].filter(Boolean));
     const rows = /* @__PURE__ */ new Map();
     const activeStaffKeys = /* @__PURE__ */ new Set();
     instructorsData.forEach((staff) => {
@@ -110637,7 +110638,7 @@ ${"=".repeat(60)}`);
   }, [
     activeContextUnitCodeSet,
     activeCrewPositionTerminology,
-    activeUnitCode,
+    activeUnitCode2,
     getDiagnosticEventBookingWindow,
     getDiagnosticEventSeatAssignments,
     getDiagnosticPersonKeys,
@@ -110797,7 +110798,7 @@ ${"=".repeat(60)}`);
     if (!isStaffAvailabilityDiagnoseActive || staffAvailabilityPointer.time === null) {
       return /* @__PURE__ */ new Set();
     }
-    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode || "").trim().toUpperCase()].filter(Boolean));
+    const activeUnits = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set([String(activeUnitCode2 || "").trim().toUpperCase()].filter(Boolean));
     const activeStaffNames = new Set(
       instructorsData.filter((staff) => {
         const staffUnit = String(staff.unit || "").trim().toUpperCase();
@@ -110823,7 +110824,7 @@ ${"=".repeat(60)}`);
     return highlightedIds;
   }, [
     activeContextUnitCodeSet,
-    activeUnitCode,
+    activeUnitCode2,
     getDiagnosticEventBookingWindow,
     getDiagnosticEventPersonnel,
     getDiagnosticEventSeatAssignments,
@@ -111631,8 +111632,8 @@ ${"=".repeat(60)}`);
         return Array.isArray(settings?.permissionProfileIds) ? settings.permissionProfileIds : [];
       })
     ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
-    return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
-  }, [platformAccessContext, platformConfig, normalisePermissionId]);
+    return new Set(getPlatformPermissionProfiles(platformConfig2).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
+  }, [platformAccessContext, platformConfig2, normalisePermissionId]);
   const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
     if (platformAccessContext.isSuperAdmin) return true;
     if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
@@ -111901,7 +111902,7 @@ ${"=".repeat(60)}`);
         });
         return null;
       }
-      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode;
+      const traineeUnitCode = trainee.unit || matchedTrainee?.unit || activeUnitCode2;
       if (!hasMasterLmpUnitAccess(persistedLmpType, traineeUnitCode, "Assign")) {
         pushDfpDataDiag("report-lmp:load:blocked-access", {
           traineeFullName: trainee.fullName,
@@ -111935,7 +111936,7 @@ ${"=".repeat(60)}`);
       console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
       return null;
     }
-  }, [activeUnitCode, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, pushDfpDataDiag, syllabusDetails]);
+  }, [activeUnitCode2, allTraineesData, filterSyllabusForMasterLmpAccess, hasMasterLmpUnitAccess, pushDfpDataDiag, syllabusDetails]);
   const loadPersistedPt051Assessment = reactExports.useCallback(async (trainee, event) => {
     const loadKey = `${event.id}-${trainee.fullName}`;
     try {
@@ -112197,7 +112198,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       ].map((value) => String(value || "").trim()).filter(Boolean));
       assignment = allAssignments.find((candidate) => trainingCodes.has(candidate.code));
       if (!assignment) {
-        assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+        assignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode2, currentUserName);
       }
     }
     return { staff, assignment, item: matchingItem, sourceEvent };
@@ -112211,7 +112212,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         ...pendingContext.report,
         staffIdNumber: staff.idNumber,
         staffName: staff.name,
-        unitCode: staff.unit || pendingContext.report.unitCode || activeUnitCode,
+        unitCode: staff.unit || pendingContext.report.unitCode || activeUnitCode2,
         instructorName: pendingContext.assessorName || pendingContext.report.instructorName || pendingContext.report.dashboardAssigneeName || currentUserName,
         dashboardAssigneeName: pendingContext.report.dashboardAssigneeName || pendingContext.assessorName
       };
@@ -112350,9 +112351,9 @@ ${error instanceof Error ? error.message : String(error)}`,
       matchingItem.phase,
       matchingItem.module
     ].map((value) => String(value || "").trim()).filter(Boolean));
-    const fallbackAssignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode, currentUserName);
+    const fallbackAssignment = getAirCombatAssignmentFromItem(matchingItem, school, staff.unit || activeUnitCode2, currentUserName);
     const assignment = allAssignments.find((candidate) => candidate.trainingKey === fallbackAssignment.trainingKey || trainingCodes.has(candidate.code)) || fallbackAssignment;
-    const reportTemplate = getUnitTrainingReportTemplate(platformConfig, staff.unit || activeUnitCode);
+    const reportTemplate = getUnitTrainingReportTemplate(platformConfig2, staff.unit || activeUnitCode2);
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const reportId = `air-combat-postflight-${staff.idNumber}-${sourceEvent.id || eventCode2}`;
     const existingReports = normaliseAirCombatTrainingReports(preferences);
@@ -112364,7 +112365,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       staffIdNumber: staff.idNumber,
       staffName: staff.name,
       locationCode: school,
-      unitCode: staff.unit || activeUnitCode,
+      unitCode: staff.unit || activeUnitCode2,
       trainingKey: assignment.trainingKey,
       trainingKind: assignment.kind,
       trainingCode: assignment.code || matchingItem.phase,
@@ -112569,7 +112570,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const handleAddTrainee = reactExports.useCallback(async (newTrainee) => {
     const traineeToCreate = {
       ...newTrainee,
-      unit: newTrainee.unit || activeUnitCode,
+      unit: newTrainee.unit || activeUnitCode2,
       location: newTrainee.location || school,
       role: newTrainee.role || "Trainee"
     };
@@ -112604,7 +112605,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} because no Master LMP is assigned to the trainee or course.`);
       return;
     }
-    const traineeUnitCode = savedTrainee.unit || activeUnitCode;
+    const traineeUnitCode = savedTrainee.unit || activeUnitCode2;
     if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
       setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
       return;
@@ -112619,7 +112620,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       });
     }
     setSuccessMessage("New Trainee Added!");
-  }, [activeUnitCode, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, school, scopedApiPath, syllabusDetails]);
+  }, [activeUnitCode2, filterSyllabusForMasterLmpAccess, getConfiguredLmpTypeForTrainee, hasMasterLmpUnitAccess, school, scopedApiPath, syllabusDetails]);
   const handleUpdateTrainee = reactExports.useCallback(async (data) => {
     console.log("📝 [APP] handleUpdateTrainee called");
     console.log("📝 [APP] Trainee data received:", {
@@ -112630,15 +112631,15 @@ ${error instanceof Error ? error.message : String(error)}`,
       unavailability: data.unavailability,
       unavailabilityLength: data.unavailability?.length || 0
     });
-    const traineeUnitCode = data.unit || activeUnitCode;
+    const traineeUnitCode = data.unit || activeUnitCode2;
     const requestedLmpType = data.lmpType || "";
     const requestedAcademicLmpType = data.academicLmpType || "";
     const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
-    if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
+    if (requestedLmpType && !hasMasterLmpAccess(platformConfig2, requestedLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
+    if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig2, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
@@ -112718,7 +112719,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } else {
       console.log("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
     }
-  }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
+  }, [activeUnitCode2, getMasterLmpAccessContextForUnit, platformConfig2]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
     let lastNewEventId = eventToRemediate.id;
     const remedialPackageItems = [];
@@ -113413,13 +113414,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
-    const courseUnitCode = data.unit || activeUnitCode;
+    const courseUnitCode = data.unit || activeUnitCode2;
     const lmpAccessContext = getMasterLmpAccessContextForUnit(courseUnitCode);
-    if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
+    if (data.lmpType && !hasMasterLmpAccess(platformConfig2, data.lmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
+    if (data.academicLmpType && !hasMasterLmpAccess(platformConfig2, data.academicLmpType, lmpAccessContext, "Assign")) {
       setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
@@ -114438,7 +114439,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       isPaused: !!inst.isPaused,
       currencyStatus: inst.currencyStatus || [],
       snapshotSchool: school,
-      snapshotUnit: activeUnitCode,
+      snapshotUnit: activeUnitCode2,
       operationalModel: activeOperationalModel,
       snapshotDate: targetDate
     }));
@@ -114455,7 +114456,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const snapshotPayload = {
       date: snapshotKey,
       locationCode: school,
-      unitCode: activeUnitCode,
+      unitCode: activeUnitCode2,
       operationalModel: activeOperationalModel,
       scheduleEvents: allEventsForDate,
       staffEvents: staffEventsForDate,
@@ -114471,7 +114472,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (baselineEventsForDate !== void 0) {
       snapshotPayload.baselineEvents = baselineEventsForDate;
     }
-    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events...`);
+    console.log(`[Persist] Saving snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events...`);
     cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
     fetch(`${apiBase}/daily-snapshot/save`, {
       method: "POST",
@@ -114481,7 +114482,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (result.success) {
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, targetDate);
-        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode}), ${allEventsForDate.length} events`);
+        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school} - ${activeUnitCode2}), ${allEventsForDate.length} events`);
       } else {
         console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
       }
@@ -115102,7 +115103,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         date: snapshotDate,
         eventDate: date,
         school,
-        unit: activeUnitCode,
+        unit: activeUnitCode2,
         operationalModel: activeOperationalModel,
         eventId,
         sentBy: userId,
@@ -115215,7 +115216,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     setSelectedEvent(null);
   };
   const syncPriorityEventsWithSctAndRemedial = () => {
-    console.log("📋 Starting sync of priority events with SCT and remedial requests...");
+    const continuationShortLabel = getSctTerminology(platformConfig2, activeUnitCode2).shortLabel;
+    console.log(`📋 Starting sync of priority events with ${continuationShortLabel} and remedial requests...`);
     let added = 0;
     const newPriorityEvents = [...highestPriorityEvents];
     const remedialPrioritySyncTrace = [];
@@ -115276,14 +115278,14 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       return configured.length > 0 ? Array.from(new Set(configured)) : [fallbackConfigId];
     };
     const hasSctParticipant = (sctReq) => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
-    console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
+    console.log(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
       (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
     const highPrioritySctFtds = sctFtds.filter(
       (req) => (req.priority === "High" || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ""
     );
-    console.log("🔍 Found SCT flights to include:", highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
+    console.log(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, "| FTDs:", highPrioritySctFtds.length);
     const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel) ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS : null;
     highPrioritySctFlights.forEach((sctReq) => {
       const sctEventCode = String(sctReq.eventCode || sctReq.event || "").trim().toUpperCase().slice(0, 8) || sctReq.event;
@@ -115326,7 +115328,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
-        console.log("🔄 Updated HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log(`🔄 Updated HIGH priority ${continuationShortLabel} flight:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else {
         if (existingInNextDay) {
           setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-flight-${sctReq.id}`));
@@ -115380,7 +115382,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         };
         newPriorityEvents.push(newEvent);
         added++;
-        console.log("✅ Added HIGH priority SCT flight:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log(`✅ Added HIGH priority ${continuationShortLabel} flight:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
         console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
       }
     });
@@ -115425,7 +115427,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
-        console.log("🔄 Updated HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log(`🔄 Updated HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else {
         if (existingInNextDay) {
           setNextDayBuildEvents((prev) => prev.filter((event) => event.id !== `sct-ftd-${sctReq.id}`));
@@ -115477,7 +115479,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dayNight: getSctDayNight(sctReq),
           fixedCrewGroup: sctCrewGroupKey || void 0
         };
-        console.log("✅ Added HIGH priority SCT FTD:", sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
+        console.log(`✅ Added HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
         console.log("  - Event date:", newEvent.date, "| isTimeFixed:", newEvent.isTimeFixed, "| startTime:", newEvent.startTime);
         newPriorityEvents.push(newEvent);
         added++;
@@ -115984,7 +115986,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const isPromptTaskingPriority = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
     const getEventPicName = (event) => String(event.fixedCrewPic || event.pilot || event.instructor || "").trim();
     const hasAssignedCrew = (event) => Boolean(String(event.fixedCrewGroup || "").trim());
-    const activeUnitSet = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set(activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode]);
+    const activeUnitSet = activeContextUnitCodeSet.size > 0 ? activeContextUnitCodeSet : new Set(activeContextUnitCodes.length > 0 ? activeContextUnitCodes : [activeUnitCode2]);
     const crewGroups = /* @__PURE__ */ new Map();
     instructorsData.filter((staff) => Boolean(staff.name) && !staff.isAdminStaff).filter((staff) => {
       const unitCode = normalisePromptUnitCode(staff.unit);
@@ -116013,7 +116015,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       const picName = getEventPicName(event);
       if (!picName || isPlaceholderPersonnelName(picName) || /^CREW\b/i.test(picName)) continue;
       const picStaff = instructorsData.find((staff) => personnelNamesMatch(staff.name, picName));
-      const eventUnit = normalisePromptUnitCode(event.fixedCrewUnit || event.unit || picStaff?.unit || activeUnitCode);
+      const eventUnit = normalisePromptUnitCode(event.fixedCrewUnit || event.unit || picStaff?.unit || activeUnitCode2);
       const sameUnitCrews = Array.from(crewGroups.values()).filter((group) => !eventUnit || group.unit === eventUnit).sort((left, right) => left.label.localeCompare(right.label, void 0, { numeric: true }));
       if (sameUnitCrews.length === 0) {
         showDarkAlert2(
@@ -116072,9 +116074,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     return resolvedEvents;
   };
   const startBuildProcess = async () => {
+    const continuationShortLabel = getSctTerminology(platformConfig2, activeUnitCode2).shortLabel;
     console.log("🚀 [NEO-Build] startBuildProcess called");
     console.log("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
-    console.log("🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...");
+    console.log(`🚀 [NEO-Build] Pre-Build Step 1: Syncing ${continuationShortLabel} and Remedial requests...`);
     const taskTraceLabels = Array.from(/* @__PURE__ */ new Set([
       ...DEFAULT_TASK_PROFILE_CONFIG.air_combat || [],
       "Task",
@@ -116167,7 +116170,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const requestId = getSctRequestIdFromEvent(event);
         const stillRequested = !!requestId && liveSctRequestIds.has(requestId);
         if (!stillRequested) {
-          console.log(`DEBUG Removing stale SCT priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || "none"})`);
+          console.log(`DEBUG Removing stale ${continuationShortLabel} priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || "none"})`);
         }
         return stillRequested;
       }
@@ -116178,7 +116181,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     window.__lastTaskingProvenancePreBuild = {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       buildDate: buildDfpDate,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       school,
       watchedLabels: taskTraceLabels,
       localStorageTaskingRequests: storedTaskingRequestsForTrace,
@@ -116218,7 +116221,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const fixedExistingEventsForDate = existingEventsForDate.filter((event) => {
       if (!event.isTimeFixed) return false;
       if (isSctPriorityEvent(event)) {
-        console.log(`DEBUG Skipping fixed SCT event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
+        console.log(`DEBUG Skipping fixed ${continuationShortLabel} event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
         return false;
       }
       if (!isTaskingEvent2(event)) return true;
@@ -116237,7 +116240,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       };
     }
     if (staleExistingSctEventsForDate.length > 0) {
-      console.log(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale SCT event(s) from build-date published schedule before NEO Build input handoff.`);
+      console.log(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale ${continuationShortLabel} event(s) from build-date published schedule before NEO Build input handoff.`);
     }
     console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
     let newHighestPriorityEvents = [...syncedPriorityEvents];
@@ -116305,7 +116308,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       return;
     }
     if (!isNeoCapableOperationalModel) {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO Build is not available for this operational model yet.`);
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode2}. NEO Build is not available for this operational model yet.`);
       return;
     }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
@@ -116457,7 +116460,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       });
     } else try {
       const apiBase = getApiBaseUrl();
-      const assignableBuildSyllabus = activeOperationalModel === "flight_school" ? assignableFlightSchoolBuildSyllabus : filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode);
+      const assignableBuildSyllabus = activeOperationalModel === "flight_school" ? assignableFlightSchoolBuildSyllabus : filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
       const bpcIpcSyllabus = assignableBuildSyllabus.filter(
         (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
       );
@@ -116504,7 +116507,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
               return;
             }
-            const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode;
+            const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode2;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
               console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
               return;
@@ -116916,9 +116919,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const effectiveInstructorPriority = isFixedCrewLikeOperationalModel(activeOperationalModel) ? { ...instructorPriority, enabled: false } : instructorPriority;
     const config = {
       operationalModel: activeOperationalModel,
-      activeUnitCode,
+      activeUnitCode: activeUnitCode2,
       activeContextUnitCodes,
-      platformConfig,
+      platformConfig: platformConfig2,
       airCombatSchedulingWeights: organisationSettings.airCombatScheduling?.defaultWeights,
       fixedCrewTrainingPriorities,
       fixedCrewTileColourMode: activeFixedCrewTileColourMode,
@@ -116966,7 +116969,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       aircraftCrewComposition: activeAircraftCrewComposition,
       runtimeResourceContext: {
         location: school,
-        unit: activeUnitCode,
+        unit: activeUnitCode2,
         operationalModel: activeOperationalModel,
         resourcePoolCode: activePlatformResourcePool?.code || null,
         resourcePoolName: activePlatformResourcePool?.name || null,
@@ -117008,7 +117011,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           stage: "before-generateDfpInternal",
           buildDate: config.buildDate,
           location: school,
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           activeContextUnitCodes,
           operationalModel: activeOperationalModel,
           inputs: {
@@ -117180,7 +117183,7 @@ ${conflictLines.join("\n")}${moreText}`,
             highestPriorityEvents: config.highestPriorityEvents.length,
             remedialRequests: config.remedialRequests.length,
             operationalModel: activeOperationalModel,
-            activeUnitCode,
+            activeUnitCode: activeUnitCode2,
             crewPositionTerminology: normaliseCrewPositionTerminology(activeCrewPositionTerminology),
             activeAircraftCrewComposition,
             staffRoleSummary: instructorsData.slice(0, 200).map((staff) => {
@@ -117231,7 +117234,7 @@ ${conflictLines.join("\n")}${moreText}`,
             model: activeOperationalModel,
             context: {
               locationCode: school,
-              unitCode: activeUnitCode,
+              unitCode: activeUnitCode2,
               buildDate: buildDfpDate
             },
             inputs: {
@@ -118181,7 +118184,7 @@ ${conflictLines.join("\n")}${moreText}`,
         isPaused: !!inst.isPaused,
         currencyStatus: inst.currencyStatus || [],
         snapshotSchool: school,
-        snapshotUnit: activeUnitCode,
+        snapshotUnit: activeUnitCode2,
         operationalModel: activeOperationalModel,
         snapshotDate: buildDfpDate
       }));
@@ -118199,7 +118202,7 @@ ${conflictLines.join("\n")}${moreText}`,
       const snapshotPayload = {
         date: snapshotKey,
         locationCode: school,
-        unitCode: activeUnitCode,
+        unitCode: activeUnitCode2,
         operationalModel: activeOperationalModel,
         scheduleEvents: newEventsForDate,
         staffEvents: staffEventsForDate,
@@ -118236,7 +118239,7 @@ ${conflictLines.join("\n")}${moreText}`,
         if (!saveResponse.ok || !result.success) {
           throw new Error(result.error || result.details || `Snapshot save failed with HTTP ${saveResponse.status}`);
         }
-        console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode}), ${newEventsForDate.length} events`);
+        console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school} - ${activeUnitCode2}), ${newEventsForDate.length} events`);
         loadedSnapshotDates.current.add(snapshotKey);
         cacheDailySnapshot(snapshotKey, snapshotPayload, buildDfpDate);
       } catch (err) {
@@ -119467,7 +119470,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       const savedUnit = String(change.detail?.unitCode || parsedSnapshotKey.unit || "").trim();
       const currentLocationKeys = getDailySnapshotLocationAliases(school).map(normaliseDailySnapshotPart);
       const savedLocationKey = normaliseDailySnapshotPart(savedLocation);
-      const currentUnitKey = normaliseDailySnapshotPart(activeUnitCode);
+      const currentUnitKey = normaliseDailySnapshotPart(activeUnitCode2);
       const savedUnitKey = normaliseDailySnapshotPart(savedUnit);
       if (savedLocationKey && !currentLocationKeys.includes(savedLocationKey)) return;
       if (savedUnitKey && savedUnitKey !== currentUnitKey) return;
@@ -119476,13 +119479,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         replace: true,
         useCache: false,
         schoolOverride: savedLocation || school,
-        unitOverride: savedUnit || activeUnitCode,
+        unitOverride: savedUnit || activeUnitCode2,
         exactSnapshotKey: snapshotDate
       });
     };
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
-  }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
+  }, [activeUnitCode2, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
   reactExports.useEffect(() => {
     const handleLivePeopleChange = (event) => {
       if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
@@ -119616,7 +119619,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       acceptableAircraftConfigs: [ANY_AIRCRAFT_CONFIG],
       resourcesHuman: peopleRequired,
       location: assignment.locationCode || followsItem.location || school,
-      unit: assignment.unitCode || followsItem.unit || activeUnitCode,
+      unit: assignment.unitCode || followsItem.unit || activeUnitCode2,
       courses: [assignment.code],
       lmpType: assignment.kind === "training_package" ? "Staff CAT" : "Master LMP",
       sortOrder
@@ -119677,7 +119680,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     } = {
       ...updatedItem,
       location: updatedItem.location || assignment.locationCode || school,
-      unit: updatedItem.unit || assignment.unitCode || activeUnitCode,
+      unit: updatedItem.unit || assignment.unitCode || activeUnitCode2,
       courses: [assignment.code],
       lmpType: assignment.kind === "training_package" ? "Staff CAT" : "Master LMP",
       sortOrder: originalItem.sortOrder ?? updatedItem.sortOrder ?? 0
@@ -120067,7 +120070,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     console.log("🔍 generatePilotRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
     console.log("🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
     console.log("🔍 [PILOT REMEDIES DEBUG] School:", school);
-    const locationFilteredInstructors = instructorsData.filter((i) => personMatchesConfiguredLocation(platformConfig, i, school));
+    const locationFilteredInstructors = instructorsData.filter((i) => personMatchesConfiguredLocation(platformConfig2, i, school));
     console.log("🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:", locationFilteredInstructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
     const qualifiedPilots = locationFilteredInstructors.filter((i) => isInstructorEligibleForBuildEventType(i, "flight"));
     console.log("🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:", qualifiedPilots.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
@@ -120110,7 +120113,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [instructorsData, syllabusDetails, school, platformConfig, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
+  }, [instructorsData, syllabusDetails, school, platformConfig2, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const findClosestTurnaroundFix = (problemEvent, allEvents, context, flyingWindow) => {
     const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
     const eventsOnResource = allEvents.filter((e) => e.resourceId === problemEvent.resourceId && e.id !== problemEvent.id).sort((a, b) => a.startTime - b.startTime);
@@ -120197,7 +120200,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const getFlightLineAircraftNumberForNeo = reactExports.useCallback((event, targetDate) => {
     const storageDate = targetDate || event.date || date;
-    const storageKey = `dfp-flight-line-aircraft-event-assignments:${storageDate}:${school}:${activeUnitCode}`;
+    const storageKey = `dfp-flight-line-aircraft-event-assignments:${storageDate}:${school}:${activeUnitCode2}`;
     let storedNumber = "";
     try {
       const storedAssignments = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
@@ -120209,7 +120212,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!rawNumber) return "";
     const parsed = parseAircraftNumber(rawNumber, aircraftNumberSettings);
     return String(parsed.number || rawNumber).trim();
-  }, [activeUnitCode, aircraftNumberSettings, date, school]);
+  }, [activeUnitCode2, aircraftNumberSettings, date, school]);
   const getFlightLineAircraftConflictReasons = reactExports.useCallback((event, allEventsForDate, targetDate) => {
     if (event.type !== "flight") return [];
     const settings = activePlatformResourcePool?.settings || {};
@@ -120820,7 +120823,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       return;
     }
     if (!isNeoCapableOperationalModel) {
-      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode}. NEO tile assistance is not available for this operational model yet.`);
+      setShowInfoNotification(`${activeOperationalModelLabel} is selected for ${school} - ${activeUnitCode2}. NEO tile assistance is not available for this operational model yet.`);
       return;
     }
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
@@ -120831,7 +120834,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       setOraclePreviewEvent(null);
     }
     setIsOracleMode((prev) => !prev);
-  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
+  }, [activeOperationalModel, activeOperationalModelLabel, activeUnitCode2, isNeoCapableOperationalModel, isOracleMode, activeView, canRunNeoBuild, denyPlatformAction, school]);
   const handleQuickTile = reactExports.useCallback(() => {
     if (!isFixedCrewLikeOperationalModel(activeOperationalModel)) {
       handleToggleOracleMode();
@@ -120880,7 +120883,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       isTimeFixed: true,
       aircraftConfigId: BASE_AIRCRAFT_CONFIG.id,
       acceptableAircraftConfigs: [BASE_AIRCRAFT_CONFIG.id],
-      fixedCrewUnit: activeUnitCode,
+      fixedCrewUnit: activeUnitCode2,
       eventCategory: "quick_tile",
       pilot: "Select PIC",
       instructor: "Select PIC",
@@ -120898,7 +120901,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [
     activeOperationalModel,
     activeAircraftResourcePrefix,
-    activeUnitCode,
+    activeUnitCode2,
     buildResources,
     canEditDfpTiles,
     date,
@@ -121453,7 +121456,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             isReadOnly: isViewingPastDfp,
             onExternalEventDrop: handleProgramScheduleExternalEventDrop,
             diagnosticHighlightedEventIds: staffAvailabilityDiagnosticEventIds,
-            platformConfig,
+            platformConfig: platformConfig2,
             onUpdatePlatformConfig: handleUpdatePlatformConfigFromSchedule,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             isSetupTestMode: Boolean(setupTestProfile),
@@ -121490,7 +121493,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             initialAvailability: availableAircraftCount,
             apiBase: getApiBaseUrl(),
             locationCode: school,
-            unitCode: activeUnitCode,
+            unitCode: activeUnitCode2,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             onAvailabilityChange: (record) => {
@@ -121836,7 +121839,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2,
-            platformConfig
+            platformConfig: platformConfig2
           }
         );
       case "CourseRoster":
@@ -122377,7 +122380,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             taskProfileAbbreviations: activeTaskProfileAbbreviations,
             operationalModel: activeOperationalModel,
             operationalModelLabel: activeOperationalModelLabel,
-            activeUnitCode,
+            activeUnitCode: activeUnitCode2,
             activeUnitCodes: activeContextUnitCodes,
             airCombatSchedulingWeights,
             onUpdateAirCombatSchedulingWeights: handleUpdateAirCombatSchedulingWeights,
@@ -122427,8 +122430,8 @@ ${error instanceof Error ? error.message : String(error)}`,
             locations,
             units,
             activeLocationCode: school,
-            activeUnitCode,
-            platformConfig,
+            activeUnitCode: activeUnitCode2,
+            platformConfig: platformConfig2,
             serviceDefinitions,
             resourceDisplayNames,
             instructorLabel,
@@ -122532,7 +122535,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             selectedStaffName: dashboardUserName,
             onSelectStaffName: setDashboardTestUserName,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
-            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2),
             currentLocationCode: activeLocationSolarProfile.code,
             onSelectTrainingReport: (entry) => {
               const selectedStaff = allInstructorsData.find((staff) => entry.staff.id ? staff.id === entry.staff.id : staff.idNumber === entry.staff.idNumber) || entry.staff;
@@ -122789,9 +122792,9 @@ ${error instanceof Error ? error.message : String(error)}`,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
-            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2),
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
-            activeUnitCode,
+            activeUnitCode: activeUnitCode2,
             defaultLocationName: activeLocationDisplayName
           }
         );
@@ -122908,7 +122911,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
-            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2),
             trainingReportDisplayName: configuredTrainingReportDisplayName,
             defaultLocationName: activeLocationDisplayName
           }
@@ -122960,7 +122963,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftCrewComposition: activeAircraftCrewComposition,
             crewPositionTerminology: activeCrewPositionTerminology,
             activeLocationCode: school,
-            activeUnitCode,
+            activeUnitCode: activeUnitCode2,
             sharedUnitTabs: fixedCrewSharedResourceUnitTabs,
             trainingPackageTemplates: trainingPackageTemplatesForActiveModel,
             instructorsData,
@@ -123075,7 +123078,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             unitCurrencyDefinitions,
             sctEvents,
             onUpdateSctEvents: setSctEvents,
-            sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+            sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2),
             preferredDutyPeriod,
             onUpdatePreferredDutyPeriod: setPreferredDutyPeriod,
             maxCrewDutyPeriod,
@@ -123122,7 +123125,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             canUsePlatformPermission,
             activeUnitCode: activeTrainingReportUnitCode,
             activeUnitCodes: activeContextUnitCodes,
-            activeCompositeUnitCode: activeUnitCode,
+            activeCompositeUnitCode: activeUnitCode2,
             activeAircraftTypeCode: activeRuntimeAircraftTypeCode,
             activeOperationalModel,
             activeUnitHasTrainees,
@@ -123153,8 +123156,8 @@ ${error instanceof Error ? error.message : String(error)}`,
         console.log("eventForPt051:", eventForPt051);
         console.log("selectedTraineeForHateSheet:", selectedTraineeForHateSheet);
         if (eventForPt051 && selectedTraineeForHateSheet) {
-          const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode);
-          const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || getTrainingReportDisplayNameForUnit(selectedTraineeForHateSheet.unit || activeUnitCode);
+          const selectedTrainingReportTemplate = getUnitTrainingReportTemplate(platformConfig2, selectedTraineeForHateSheet.unit || activeUnitCode2);
+          const selectedTrainingReportName = selectedTrainingReportTemplate.displayName || getTrainingReportDisplayNameForUnit(selectedTraineeForHateSheet.unit || activeUnitCode2);
           if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
@@ -123204,10 +123207,10 @@ ${error instanceof Error ? error.message : String(error)}`,
               event: eventForPt051,
               initialAssessment: existingAssessment,
               instructorLabel,
-              trainingReportTerminology: getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
+              trainingReportTerminology: getUnitTrainingReportTerminology(platformConfig2, selectedTraineeForHateSheet.unit || activeUnitCode2),
               trainingReportTemplate: selectedTrainingReportTemplate,
-              trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
-              trainingReportContextUnitCode: activeUnitCode,
+              trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode2,
+              trainingReportContextUnitCode: activeUnitCode2,
               formatResourceLabel: formatResourceDisplayLabel,
               onBack: () => {
                 setEventForPt051(null);
@@ -123361,7 +123364,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
               lmpScores: scores.get(selectedTraineeForHateSheet.fullName) || [],
               syllabusDetails,
               registerDirtyCheck,
-              phraseBank: getUnitTrainingReportPhraseBank(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode, phraseBank),
+              phraseBank: getUnitTrainingReportPhraseBank(platformConfig2, selectedTraineeForHateSheet.unit || activeUnitCode2, phraseBank),
               currentUserPin: currentUser2?.pin || "1111",
               canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet)
             },
@@ -124098,7 +124101,7 @@ Do you want to replace the existing entry?`,
             },
             contextOptions: operationalContextOptions,
             activeLocation: school,
-            activeUnit: activeUnitCode,
+            activeUnit: activeUnitCode2,
             onContextChange: (loc, unit) => changeOperationalContext(loc, unit),
             activeModelLabel: activeOperationalModelLabel,
             isMagnifierEnabled,
@@ -124360,7 +124363,7 @@ Do you want to replace the existing entry?`,
                         staffListNames: neoAssistStaffListNames,
                         formatResourceLabel: formatResourceDisplayLabel,
                         operationalModel: activeOperationalModel,
-                        activeUnitCode,
+                        activeUnitCode: activeUnitCode2,
                         activeAircraftType: activeRuntimeAircraftType,
                         staffQualificationCatalogue: activeStaffQualificationCatalogue,
                         unitCallsignSettings: activeUnitCallsignSettings,
@@ -124467,7 +124470,7 @@ Do you want to replace the existing entry?`,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
           currentUserName,
           currentUserLocation: school,
-          currentUserUnit: activeUnitCode || currentUser2?.unit || "",
+          currentUserUnit: activeUnitCode2 || currentUser2?.unit || "",
           canAccessView,
           canRunNeoBuild: canRunNeoBuildForActiveModel,
           canPublishDfp,
@@ -124509,13 +124512,13 @@ Do you want to replace the existing entry?`,
           aircraftCrewComposition: activeAircraftCrewComposition,
           crewCompositionSettings: activeCrewCompositionSettings,
           operationalModel: activeOperationalModel,
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           activeUnitCodes: activeContextUnitCodes,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
           personnelDisplaySettings,
           personnelData,
-          sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+          sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2),
           sctEvents,
           nightContinuationDefaultStartTime: commenceNightFlying
         }
@@ -124565,7 +124568,7 @@ Do you want to replace the existing entry?`,
             handleNavigation("PT051");
           },
           trainingReportDisplayName: getTrainingReportDisplayNameForUnit(
-            selectedEvent.unit || selectedEvent.unitCode || allTraineesData.find((trainee) => trainee.fullName === selectedEvent.student || trainee.name === selectedEvent.student)?.unit || activeUnitCode
+            selectedEvent.unit || selectedEvent.unitCode || allTraineesData.find((trainee) => trainee.fullName === selectedEvent.student || trainee.name === selectedEvent.student)?.unit || activeUnitCode2
           ),
           onOpenTrainingReport: normaliseOperationalModel(activeOperationalModel) === "air_combat" || isFixedCrewLikeOperationalModel(activeOperationalModel) ? handleOpenAirCombatTrainingReportFromFlightDetails : void 0,
           onOpenAuth: (e) => {
@@ -124677,10 +124680,10 @@ Do you want to replace the existing entry?`,
           aircraftCrewComposition: activeAircraftCrewComposition,
           crewPositionTerminology: activeCrewPositionTerminology,
           operationalModel: activeOperationalModel,
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           staffQualificationCatalogue: activeStaffQualificationCatalogue,
           unitCallsignSettings: activeUnitCallsignSettings,
-          sctTerminology: getSctTerminology(platformConfig, activeUnitCode)
+          sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2)
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
@@ -124920,14 +124923,14 @@ Do you want to replace the existing entry?`,
               console.warn("[SCT] No userId available from any source - Flyout request NOT saved to DB");
             }
             setShowSctRequest(false);
-            setSuccessMessage(`${getSctTerminology(platformConfig, activeUnitCode).shortLabel} request submitted for ${instructorForSct.name}`);
+            setSuccessMessage(`${getSctTerminology(platformConfig2, activeUnitCode2).shortLabel} request submitted for ${instructorForSct.name}`);
           },
           currencyNames: [],
           sctEvents,
-          sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
+          sctTerminology: getSctTerminology(platformConfig2, activeUnitCode2),
           nightContinuationDefaultTime: formatDecimalTimeInput(commenceNightFlying),
           aircraftConfigurationDefinitions: aircraftConfigCapacityDefinitions,
-          activeUnitCode,
+          activeUnitCode: activeUnitCode2,
           activeUnitCodes: activeContextUnitCodes,
           aircraftTypeCode: activeRuntimeAircraftTypeCode
         }
@@ -125142,11 +125145,11 @@ Do you want to replace the existing entry?`,
         syllabusDetails,
         initialReport: airCombatTrainingReportDraft.initialReport,
         startInEditMode: airCombatTrainingReportDraft.startInEditMode === true,
-        reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
-        trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
+        reportName: getUnitTrainingReportTemplate(platformConfig2, airCombatTrainingReportDraft.staff.unit || activeUnitCode2).displayName,
+        trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig2, airCombatTrainingReportDraft.staff.unit || activeUnitCode2),
         currentUserName,
         locationCode: school,
-        unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,
+        unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode2,
         formatResourceLabel: formatResourceDisplayLabel,
         onCancel: () => setAirCombatTrainingReportDraft(null),
         onSave: handleSaveAirCombatTrainingReport

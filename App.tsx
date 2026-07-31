@@ -7526,6 +7526,7 @@ function generateDfpInternal(
         _isNext: undefined,
         _traineeName: e.student || e.pilot || ''
     }));
+    const buildContinuationShortLabel = getSctTerminology(platformConfig, buildActiveUnitCode || activeUnitCode).shortLabel;
 
     const neoBuildDiag: any = {
         timestamp: new Date().toISOString(),
@@ -7732,7 +7733,7 @@ function generateDfpInternal(
             duplicateCrewMemberships: [] as any[],
             queueSourceAudit: null,
             sctCrewTrace: {
-                purpose: 'Explains why a Fixed Crew SCT/currency tile shows one crew instead of the crew selected in Specific Currency Requests.',
+                purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Specific Currency Requests.`,
                 requestInputs: [] as any[],
                 priorityInputs: [] as any[],
                 activeDfpInputs: [] as any[],
@@ -11064,7 +11065,7 @@ function generateDfpInternal(
 
         if (isTaskingPriorityEvent(event)) {
             skippedCount++;
-            buildDebugLog(`  ↷ DEBUG QUEUED tasking priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
+            buildDebugLog(`  ↷ DEBUG QUEUED mission priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
             return;
         }
 
@@ -18832,7 +18833,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             scheduleAirCombatTrainingPriorityEvents('night');
         }
         if (airCombatDayTaskingEvents.length > 0) {
-            recordProgress({ message: 'Scheduling Air Combat mandatory tasking...', percentage: 45 });
+            recordProgress({ message: 'Scheduling Air Combat mandatory mission events...', percentage: 45 });
             scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
         }
         if (airCombatDayCurrencyEvents.length > 0) {
@@ -20637,11 +20638,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry: any) => (
                 (event.sctRequestId && entry.sctRequestId === event.sctRequestId) || entry.eventId === event.id
             ));
-            let likelyReason = 'No request found for this final SCT event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.';
+            let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Specific Currency Requests.`;
             if (request && !selectedCrew) {
-                likelyReason = 'The SCT request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.';
+                likelyReason = `The ${buildContinuationShortLabel} request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.`;
             } else if (request && matchingQueue.length === 0) {
-                likelyReason = 'The SCT request existed, but no matching Fixed Crew queue item was found.';
+                likelyReason = `The ${buildContinuationShortLabel} request existed, but no matching Fixed Crew queue item was found.`;
             } else if (request && selectedCrew && finalCrew && selectedCrew !== finalCrew) {
                 const placement = matchingPlacements[matchingPlacements.length - 1];
                 if (placement?.requestedFixedCrewDisplay && placement?.crew && placement.requestedFixedCrewDisplay !== finalCrew) {
@@ -34233,10 +34234,11 @@ const App: React.FC = () => {
         setSelectedEvent(null);
     };
 
-    // SCT & REMEDIAL AUTO-ADD SYSTEM
-    // Auto-adds HIGH priority SCT and Force Schedule remedial events to highest priority list
+    // Continuation/currency and remedial auto-add system.
+    // Auto-adds high-priority continuation/currency and force-scheduled remedial events to the highest priority list.
     const syncPriorityEventsWithSctAndRemedial = () => {
-        console.log('\ud83d\udccb Starting sync of priority events with SCT and remedial requests...');
+        const continuationShortLabel = getSctTerminology(platformConfig, activeUnitCode).shortLabel;
+        console.log(`\ud83d\udccb Starting sync of priority events with ${continuationShortLabel} and remedial requests...`);
 
         let added = 0;
         const newPriorityEvents = [...highestPriorityEvents];
@@ -34305,15 +34307,15 @@ const App: React.FC = () => {
         };
         const hasSctParticipant = (sctReq: SctRequest): boolean => Boolean(getSctSelectedPerson(sctReq) || getSctCrewDisplayLabel(sctReq));
 
-        // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
-        console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
+        // 1. Auto-add high-priority continuation/currency requests and medium/low requests with includeInBuild=true.
+        console.log(`🔍 ${continuationShortLabel} Sync - buildDfpDate:`, buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req =>
             (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req =>
             (req.priority === 'High' || req.includeInBuild) && hasSctParticipant(req) && req.event.trim() !== ''
         );
-        console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
+        console.log(`🔍 Found ${continuationShortLabel} flights to include:`, highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
         const fixedCrewCurrencyEventDuration = isFixedCrewLikeOperationalModel(activeOperationalModel)
             ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS
             : null;
@@ -34367,7 +34369,7 @@ const App: React.FC = () => {
                     dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
-                console.log('🔄 Updated HIGH priority SCT flight:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                console.log(`🔄 Updated HIGH priority ${continuationShortLabel} flight:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else {
                 if (existingInNextDay) {
                     setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-flight-${sctReq.id}`));
@@ -34418,12 +34420,12 @@ const App: React.FC = () => {
 
                 newPriorityEvents.push(newEvent);
                 added++;
-                console.log('\u2705 Added HIGH priority SCT flight:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                console.log(`\u2705 Added HIGH priority ${continuationShortLabel} flight:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
                 console.log('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
             }
         });
 
-        // Process SCT FTDs
+        // Process continuation/currency FTDs
         highPrioritySctFtds.forEach(sctReq => {
             const sctEventCode = String(sctReq.eventCode || sctReq.event || '').trim().toUpperCase().slice(0, 8) || sctReq.event;
             const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
@@ -34472,7 +34474,7 @@ const App: React.FC = () => {
                     dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
-                console.log('🔄 Updated HIGH priority SCT FTD:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                console.log(`🔄 Updated HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else {
                 if (existingInNextDay) {
                     setNextDayBuildEvents(prev => prev.filter(event => event.id !== `sct-ftd-${sctReq.id}`));
@@ -34520,7 +34522,7 @@ const App: React.FC = () => {
                     dayNight: getSctDayNight(sctReq),
                     fixedCrewGroup: sctCrewGroupKey || undefined,
                 };
-                console.log('\u2705 Added HIGH priority SCT FTD:', sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
+                console.log(`\u2705 Added HIGH priority ${continuationShortLabel} FTD:`, sctEventCode, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
                 console.log('  - Event date:', newEvent.date, '| isTimeFixed:', newEvent.isTimeFixed, '| startTime:', newEvent.startTime);
 
                 newPriorityEvents.push(newEvent);
@@ -35267,10 +35269,11 @@ const App: React.FC = () => {
     };
 
     const startBuildProcess = async () => {
+        const continuationShortLabel = getSctTerminology(platformConfig, activeUnitCode).shortLabel;
         console.log('🚀 [NEO-Build] startBuildProcess called');
-        // CRITICAL FIRST STEP: Sync SCT and Remedial requests to Highest Priority
+        // Critical first step: sync continuation/currency and remedial requests to Highest Priority.
         console.log('🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====');
-        console.log('🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...');
+        console.log(`🚀 [NEO-Build] Pre-Build Step 1: Syncing ${continuationShortLabel} and Remedial requests...`);
         const taskTraceLabels = Array.from(new Set([
             ...(DEFAULT_TASK_PROFILE_CONFIG.air_combat || []),
             'Task',
@@ -35374,7 +35377,7 @@ const App: React.FC = () => {
                 const requestId = getSctRequestIdFromEvent(event);
                 const stillRequested = !!requestId && liveSctRequestIds.has(requestId);
                 if (!stillRequested) {
-                    console.log(`DEBUG Removing stale SCT priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || 'none'})`);
+                    console.log(`DEBUG Removing stale ${continuationShortLabel} priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || 'none'})`);
                 }
                 return stillRequested;
             }
@@ -35443,7 +35446,7 @@ const App: React.FC = () => {
         const fixedExistingEventsForDate = existingEventsForDate.filter(event => {
             if (!event.isTimeFixed) return false;
             if (isSctPriorityEvent(event)) {
-                console.log(`DEBUG Skipping fixed SCT event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || 'none'})`);
+                console.log(`DEBUG Skipping fixed ${continuationShortLabel} event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || 'none'})`);
                 return false;
             }
             if (!isTaskingEvent(event)) return true;
@@ -35464,7 +35467,7 @@ const App: React.FC = () => {
             };
         }
         if (staleExistingSctEventsForDate.length > 0) {
-            console.log(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale SCT event(s) from build-date published schedule before NEO Build input handoff.`);
+            console.log(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale ${continuationShortLabel} event(s) from build-date published schedule before NEO Build input handoff.`);
         }
 
         console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
