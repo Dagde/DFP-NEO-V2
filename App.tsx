@@ -3996,12 +3996,12 @@ const DfpSidePanelTimeline: React.FC<{
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
                                 Mission Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
-                                    <option value="">Select mission profile</option>
+                                    <option value="">Select task profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
-                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission profile
-                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission profile manually" />
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual task profile
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type task profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />

@@ -11549,26 +11549,26 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
           settingsLink("platform-task-profiles", "Take me there", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full mission profile name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the mission profile, training requirement, or event data." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the mission profile is Close Air Support and the tile label is CAS, the schedule tile can show Mission - CAS." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task is Close Air Support and the tile label is CAS, the schedule tile can show Mission - CAS." })
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Mission profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Task" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Tile label" })
             ] }),
             taskTileLabelProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No mission profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission tile labels", value: "No task profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Mission Profiles", description: "Regular unit flight mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Profiles", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
-        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission profiles", value: "No mission profiles are configured for this unit.", muted: true }) }),
+        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Reusable flight profiles", value: "No reusable flight profiles are configured for this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build defaults are configured under Training & Standards.", action: settingsLink("sct-events", "Take me there"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: "Continuation and currency event rows are edited in one place." })
@@ -38297,7 +38297,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Mission profile",
+        placeholder: "Task profile",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -38314,14 +38314,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " mission profile"
+            " task profile"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission profile" : "No mission profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this mission profile manually." : `${operationalModelLabel} has no saved mission profiles yet. Add them in Settings > Platform & Deployment > Mission Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -38402,7 +38402,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission Profile", hint: request.tasking || "Select or type mission profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Task Profile", hint: request.tasking || "Select or type task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -40740,7 +40740,7 @@ const PrioritiesView = ({
   );
   const renderSavedSpecialEvents = () => {
     if (displayedStandardMissionProfiles.length === 0) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved mission profiles for this unit context." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved task profiles for this unit context." });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
@@ -40816,7 +40816,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these mission profile changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these task profile changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -66317,7 +66317,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
       return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
     }
     if (lowerTitle.includes("profiles")) {
-      return { section: "platform-standard-missions", label: "Mission Profiles" };
+      return { section: "platform-standard-missions", label: "Reusable Flight Profiles" };
     }
   }
   return null;
@@ -66516,13 +66516,13 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} unit-scoped reusable flight mission profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped reusable flight profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Mission Profiles, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.",
-      { section: "platform-standard-missions", label: "Mission Profiles", focusSubsectionId: "platform-standard-missions" }
+      "Open Reusable Flight Profiles, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.",
+      { section: "platform-standard-missions", label: "Reusable Flight Profiles", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Mission profiles, alternate crew profiles and continuation/currency events have per-unit records where needed.", "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Reusable flight profiles, alternate crew profiles and continuation/currency events have per-unit records where needed.", "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -70785,8 +70785,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Mission Profiles",
-          subtitle: "Model-specific mission profile lists used by mission requests. Users can still type a profile manually if the assigned profile is not listed.",
+          title: "Task Profiles",
+          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -70806,14 +70806,14 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the mission profile names available for each operational model. Unit tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the task names available for each operational model. Unit tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model mission profiles." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model task profiles." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
@@ -70827,7 +70827,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One mission profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
@@ -71106,23 +71106,23 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Mission Profiles",
-          subtitle: "Define reusable flight mission profiles for regular Fixed Crew-style unit flights.",
+          title: "Reusable Flight Profiles",
+          subtitle: "Define reusable flight templates for regular Fixed Crew-style unit flights.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Profile" })
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Mission Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
             activeStandardMissionUnitLabel || "No unit selected"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New mission profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New reusable flight profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Mission Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No reusable flight profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -71170,7 +71170,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Reusable Flight Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -75147,12 +75147,12 @@ const sectionLabels = {
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
-  "standard-missions": "Mission Profiles",
+  "standard-missions": "Reusable Flight Profiles",
   "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Mission Profiles",
+  "platform-task-profiles": "Task Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -75292,12 +75292,12 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Mission profiles for regular unit scheduling",
+  "standard-missions": "Reusable flight profiles for regular unit scheduling",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Mission profile lists by operational model",
+  "platform-task-profiles": "Task profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -90202,13 +90202,13 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Mission Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual mission profile",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission profile manually" })
+            "Manual task profile",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type task profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
