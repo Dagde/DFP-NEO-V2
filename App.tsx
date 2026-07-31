@@ -38710,17 +38710,17 @@ appliedUpdates.forEach(update => {
             const roleText = String(instructor.role || '').trim().toLowerCase();
             const unitCode = String(instructor.unit || '').trim().toUpperCase();
             const inferredQfi = roleText === 'qfi' || roleText === 'instructor';
+            const inferredContractor = roleText === 'sim ip' || roleText === 'contractor staff';
             const normalisedRole =
-                roleText === 'sim ip' || roleText === 'contractor staff' ? 'SIM IP' :
+                inferredContractor ? 'Pilot' :
                 roleText === 'pilot' ? 'Pilot' :
                 roleText === 'qfi' || roleText === 'instructor' ? 'Pilot' :
                 normaliseFixedCrewStaffRole(instructor.role, unitCode) || 'Pilot';
-            const isContractorStaff = normalisedRole === 'SIM IP';
             const nextInstructor: Instructor = {
                 ...instructor,
                 role: normalisedRole,
-                isQFI: isContractorStaff ? false : (instructor.isQFI ?? inferredQfi),
-                isContractor: isContractorStaff ? true : (instructor.isContractor ?? false),
+                isQFI: inferredContractor ? false : (instructor.isQFI ?? inferredQfi),
+                isContractor: inferredContractor ? true : (instructor.isContractor ?? false),
                 isOFI: instructor.isOFI ?? false,
                 isCFI: instructor.isCFI ?? false,
                 isAdminStaff: instructor.isAdminStaff ?? false,

@@ -52582,7 +52582,7 @@ const normaliseImportedStaffRole = (value, crewPositionTerminology) => {
   const cleanValue = value.trim();
   const cleanLower = cleanValue.toLowerCase();
   if (!cleanValue) return void 0;
-  if (["sim ip", "simulator ip", "sim instructor", "simulator instructor", "contractor staff"].includes(cleanLower)) return "SIM IP";
+  if (["sim ip", "simulator ip", "sim instructor", "simulator instructor", "contractor staff"].includes(cleanLower)) return "Pilot";
   if (["qfi", "instructor", "flight instructor"].includes(cleanLower)) return void 0;
   const crewPosition = findCrewPositionEntry(cleanValue, crewPositionTerminology);
   if (crewPosition) return isPilotCrewPosition(crewPosition.genericName, crewPositionTerminology) ? "Pilot" : cleanValue;
@@ -52604,12 +52604,12 @@ const applyQualificationRoles = (parsedData, rolesValue, crewPositionTerminology
   parsedData.isAdminStaff = rolesLower.includes("admin");
   if (importedCrewRole) {
     parsedData.role = importedCrewRole;
-    if (importedCrewRole === "SIM IP") {
+    if (rolesLower.includes("sim ip") || rolesLower.includes("contractor staff")) {
       parsedData.isQFI = false;
       parsedData.isContractor = true;
     }
   } else if (rolesLower.includes("sim ip") || rolesLower.includes("contractor staff")) {
-    parsedData.role = "SIM IP";
+    parsedData.role = "Pilot";
     parsedData.isQFI = false;
     parsedData.isContractor = true;
   } else if (rolesLower.includes("pilot")) {
@@ -118681,13 +118681,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       const roleText = String(instructor.role || "").trim().toLowerCase();
       String(instructor.unit || "").trim().toUpperCase();
       const inferredQfi = roleText === "qfi" || roleText === "instructor";
-      const normalisedRole = roleText === "sim ip" || roleText === "contractor staff" ? "SIM IP" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "Pilot" : normaliseFixedCrewStaffRole(instructor.role) || "Pilot";
-      const isContractorStaff = normalisedRole === "SIM IP";
+      const inferredContractor = roleText === "sim ip" || roleText === "contractor staff";
+      const normalisedRole = inferredContractor ? "Pilot" : roleText === "pilot" ? "Pilot" : roleText === "qfi" || roleText === "instructor" ? "Pilot" : normaliseFixedCrewStaffRole(instructor.role) || "Pilot";
       const nextInstructor = {
         ...instructor,
         role: normalisedRole,
-        isQFI: isContractorStaff ? false : instructor.isQFI ?? inferredQfi,
-        isContractor: isContractorStaff ? true : instructor.isContractor ?? false,
+        isQFI: inferredContractor ? false : instructor.isQFI ?? inferredQfi,
+        isContractor: inferredContractor ? true : instructor.isContractor ?? false,
         isOFI: instructor.isOFI ?? false,
         isCFI: instructor.isCFI ?? false,
         isAdminStaff: instructor.isAdminStaff ?? false,
