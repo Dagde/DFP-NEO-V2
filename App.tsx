@@ -24341,7 +24341,7 @@ const App: React.FC = () => {
                                             const normalizedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
 
                                             // Add LMP completions only when there is no real score record.
-                                            // Do not replace actual PT-051 grades such as Fail/Marginal.
+                                            // Do not replace actual training report grades such as Fail/Marginal.
                                             const existingScores = merged.get(lmp.traineeFullName) || [];
                                             const existingEventIds = new Set(existingScores.map(score => score.event));
                                             const completionOnlyRecords: Score[] = normalizedIds
@@ -24413,7 +24413,7 @@ const App: React.FC = () => {
                                 durationMs: Math.round(performance.now() - lmpSyncStartedAt),
                                 status: syncRes.status,
                             });
-                            // Fallback: directly apply DB PT-051 scores to state
+                            // Fallback: directly apply DB training report scores to state
                             // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
                             setScores(prev => {
                                 const merged = new Map(prev);
@@ -24440,7 +24440,7 @@ const App: React.FC = () => {
                             durationMs: Math.round(performance.now() - lmpSyncStartedAt),
                             error: String(syncErr),
                         });
-                        // Fallback: directly apply DB PT-051 scores to state
+                        // Fallback: directly apply DB training report scores to state
                         // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
                         setScores(prev => {
                             const merged = new Map(prev);
@@ -24670,7 +24670,7 @@ const App: React.FC = () => {
 
     const historicalLoadAbortRef = React.useRef<AbortController | null>(null);
 
-    // Load persisted history metadata and PT-051 data. Current-day DFP is loaded by loadSnapshotForDate.
+    // Load persisted history metadata and training report data. Current-day DFP is loaded by loadSnapshotForDate.
     useEffect(() => {
         historicalLoadAbortRef.current?.abort();
         if (setupTestProfile) {
@@ -24792,7 +24792,7 @@ const App: React.FC = () => {
                     }
 
                     if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
-                        console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
+                        console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy training report records; TraineePerformance is authoritative`);
                     }
                 } else {
                     pushDfpDataDiag('history:legacy-skipped', {
@@ -25013,7 +25013,7 @@ const App: React.FC = () => {
         console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || 'unit not set'}), ${events.length} events`);
 
         if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
-            console.log(`[Snapshot] Ignored ${Object.keys(snap.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
+            console.log(`[Snapshot] Ignored ${Object.keys(snap.pt051Assessments).length} training report snapshot records for ${targetDate}; TraineePerformance is authoritative`);
         }
 
         if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
@@ -31500,7 +31500,7 @@ const App: React.FC = () => {
                 }
             }
         } else {
-            console.warn(`[Individual LMP] Could not scan PT-051 records while deleting ${item.code}:`, await performanceResponse.text().catch(() => ''));
+            console.warn(`[Individual LMP] Could not scan training report records while deleting ${item.code}:`, await performanceResponse.text().catch(() => ''));
         }
 
         setScores(prev => {
@@ -32452,7 +32452,7 @@ const App: React.FC = () => {
                 extraEventCode,
                 error: error instanceof Error ? error.message : String(error),
             });
-            console.error('[Training Report] Failed to persist extra event from PT-051:', error);
+            console.error('[Training Report] Failed to persist extra event from training report:', error);
             void showDarkAlert(
                 `The training report was saved, but the extra ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} could not be inserted into the trainee Individual LMP.\n\n${error instanceof Error ? error.message : String(error)}`,
                 'Extra Event Insert Failed',
@@ -32669,7 +32669,7 @@ const App: React.FC = () => {
                 nextEventCode: nextEvent.code,
                 error: error instanceof Error ? error.message : String(error),
             });
-            console.error('[Training Report] Failed to persist next event extension from PT-051:', error);
+            console.error('[Training Report] Failed to persist next event extension from training report:', error);
             void showDarkAlert(
                 `The training report was saved, but the next ${sourceItem.type === 'FTD' ? 'sim' : 'flight'} could not be extended in the trainee Individual LMP.\n\n${error instanceof Error ? error.message : String(error)}`,
                 'Next Event Extension Failed',
@@ -33630,11 +33630,11 @@ const App: React.FC = () => {
                     return newSchedules;
                 });
 
-                // NEW APPROACH: Trigger PT-051 sync after any Active DFP change
+                // NEW APPROACH: Trigger training report sync after any Active DFP change
                 // Use functional setState to access the latest state
-                console.log('📋 Triggering PT-051 sync after Active DFP change...');
+                console.log('📋 Triggering training report sync after Active DFP change...');
                 setTimeout(() => {
-                    console.log('⏰ Executing delayed PT-051 sync...');
+                    console.log('⏰ Executing delayed training report sync...');
                     setPublishedSchedules(currentSchedules => {
                         setPt051Assessments(currentAssessments => {
                             syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -33971,11 +33971,11 @@ const App: React.FC = () => {
             });
         }
 
-        // NEW APPROACH: Trigger PT-051 sync after deletion (only for Active DFP)
+        // NEW APPROACH: Trigger training report sync after deletion (only for Active DFP)
         if (!isNextDay) {
-            console.log('📋 Triggering PT-051 sync after event deletion...');
+            console.log('📋 Triggering training report sync after event deletion...');
             setTimeout(() => {
-                console.log('⏰ Executing delayed PT-051 sync after deletion...');
+                console.log('⏰ Executing delayed training report sync after deletion...');
                 setPublishedSchedules(currentSchedules => {
                     setPt051Assessments(currentAssessments => {
                         syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -35716,7 +35716,7 @@ const App: React.FC = () => {
 
         // ── Fetch DB-backed ELCE for all active trainees ──────────────────────
         // This gives the build algorithm real DCO tracking data written the moment
-        // the post-flight form is saved, before PT-051 paperwork is entered.
+        // the post-flight form is saved, before training report paperwork is entered.
         // Non-fatal: if the fetch fails, the build proceeds with legacy DFP-scan ELCE.
         let dbElceMap: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> | undefined;
         try {
@@ -37588,7 +37588,7 @@ const App: React.FC = () => {
             [`${school}:${targetDate}`]: JSON.parse(JSON.stringify(finalEvents)),
         }));
 
-        // 3. Sync PT-051s with the updated schedule (delayed to let state settle)
+        // 3. Sync training reports with the updated schedule (delayed to let state settle)
         setTimeout(() => {
             setPublishedSchedules(currentSchedules => {
                 setPt051Assessments(currentAssessments => {
@@ -37725,10 +37725,10 @@ const App: React.FC = () => {
             [publishedSnapshotKey]: currentAircraftConfigState,
         }));
 
-        // NEW APPROACH: Sync PT-051s with Active DFP after publish
-        console.log('\u{1F4CB} Triggering PT-051 sync after publish...');
+        // NEW APPROACH: Sync training reports with Active DFP after publish
+        console.log('\u{1F4CB} Triggering training report sync after publish...');
         setTimeout(() => {
-            console.log('\u{23F0} Executing delayed PT-051 sync after publish...');
+            console.log('\u{23F0} Executing delayed training report sync after publish...');
             setPublishedSchedules(currentSchedules => {
                 setPt051Assessments(currentAssessments => {
                     syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -42980,7 +42980,7 @@ appliedUpdates.forEach(update => {
                             trainingReportDisplayName={configuredTrainingReportDisplayName}
                         />;
             case 'MyDashboard':
-                // Get all events from published schedules for PT-051 lookup
+                // Get all events from published schedules for training report lookup
                 const allPublishedEvents: ScheduleEvent[] = [];
                 Object.values(publishedSchedules).forEach(scheduleEvents => {
                     allPublishedEvents.push(...scheduleEvents);
@@ -43070,11 +43070,11 @@ appliedUpdates.forEach(update => {
                             }}
                             onReassignTrainingReport={handleReassignTrainingReportNotification}
                             onSelectPt051={(assessment) => {
-                                console.log('🔍 Dashboard PT-051 clicked:', assessment);
+                                console.log('🔍 Dashboard training report clicked:', assessment);
                                 console.log('Looking for event ID:', assessment.eventId);
                                 console.log('Total events available:', allPublishedEvents.length);
 
-                                // Find the event associated with this PT-051
+                                // Find the event associated with this training report
                                 const event = allPublishedEvents.find(e => e.id === assessment.eventId);
                                 console.log('Found event:', event);
 
@@ -43093,7 +43093,7 @@ appliedUpdates.forEach(update => {
                                         handleNavigation('PT051');
                                     }, 0);
                                 } else {
-                                    console.error('❌ Could not find event or trainee for PT-051:', {
+                                    console.error('❌ Could not find event or trainee for training report:', {
                                         assessment,
                                         eventFound: !!event,
                                         traineeFound: !!trainee,
@@ -43145,7 +43145,7 @@ appliedUpdates.forEach(update => {
 
                                         if (secondaryFallbackEvent && trainee) {
                                             console.log('✅ Found event using secondary fallback:', secondaryFallbackEvent);
-                                            console.warn('⚠️ Note: Event date may differ from PT-051 date');
+                                            console.warn('⚠️ Note: Event date may differ from training report date');
                                             setEventForPt051(secondaryFallbackEvent);
                                             setSelectedTraineeForHateSheet(trainee);
                                             setTimeout(() => {
@@ -43153,7 +43153,7 @@ appliedUpdates.forEach(update => {
                                                 handleNavigation('PT051');
                                             }, 0);
                                         } else {
-                                            console.error('❌ All fallback attempts failed - cannot open PT-051');
+                                            console.error('❌ All fallback attempts failed - cannot open training report');
                                             // Create mock event as last resort
                                             console.log('🔧 Creating mock event as last resort...');
 
@@ -43709,7 +43709,7 @@ appliedUpdates.forEach(update => {
                             </div>
                         </div>;
                     }
-                    // Find the PT-051 for this event and trainee combination
+                    // Find the training report for this event and trainee combination
                     const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                     console.log('Looking for assessment with key:', assessmentKey);
                     console.log('Available assessment keys:', Array.from(pt051Assessments.keys()));
@@ -43801,7 +43801,7 @@ appliedUpdates.forEach(update => {
                                 throw new Error(errorText || `Failed to delete ${selectedTrainingReportName} record (${response.status})`);
                             }
 
-                            // Find and delete the PT-051 assessment from local state after the database delete succeeds.
+                            // Find and delete the training report assessment from local state after the database delete succeeds.
                             const assessmentKey = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
                             console.log('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
                             const updatedAssessments = new Map(pt051Assessments);
@@ -43881,8 +43881,8 @@ appliedUpdates.forEach(update => {
                                 await maybePassTrainingReportNotesToNextLmpEvent(normalizedAssessment);
                                 setSuccessMessage(`${selectedTrainingReportName} Assessment Saved!`);
 
-                                // PT-051 COMPLETION -> SCORE DB SYNC
-                                // When a PT-051 is saved (not auto-save), persist a Score record to the DB
+                                // Training report completion -> SCORE DB SYNC
+                                // When a training report is saved (not auto-save), persist a Score record to the DB
                                 // so that IndividualLMP.completedEventIds is kept in sync and Course Progress
                                 // / NEO Build scheduling reflect the correct trainee progress.
                                 const eventId = assessment.flightNumber;
@@ -44023,7 +44023,7 @@ appliedUpdates.forEach(update => {
                                     // This record is later consumed by:
                                     //   1. The ELCE (Effective Last Completed Event) logic in the build
                                     //      algorithm, which queries /api/event-completions/elce to find
-                                    //      events that finished after the last PT-051 was entered.
+                                    //      events that finished after the last training report was entered.
                                     //   2. DCO result history / analytics views.
                                     // isCountedAsElce is derived server-side from the dcoResult value:
                                     //   DCO / DPCO => isCountedAsElce = true
@@ -44505,8 +44505,8 @@ appliedUpdates.forEach(update => {
                                     }
                                     // ── End FlightLogEntry ────────────────────────────────────────────────────
 
-                                    // ── PT-051 result update ──────────────────────────────────────────────────
-                                    // When a DCO/DPCO/DNCO result is saved, also update the linked PT-051
+                                    // ── training report result update ──────────────────────────────────────────────────
+                                    // When a DCO/DPCO/DNCO result is saved, also update the linked training report
                                     // assessment record's dcoResult so Performance History shows the result.
                                     const isCurrencyPostFlightEvent = !!eventForPostFlight && (
                                         eventForPostFlight.eventCategory === 'currency' ||
@@ -44520,7 +44520,7 @@ appliedUpdates.forEach(update => {
                                         const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || '';
                                         const pt051FlightNumber = pfEvtForPt051.flightNumber || '';
                                         if (pt051TraineeName && pt051FlightNumber) {
-                                            // Find the matching unassessed PT-051 for this flight + trainee
+                                            // Find the matching unassessed training report for this flight + trainee
                                             const matchingPt051 = Array.from(pt051Assessments.values()).find((a: any) =>
                                                 a.traineeFullName === pt051TraineeName &&
                                                 a.flightNumber === pt051FlightNumber &&
@@ -44538,13 +44538,13 @@ appliedUpdates.forEach(update => {
                                                     next.set((matchingPt051 as any).id, updatedAssessment);
                                                     return next;
                                                 });
-                                                console.log(`[PostFlight] ✅ PT-051 updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                                                console.log(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
                                             } else {
-                                                console.log(`[PostFlight] ℹ️ No unassessed PT-051 found for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                                                console.log(`[PostFlight] ℹ️ No unassessed training report found for ${pt051TraineeName} — ${pt051FlightNumber}`);
                                             }
                                         }
                                     }
-                                    // ── End PT-051 result update ──────────────────────────────────────────────
+                                    // ── End training report result update ──────────────────────────────────────────────
 
                                     if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && isCurrencyPostFlightEvent && eventForPostFlight) {
                                         try {
@@ -45285,7 +45285,7 @@ appliedUpdates.forEach(update => {
                         setScores(updatedScores);
                         console.log('Scores state updated successfully');
 
-                        // Persist new PT-051 completions to DB Individual LMP
+                        // Persist new training report completions to DB Individual LMP
                         // Group new scores by trainee name and update their LMP
                         const traineeNamesWithNewScores = [...new Set(newScores.map((s: any) => s.traineeName as string))];
                         traineeNamesWithNewScores.forEach(async (traineeName) => {
@@ -45298,7 +45298,7 @@ appliedUpdates.forEach(update => {
 
                                 const lmpType = getConfiguredLmpTypeForTrainee(trainee);
                                 if (!lmpType) {
-                                    console.warn(`[PT-051] Skipped Individual LMP completion persistence for ${trainee.fullName}: no Master LMP assigned on trainee or course`);
+                                    console.warn(`[Training Report] Skipped Individual LMP completion persistence for ${trainee.fullName}: no Master LMP assigned on trainee or course`);
                                     return;
                                 }
 

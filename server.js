@@ -357,7 +357,7 @@ async function runPrismaRuntimeMaintenance(db) {
     } catch (tieErr) {
       console.error('TIE startup failed (non-fatal):', tieErr.message);
     }
-    // Ensure TraineePerformance table exists (single source of truth for PT-051 assessments)
+    // Ensure TraineePerformance table exists (single source of truth for training report assessments)
     await ensureTraineePerformanceTable(db);
     await migrateLegacyPerformanceIntoTraineePerformance(db);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
@@ -4383,12 +4383,12 @@ app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
   }
 });
 
-// POST /api/fix-pt051-scores - Remove asterisks from PT-051 Score records
+// POST /api/fix-pt051-scores - Remove asterisks from training report Score records
 // This fixes the display in the Performance History table
 app.post('/api/fix-pt051-scores', async (req, res) => {
   try {
     const db = await getPrisma();
-    console.log('[PT-051 Fix] Starting PT-051 Score fix...');
+    console.log('[Training Report Fix] Starting training report Score fix...');
 
     // Get all Score records with BIF FTD1* or BIF FTD3*
     const scoresToFix = await db.score.findMany({
@@ -4399,7 +4399,7 @@ app.post('/api/fix-pt051-scores', async (req, res) => {
       }
     });
 
-    console.log(`[PT-051 Fix] Found ${scoresToFix.length} PT-051 Score records with asterisks`);
+    console.log(`[Training Report Fix] Found ${scoresToFix.length} training report Score records with asterisks`);
 
     let updatedCount = 0;
     const details = [];
@@ -4417,7 +4417,7 @@ app.post('/api/fix-pt051-scores', async (req, res) => {
       details.push(`Updated score for ${score.traineeFullName}: ${oldEvent} → ${newEvent}`);
     }
 
-    console.log(`[PT-051 Fix] Complete: Updated ${updatedCount} PT-051 Score records`);
+    console.log(`[Training Report Fix] Complete: Updated ${updatedCount} training report Score records`);
     res.json({
       success: true,
       updatedCount,
@@ -4425,8 +4425,8 @@ app.post('/api/fix-pt051-scores', async (req, res) => {
       details
     });
   } catch (error) {
-    console.error('[PT-051 Fix] Error:', error);
-    res.status(500).json({ error: 'Failed to fix PT-051 Score records', details: error.message });
+    console.error('[Training Report Fix] Error:', error);
+    res.status(500).json({ error: 'Failed to fix training report Score records', details: error.message });
   }
 });
 
@@ -4878,7 +4878,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
   return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
 };
 
-// POST /api/trainees/lmp-sync - Sync all trainees' authoritative PT-051 records → IndividualLMP
+// POST /api/trainees/lmp-sync - Sync all trainees' authoritative training report records → IndividualLMP
 // Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]> }
 // syllabusData is OPTIONAL - server loads syllabus directly from DB for accurate backfill.
 // Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
@@ -4918,9 +4918,9 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
     }
 
-    // Fetch all active trainees with their existing LMP. PT-051 progress is
+    // Fetch all active trainees with their existing LMP. training report progress is
     // sourced exclusively from TraineePerformance below; legacy Score rows and
-    // snapshot PT-051 payloads can contain imported/stale completions and must
+    // snapshot training report payloads can contain imported/stale completions and must
     // not drive LMP progression.
     const trainees = await db.trainee.findMany({
       where: { isActive: true },
@@ -4972,7 +4972,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         continue;
       }
 
-      // Build set of completed event IDs from the authoritative PT-051 table.
+      // Build set of completed event IDs from the authoritative training report table.
       // Do not merge legacy Score rows: they are retained for compatibility
       // views, but using them here can falsely complete an entire LMP.
       const scoreMap = {};
@@ -10411,7 +10411,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
 
     // ----------------------------------------------------------------
     // RESET: Clear all existing historical data before reseeding
-    // This ensures a clean slate for IndividualLMP, PT-051s, and scores
+    // This ensures a clean slate for IndividualLMP, training reports, and scores
     // ----------------------------------------------------------------
     console.log('🧹 Resetting historical data before reseeding...');
 
@@ -10543,7 +10543,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
     // Key: trainee.id, Value: { traineeFullName, lmpType, completedEventIds: string[] }
     const traineeCompletedEvents = {}; // { traineeId: Set<string> }
 
-    // PT-051 ALL_ELEMENTS - exact 22 elements matching PT051_STRUCTURE in PT051View.tsx
+    // Training report ALL_ELEMENTS - exact 22 elements matching PT051_STRUCTURE in PT051View.tsx
     // This must match exactly: PT051_STRUCTURE.flatMap(cat => cat.elements)
     const ALL_ELEMENTS = [
       // Core Dimensions
@@ -10566,7 +10566,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
       'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge',
     ];
 
-    // PT-051 grading: 1-5 scale (no 0 for historical data - all events completed satisfactorily)
+    // Training report grading: 1-5 scale (no 0 for historical data - all events completed satisfactorily)
     // Weighted: 3 = standard, 4 = above standard, occasional 5, rare 2 (marginal)
     const gradePool = [3, 3, 3, 4, 4, 3, 3, 4, 3, 3, 4, 3, 5, 3, 4]; // weighted 3-4, some 5
 
@@ -10895,7 +10895,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
           publishedSchedules[dateStr].push(logbookEntry);
         }
 
-        // Generate PT-051 for ALL event types
+        // Generate training report for ALL event types
         // Flight/FTD: full assessment with graded elements and element-specific comments
         // Ground/other: DCO-only record (no element scores required)
         if (eventType === 'flight' || eventType === 'ftd') {
@@ -10964,13 +10964,13 @@ app.post('/api/historical-data/seed', async (req, res) => {
             isHistoricalSeed: true,
           };
 
-          // Mark this event as completed in IndividualLMP (PT-051 exists = completed)
+          // Mark this event as completed in IndividualLMP (training report exists = completed)
           // Strip asterisks for LMP matching (e.g. 'BIF FTD1*' → 'BIF FTD1')
           const normalizedCode = code.replace('*', '');
           traineeCompletedEvents[trainee.id].completedIds.add(normalizedCode);
 
         } else {
-          // Ground/non-flight events: generate a DCO-only PT-051 record (no element scores)
+          // Ground/non-flight events: generate a DCO-only training report record (no element scores)
           const pt051Key = `pt051-${eventId}-${trainee.fullName}`;
           pt051Assessments[pt051Key] = {
             id: pt051Key,
@@ -11028,7 +11028,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
     }
 
     // Update IndividualLMP for each processed trainee
-    // Set completedEventIds to the set of events that have a PT-051 assessment
+    // Set completedEventIds to the set of events that have a training report assessment
     let lmpUpdated = 0;
     let lmpSkipped = 0;
 
@@ -11230,7 +11230,7 @@ app.post('/api/historical-data/refresh-dates', async (req, res) => {
       newPublishedSchedules[newDateStr].push(...updatedEvents);
     }
 
-    // Update PT-051 dates
+    // Update training report dates
     const newPt051Assessments = {};
     for (const [key, assessment] of Object.entries(pt051Assessments)) {
       const newDate = dateMap[assessment.date] || assessment.date;
@@ -13295,7 +13295,7 @@ app.get('/api/tie/runs', async (req, res) => {
   }
 });
 
-// GET /api/tie/courses - list courses with PT-051 data and last run info
+// GET /api/tie/courses - list courses with training report data and last run info
 app.get('/api/tie/courses', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -13305,7 +13305,7 @@ app.get('/api/tie/courses', async (req, res) => {
     for (const b of backups) {
       try {
         const parsed = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
-        // PT-051 data is stored as a dict keyed by record ID; course is embedded in traineeFullName after em-dash
+        // training report data is stored as a dict keyed by record ID; course is embedded in traineeFullName after em-dash
         const records = Array.isArray(parsed) ? parsed : Object.values(parsed);
         for (const r of records) {
           // Try direct course field first, then extract from traineeFullName (e.g. "Smith, John – ADF301")
@@ -13603,7 +13603,7 @@ app.put('/api/tie/settings', async (req, res) => {
 
 // ============================================================
 // TRAINEE PERFORMANCE API ROUTES
-// Single source of truth for all PT-051 assessments
+// Single source of truth for all training report assessments
 // ============================================================
 
 // Ensure TraineePerformance table exists (called at Prisma startup)
@@ -14002,7 +14002,7 @@ app.get('/api/trainee-performance/stats', async (req, res) => {
   }
 });
 
-// POST /api/trainee-performance/migrate-legacy - backfill legacy PT-051 stores into TraineePerformance
+// POST /api/trainee-performance/migrate-legacy - backfill legacy training report stores into TraineePerformance
 // IMPORTANT: This must come BEFORE /:eventId to avoid Express matching 'migrate-legacy' as an eventId.
 app.post('/api/trainee-performance/migrate-legacy', async (req, res) => {
   try {
@@ -14011,7 +14011,7 @@ app.post('/api/trainee-performance/migrate-legacy', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('❌ POST /api/trainee-performance/migrate-legacy error:', error);
-    res.status(500).json({ error: 'Failed to migrate legacy PT-051 records', details: error.message });
+    res.status(500).json({ error: 'Failed to migrate legacy training report records', details: error.message });
   }
 });
 

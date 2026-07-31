@@ -107595,7 +107595,7 @@ const App = () => {
             setSnapshotDates((prev) => [.../* @__PURE__ */ new Set([...prev, ...Object.keys(seedSchedules)])].sort((a, b) => b.localeCompare(a)));
           }
           if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
-            console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
+            console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy training report records; TraineePerformance is authoritative`);
           }
         } else {
           pushDfpDataDiag("history:legacy-skipped", {
@@ -107792,7 +107792,7 @@ const App = () => {
     });
     console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
     if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
-      console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
+      console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} training report snapshot records for ${targetDate}; TraineePerformance is authoritative`);
     }
     if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
       setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
@@ -113048,7 +113048,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         }
       }
     } else {
-      console.warn(`[Individual LMP] Could not scan PT-051 records while deleting ${item.code}:`, await performanceResponse.text().catch(() => ""));
+      console.warn(`[Individual LMP] Could not scan training report records while deleting ${item.code}:`, await performanceResponse.text().catch(() => ""));
     }
     setScores((prev) => {
       const traineeScores = prev.get(trainee.fullName) || [];
@@ -113830,7 +113830,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         extraEventCode,
         error: error instanceof Error ? error.message : String(error)
       });
-      console.error("[Training Report] Failed to persist extra event from PT-051:", error);
+      console.error("[Training Report] Failed to persist extra event from training report:", error);
       void showDarkAlert2(
         `The training report was saved, but the extra ${sourceItem.type === "FTD" ? "sim" : "flight"} could not be inserted into the trainee Individual LMP.
 
@@ -114033,7 +114033,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         nextEventCode: nextEvent.code,
         error: error instanceof Error ? error.message : String(error)
       });
-      console.error("[Training Report] Failed to persist next event extension from PT-051:", error);
+      console.error("[Training Report] Failed to persist next event extension from training report:", error);
       void showDarkAlert2(
         `The training report was saved, but the next ${sourceItem.type === "FTD" ? "sim" : "flight"} could not be extended in the trainee Individual LMP.
 
@@ -114819,9 +114819,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           console.log("🟢 New publishedSchedules keys:", Object.keys(newSchedules));
           return newSchedules;
         });
-        console.log("📋 Triggering PT-051 sync after Active DFP change...");
+        console.log("📋 Triggering training report sync after Active DFP change...");
         setTimeout(() => {
-          console.log("⏰ Executing delayed PT-051 sync...");
+          console.log("⏰ Executing delayed training report sync...");
           setPublishedSchedules((currentSchedules) => {
             setPt051Assessments((currentAssessments) => {
               syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -115082,9 +115082,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       });
     }
     if (!isNextDay) {
-      console.log("📋 Triggering PT-051 sync after event deletion...");
+      console.log("📋 Triggering training report sync after event deletion...");
       setTimeout(() => {
-        console.log("⏰ Executing delayed PT-051 sync after deletion...");
+        console.log("⏰ Executing delayed training report sync after deletion...");
         setPublishedSchedules((currentSchedules) => {
           setPt051Assessments((currentAssessments) => {
             syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -118171,9 +118171,9 @@ ${conflictLines.join("\n")}${moreText}`,
       ...prev,
       [publishedSnapshotKey]: currentAircraftConfigState
     }));
-    console.log("📋 Triggering PT-051 sync after publish...");
+    console.log("📋 Triggering training report sync after publish...");
     setTimeout(() => {
-      console.log("⏰ Executing delayed PT-051 sync after publish...");
+      console.log("⏰ Executing delayed training report sync after publish...");
       setPublishedSchedules((currentSchedules) => {
         setPt051Assessments((currentAssessments) => {
           syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -122633,7 +122633,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             },
             onReassignTrainingReport: handleReassignTrainingReportNotification,
             onSelectPt051: (assessment) => {
-              console.log("🔍 Dashboard PT-051 clicked:", assessment);
+              console.log("🔍 Dashboard training report clicked:", assessment);
               console.log("Looking for event ID:", assessment.eventId);
               console.log("Total events available:", allPublishedEvents.length);
               const event = allPublishedEvents.find((e) => e.id === assessment.eventId);
@@ -122649,7 +122649,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   handleNavigation("PT051");
                 }, 0);
               } else {
-                console.error("❌ Could not find event or trainee for PT-051:", {
+                console.error("❌ Could not find event or trainee for training report:", {
                   assessment,
                   eventFound: !!event,
                   traineeFound: !!trainee,
@@ -122690,7 +122690,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   );
                   if (secondaryFallbackEvent && trainee) {
                     console.log("✅ Found event using secondary fallback:", secondaryFallbackEvent);
-                    console.warn("⚠️ Note: Event date may differ from PT-051 date");
+                    console.warn("⚠️ Note: Event date may differ from training report date");
                     setEventForPt051(secondaryFallbackEvent);
                     setSelectedTraineeForHateSheet(trainee);
                     setTimeout(() => {
@@ -122698,7 +122698,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                       handleNavigation("PT051");
                     }, 0);
                   } else {
-                    console.error("❌ All fallback attempts failed - cannot open PT-051");
+                    console.error("❌ All fallback attempts failed - cannot open training report");
                     console.log("🔧 Creating mock event as last resort...");
                     let eventType = "flight";
                     const flightNum = assessment.flightNumber || "";
@@ -123957,9 +123957,9 @@ Do you want to replace the existing entry?`,
                         next.set(matchingPt051.id, updatedAssessment);
                         return next;
                       });
-                      console.log(`[PostFlight] ✅ PT-051 updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                      console.log(`[PostFlight] ✅ Training report updated with ${data.result} for ${pt051TraineeName} — ${pt051FlightNumber}`);
                     } else {
-                      console.log(`[PostFlight] ℹ️ No unassessed PT-051 found for ${pt051TraineeName} — ${pt051FlightNumber}`);
+                      console.log(`[PostFlight] ℹ️ No unassessed training report found for ${pt051TraineeName} — ${pt051FlightNumber}`);
                     }
                   }
                 }
@@ -124683,7 +124683,7 @@ Do you want to replace the existing entry?`,
                 const completedEventIds = allScoresForTrainee.map((s) => s.event);
                 const lmpType = getConfiguredLmpTypeForTrainee(trainee);
                 if (!lmpType) {
-                  console.warn(`[PT-051] Skipped Individual LMP completion persistence for ${trainee.fullName}: no Master LMP assigned on trainee or course`);
+                  console.warn(`[Training Report] Skipped Individual LMP completion persistence for ${trainee.fullName}: no Master LMP assigned on trainee or course`);
                   return;
                 }
                 const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, "Assign");
