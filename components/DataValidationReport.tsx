@@ -104,7 +104,7 @@ const DataValidationReport: React.FC<DataValidationReportProps> = ({
 
       <div className="mt-3 text-xs text-red-200">
         <p>These issues are typically caused by bulk upload operations with incomplete data.</p>
-        <p>Click "Repair Data" to automatically fix common issues like missing names and courses.</p>
+        <p>Repair normalises invalid values, but it leaves missing names and courses blank so they can be corrected deliberately.</p>
       </div>
     </div>
   );

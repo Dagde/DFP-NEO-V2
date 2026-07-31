@@ -25,8 +25,8 @@ export function safeSortTrainees(trainees: any[]): any[] {
     .filter(trainee => trainee != null) // Remove null/undefined
     .sort((a, b) => {
       // First sort by course
-      const courseA = a?.course ?? 'No Course';
-      const courseB = b?.course ?? 'No Course';
+      const courseA = a?.course ?? '';
+      const courseB = b?.course ?? '';
       if (courseA !== courseB) {
         return courseA.localeCompare(courseB);
       }

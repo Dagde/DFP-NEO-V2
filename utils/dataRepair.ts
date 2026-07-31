@@ -9,33 +9,28 @@ import { safeProcessTrainees } from './traineeDataValidator';
  * Attempts to repair existing corrupted trainee data
  */
 export function repairTraineeData(trainees: any[]): Trainee[] {
+  const cleanText = (value: any): string => {
+    const text = String(value ?? '').trim();
+    return text === 'undefined' || text === 'null' ? '' : text;
+  };
+
   return trainees.map(trainee => {
     if (!trainee) return null;
 
     // Basic repair for missing critical fields
     const repaired = { ...trainee };
 
-    // Repair name fields
-    if (!trainee.name && !trainee.fullName) {
-      repaired.name = 'Unknown Trainee';
-      repaired.fullName = 'Unknown Trainee';
-    } else if (!trainee.name) {
-      repaired.name = trainee.fullName;
-    } else if (!trainee.fullName) {
-      repaired.fullName = trainee.name;
-    }
-
-    // Repair course field
-    if (!trainee.course || trainee.course === 'undefined' || trainee.course === 'null') {
-      repaired.course = 'No Course';
-    }
+    // Repair mirrored fields without inventing placeholder trainee/course data.
+    const name = cleanText(trainee.name);
+    const fullName = cleanText(trainee.fullName);
+    repaired.name = name || fullName;
+    repaired.fullName = fullName || name;
+    repaired.course = cleanText(trainee.course);
 
     // Repair other critical string fields
     const stringFields = ['class', 'squadron', 'rank'];
     stringFields.forEach(field => {
-      if (!trainee[field] || trainee[field] === 'undefined' || trainee[field] === 'null') {
-        repaired[field] = 'Unknown';
-      }
+      repaired[field] = cleanText(trainee[field]);
     });
     // Repair instructor fields - normalize to arrays
     ['primaryInstructor', 'secondaryInstructor'].forEach(field => {

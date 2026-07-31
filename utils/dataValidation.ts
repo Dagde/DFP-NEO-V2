@@ -37,11 +37,18 @@ export function safeSortByString<T>(
  * Validates trainee object and provides safe defaults
  */
 export function validateTrainee(trainee: any) {
+  const cleanText = (value: any): string => {
+    const text = String(value ?? '').trim();
+    return text === 'undefined' || text === 'null' ? '' : text;
+  };
+  const name = cleanText(trainee?.name);
+  const fullName = cleanText(trainee?.fullName);
+
   return {
     ...trainee,
-    name: safeString(trainee?.name, trainee?.fullName || 'Unknown'),
-    fullName: safeString(trainee?.fullName, trainee?.name || 'Unknown'),
-    course: safeString(trainee?.course, 'No Course'),
+    name: name || fullName,
+    fullName: fullName || name,
+    course: cleanText(trainee?.course),
   };
 }
 

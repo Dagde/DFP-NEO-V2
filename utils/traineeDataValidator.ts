@@ -17,28 +17,31 @@ export interface ValidationResult {
 export function validateTraineeRecord(trainee: any, index: number): { isValid: boolean; cleanedTrainee: Trainee; errors: string[] } {
   const errors: string[] = [];
   const cleanedTrainee: any = { ...trainee };
+  const cleanText = (value: any): string => {
+    const text = String(value ?? '').trim();
+    return text === 'undefined' || text === 'null' ? '' : text;
+  };
+  const name = cleanText(trainee.name);
+  const fullName = cleanText(trainee.fullName);
 
   // Validate required fields
-  if (!trainee.name && !trainee.fullName) {
+  if (!name && !fullName) {
     errors.push(`Trainee at index ${index}: Missing both name and fullName`);
-    cleanedTrainee.name = 'Unknown Trainee';
-    cleanedTrainee.fullName = 'Unknown Trainee';
-  } else {
-    cleanedTrainee.name = trainee.name ?? trainee.fullName ?? 'Unknown';
-    cleanedTrainee.fullName = trainee.fullName ?? trainee.name ?? 'Unknown';
   }
+  cleanedTrainee.name = name || fullName;
+  cleanedTrainee.fullName = fullName || name;
 
   // Validate course
-  if (!trainee.course) {
-    errors.push(`Trainee ${cleanedTrainee.name}: Missing course`);
-    cleanedTrainee.course = 'No Course';
+  cleanedTrainee.course = cleanText(trainee.course);
+  if (!cleanedTrainee.course) {
+    errors.push(`Trainee ${cleanedTrainee.name || `at index ${index}`}: Missing course`);
   }
 
-  // Validate other fields with safe defaults
-  cleanedTrainee.class = trainee.class ?? 'No Class';
-  cleanedTrainee.squadron = trainee.squadron ?? 'No Squadron';
+  // Preserve missing configured fields as blank data instead of writing demo placeholders.
+  cleanedTrainee.class = cleanText(trainee.class);
+  cleanedTrainee.squadron = cleanText(trainee.squadron);
   cleanedTrainee.status = trainee.status ?? 'Active';
-  cleanedTrainee.rank = trainee.rank ?? 'Trainee';
+  cleanedTrainee.rank = cleanText(trainee.rank);
   // Normalize instructor fields to arrays
   const normInstr = (val: any): string[] => {
     if (!val || val === 'Unassigned') return [];
@@ -81,12 +84,12 @@ export function validateTraineeData(trainees: any[]): ValidationResult {
     errors.push(...result.errors);
 
     // Add warnings for potential data issues
-    if (result.cleanedTrainee.course === 'No Course') {
-      warnings.push(`Trainee ${result.cleanedTrainee.name} has no course assigned`);
+    if (!result.cleanedTrainee.course) {
+      warnings.push(`Trainee ${result.cleanedTrainee.name || `at index ${index}`} has no course assigned`);
     }
     const primArr = Array.isArray(result.cleanedTrainee.primaryInstructor) ? result.cleanedTrainee.primaryInstructor : result.cleanedTrainee.primaryInstructor ? [result.cleanedTrainee.primaryInstructor] : [];
     if (primArr.length === 0) {
-      warnings.push(`Trainee ${result.cleanedTrainee.name} has no primary instructor`);
+      warnings.push(`Trainee ${result.cleanedTrainee.name || `at index ${index}`} has no primary instructor`);
     }
   });
 
@@ -138,9 +141,9 @@ export function safeProcessTrainees(trainees: any[]): Trainee[] {
     console.error('🟡 Error processing trainee data:', error);
     const fallbackData = trainees.filter(t => t != null).map(t => ({
       ...t,
-      name: t?.name ?? t?.fullName ?? 'Unknown',
-      fullName: t?.fullName ?? t?.name ?? 'Unknown',
-      course: t?.course ?? 'No Course'
+      name: t?.name ?? t?.fullName ?? '',
+      fullName: t?.fullName ?? t?.name ?? '',
+      course: t?.course ?? ''
     }));
     console.log('🟡 Fallback data count:', fallbackData.length);
     console.log('🟡 ========== DATA VALIDATION END ==========');
