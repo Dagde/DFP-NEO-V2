@@ -416,6 +416,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       ))
       .map(qualification => qualification.id)
   ), [normalisedQualificationCatalogue]);
+  const ofiQualificationLabel = useMemo(() => {
+    const match = normalisedQualificationCatalogue.qualifications.find(qualification => (
+      normaliseQualificationToken(qualification.id) === 'ofi'
+      || normaliseQualificationToken(qualification.code) === 'ofi'
+      || normaliseQualificationToken(qualification.name) === 'ofi'
+    ));
+    return String(match?.code || match?.name || 'OFI').trim() || 'OFI';
+  }, [normalisedQualificationCatalogue]);
   const normaliseContractorStaffQualifications = useCallback((ids: string[]): string[] => {
     const filtered = ids.filter(id => !qfiQualificationIds.includes(id));
     return Array.from(new Set([...filtered, contractorQualificationId]));
@@ -929,7 +937,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (instructor.isContractor !== savedIsContractor) changes.push(`Contractor: ${instructor.isContractor} → ${savedIsContractor}`);
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
       if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${savedIsQFI}`);
-      if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
+      if (instructor.isOFI !== isOFI) changes.push(`${ofiQualificationLabel}: ${instructor.isOFI} → ${isOFI}`);
 
       const changesStr = changes.length > 0 ? changes.join(', ') : 'No field changes';
       logAudit({ action: 'Edit', description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: 'Staff' });

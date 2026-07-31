@@ -11583,7 +11583,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
             ] }, profile))
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task tile labels", value: "No task profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Task Profiles", description: "Regular unit flight task profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Mission Profiles", description: "Regular unit flight mission profiles scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Task name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
@@ -51000,6 +51000,10 @@ const InstructorProfileFlyout = ({
   );
   const contractorQualificationId = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.find((qualification) => normaliseQualificationToken(qualification.id) === "contractor" || normaliseQualificationToken(qualification.code) === "contractor" || normaliseQualificationToken(qualification.name) === "contractor")?.id || "contractor", [normalisedQualificationCatalogue]);
   const qfiQualificationIds = reactExports.useMemo(() => normalisedQualificationCatalogue.qualifications.filter((qualification) => normaliseQualificationToken(qualification.id) === "qfi" || normaliseQualificationToken(qualification.code) === "qfi" || normaliseQualificationToken(qualification.name) === "qfi").map((qualification) => qualification.id), [normalisedQualificationCatalogue]);
+  const ofiQualificationLabel = reactExports.useMemo(() => {
+    const match = normalisedQualificationCatalogue.qualifications.find((qualification) => normaliseQualificationToken(qualification.id) === "ofi" || normaliseQualificationToken(qualification.code) === "ofi" || normaliseQualificationToken(qualification.name) === "ofi");
+    return String(match?.code || match?.name || "OFI").trim() || "OFI";
+  }, [normalisedQualificationCatalogue]);
   const normaliseContractorStaffQualifications = reactExports.useCallback((ids) => {
     const filtered = ids.filter((id) => !qfiQualificationIds.includes(id));
     return Array.from(/* @__PURE__ */ new Set([...filtered, contractorQualificationId]));
@@ -51477,7 +51481,7 @@ const InstructorProfileFlyout = ({
       if (instructor.isContractor !== savedIsContractor) changes.push(`Contractor: ${instructor.isContractor} → ${savedIsContractor}`);
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
       if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${savedIsQFI}`);
-      if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
+      if (instructor.isOFI !== isOFI) changes.push(`${ofiQualificationLabel}: ${instructor.isOFI} → ${isOFI}`);
       const changesStr = changes.length > 0 ? changes.join(", ") : "No field changes";
       logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
     }
@@ -53309,10 +53313,17 @@ const getStaffArchiveIdentifier = (instructor) => {
 };
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
 const isContractorStaffRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "SIM IP";
+const isOfiSupportRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "OFI" || instructor.isOFI === true;
+const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) => {
+  const targetId = String(qualificationId).trim().toLowerCase();
+  const match = catalogue?.qualifications?.find(
+    (qualification) => String(qualification.id || "").trim().toLowerCase() === targetId
+  );
+  return String(match?.name || match?.code || fallback).trim() || fallback;
+};
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const isSupportStaffRole = (instructor) => {
-  const role = String(instructor.role || "").trim().toUpperCase();
-  return isContractorStaffRole(instructor) || role === "OFI" || instructor.isOFI === true;
+  return isContractorStaffRole(instructor) || isOfiSupportRole(instructor);
 };
 const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel) => {
   if (instructor.isAdminStaff || isSupportStaffRole(instructor)) return false;
@@ -53465,6 +53476,10 @@ const InstructorListView = ({
   );
   const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffGroupLabel = simIpDisplayLabel.trim() || "Contractor Staff";
+  const ofiGroupLabel = reactExports.useMemo(
+    () => getConfiguredQualificationLabel(staffQualificationCatalogue, "ofi", "OFI"),
+    [staffQualificationCatalogue]
+  );
   const getPooledCrewFlightRoleOrder = (instructor) => {
     const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
     const roleText = `${instructor.role || ""} ${roleDisplay.label || ""}`.trim().toLowerCase();
@@ -53548,13 +53563,7 @@ const InstructorListView = ({
     [qfisByFlight]
   );
   const simIps = reactExports.useMemo(() => {
-    console.log("🔍 [CONTRACTOR STAFF FILTER] instructorsData length:", instructorsData.length);
-    const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
-      if (!isContractorStaffRole(i)) return false;
-      console.log(`🔍 [CONTRACTOR STAFF FILTER] Found active-context contractor staff: ${i.name} (${i.rank}) - Location: ${i.location}`);
-      return true;
-    });
-    console.log("🔍 [CONTRACTOR STAFF FILTER] Total contractor staff found:", simIpCandidates.length);
+    const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(isContractorStaffRole);
     return simIpCandidates.sort((a, b) => {
       const unitA = a.unit || "Unassigned";
       const unitB = b.unit || "Unassigned";
@@ -53565,16 +53574,10 @@ const InstructorListView = ({
     });
   }, [instructorsData, personnelDisplaySettings]);
   const ofis = reactExports.useMemo(() => {
-    console.log("🔍 [OFI FILTER] instructorsData length:", instructorsData.length);
-    console.log("🔍 [OFI FILTER] All instructors:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
     const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
-      const isOfi = i.role === "OFI" || i.isOFI === true;
-      if (!isOfi) return false;
-      console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}`);
-      return true;
+      const isOfi = isOfiSupportRole(i);
+      return isOfi;
     });
-    console.log("🔍 [OFI FILTER] OFI candidates found:", ofiCandidates.length);
-    console.log("🔍 [OFI FILTER] OFI candidates:", ofiCandidates.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
     const sorted = ofiCandidates.sort((a, b) => {
       const unitA = a.unit || "Unassigned";
       const unitB = b.unit || "Unassigned";
@@ -53583,21 +53586,16 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-    console.log("🔍 [OFI FILTER] Final OFI list:", sorted.map((i) => ({ id: i.idNumber, name: i.name, rank: i.rank })));
     return sorted;
-  }, [instructorsData, school, personnelDisplaySettings]);
+  }, [instructorsData, personnelDisplaySettings]);
   const otherStaff = reactExports.useMemo(() => {
-    console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
       const isSimIp = isContractorStaffRole(i);
-      const isOfi = i.role === "OFI" || i.isOFI === true;
+      const isOfi = isOfiSupportRole(i);
       const isOther = !isMainStaff && !isSimIp && !isOfi;
-      if (!isOther) return false;
-      console.log(`🔍 [OTHER STAFF] Found active-context other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
-      return true;
+      return isOther;
     });
-    console.log("🔍 [OTHER STAFF] Total other staff found:", otherStaffCandidates.length);
     return otherStaffCandidates.sort((a, b) => {
       const unitA = a.unit || "Unassigned";
       const unitB = b.unit || "Unassigned";
@@ -53838,7 +53836,7 @@ const InstructorListView = ({
     sortedOfiUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-purple-400", children: "OFIs" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-purple-400", children: ofiGroupLabel }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: unit })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full", children: ofisByUnit[unit].length })
@@ -54330,7 +54328,6 @@ const StaffView = (props) => {
     }
   }, [activeUnitTab, sharedUnitTabs]);
   useSystemFreeze();
-  console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
   const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
   reactExports.useEffect(() => {
@@ -54349,8 +54346,8 @@ const StaffView = (props) => {
       if (unitA !== unitB) return unitA.localeCompare(unitB);
       return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
     }
-    const roleA = a.isQFI || a.role === "Pilot" ? 0 : 1;
-    const roleB = b.isQFI || b.role === "Pilot" ? 0 : 1;
+    const roleA = a.isQFI || String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
+    const roleB = b.isQFI || String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
     if (roleA !== roleB) {
       return roleA - roleB;
     }
@@ -66667,7 +66664,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
       return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
     }
     if (lowerTitle.includes("profiles")) {
-      return { section: "platform-standard-missions", label: "Reusable Flight Task Profiles" };
+      return { section: "platform-standard-missions", label: "Reusable Flight Mission Profiles" };
     }
   }
   return null;
@@ -66866,10 +66863,10 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} unit-scoped reusable flight task profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped reusable flight mission profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Reusable Flight Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
-      { section: "platform-standard-missions", label: "Reusable Flight Task Profiles", focusSubsectionId: "platform-standard-missions" }
+      "Open Reusable Flight Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
+      { section: "platform-standard-missions", label: "Reusable Flight Mission Profiles", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
     add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Task profiles, alternate crew profiles and currency events have per-unit records where needed.", "unit-separation-profiles-ok");
@@ -71131,8 +71128,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Task Profiles",
-          subtitle: "Model-specific tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed.",
+          title: "Mission / Task Profiles",
+          subtitle: "Model-specific mission and tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71152,14 +71149,14 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed mission and task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model directed tasks." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model mission and tasking profiles." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
@@ -71173,7 +71170,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One mission or task profile per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
@@ -71452,23 +71449,23 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Reusable Flight Task Profiles",
-          subtitle: "Define reusable task profiles for regular Fixed Crew-style unit flights.",
+          title: "Reusable Flight Mission Profiles",
+          subtitle: "Define reusable mission profiles for regular Fixed Crew-style unit flights.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Task" })
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight Task Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight Mission Profiles are currently available for Fixed Crew-style models." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
             activeStandardMissionUnitLabel || "No unit selected"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New task profiles default to the unit home location and unit default callsign. Values can be manually edited per task." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New mission profiles default to the unit home location and unit default callsign. Values can be manually edited per task." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Reusable Flight Task Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Reusable Flight Mission Profiles configured for this Fixed Crew unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -71516,7 +71513,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Reusable Flight Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Reusable Flight Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -73766,7 +73763,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: personnelDisplaySettings.instructorLabel,
                 disabled: !canEditRankTerminology,
                 onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
+                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || "Instructor"}: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
@@ -75493,12 +75490,12 @@ const sectionLabels = {
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
-  "standard-missions": "Reusable Flight Task Profiles",
+  "standard-missions": "Reusable Flight Mission Profiles",
   "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Directed Task Profiles",
+  "platform-task-profiles": "Mission / Task Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -75638,12 +75635,12 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Reusable flight task profiles for regular unit tasking",
+  "standard-missions": "Reusable flight mission profiles for regular unit tasking",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Directed task profile lists by operational model",
+  "platform-task-profiles": "Mission and task profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -92889,7 +92886,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (key === "ground" || key === "academic") return Boolean(buildContractorStaffEventEligibility.ground);
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
     if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
@@ -108846,7 +108843,7 @@ const App = () => {
     if (key === "ground" || key === "academic") return contractorStaffEventEligibility.ground;
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (instructor.role === "QFI" || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
     if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
@@ -124106,7 +124103,8 @@ Do you want to replace the existing entry?`,
     console.log("🎡 Navigating to profile:", user);
     console.log("user:", JSON.stringify(user));
     const isTrainee = user.userType === "TRAINEE" || user.course || user._dataSource === "trainee";
-    const isStaff = user.userType === "STAFF" || !isTrainee && (user.isQFI || user.isOFI || user.isCFI || user.role === "INSTRUCTOR");
+    const userRoleCode = String(user.role || "").trim().toUpperCase();
+    const isStaff = user.userType === "STAFF" || !isTrainee && (user.isQFI || user.isOFI || user.isCFI || userRoleCode === "INSTRUCTOR");
     if (isStaff) {
       console.log("Opening staff profile:", user.name);
       const fullInstructor = instructorsData.find(

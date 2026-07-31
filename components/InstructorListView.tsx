@@ -47,13 +47,25 @@ const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'INSTRUCTOR';
 const isContractorStaffRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'SIM IP';
+const isOfiSupportRole = (instructor: Instructor): boolean =>
+    String(instructor.role || '').trim().toUpperCase() === 'OFI' || instructor.isOFI === true;
+const getConfiguredQualificationLabel = (
+    catalogue: StaffQualificationCatalogue | undefined,
+    qualificationId: string,
+    fallback: string,
+): string => {
+    const targetId = String(qualificationId || '').trim().toLowerCase();
+    const match = catalogue?.qualifications?.find((qualification) =>
+        String(qualification.id || '').trim().toLowerCase() === targetId
+    );
+    return String(match?.name || match?.code || fallback).trim() || fallback;
+};
 const isConfiguredCrewPositionRole = (
     instructor: Instructor,
     terminology?: CrewPositionTerminology,
 ): boolean => Boolean(findCrewPositionEntry(instructor.role, terminology));
 const isSupportStaffRole = (instructor: Instructor): boolean => {
-    const role = String(instructor.role || '').trim().toUpperCase();
-    return isContractorStaffRole(instructor) || role === 'OFI' || instructor.isOFI === true;
+    return isContractorStaffRole(instructor) || isOfiSupportRole(instructor);
 };
 const isActiveStaffListRole = (
     instructor: Instructor,
@@ -304,6 +316,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   );
   const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffGroupLabel = simIpDisplayLabel.trim() || 'Contractor Staff';
+  const ofiGroupLabel = useMemo(
+      () => getConfiguredQualificationLabel(staffQualificationCatalogue, 'ofi', 'OFI'),
+      [staffQualificationCatalogue],
+  );
 
   const getPooledCrewFlightRoleOrder = (instructor: Instructor): number => {
       const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
@@ -405,14 +421,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   [qfisByFlight]);
 
   const simIps = useMemo(() => {
-        console.log('🔍 [CONTRACTOR STAFF FILTER] instructorsData length:', instructorsData.length);
-        const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
-            if (!isContractorStaffRole(i)) return false;
-            console.log(`🔍 [CONTRACTOR STAFF FILTER] Found active-context contractor staff: ${i.name} (${i.rank}) - Location: ${i.location}`);
-            return true;
-        });
-        console.log('🔍 [CONTRACTOR STAFF FILTER] Total contractor staff found:', simIpCandidates.length);
-
+        const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(isContractorStaffRole);
         return simIpCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -425,18 +434,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     }, [instructorsData, personnelDisplaySettings]);
 
     const ofis = useMemo(() => {
-        console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
-        console.log('🔍 [OFI FILTER] All instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
-
         const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
-            const isOfi = i.role === 'OFI' || i.isOFI === true;
-            if (!isOfi) return false;
-            console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}`);
-            return true;
+            const isOfi = isOfiSupportRole(i);
+            return isOfi;
         });
-
-        console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
-        console.log('🔍 [OFI FILTER] OFI candidates:', ofiCandidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
 
         const sorted = ofiCandidates.sort((a, b) => {
             // First sort by Unit
@@ -447,28 +448,21 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-        console.log('🔍 [OFI FILTER] Final OFI list:', sorted.map(i => ({ id: i.idNumber, name: i.name, rank: i.rank })));
         return sorted;
-    }, [instructorsData, school, personnelDisplaySettings]);
+    }, [instructorsData, personnelDisplaySettings]);
 
     // NEW: All other staff members who don't fit into instructor, contractor staff, or OFI categories
     const otherStaff = useMemo(() => {
-        console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
-
         const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             // Keep recognised active flying/crew staff in the main staff list.
             const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
             const isSimIp = isContractorStaffRole(i);
-            const isOfi = i.role === 'OFI' || i.isOFI === true;
+            const isOfi = isOfiSupportRole(i);
 
             // Include everyone else
             const isOther = !isMainStaff && !isSimIp && !isOfi;
-            if (!isOther) return false;
-            console.log(`🔍 [OTHER STAFF] Found active-context other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
-            return true;
+            return isOther;
         });
-
-        console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
 
         return otherStaffCandidates.sort((a, b) => {
             // First sort by Unit
@@ -756,7 +750,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             <div key={`ofi-${unit}`} className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                 <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center rounded-t-lg backdrop-blur-sm">
                     <div>
-                        <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
+                        <h3 className="text-lg font-bold text-purple-400">{ofiGroupLabel}</h3>
                         <p className="text-xs text-gray-400">{unit}</p>
                     </div>
                     <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{ofisByUnit[unit].length}</span>

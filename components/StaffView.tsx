@@ -85,7 +85,6 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
     }
   }, [activeUnitTab, sharedUnitTabs]);
   const { isFrozen } = useSystemFreeze();
-  console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(props.operationalModel);
   const shouldShowUnitTabs = isFixedCrewModel && sharedUnitTabs.length > 1;
   useEffect(() => {
@@ -115,8 +114,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
       }
 
       // First sort by Role - flying staff before contractor staff
-      const roleA = a.isQFI || a.role === 'Pilot' ? 0 : 1;
-      const roleB = b.isQFI || b.role === 'Pilot' ? 0 : 1;
+      const roleA = a.isQFI || String(a.role || '').trim().toLowerCase() === 'pilot' ? 0 : 1;
+      const roleB = b.isQFI || String(b.role || '').trim().toLowerCase() === 'pilot' ? 0 : 1;
       if (roleA !== roleB) {
         return roleA - roleB;
       }

@@ -7096,7 +7096,10 @@ function generateDfpInternal(
         return false;
     };
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
-        !isContractorStaffRole(instructor) && (instructor.role === 'QFI' || instructor.isQFI === true)
+        !isContractorStaffRole(instructor) && (
+            ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
+            || instructor.isQFI === true
+        )
     );
     const isInstructorEligibleForBuildEventType = (instructor: Instructor, eventType: string): boolean => {
         if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
@@ -26203,7 +26206,10 @@ const App: React.FC = () => {
         return false;
     };
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
-        !isContractorStaffRole(instructor) && (instructor.role === 'QFI' || instructor.isQFI === true)
+        !isContractorStaffRole(instructor) && (
+            ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
+            || instructor.isQFI === true
+        )
     );
     const isInstructorEligibleForBuildEventType = (instructor: Instructor, eventType: string): boolean => {
         if (isContractorStaffRole(instructor)) return canContractorStaffWorkEventType(eventType);
@@ -44662,7 +44668,8 @@ appliedUpdates.forEach(update => {
        // Determine if this is a trainee or staff based on available fields
        // Trainees have 'course' field, staff don't
        const isTrainee = user.userType === 'TRAINEE' || user.course || user._dataSource === 'trainee';
-       const isStaff = user.userType === 'STAFF' || (!isTrainee && (user.isQFI || user.isOFI || user.isCFI || user.role === 'INSTRUCTOR'));
+       const userRoleCode = String(user.role || '').trim().toUpperCase();
+       const isStaff = user.userType === 'STAFF' || (!isTrainee && (user.isQFI || user.isOFI || user.isCFI || userRoleCode === 'INSTRUCTOR'));
 
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster

@@ -1335,7 +1335,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
       return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
     }
     if (lowerTitle.includes('profiles')) {
-      return { section: 'platform-standard-missions', label: 'Reusable Flight Task Profiles' };
+      return { section: 'platform-standard-missions', label: 'Reusable Flight Mission Profiles' };
     }
   }
   return null;
@@ -1575,10 +1575,10 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit profiles need per-unit copies',
-      `${missingCompositeClones} unit-scoped reusable flight task profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped reusable flight mission profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Reusable Flight Task Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
-      { section: 'platform-standard-missions', label: 'Reusable Flight Task Profiles', focusSubsectionId: 'platform-standard-missions' }
+      'Open Reusable Flight Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
+      { section: 'platform-standard-missions', label: 'Reusable Flight Mission Profiles', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
     add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Task profiles, alternate crew profiles and currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
@@ -6818,8 +6818,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Task Profiles"
-          subtitle="Model-specific tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed."
+          title="Mission / Task Profiles"
+          subtitle="Model-specific mission and tasking lists used by Directed Tasks. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6841,7 +6841,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the directed task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
+            Set the directed mission and task profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6853,7 +6853,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model directed tasks.'
+                          ? 'Use this for Fighter / Strike model mission and tasking profiles.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
@@ -6866,7 +6866,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One task profile per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One mission or task profile per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
@@ -7109,8 +7109,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
-          title="Reusable Flight Task Profiles"
-          subtitle="Define reusable task profiles for regular Fixed Crew-style unit flights."
+          title="Reusable Flight Mission Profiles"
+          subtitle="Define reusable mission profiles for regular Fixed Crew-style unit flights."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
@@ -7121,19 +7121,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Reusable Flight Task Profiles are currently available for Fixed Crew-style models.
+              Reusable Flight Mission Profiles are currently available for Fixed Crew-style models.
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New task profiles default to the unit home location and unit default callsign. Values can be manually edited per task.
+                  New mission profiles default to the unit home location and unit default callsign. Values can be manually edited per task.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No Reusable Flight Task Profiles configured for this Fixed Crew unit.
+                  No Reusable Flight Mission Profiles configured for this Fixed Crew unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
@@ -7194,7 +7194,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={activeStandardMissionUnitLabel}
                                 disabled
                                 onChange={() => undefined}
-                                info="Reusable Flight Task Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                                info="Reusable Flight Mission Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
                               <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
@@ -9489,7 +9489,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 value={personnelDisplaySettings.instructorLabel}
                 disabled={!canEditRankTerminology}
                 onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
-                info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
+                info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || 'Instructor'}: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
               />
               <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
                 Linked qualification label: <span className="font-semibold text-cyan-50">{linkedInstructorQualificationLabel}</span>. Rename this in{' '}
