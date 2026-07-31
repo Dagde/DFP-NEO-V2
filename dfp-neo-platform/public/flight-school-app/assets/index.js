@@ -3171,48 +3171,10 @@ const handleEditableTextBeforeInput = (event, onChange, maxLength) => {
   insertEditableTextAtCursor(event.currentTarget, " ", onChange, maxLength);
 };
 const DEFAULT_TASK_PROFILE_CONFIG = {
-  flight_school: [
-    "Transit",
-    "Ferry",
-    "Display",
-    "Fly Past"
-  ],
-  air_combat: [
-    "Air Defence Alert",
-    "Offensive Counter Air",
-    "Defensive Counter Air",
-    "Close Air Support",
-    "Surface Attack",
-    "Maritime Strike",
-    "Strategic Strike",
-    "Armed Reconnaissance",
-    "Combat Air Patrol",
-    "Composite Air Operation"
-  ],
-  fixed_crew: [
-    "Maritime Patrol",
-    "Airborne Early Warning & Control",
-    "Intelligence, Surveillance & Reconnaissance (ISR)",
-    "Electronic Surveillance",
-    "Anti-Submarine Warfare",
-    "Anti-Surface Warfare",
-    "Battle Management",
-    "Communications Relay",
-    "Border Security Patrol",
-    "Search and Rescue Coordination"
-  ],
-  pooled_crew: [
-    "Maritime Patrol",
-    "Airborne Early Warning & Control",
-    "Intelligence, Surveillance & Reconnaissance (ISR)",
-    "Electronic Surveillance",
-    "Anti-Submarine Warfare",
-    "Anti-Surface Warfare",
-    "Battle Management",
-    "Communications Relay",
-    "Border Security Patrol",
-    "Search and Rescue Coordination"
-  ]
+  flight_school: [],
+  air_combat: [],
+  fixed_crew: [],
+  pooled_crew: []
 };
 const uniqueProfiles = (profiles) => {
   const seen = /* @__PURE__ */ new Set();

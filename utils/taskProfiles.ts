@@ -10,48 +10,10 @@ export type TaskProfileConfig = Record<OperationalModelCode, string[]>;
 export type TaskProfileAbbreviationConfig = Record<OperationalModelCode, Record<string, string>>;
 
 export const DEFAULT_TASK_PROFILE_CONFIG: TaskProfileConfig = {
-  flight_school: [
-    'Transit',
-    'Ferry',
-    'Display',
-    'Fly Past',
-  ],
-  air_combat: [
-    'Air Defence Alert',
-    'Offensive Counter Air',
-    'Defensive Counter Air',
-    'Close Air Support',
-    'Surface Attack',
-    'Maritime Strike',
-    'Strategic Strike',
-    'Armed Reconnaissance',
-    'Combat Air Patrol',
-    'Composite Air Operation',
-  ],
-  fixed_crew: [
-    'Maritime Patrol',
-    'Airborne Early Warning & Control',
-    'Intelligence, Surveillance & Reconnaissance (ISR)',
-    'Electronic Surveillance',
-    'Anti-Submarine Warfare',
-    'Anti-Surface Warfare',
-    'Battle Management',
-    'Communications Relay',
-    'Border Security Patrol',
-    'Search and Rescue Coordination',
-  ],
-  pooled_crew: [
-    'Maritime Patrol',
-    'Airborne Early Warning & Control',
-    'Intelligence, Surveillance & Reconnaissance (ISR)',
-    'Electronic Surveillance',
-    'Anti-Submarine Warfare',
-    'Anti-Surface Warfare',
-    'Battle Management',
-    'Communications Relay',
-    'Border Security Patrol',
-    'Search and Rescue Coordination',
-  ],
+  flight_school: [],
+  air_combat: [],
+  fixed_crew: [],
+  pooled_crew: [],
 };
 
 export const DEFAULT_TASK_PROFILE_ABBREVIATIONS: TaskProfileAbbreviationConfig = {

@@ -291,6 +291,10 @@ async function ensureTIETables(db) {
 // SECTION 2: SEED DEFAULT SETTINGS & DICTIONARIES
 // ============================================================
 async function seedTIEDefaults(db) {
+  const allowStarterTaxonomySeed = String(process.env.DFP_SEED_TIE_STARTER_TAXONOMY || '').trim().toLowerCase() === 'true';
+  const allowStarterEventRelationshipSeed = String(process.env.DFP_SEED_TIE_STARTER_EVENT_RELATIONSHIPS || '').trim().toLowerCase() === 'true'
+    || allowStarterTaxonomySeed;
+
   // Default settings
   const defaults = [
     { key: 'concern_threshold_grade', value: 3, description: 'Grade at or below which an element is flagged as concern (scale 1-5)' },
@@ -419,84 +423,92 @@ async function seedTIEDefaults(db) {
   // Skill mappings
   const mappingCount = await safeQuery(db, `SELECT COUNT(*) as cnt FROM "TIESkillMapping"`);
   if (mappingCount[0].cnt == 0) {
-    const mappings = [
-      { element: 'Lookout', skillFamily: 'Situational Awareness' },
-      { element: 'Lookout', skillFamily: 'Airmanship' },
-      { element: 'Situational Awareness', skillFamily: 'Situational Awareness' },
-      { element: 'Situational Awareness', skillFamily: 'Workload Management' },
-      { element: 'Radio Comms', skillFamily: 'Communication' },
-      { element: 'Radio Comms', skillFamily: 'Workload Management' },
-      { element: 'Airborne Checks', skillFamily: 'Procedural Discipline' },
-      { element: 'Airborne Checks', skillFamily: 'Workload Management' },
-      { element: 'Ground Checks', skillFamily: 'Procedural Discipline' },
-      { element: 'Ground Checks', skillFamily: 'Preparation' },
-      { element: 'Walk Around', skillFamily: 'Procedural Discipline' },
-      { element: 'Walk Around', skillFamily: 'Preparation' },
-      { element: 'Pre-Post Flight', skillFamily: 'Procedural Discipline' },
-      { element: 'Preparation', skillFamily: 'Preparation' },
-      { element: 'Preparation', skillFamily: 'Knowledge' },
-      { element: 'Trimming', skillFamily: 'Handling Accuracy' },
-      { element: 'Straight and Level', skillFamily: 'Handling Accuracy' },
-      { element: 'Level medium Turn', skillFamily: 'Handling Accuracy' },
-      { element: 'Level Steep turn', skillFamily: 'Handling Accuracy' },
-      { element: 'Technique', skillFamily: 'Handling Accuracy' },
-      { element: 'Stationary', skillFamily: 'Handling Accuracy' },
-      { element: 'Effects of Control', skillFamily: 'Handling Accuracy' },
-      { element: 'Effects of Control', skillFamily: 'Knowledge' },
-      { element: 'Landing', skillFamily: 'Takeoff/Landing Technique' },
-      { element: 'Landing', skillFamily: 'Decision Making' },
-      { element: 'Landing', skillFamily: 'Handling Accuracy' },
-      { element: 'Crosswind', skillFamily: 'Handling Accuracy' },
-      { element: 'Crosswind', skillFamily: 'Airmanship' },
-      { element: 'Crosswind', skillFamily: 'Decision Making' },
-      { element: 'Visual', skillFamily: 'Situational Awareness' },
-      { element: 'Visual', skillFamily: 'Communication' },
-      { element: 'Visual - Initial & Pitch', skillFamily: 'Situational Awareness' },
-      { element: 'Visual - Initial & Pitch', skillFamily: 'Handling Accuracy' },
-      { element: 'Airmanship', skillFamily: 'Airmanship' },
-      { element: 'Airmanship', skillFamily: 'Situational Awareness' },
-      { element: 'Knowledge', skillFamily: 'Knowledge' },
-      { element: 'Knowledge', skillFamily: 'Preparation' },
-      { element: 'Strap-in', skillFamily: 'Procedural Discipline' },
-    ];
-    for (const m of mappings) {
-      await safeExec(db, 
-        `INSERT INTO "TIESkillMapping"("id","element","skillFamily") VALUES(gen_random_uuid()::text,$1::text,$2::text)`,
-        m.element, m.skillFamily
-      );
+    if (!allowStarterTaxonomySeed) {
+      console.log('ℹ️ TIE skill mapping starter seed disabled; configure skill mappings from report elements for this organisation.');
+    } else {
+      const mappings = [
+        { element: 'Lookout', skillFamily: 'Situational Awareness' },
+        { element: 'Lookout', skillFamily: 'Airmanship' },
+        { element: 'Situational Awareness', skillFamily: 'Situational Awareness' },
+        { element: 'Situational Awareness', skillFamily: 'Workload Management' },
+        { element: 'Radio Comms', skillFamily: 'Communication' },
+        { element: 'Radio Comms', skillFamily: 'Workload Management' },
+        { element: 'Airborne Checks', skillFamily: 'Procedural Discipline' },
+        { element: 'Airborne Checks', skillFamily: 'Workload Management' },
+        { element: 'Ground Checks', skillFamily: 'Procedural Discipline' },
+        { element: 'Ground Checks', skillFamily: 'Preparation' },
+        { element: 'Walk Around', skillFamily: 'Procedural Discipline' },
+        { element: 'Walk Around', skillFamily: 'Preparation' },
+        { element: 'Pre-Post Flight', skillFamily: 'Procedural Discipline' },
+        { element: 'Preparation', skillFamily: 'Preparation' },
+        { element: 'Preparation', skillFamily: 'Knowledge' },
+        { element: 'Trimming', skillFamily: 'Handling Accuracy' },
+        { element: 'Straight and Level', skillFamily: 'Handling Accuracy' },
+        { element: 'Level medium Turn', skillFamily: 'Handling Accuracy' },
+        { element: 'Level Steep turn', skillFamily: 'Handling Accuracy' },
+        { element: 'Technique', skillFamily: 'Handling Accuracy' },
+        { element: 'Stationary', skillFamily: 'Handling Accuracy' },
+        { element: 'Effects of Control', skillFamily: 'Handling Accuracy' },
+        { element: 'Effects of Control', skillFamily: 'Knowledge' },
+        { element: 'Landing', skillFamily: 'Takeoff/Landing Technique' },
+        { element: 'Landing', skillFamily: 'Decision Making' },
+        { element: 'Landing', skillFamily: 'Handling Accuracy' },
+        { element: 'Crosswind', skillFamily: 'Handling Accuracy' },
+        { element: 'Crosswind', skillFamily: 'Airmanship' },
+        { element: 'Crosswind', skillFamily: 'Decision Making' },
+        { element: 'Visual', skillFamily: 'Situational Awareness' },
+        { element: 'Visual', skillFamily: 'Communication' },
+        { element: 'Visual - Initial & Pitch', skillFamily: 'Situational Awareness' },
+        { element: 'Visual - Initial & Pitch', skillFamily: 'Handling Accuracy' },
+        { element: 'Airmanship', skillFamily: 'Airmanship' },
+        { element: 'Airmanship', skillFamily: 'Situational Awareness' },
+        { element: 'Knowledge', skillFamily: 'Knowledge' },
+        { element: 'Knowledge', skillFamily: 'Preparation' },
+        { element: 'Strap-in', skillFamily: 'Procedural Discipline' },
+      ];
+      for (const m of mappings) {
+        await safeExec(db,
+          `INSERT INTO "TIESkillMapping"("id","element","skillFamily") VALUES(gen_random_uuid()::text,$1::text,$2::text)`,
+          m.element, m.skillFamily
+        );
+      }
+      console.log(`✅ TIE: Seeded ${mappings.length} skill mappings`);
     }
-    console.log(`✅ TIE: Seeded ${mappings.length} skill mappings`);
   }
 
   // Event relationships (syllabus sequence)
   const relCount = await safeQuery(db, `SELECT COUNT(*) as cnt FROM "TIEEventRelationship"`);
   if (relCount[0].cnt == 0) {
-    const relationships = [
-      // BGF sequence
-      ...['BGF1','BGF2','BGF3','BGF4','BGF5','BGF6','BGF7','BGF8','BGF9','BGF10',
-          'BGF11','BGF12','BGF13','BGF14','BGF15','BGF16','BGF17','BGF18','BGF19','BGF20'].map((evt, i, arr) =>
-        i < arr.length - 1 ? { from: evt, to: arr[i+1], type: 'follow_on', order: i+1 } : null
-      ).filter(Boolean),
-      // FTD within BGF
-      ...['BGF FTD1','BGF FTD2','BGF FTD3','BGF FTD4','BGF FTD5','BGF FTD6','BGF FTD7','BGF FTD8','BGF FTD9'].map((evt, i, arr) =>
-        i < arr.length - 1 ? { from: evt, to: arr[i+1], type: 'follow_on', order: i+1 } : null
-      ).filter(Boolean),
-      // BGF FTD leads to BGF flights
-      { from: 'BGF FTD1', to: 'BGF1', type: 'prerequisite', order: 1 },
-      { from: 'BGF FTD2', to: 'BGF3', type: 'prerequisite', order: 2 },
-      { from: 'BGF FTD3', to: 'BGF5', type: 'prerequisite', order: 3 },
-      // BIF sequence
-      ...['BIF1','BIF2','BIF3','BIF4'].map((evt, i, arr) =>
-        i < arr.length - 1 ? { from: evt, to: arr[i+1], type: 'follow_on', order: i+100 } : null
-      ).filter(Boolean),
-    ];
-    for (const r of relationships) {
-      await safeExec(db, 
-        `INSERT INTO "TIEEventRelationship"("id","fromEvent","toEvent","relationshipType","sequenceOrder") VALUES(gen_random_uuid()::text,$1::text,$2::text,$3::text,$4::int)`,
-        r.from, r.to, r.type, r.order || 0
-      );
+    if (!allowStarterEventRelationshipSeed) {
+      console.log('ℹ️ TIE starter event relationship seed disabled; configure event relationships from the organisation syllabus/LMP data.');
+    } else {
+      const relationships = [
+        // BGF sequence
+        ...['BGF1','BGF2','BGF3','BGF4','BGF5','BGF6','BGF7','BGF8','BGF9','BGF10',
+            'BGF11','BGF12','BGF13','BGF14','BGF15','BGF16','BGF17','BGF18','BGF19','BGF20'].map((evt, i, arr) =>
+          i < arr.length - 1 ? { from: evt, to: arr[i+1], type: 'follow_on', order: i+1 } : null
+        ).filter(Boolean),
+        // FTD within BGF
+        ...['BGF FTD1','BGF FTD2','BGF FTD3','BGF FTD4','BGF FTD5','BGF FTD6','BGF FTD7','BGF FTD8','BGF FTD9'].map((evt, i, arr) =>
+          i < arr.length - 1 ? { from: evt, to: arr[i+1], type: 'follow_on', order: i+1 } : null
+        ).filter(Boolean),
+        // BGF FTD leads to BGF flights
+        { from: 'BGF FTD1', to: 'BGF1', type: 'prerequisite', order: 1 },
+        { from: 'BGF FTD2', to: 'BGF3', type: 'prerequisite', order: 2 },
+        { from: 'BGF FTD3', to: 'BGF5', type: 'prerequisite', order: 3 },
+        // BIF sequence
+        ...['BIF1','BIF2','BIF3','BIF4'].map((evt, i, arr) =>
+          i < arr.length - 1 ? { from: evt, to: arr[i+1], type: 'follow_on', order: i+100 } : null
+        ).filter(Boolean),
+      ];
+      for (const r of relationships) {
+        await safeExec(db,
+          `INSERT INTO "TIEEventRelationship"("id","fromEvent","toEvent","relationshipType","sequenceOrder") VALUES(gen_random_uuid()::text,$1::text,$2::text,$3::text,$4::int)`,
+          r.from, r.to, r.type, r.order || 0
+        );
+      }
+      console.log(`✅ TIE: Seeded ${relationships.length} event relationships`);
     }
-    console.log(`✅ TIE: Seeded ${relationships.length} event relationships`);
   }
 }
 

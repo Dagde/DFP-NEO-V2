@@ -13027,6 +13027,7 @@ app.post('/api/alerts/register-device', async (req, res) => {
 
 app.post('/api/scores/bulk', async (req, res) => {
   try {
+    if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
     const { scores } = req.body;
     if (!scores || !Array.isArray(scores)) {
