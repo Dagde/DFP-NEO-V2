@@ -67319,6 +67319,15 @@ const PlatformConfigurationSettings = ({
   const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(
     primaryOrganisationSettings.staffQualificationCatalogue || null
   );
+  const linkedInstructorQualification = staffQualificationCatalogue.qualifications.find((qualification) => {
+    const tokens = [
+      qualification.id,
+      qualification.code,
+      qualification.name
+    ].map(normaliseQualificationToken);
+    return String(qualification.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (tokens.includes("qfi") || tokens.includes("instructor"));
+  });
+  const linkedInstructorQualificationLabel = linkedInstructorQualification ? linkedInstructorQualification.code || linkedInstructorQualification.name : "No linked instructor qualification configured";
   const unitCallsignSettings = normaliseUnitCallsignSettings(
     primaryOrganisationSettings.unitCallsignSettings || null
   );
@@ -73594,16 +73603,23 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               info: "Choose rank-then-name to sort by configured rank priority first, then surname and first name. Choose alphabetical to ignore rank and sort only by name."
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Field,
-            {
-              label: "Instructor Display Term",
-              value: personnelDisplaySettings.instructorLabel,
-              disabled: !canEditRankTerminology,
-              onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-              info: "The duty label shown on schedules, reports and event details. It does not rename a qualification held by a person."
-            }
-          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Instructor Display Term",
+                value: personnelDisplaySettings.instructorLabel,
+                disabled: !canEditRankTerminology,
+                onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
+                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
+              "Linked qualification label: ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-cyan-50", children: linkedInstructorQualificationLabel }),
+              ". Rename this in Personnel Qualifications if it should match the instructor display term."
+            ] })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SelectField,
             {
@@ -73621,10 +73637,6 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               info: "Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             }
           )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-400/25 bg-sky-500/10 p-3 text-xs leading-relaxed text-sky-50/80", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "The instructor display term is the duty label users see on schedules and reports. A qualification is something a person holds in their profile." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1", children: "Example: a profile can show Qualification: QFI, while a report says Instructor: Brown, Ashley. Rename the qualification below if your organisation wants the profile tag to use a different label too." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
@@ -73835,8 +73847,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-emerald-100", children: "Personnel Qualifications" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "If you want the profile tag to match the instructor duty wording above, rename the relevant qualification here as well." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: "Define model-specific qualifications such as PIC, Crew Commander, or Operational Captain. Staff and trainee profile qualification options are drawn from this list." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               renderRankTerminologySectionAction(),
