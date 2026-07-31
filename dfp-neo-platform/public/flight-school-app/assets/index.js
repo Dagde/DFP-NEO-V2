@@ -15610,7 +15610,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         " of ",
         mandatoryChecks.length,
         " mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. ",
-        isSetupTestMode$1 ? "Each step syncs into the local test Settings when you click Next." : "Settings are not updated until the final Save setup step."
+        isSetupTestMode$1 ? "Each step syncs into Settings when you click Next." : "Settings are not updated until the final Save setup step."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 grid gap-3 sm:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { type: "button", className: wizardChoiceClass, onClick: resumeWizard, children: [
@@ -70962,7 +70962,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Task Profiles",
-          subtitle: "Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned profile is not listed.",
+          subtitle: "Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71283,7 +71283,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Reusable Flight Profiles",
-          subtitle: "Define reusable flight templates for unit models that support recurring task profiles.",
+          subtitle: "Full flight templates with default aircraft, crew, timing, callsign and formation settings.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Profile" })
@@ -71296,7 +71296,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             "Active unit context: ",
             activeStandardMissionUnitLabel || "No unit selected"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New reusable flight profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New reusable flight profiles default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name." })
         ] }),
         standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No reusable flight profiles configured for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
@@ -75550,7 +75550,7 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Reusable flight profiles for regular unit scheduling",
+  "standard-missions": "Reusable flight templates with aircraft, crew, timing and callsign defaults",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",

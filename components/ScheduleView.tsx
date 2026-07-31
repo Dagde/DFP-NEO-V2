@@ -6849,7 +6849,7 @@ const InitialSetupWizard: React.FC<{
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-600">Initial Setup Wizard</p>
                 <h3 className="mt-1 text-xl font-bold text-slate-950">DFP-NEO is partly configured</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-700">
-                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. {isSetupTestMode ? 'Each step syncs into the local test Settings when you click Next.' : 'Settings are not updated until the final Save setup step.'}
+                    I found {completedMandatory} of {mandatoryChecks.length} mandatory setup areas already complete. You can continue from your last wizard page, or start the guide again from the beginning. {isSetupTestMode ? 'Each step syncs into Settings when you click Next.' : 'Settings are not updated until the final Save setup step.'}
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <button type="button" className={wizardChoiceClass} onClick={resumeWizard}>

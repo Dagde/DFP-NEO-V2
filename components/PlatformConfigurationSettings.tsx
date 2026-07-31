@@ -6833,7 +6833,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Task Profiles"
-          subtitle="Model-specific tasking lists used by Directed Events. Users can still type a task manually if the assigned profile is not listed."
+          subtitle="Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -7124,7 +7124,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
           title="Reusable Flight Profiles"
-          subtitle="Define reusable flight templates for unit models that support recurring task profiles."
+          subtitle="Full flight templates with default aircraft, crew, timing, callsign and formation settings."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
@@ -7142,7 +7142,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New reusable flight profiles default to the unit home location and unit default callsign. Values can be manually edited when scheduled.
+                  New reusable flight profiles default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
