@@ -7393,8 +7393,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 const isDefaultEntry = defaultCrewPositionIds.has(entry.id);
                 return (
                   <div key={`crew-role-${entry.id}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(182px,1.05fr)_minmax(65px,0.375fr)_minmax(300px,1.65fr)_auto]">
-                    <Field label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onChange={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline crew positions stay fixed so aircraft seat links remain reliable.' : 'The position used by aircraft seats and alternate crew profiles.'} />
-                    <Field label="Label" value={entry.label} disabled={!canEditCrewComposition} onChange={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
+                    <DraftField label="Generic Position" value={entry.genericName} disabled={!canEditCrewComposition || isDefaultEntry} onCommit={(value) => updateCrewPositionEntry(entry.id, { genericName: value })} info={isDefaultEntry ? 'Baseline crew positions stay fixed so aircraft seat links remain reliable.' : 'The position used by aircraft seats and alternate crew profiles.'} />
+                    <DraftField label="Label" value={entry.label} disabled={!canEditCrewComposition} onCommit={(value) => updateCrewPositionEntry(entry.id, { label: value })} />
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-400">Applies To</label>
                       <div className="grid gap-1 rounded border border-gray-700 bg-gray-950/70 p-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -7556,12 +7556,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]">
                     <div>
                       <div className="grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]">
-                        <Field
+                        <DraftField
                           label="Short Code (3 letters)"
                           value={profile.code}
                           disabled={!canEditCrewComposition}
                           maxLength={3}
-                          onChange={(value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
+                          onCommit={(value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
                           info="This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
                         />
                         <OffsetField label="Display Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateAlternateCrewComposition(profile.id, { name: value })} />
