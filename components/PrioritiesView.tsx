@@ -3940,7 +3940,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       remedial: events.filter(event => getPriorityEventGroup(event) === 'remedial'),
     };
     const groups: Array<{ key: 'tasking' | 'currency' | 'remedial'; label: string; events: ScheduleEvent[] }> = [
-      { key: 'tasking', label: 'Missions', events: groupedEvents.tasking },
+      { key: 'tasking', label: 'Directed Tasks', events: groupedEvents.tasking },
       { key: 'currency', label: 'Currency', events: groupedEvents.currency },
       { key: 'remedial', label: 'Remedial', events: groupedEvents.remedial },
     ];
@@ -4138,7 +4138,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
                                         {priorityAllocationModel === 'air_combat'
-                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted."
+                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed task and currency requests are attempted."
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
                                                 : 'Set how Flight School training capacity is shared across active courses for this locality.'}

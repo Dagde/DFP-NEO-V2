@@ -187,7 +187,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 step: '01',
                 label: 'Events Builder',
                 shortLabel: 'Events',
-                description: 'Manage priority events, mission and currency requests.',
+                description: 'Manage priority events, directed task and currency requests.',
             },
         ]
         : activeFixedCrewTab === 'deployments'

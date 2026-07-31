@@ -483,7 +483,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
                     type="email"
                     value={newEmail}
                     onChange={e => setNewEmail(e.target.value)}
-                    placeholder="email@sample.com.au"
+                    placeholder="name@example.com"
                     className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none"
                     style={{ background: 'rgba(255,255,255,0.05)' }}
                   />

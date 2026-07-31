@@ -1729,7 +1729,7 @@ const TRAINING_REPORT_COMMENT_FIELD_INFO: Record<string, string> = {
   profile: 'The label for the planned or flown profile narrative. This is where users describe the sequence of activities, sortie flow or training profile being assessed.',
   overall: 'The label for the main assessor narrative. This is the broad training judgement: what happened, why it mattered and what the staff member or trainee should focus on next.',
   nest: 'The label for a short local reference field. It can be kept as NEST, renamed to another local tracking code, or used for a compact administrative reference.',
-  notes: 'The label for additional model-specific notes. This supports Air Combat and future models where reports may need tactical, crew, mission or package-specific comments.',
+  notes: 'The label for additional model-specific notes. This supports Air Combat and future models where reports may need tactical, crew, task or package-specific comments.',
 };
 
 const humaniseFieldKey = (key: string): string => (
@@ -6847,7 +6847,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model missions.'
+                          ? 'Use this for Fighter / Strike model directed tasks.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
@@ -7236,7 +7236,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   const modeHint = mode === 'STANDARD'
                                     ? 'Use the aircraft standard crew.'
                                     : mode === 'ALTERNATE'
-                                      ? 'Use one alternate mission crew.'
+                                      ? 'Use one alternate task crew.'
                                       : 'Use the manual role list below.';
                                   return (
                                     <button
@@ -7324,7 +7324,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-crew-composition" className={getSectionClass('platform-crew-composition')}>
         <SectionHeader
           title="Crew Composition"
-          subtitle="Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew."
+          subtitle="Aircraft-specific role labels, standard crew and alternate task crew makeups for Air Combat, Fixed Crew and Pooled Crew."
           action={canEdit ? (
             <button
               type="button"

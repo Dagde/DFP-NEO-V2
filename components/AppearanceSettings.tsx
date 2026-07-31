@@ -218,13 +218,13 @@ const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
                             {
                                 value: 'event_type' as const,
                                 label: 'Event Type',
-                                description: 'Courses, packages, missions, currency, and other event types each use their own colour.',
+                                description: 'Courses, packages, directed tasks, currency, and other event types each use their own colour.',
                                 swatches: ['bg-cyan-500/70', 'bg-violet-500/70', 'bg-sky-500/70', 'bg-green-500/70'],
                             },
                             {
                                 value: 'crew' as const,
                                 label: 'Crew Group',
-                                description: 'Each crew group uses a different colour so whole-crew missions are easier to scan.',
+                                description: 'Each crew group uses a different colour so whole-crew tasking is easier to scan.',
                                 swatches: ['bg-sky-500/70', 'bg-green-500/70', 'bg-violet-500/70', 'bg-amber-500/70'],
                             },
                         ].map(option => {

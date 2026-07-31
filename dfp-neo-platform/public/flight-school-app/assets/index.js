@@ -1323,7 +1323,7 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
                 type: "email",
                 value: newEmail,
                 onChange: (e) => setNewEmail(e.target.value),
-                placeholder: "email@sample.com.au",
+                placeholder: "name@example.com",
                 className: "w-full px-3 py-2 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none",
                 style: { background: "rgba(255,255,255,0.05)" }
               }
@@ -41226,7 +41226,7 @@ const PrioritiesView = ({
       remedial: events.filter((event) => getPriorityEventGroup(event) === "remedial")
     };
     const groups = [
-      { key: "tasking", label: "Missions", events: groupedEvents.tasking },
+      { key: "tasking", label: "Directed Tasks", events: groupedEvents.tasking },
       { key: "currency", label: "Currency", events: groupedEvents.currency },
       { key: "remedial", label: "Remedial", events: groupedEvents.remedial }
     ];
@@ -41372,7 +41372,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : "Flight School Course Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed task and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -42580,7 +42580,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "01",
       label: "Events Builder",
       shortLabel: "Events",
-      description: "Manage priority events, mission and currency requests."
+      description: "Manage priority events, directed task and currency requests."
     }
   ] : activeFixedCrewTab === "deployments" ? [
     {
@@ -65295,13 +65295,13 @@ const AppearanceSettings = ({
         {
           value: "event_type",
           label: "Event Type",
-          description: "Courses, packages, missions, currency, and other event types each use their own colour.",
+          description: "Courses, packages, directed tasks, currency, and other event types each use their own colour.",
           swatches: ["bg-cyan-500/70", "bg-violet-500/70", "bg-sky-500/70", "bg-green-500/70"]
         },
         {
           value: "crew",
           label: "Crew Group",
-          description: "Each crew group uses a different colour so whole-crew missions are easier to scan.",
+          description: "Each crew group uses a different colour so whole-crew tasking is easier to scan.",
           swatches: ["bg-sky-500/70", "bg-green-500/70", "bg-violet-500/70", "bg-amber-500/70"]
         }
       ].map((option) => {
@@ -66839,7 +66839,7 @@ const TRAINING_REPORT_COMMENT_FIELD_INFO = {
   profile: "The label for the planned or flown profile narrative. This is where users describe the sequence of activities, sortie flow or training profile being assessed.",
   overall: "The label for the main assessor narrative. This is the broad training judgement: what happened, why it mattered and what the staff member or trainee should focus on next.",
   nest: "The label for a short local reference field. It can be kept as NEST, renamed to another local tracking code, or used for a compact administrative reference.",
-  notes: "The label for additional model-specific notes. This supports Air Combat and future models where reports may need tactical, crew, mission or package-specific comments."
+  notes: "The label for additional model-specific notes. This supports Air Combat and future models where reports may need tactical, crew, task or package-specific comments."
 };
 const humaniseFieldKey = (key) => key.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase());
 const PlatformConfigurationSettings = ({
@@ -70987,7 +70987,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model missions." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model directed tasks." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
@@ -71389,7 +71389,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
                       const selected = crewMode === mode;
                       const modeLabel = mode === "STANDARD" ? "Standard Crew" : mode === "ALTERNATE" ? "Alternate Crew" : "Custom Crew";
-                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate mission crew." : "Use the manual role list below.";
+                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate task crew." : "Use the manual role list below.";
                       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "button",
                         {
@@ -71451,7 +71451,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: "Crew Composition",
-          subtitle: "Aircraft-specific role labels, standard crew and alternate mission crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
+          subtitle: "Aircraft-specific role labels, standard crew and alternate task crew makeups for Air Combat, Fixed Crew and Pooled Crew.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -88619,7 +88619,7 @@ const DfpSidePanelTimeline = ({
     { id: "flying", label: "Flying Window" },
     { id: "resources", label: "Resources Available" },
     { id: "training", label: "Training Priority" },
-    { id: "taskings", label: "Missions" },
+    { id: "taskings", label: "Directed Tasks" },
     { id: "currency", label: "Currency events" },
     { id: "crew", label: "Crew" },
     { id: "course", label: "Course events" },
@@ -89636,7 +89636,7 @@ const DfpSidePanelTimeline = ({
             " active course/package streams and totals ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
             "."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed mission and currency events will drive the build." }),
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed task and currency events will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed events only" }),
@@ -90401,7 +90401,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-              ["01", "Mandatory missions", `${scheduledTaskCount} scheduled`],
+              ["01", "Mandatory directed tasks", `${scheduledTaskCount} scheduled`],
               ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
               ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
               ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
@@ -90475,7 +90475,7 @@ const DfpSidePanelTimeline = ({
     if (activeAssistSection === "taskings") {
       const localRows = visibleAssistTaskRequests.map((request) => ({
         id: request.id,
-        tasking: request.tasking || "Mission",
+        tasking: request.tasking || "Directed task",
         date: request.date,
         takeoff: request.takeoff,
         duration: request.duration,
@@ -90493,7 +90493,7 @@ const DfpSidePanelTimeline = ({
       const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, ignored: false, source: "remote" }))];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No missions entered." }),
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed tasks entered." }),
           rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
@@ -102775,7 +102775,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleAirCombatTrainingPriorityEvents("night");
     }
     if (airCombatDayTaskingEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory mission events...", percentage: 45 });
+      recordProgress({ message: "Scheduling Air Combat mandatory directed task events...", percentage: 45 });
       scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
     }
     if (airCombatDayCurrencyEvents.length > 0) {
@@ -104148,7 +104148,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const conclusions = [];
     if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
     if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.");
-    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat mission events matched the build date.");
+    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed task events matched the build date.");
     const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
     if (crewRoleShortfalls.length > 0) {
       conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || "selected unit"}: ${crewRoleShortfalls.map((shortfall) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(", ")}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);

@@ -8804,11 +8804,11 @@ async function seedCommercialLicenseIfEmpty(db) {
             THEN regexp_replace("licenseKey", '-EVAL$', '-STARTER')
           ELSE "licenseKey"
         END,
-        "licenseName" = regexp_replace(regexp_replace("licenseName", ' Evaluation Licence$', ' Starter Licence'), ' Evaluation License$', ' Starter Licence'),
-        "features" = COALESCE("features", '{}'::jsonb) - 'developmentOnly' || '{"seededBy":"Starter licensing foundation"}'::jsonb,
+        "licenseName" = regexp_replace(regexp_replace("licenseName", ' Evaluation Licence$', ' Initial Licence'), ' Evaluation License$', ' Initial Licence'),
+        "features" = COALESCE("features", '{}'::jsonb) - 'developmentOnly' || '{"seededBy":"Initial licensing foundation"}'::jsonb,
         "notes" = CASE
           WHEN "notes" ILIKE 'Development licensing foundation record.%'
-            THEN 'Starter licensing foundation record. Replace with signed licence files for production or offline customer deployments.'
+            THEN 'Initial licensing foundation record. Replace with signed licence files for production or offline customer deployments.'
           ELSE "notes"
         END,
         "updatedAt" = NOW()
@@ -8853,14 +8853,14 @@ async function seedCommercialLicenseIfEmpty(db) {
   `,
     organisationCode,
     `${organisationCode}-STARTER`,
-    `${organisationName} Starter Licence`,
+    `${organisationName} Initial Licence`,
     moduleCodes,
     JSON.stringify({
       enforcementMode: 'Monitor Only',
       offlineCapable: false,
-      seededBy: 'Starter licensing foundation',
+      seededBy: 'Initial licensing foundation',
     }),
-    'Starter licensing foundation record. Replace with signed licence files for production or offline customer deployments.',
+    'Initial licensing foundation record. Replace with signed licence files for production or offline customer deployments.',
     now
   );
 }
@@ -8971,7 +8971,7 @@ async function seedCommercialConfigIfEmpty(db) {
     INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
     VALUES (gen_random_uuid()::text, $1, $2, 'Training', 'ACTIVE', $3::jsonb, $4::timestamp, $4::timestamp)
     ON CONFLICT ("code") DO NOTHING
-  `, seedAircraftCode, seedAircraftName, JSON.stringify({ source: legacyAircraftLabel ? 'Legacy app settings aircraft type' : 'Commercial setup starter aircraft type' }), now);
+  `, seedAircraftCode, seedAircraftName, JSON.stringify({ source: legacyAircraftLabel ? 'Legacy app settings aircraft type' : 'Commercial setup aircraft type' }), now);
 
   for (const locationName of locationNames) {
     const locationCode = locationIdentityFor(locationName).code;
