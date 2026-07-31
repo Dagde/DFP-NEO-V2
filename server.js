@@ -589,8 +589,13 @@ async function migrateMissingPersonnelIdNumbers(db) {
 
 function logApiTiming(label, startedAt, details = {}) {
   const elapsedMs = Date.now() - startedAt;
-  const log = elapsedMs > 1000 ? console.warn : console.log;
-  log(`⏱️ ${label} completed in ${elapsedMs}ms`, details);
+  if (elapsedMs > 1000) {
+    console.warn(`⏱️ ${label} completed in ${elapsedMs}ms`, details);
+    return;
+  }
+  if (process.env.DFP_VERBOSE_API_TIMING === 'true') {
+    console.log(`⏱️ ${label} completed in ${elapsedMs}ms`, details);
+  }
 }
 
 async function getPrisma() {
@@ -688,6 +693,58 @@ function normaliseLocationCode(value) {
   const upper = raw.toUpperCase();
   if (LOCATION_NAME_BY_CODE[upper]) return upper;
   return LOCATION_CODE_BY_NAME[raw.toLowerCase()] || upper;
+}
+
+function normaliseHistoricalSeedCourseConfig(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  return Object.fromEntries(
+    Object.entries(input)
+      .map(([courseCode, config]) => {
+        if (!config || typeof config !== 'object' || Array.isArray(config)) return null;
+        const code = String(courseCode || '').trim();
+        const startDate = String(config.startDate || '').trim();
+        const lmpType = String(config.lmpType || '').trim();
+        if (!code || !startDate || !lmpType) return null;
+        const nextConfig = { startDate, lmpType };
+        if (Array.isArray(config.progressRange) && config.progressRange.length >= 2) {
+          nextConfig.progressRange = [
+            String(config.progressRange[0] || '').trim(),
+            String(config.progressRange[1] || '').trim(),
+          ].filter(Boolean);
+        }
+        if (String(config.centreEvent || '').trim()) {
+          nextConfig.centreEvent = String(config.centreEvent || '').trim();
+        }
+        if (Number.isFinite(Number(config.defaultGroundHours))) {
+          nextConfig.defaultGroundHours = Number(config.defaultGroundHours);
+        }
+        if (Number.isFinite(Number(config.defaultProceduralTrainerHours))) {
+          nextConfig.defaultProceduralTrainerHours = Number(config.defaultProceduralTrainerHours);
+        }
+        if (Number.isFinite(Number(config.defaultSimulatorHours))) {
+          nextConfig.defaultSimulatorHours = Number(config.defaultSimulatorHours);
+        }
+        if (Number.isFinite(Number(config.defaultFlightHours))) {
+          nextConfig.defaultFlightHours = Number(config.defaultFlightHours);
+        }
+        return [code, nextConfig];
+      })
+      .filter(Boolean)
+  );
+}
+
+function normaliseHistoricalSeedSyllabusSequences(input = {}) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  return Object.fromEntries(
+    Object.entries(input)
+      .map(([lmpType, events]) => {
+        const code = String(lmpType || '').trim();
+        if (!code || !Array.isArray(events)) return null;
+        const sequence = events.map((eventCode) => String(eventCode || '').trim()).filter(Boolean);
+        return sequence.length > 0 ? [code, sequence] : null;
+      })
+      .filter(Boolean)
+  );
 }
 
 function expandLocationValues(values) {
@@ -10207,6 +10264,17 @@ app.post('/api/historical-data/seed', async (req, res) => {
   try {
     if (!validateSeedEndpointSecret(req, res)) return;
     const db = await getPrisma();
+    const bodyCourseConfig = normaliseHistoricalSeedCourseConfig(req.body?.courseConfig);
+    const bodySyllabusSequences = normaliseHistoricalSeedSyllabusSequences(req.body?.syllabusSequences);
+    const allowDemoHistoricalSeed = process.env.DFP_SEED_DEMO_HISTORICAL_DATA === 'true';
+
+    if (Object.keys(bodyCourseConfig).length === 0 && !allowDemoHistoricalSeed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Historical seed course setup is required',
+        message: 'Provide courseConfig and syllabusSequences in the request body, or set DFP_SEED_DEMO_HISTORICAL_DATA=true for a deliberate demo-data seed.',
+      });
+    }
 
     // Check if seeding has already been done
     const existingMeta = await db.dataBackup.findFirst({
@@ -10273,20 +10341,25 @@ app.post('/api/historical-data/seed', async (req, res) => {
 
     console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${instructorQualifiedStaff.length} instructor-qualified staff`);
 
-    // Course configuration
-    // progressRange: [startEvent, endEvent] - trainee is randomly placed anywhere in this range
-    // For FIC courses, centreEvent is still used (original ±3 logic retained)
-    const courseConfig = {
-      'ADF301': { startDate: '2023-04-01', lmpType: 'BPC+IPC', progressRange: ['BIF TUT2', 'BGF23'] },
-      'ADF302': { startDate: '2025-08-01', lmpType: 'BPC+IPC', progressRange: ['BGF10', 'BGF19'] },
-      'ADF303': { startDate: '2025-12-01', lmpType: 'BPC+IPC', progressRange: ['BGF1', 'BGF5'] },
-      'FIC210': { startDate: '2025-10-01', lmpType: 'FIC', centreEvent: 'AIT3' },
-      'FIC211': { startDate: '2026-01-11', lmpType: 'FIC', centreEvent: 'FIC4' },
-      'FIC 210': { startDate: '2025-10-01', lmpType: 'FIC', centreEvent: 'AIT3' },
+    // Course configuration supplied by the admin performing the seed.
+    // progressRange: [startEvent, endEvent] places each trainee inside that range.
+    // centreEvent keeps the original centre-point behaviour for compatible seeds.
+    const demoCourseConfig = {
+      'ADF301': { startDate: '2023-04-01', lmpType: 'BPC+IPC', progressRange: ['BIF TUT2', 'BGF23'], defaultGroundHours: 2.0, defaultProceduralTrainerHours: 1.0, defaultSimulatorHours: 2.0, defaultFlightHours: 1.2 },
+      'ADF302': { startDate: '2025-08-01', lmpType: 'BPC+IPC', progressRange: ['BGF10', 'BGF19'], defaultGroundHours: 2.0, defaultProceduralTrainerHours: 1.0, defaultSimulatorHours: 2.0, defaultFlightHours: 1.2 },
+      'ADF303': { startDate: '2025-12-01', lmpType: 'BPC+IPC', progressRange: ['BGF1', 'BGF5'], defaultGroundHours: 2.0, defaultProceduralTrainerHours: 1.0, defaultSimulatorHours: 2.0, defaultFlightHours: 1.2 },
+      'FIC210': { startDate: '2025-10-01', lmpType: 'FIC', centreEvent: 'AIT3', defaultGroundHours: 2.0, defaultProceduralTrainerHours: 1.0, defaultSimulatorHours: 2.0, defaultFlightHours: 1.2 },
+      'FIC211': { startDate: '2026-01-11', lmpType: 'FIC', centreEvent: 'FIC4', defaultGroundHours: 2.0, defaultProceduralTrainerHours: 1.0, defaultSimulatorHours: 2.0, defaultFlightHours: 1.2 },
+      'FIC 210': { startDate: '2025-10-01', lmpType: 'FIC', centreEvent: 'AIT3', defaultGroundHours: 2.0, defaultProceduralTrainerHours: 1.0, defaultSimulatorHours: 2.0, defaultFlightHours: 1.2 },
     };
+    const courseConfig = Object.keys(bodyCourseConfig).length > 0
+      ? bodyCourseConfig
+      : allowDemoHistoricalSeed
+        ? demoCourseConfig
+        : {};
 
-    // BPC+IPC syllabus ordered sequence
-    const BPC_IPC_SYLLABUS = [
+    const demoSyllabusSequences = {
+      'BPC+IPC': [
       'BGF MB1','BGF MB2','BGF CPT1','BGF TUT1A','BGF TUT1B','BGF TUT2',
       'BGF MB3','BGF MB4','BGF MB5','BGF MB6','BGF CPT2','BGF FTD1','BGF MB7',
       'BGF1','BGF FTD2','BGF2','BGF MB8','BGF CPT3','BGF MB9','BGF TUT3',
@@ -10304,16 +10377,20 @@ app.post('/api/historical-data/seed', async (req, res) => {
       'BGF MB17','BGF FTD10','BGF21','BGF22','BGF23','BGF24',
       'BNAV MB1','BNAV TUT1','BNAV FTD1','BNAV1','BNAV2','BNAV3 NAVPT',
       'SCT GF','SCT IF','SCT NAV','SCT FORM','Night SCT',
-    ];
-
-    // FIC syllabus ordered sequence (FIC courses use AIT prefix first, then FIC)
-    const FIC_SYLLABUS = [
+      ],
+      FIC: [
       'FIC MB1','FIC MB2','FIC FTD1','FIC FTD2',
       'FIC1','FIC2','FIC3','FIC FTD3','FIC4','FIC5','FIC6',
       'FIC FTD4','FIC FTD5',
       'FIC IF1','FIC IF2','FIC IF3','FIC IF4','FIC FTD6',
       'AIT1','AIT2','AIT3','AIT4','AIT5','AIT6','AIT7','AIT8',
-    ];
+      ],
+    };
+    const syllabusSequences = Object.keys(bodySyllabusSequences).length > 0
+      ? bodySyllabusSequences
+      : allowDemoHistoricalSeed
+        ? demoSyllabusSequences
+        : {};
 
     // Event type classification for generating ScheduleEvent records
     const getEventType = (code) => {
@@ -10322,17 +10399,17 @@ app.post('/api/historical-data/seed', async (req, res) => {
       return 'flight';
     };
 
-    const getEventDuration = (code, lmpType) => {
-      if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) return 2.0;
-      if (code.includes('CPT')) return 1.0;
-      // FTD events: 2.0hrs for BPC+IPC and FIC courses
-      if (code.includes('FTD')) {
-        if (lmpType === 'BPC+IPC' || lmpType === 'FIC') return 2.0;
-        return 1.0;
+    const getEventDuration = (code, seedConfig = {}) => {
+      if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) {
+        return Number(seedConfig.defaultGroundHours ?? 2.0);
       }
-      // Flight events: 1.2hrs for BPC+IPC and FIC courses
-      if (lmpType === 'FIC' || lmpType === 'BPC+IPC') return 1.2;
-      return 1.3;
+      if (code.includes('CPT')) {
+        return Number(seedConfig.defaultProceduralTrainerHours ?? 1.0);
+      }
+      if (code.includes('FTD')) {
+        return Number(seedConfig.defaultSimulatorHours ?? 1.0);
+      }
+      return Number(seedConfig.defaultFlightHours ?? 1.3);
     };
 
     // Deterministic seeded random (no global Math.random side effects on each call)
@@ -10562,7 +10639,11 @@ app.post('/api/historical-data/seed', async (req, res) => {
       const config = courseConfig[course];
       if (!config) continue; // Skip courses not in config (ADF304, ADF305, IFF6 etc)
 
-      const syllabus = config.lmpType === 'FIC' ? FIC_SYLLABUS : BPC_IPC_SYLLABUS;
+      const syllabus = syllabusSequences[config.lmpType] || [];
+      if (syllabus.length === 0) {
+        console.warn(`⚠️ No historical seed event sequence supplied for training type ${config.lmpType} on course ${course}`);
+        continue;
+      }
 
       // Each trainee gets a unique seed based on their id/idNumber
       const seedVal = trainee.idNumber ? parseInt(String(trainee.idNumber).replace(/\D/g, '') || '0') : parseInt(trainee.id.slice(-8), 16);
@@ -10633,7 +10714,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
       for (let i = 0; i < eventsToGenerate.length; i++) {
         const code = eventsToGenerate[i];
         const eventType = getEventType(code);
-        const duration = getEventDuration(code, config.lmpType);
+        const duration = getEventDuration(code, config);
 
         // Calculate date for this event (evenly distributed across the course date range)
         const progressFraction = eventCount > 1 ? i / (eventCount - 1) : 0;

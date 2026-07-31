@@ -8749,7 +8749,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div key={license.id || `platform-license-${index}`} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
                 <div className="mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]">
                   <div>
-                    <h5 className="text-sm font-bold text-white">{license.licenseName || 'Licence'}</h5>
+                    <h5 className="text-sm font-bold text-white">{formatCommercialLicenceDisplayName(license)}</h5>
                     <p className="mt-1 text-xs text-gray-400">
                       {license.licenseKey || 'No licence key'} / {license.deploymentMode || 'Deployment model not set'}
                     </p>

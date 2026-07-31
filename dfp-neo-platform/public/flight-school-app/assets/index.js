@@ -72646,7 +72646,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: license.licenseName || "Licence" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: formatCommercialLicenceDisplayName(license) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
                   license.licenseKey || "No licence key",
                   " / ",
