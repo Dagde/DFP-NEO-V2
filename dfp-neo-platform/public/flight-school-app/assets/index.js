@@ -108299,6 +108299,7 @@ const App = () => {
     [activeTrainingReportUnitCode, platformConfig2]
   );
   const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || "Training Report";
+  const configuredTrainingReportStatusFieldLabel = String(trainingReportTemplate.modules?.overallAssessment?.fields?.result || "Mission Status").trim() || "Mission Status";
   const getTrainingReportDisplayNameForUnit = reactExports.useCallback((unitCode) => {
     const reportUnitCode = unitCode || activeTrainingReportUnitCode;
     const unitTemplate = getUnitTrainingReportTemplate(platformConfig2, reportUnitCode);
@@ -113994,7 +113995,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const changes = [
       assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
       assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
-      assessment.dcoResult ? `Mission Status: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
+      assessment.dcoResult ? `${configuredTrainingReportStatusFieldLabel}: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
       assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
     ].filter(Boolean).join(", ");
     logAudit("Mass Completion", "Edit", `Updated ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
@@ -123124,7 +123125,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                   const changes = [
                     assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
                     assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
-                    assessment.dcoResult ? `Mission Status: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
+                    assessment.dcoResult ? `${configuredTrainingReportStatusFieldLabel}: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
                     assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
                   ].filter(Boolean).join(", ");
                   logAudit("Performance History", "Edit", `Modified ${selectedTrainingReportName} for ${normalizedAssessment.traineeFullName} - Event: ${normalizedAssessment.flightNumber} (${normalizedAssessment.date})`, changes);

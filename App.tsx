@@ -25895,6 +25895,7 @@ const App: React.FC = () => {
         [activeTrainingReportUnitCode, platformConfig]
     );
     const configuredTrainingReportDisplayName = trainingReportTemplate.displayName || trainingReportTerminology.name || 'Training Report';
+    const configuredTrainingReportStatusFieldLabel = String(trainingReportTemplate.modules?.overallAssessment?.fields?.result || 'Mission Status').trim() || 'Mission Status';
     const getTrainingReportDisplayNameForUnit = useCallback((unitCode?: string | null) => {
         const reportUnitCode = unitCode || activeTrainingReportUnitCode;
         const unitTemplate = getUnitTrainingReportTemplate(platformConfig, reportUnitCode);
@@ -32861,7 +32862,7 @@ const App: React.FC = () => {
         const changes = [
             assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
             assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
-            assessment.dcoResult ? `Mission Status: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
+            assessment.dcoResult ? `${configuredTrainingReportStatusFieldLabel}: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
             assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
         ].filter(Boolean).join(', ');
 
@@ -43817,7 +43818,7 @@ appliedUpdates.forEach(update => {
                                 const changes = [
                                     assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
                                     assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
-                                    assessment.dcoResult ? `Mission Status: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
+                                    assessment.dcoResult ? `${configuredTrainingReportStatusFieldLabel}: ${getConfiguredMissionStatusLabel(assessment.dcoResult)}` : null,
                                     assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
                                 ].filter(Boolean).join(', ');
 
