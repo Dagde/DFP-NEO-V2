@@ -795,6 +795,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const resolvedSctTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
+    const instructorDisplayLabel = String(personnelDisplaySettings?.instructorLabel || 'Instructor').trim() || 'Instructor';
     const configuredContinuationEvents = useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
     const getConfiguredContinuationEvent = (value?: string | null) => {
         const normalisedValue = String(value || '').trim().toUpperCase();
@@ -3891,9 +3892,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             {event.flightType === 'Dual' ? (
                                                 <>
                                                     {event.eventCategory === 'sct' ? (
-                                                        <p><strong>Instructor:</strong> {event.instructor || event.pilot}</p>
+                                                        <p><strong>{instructorDisplayLabel}:</strong> {event.instructor || event.pilot}</p>
                                                     ) : (
-                                                        <p><strong>Instructor:</strong> {event.instructor}</p>
+                                                        <p><strong>{instructorDisplayLabel}:</strong> {event.instructor}</p>
                                                     )}
                                                     {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
                                                         <div>

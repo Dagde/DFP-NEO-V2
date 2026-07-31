@@ -44,6 +44,7 @@ interface FlightTileProps {
   aircraftNumberSettings?: AircraftNumberSettings;
   disableLayoutTransition?: boolean;
   suppressAuthorisationWarnings?: boolean;
+  instructorLabel?: string;
 }
 
 const formatTime = (time: number): string => {
@@ -227,7 +228,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor' }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -798,7 +799,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     {instructor && (
                         <div style={{ fontSize: 10, color: '#cbd5e1', marginBottom: 5 }}>
                             <span style={{ color: '#64748b', marginRight: 4 }}>▶</span>
-                            <span style={{ color: '#94a3b8', marginRight: 4 }}>Instructor:</span>
+                            <span style={{ color: '#94a3b8', marginRight: 4 }}>{instructorLabel}:</span>
                             <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{instructor}</span>
                         </div>
                     )}

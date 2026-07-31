@@ -6868,20 +6868,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model task names.'
+                          ? 'Use this for Fighter / Strike model mission or task names.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
                     <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
-                      {profiles.length} task{profiles.length === 1 ? '' : 's'}
+                      {profiles.length} profile{profiles.length === 1 ? '' : 's'}
                     </span>
                   </div>
                   <TextAreaField
-                    label="Task Names"
+                    label="Mission / Task Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One task name per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One mission or task name per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
@@ -7136,7 +7136,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Reusable Flight Profiles are available when the selected unit model supports recurring task profiles.
+              Reusable Flight Profiles are available when the selected unit model supports recurring flight templates.
             </div>
           ) : (
             <>

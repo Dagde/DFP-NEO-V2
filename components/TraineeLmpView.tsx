@@ -49,6 +49,7 @@ interface TraineeLmpViewProps {
   onInsertCustomEvent?: (trainee: Trainee, event: InsertLmpEventRequest) => Promise<boolean> | boolean;
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
   trainingReportDisplayName?: string;
+  instructorLabel?: string;
 }
 
 export interface InsertLmpEventRequest {
@@ -798,7 +799,7 @@ const DetailView: React.FC<{
                         }
                     />
                      <DetailCard label="Date" value={score.date} />
-                     <DetailCard label="Instructor" value={score.instructor} />
+                     <DetailCard label={instructorLabel} value={score.instructor} />
                 </div>
                  <div className="mt-4">
                      <DetailCard label="Notes" value={<p className="whitespace-pre-wrap">{score.notes}</p>} />
@@ -1104,7 +1105,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                                     <legend className="px-2 text-sm font-semibold text-green-300">Attendance Record</legend>
                                     <div className="grid grid-cols-3 gap-4 mt-2">
                                         <DetailCard label="Date" value={lessonScore.date} />
-                                        <DetailCard label="Instructor" value={lessonScore.instructor || '—'} />
+                                        <DetailCard label={instructorLabel} value={lessonScore.instructor || '—'} />
                                         <DetailCard label="Result" value={
                                             <span className="text-green-300 font-bold">Complete ✓</span>
                                         } />
@@ -1207,6 +1208,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onInsertCustomEvent,
     onUpdateLmpItem,
     trainingReportDisplayName = 'Training Report',
+    instructorLabel = 'Instructor',
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);

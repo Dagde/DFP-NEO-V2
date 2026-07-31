@@ -2184,7 +2184,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                        ) : <UnitSettingsReadRow label="Task tile labels" value="No task profiles are configured for this operating model." muted />}
+                        ) : <UnitSettingsReadRow label="Mission / task tile labels" value="No mission / task profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Reusable Flight Profiles" description="Regular unit flight templates scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
@@ -8510,6 +8510,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         alertStatus={alertStatus}
                         aircraftNumberSettings={aircraftNumberSettings}
+                        instructorLabel={personnelDisplaySettings.instructorLabel || 'Instructor'}
                     />
                 );
             });
@@ -8971,6 +8972,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 seatConfigs={new Map()}
                                 currentTime={currentTime}
                                 aircraftNumberSettings={aircraftNumberSettings}
+                                instructorLabel={personnelDisplaySettings.instructorLabel || 'Instructor'}
                             />
                             <div
                                 className="absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50"

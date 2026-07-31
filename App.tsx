@@ -45511,6 +45511,7 @@ appliedUpdates.forEach(update => {
                     traineesData={traineesData}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
+                    instructorLabel={instructorLabel}
                 />
             }
             {showAddRemedialPackage && selectedTraineeForRemedial && (

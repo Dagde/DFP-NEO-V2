@@ -490,7 +490,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
   'platform-units': 'Unit type, base ownership and operating status',
-  'platform-task-profiles': 'Task profile lists by operational model',
+  'platform-task-profiles': 'Mission / task profile lists by operational model',
   'platform-master-lmp-access': 'Location and unit access to Master LMPs',
   'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
   'platform-unit-modules': 'Enable features and modules for each unit',

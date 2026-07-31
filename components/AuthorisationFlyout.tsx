@@ -147,6 +147,7 @@ interface AuthorisationFlyoutProps {
   traineesData?: Trainee[];
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
+  instructorLabel?: string;
 }
 
 const InfoRow: React.FC<{ label: string; value: string | undefined }> = ({ label, value }) => (
@@ -171,6 +172,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   traineesData = [],
   masterCurrencies = [],
   currencyRequirements = [],
+  instructorLabel = 'Instructor',
 }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = useState(event.authNotes ?? '');
@@ -454,7 +456,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                         <div className="space-y-1 text-sm">
                             <div className="flex justify-between"><span className="text-gray-400">Syllabus:</span><span className="text-white font-medium">{event.flightNumber}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Start Time:</span><span className="text-white font-medium">{Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-400">Instructor:</span><span className="text-white font-medium">{event.instructor}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">{instructorLabel}:</span><span className="text-white font-medium">{event.instructor}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Student:</span><span className="text-white font-medium">{getStudentName(event.student)}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Aircraft:</span><span className="text-white font-medium">{getAircraftType(event.resourceId)}</span></div>
                             <div className="flex justify-between"><span className="text-gray-400">Route:</span><span className="text-white font-medium">{event.origin}-{event.destination}</span></div>
@@ -533,7 +535,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
                             <InfoRow label="Syllabus"   value={event.flightNumber} />
                             <InfoRow label="Start Time" value={`${Math.floor(event.startTime)}:${String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}`} />
-                            <InfoRow label="Instructor" value={event.instructor} />
+                            <InfoRow label={instructorLabel} value={event.instructor} />
                             <InfoRow label="Student"    value={getStudentName(event.student)} />
                             <InfoRow label="Aircraft"   value={getAircraftType(event.resourceId)} />
                             <InfoRow label="Route"      value={`${event.origin}-${event.destination}`} />
