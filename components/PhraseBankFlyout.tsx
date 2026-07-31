@@ -7,9 +7,10 @@ interface PhraseBankFlyoutProps {
   phraseBank: PhraseBank;
   onUpdatePhraseBank: (newBank: PhraseBank) => void;
   initialDimension?: 'Airmanship' | 'Preparation' | 'Technique';
+  reportName?: string;
 }
 
-const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank, onUpdatePhraseBank, initialDimension = 'Airmanship' }) => {
+const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank, onUpdatePhraseBank, initialDimension = 'Airmanship', reportName = 'Report' }) => {
     const [activeMainTab, setActiveMainTab] = useState<'Core Dimensions' | 'Elements'>('Core Dimensions');
     const [activeDimension, setActiveDimension] = useState<'Airmanship' | 'Preparation' | 'Technique'>(initialDimension);
     
@@ -67,7 +68,7 @@ const PhraseBankFlyout: React.FC<PhraseBankFlyoutProps> = ({ onClose, phraseBank
                 
                 {/* Header */}
                 <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center shrink-0">
-                    <h2 className="text-xl font-bold text-white">PT-051 Setup</h2>
+                    <h2 className="text-xl font-bold text-white">{reportName} Setup</h2>
                     <button onClick={onClose} className="text-white hover:text-gray-300" aria-label="Close">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>

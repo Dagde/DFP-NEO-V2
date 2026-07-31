@@ -123416,7 +123416,11 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
           view
         });
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-8 bg-gray-900 text-white", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: [
+            "Error: ",
+            configuredTrainingReportDisplayName,
+            " View Context Missing"
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mb-2", children: [
             "Trainee: ",
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"

@@ -43944,7 +43944,7 @@ appliedUpdates.forEach(update => {
                     view
                 });
                 return <div className="p-8 bg-gray-900 text-white">
-                    <h2 className="text-2xl font-bold text-red-500 mb-4">Error: PT-051 View Context Missing</h2>
+                    <h2 className="text-2xl font-bold text-red-500 mb-4">Error: {configuredTrainingReportDisplayName} View Context Missing</h2>
                     <p className="mb-2">Trainee: {selectedTraineeForHateSheet ? '✅ Set' : '❌ Not Set'}</p>
                     <p className="mb-2">Event: {eventForPt051 ? '✅ Set' : '❌ Not Set'}</p>
                     <button

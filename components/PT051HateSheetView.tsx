@@ -8,18 +8,20 @@ interface PT051HateSheetViewProps {
   lmpScores: Score[];
   assessments: Pt051Assessment[];
   onSelectLmpScore: (score: Score) => void;
+  reportName?: string;
 }
 
 const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
   trainee,
   lmpScores,
   assessments,
-  onSelectLmpScore
+  onSelectLmpScore,
+  reportName = 'Report',
 }) => {
   return (
     <div className="hate-sheet-view" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <div className="trainee-header" style={{ marginBottom: '20px', borderBottom: '2px solid #ccc', paddingBottom: '10px' }}>
-        <h2 style={{ margin: 0, color: '#333' }}>PT-051 Hate Sheet</h2>
+        <h2 style={{ margin: 0, color: '#333' }}>{reportName} History</h2>
         <div style={{ marginTop: '10px' }}>
           <strong>Trainee:</strong> {trainee.fullName} ({trainee.rank})
           <br />
@@ -33,10 +35,10 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
 
       <div className="assessments-section" style={{ marginBottom: '30px' }}>
         <h3 style={{ color: '#555', borderBottom: '1px solid #ddd', paddingBottom: '5px' }}>
-          PT-051 Assessments ({assessments.length})
+          {reportName} Assessments ({assessments.length})
         </h3>
         {assessments.length === 0 ? (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>No PT-051 assessments found for this trainee.</p>
+          <p style={{ color: '#666', fontStyle: 'italic' }}>No {reportName} assessments found for this trainee.</p>
         ) : (
           <div style={{ display: 'grid', gap: '15px' }}>
             {assessments.map((assessment) => (
