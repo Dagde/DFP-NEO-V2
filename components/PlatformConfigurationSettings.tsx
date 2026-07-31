@@ -2531,9 +2531,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const startOrganisationStructureEdit = () => {
-    setOrganisationStructureOptionDrafts(Object.fromEntries(
-      organisationStructure.levels.map((level) => [level.id, level.options.join('\n')]),
-    ));
+    setOrganisationStructureImportError('');
     setOrganisationStructureUnlocked(true);
   };
 
@@ -2564,7 +2562,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       }),
       ...(relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}),
     });
-    setOrganisationStructureOptionDrafts({});
     setOrganisationStructureImportError('');
     setOrganisationStructureUnlocked(true);
     return true;
@@ -2700,7 +2697,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const saveOrganisationStructure = async () => {
     const saved = await save(undefined, 'platform-organisation', { reloadPage: false, successMessage: 'Organisation structure saved.' });
     if (saved) {
-      setOrganisationStructureOptionDrafts({});
       setOrganisationStructureUnlocked(false);
     }
   };
@@ -2788,7 +2784,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const saved = await save(nextConfig, 'platform-organisation', { reloadPage: false, successMessage: `Organisation "${organisationLabel}" deleted.` });
     if (saved) {
       setConfig(nextConfig);
-      setOrganisationStructureOptionDrafts({});
       setOrganisationStructureImportError('');
       setOrganisationStructureUnlocked(false);
     }

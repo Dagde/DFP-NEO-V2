@@ -67558,9 +67558,7 @@ const PlatformConfigurationSettings = ({
     });
   };
   const startOrganisationStructureEdit = () => {
-    setOrganisationStructureOptionDrafts(Object.fromEntries(
-      organisationStructure.levels.map((level) => [level.id, level.options.join("\n")])
-    ));
+    setOrganisationStructureImportError("");
     setOrganisationStructureUnlocked(true);
   };
   const downloadOrganisationStructureTemplate = () => {
@@ -67586,7 +67584,6 @@ const PlatformConfigurationSettings = ({
       }),
       ...relationshipPaths && relationshipPaths.length > 0 ? { relationshipPaths } : {}
     });
-    setOrganisationStructureOptionDrafts({});
     setOrganisationStructureImportError("");
     setOrganisationStructureUnlocked(true);
     return true;
@@ -67711,7 +67708,6 @@ const PlatformConfigurationSettings = ({
   const saveOrganisationStructure = async () => {
     const saved2 = await save(void 0, "platform-organisation", { reloadPage: false, successMessage: "Organisation structure saved." });
     if (saved2) {
-      setOrganisationStructureOptionDrafts({});
       setOrganisationStructureUnlocked(false);
     }
   };
@@ -67775,7 +67771,6 @@ This permanently removes the organisation record from platform configuration and
     const saved2 = await save(nextConfig, "platform-organisation", { reloadPage: false, successMessage: `Organisation "${organisationLabel}" deleted.` });
     if (saved2) {
       setConfig(nextConfig);
-      setOrganisationStructureOptionDrafts({});
       setOrganisationStructureImportError("");
       setOrganisationStructureUnlocked(false);
     }
