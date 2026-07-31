@@ -2264,7 +2264,7 @@ const DfpSidePanelTimeline: React.FC<{
     const buildTaskRequestEvents = (request: typeof assistTaskRequests[number]): ScheduleEvent[] => {
         const tasking = request.tasking.trim();
         const abbreviation = taskProfileAbbreviations[tasking] || '';
-        const label = abbreviation ? `Task - ${abbreviation}` : 'Task';
+        const label = abbreviation ? `Mission - ${abbreviation}` : (tasking || 'Mission');
         const depPoint = request.depPoint.trim().toUpperCase();
         const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
         const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -2275,7 +2275,7 @@ const DfpSidePanelTimeline: React.FC<{
             instructor: '',
             student: '',
             pilot: '',
-            group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : 'Tasking',
+            group: aircraftCount > 1 ? `Mission ${index + 1} of ${aircraftCount}` : 'Mission',
             flightNumber: label,
             duration: Math.max(0.1, Number(request.duration) || defaultAssistTaskDuration),
             startTime: request.takeoff,
@@ -2301,7 +2301,7 @@ const DfpSidePanelTimeline: React.FC<{
             taskingAircraftIndex: index + 1,
             taskingAircraftCount: aircraftCount,
             dateCreated: new Date().toISOString(),
-            notes: `NEO Assist tasking request: ${tasking}`,
+            notes: `NEO Assist mission request: ${tasking}`,
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -3026,7 +3026,7 @@ const DfpSidePanelTimeline: React.FC<{
                     'Should normal Fixed Crew training be included?',
                     enabledStreams.length
                         ? <p>Current routine training allocation has <strong>{enabledStreams.length}</strong> active course/package streams and totals <strong>100%</strong>.</p>
-                        : <p>Routine Fixed Crew course/package training is currently off, so directed tasking and currency events will drive the build.</p>,
+                        : <p>Routine Fixed Crew course/package training is currently off, so directed mission and currency events will drive the build.</p>,
                     <>
                         <button type="button" className={wizardChoiceClass} onClick={useRoutineTraining}>Yes, use normal training</button>
                         <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, directed events only</button>
@@ -15093,7 +15093,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
         );
         let scheduledCount = 0;
-        buildDebugLog(`DEBUG Scheduling Tasking priority events: ${orderedTaskingEvents.length}`);
+        buildDebugLog(`DEBUG Scheduling mission priority events: ${orderedTaskingEvents.length}`);
         if (isAirCombatBuild) {
             neoBuildDiag.airCombatPriority.taskingQueue = orderedTaskingEvents.map(event => ({
                 ...getTaskingEventIdentity(event),
@@ -15518,9 +15518,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     });
                 }
                 scheduledCount++;
-                buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
+                buildDebugLog(`[Mission Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
             } else {
-                buildDebugLog(`[Tasking Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
+                buildDebugLog(`[Mission Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ''}/${priorityEvent.taskingAircraftCount || ''}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
             }
             if (isAirCombatBuild) {
                 pushAirCombatDiag('taskingAttempts', {
@@ -18690,14 +18690,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     prioritizedFlightList,
                     currentStart,
                     endTimeBoundary,
-                    `${normalLabel} Before Tasking ${segment}`,
-                    `${formationLabel} Before Tasking ${segment}`,
+                    `${normalLabel} Before Mission ${segment}`,
+                    `${formationLabel} Before Mission ${segment}`,
                     taskingTime
                 );
             }
             const dueTaskingEvents = pendingTaskingEvents().filter(event => getTaskingRequestedStart(event) <= taskingTime + 0.001);
             if (dueTaskingEvents.length > 0) {
-                recordProgress({ message: 'Scheduling Tasking Priority Events...', percentage: 45 });
+                recordProgress({ message: 'Scheduling Mission Priority Events...', percentage: 45 });
                 scheduleTaskingPriorityEvents(dueTaskingEvents);
             }
             currentStart = Math.max(currentStart, taskingTime);
@@ -20714,7 +20714,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const conclusions: string[] = [];
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
         if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.');
-        if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat tasking events matched the build date.');
+        if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat mission events matched the build date.');
         const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
         if (crewRoleShortfalls.length > 0) {
             conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || 'selected unit'}: ${crewRoleShortfalls.map((shortfall: any) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(', ')}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
@@ -44597,14 +44597,14 @@ appliedUpdates.forEach(update => {
                                                     if (nextTaskingRequests.length !== taskingRequests.length) {
                                                         localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                                                         window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                                                        console.log(`[PostFlight] Tasking request cleared after ${data.result}:`, completedTaskingRequestId);
+                                                        console.log(`[PostFlight] Mission request cleared after ${data.result}:`, completedTaskingRequestId);
                                                     }
                                                 }
                                                 setHighestPriorityEvents(prev =>
                                                     prev.filter(event => event.taskingRequestId !== completedTaskingRequestId)
                                                 );
                                             } catch (taskingCleanupErr) {
-                                                console.warn('[PostFlight] Failed to clear completed tasking request after post-flight result:', taskingCleanupErr);
+                                                console.warn('[PostFlight] Failed to clear completed mission request after post-flight result:', taskingCleanupErr);
                                             }
                                         }
                                     }

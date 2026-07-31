@@ -11539,7 +11539,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
             ))
           ] }, aircraft.code || aircraft.name);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Crew", value: "No aircraft crew composition is linked to this unit yet.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Alternate Crew Profiles", description: "Alternate tasking crews available to this unit and operational model.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Alternate Crew Profiles", description: "Alternate crew profiles available to this unit and operational model.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
             alternateCrewProfiles.length,
             " profiles"
@@ -38571,7 +38571,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Tasking",
+        placeholder: "Mission profile",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -38641,7 +38641,7 @@ const TaskingRequestTable = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
-    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No tasking requests configured." }),
+    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No mission requests configured." }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -38650,7 +38650,7 @@ const TaskingRequestTable = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || "New tasking request";
+      const taskingHeaderTitle = request.tasking.trim() || "New mission request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
@@ -38664,7 +38664,7 @@ const TaskingRequestTable = ({
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Tasking" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Mission" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
@@ -38676,7 +38676,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Tasking", hint: request.tasking || "Select or type task", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission Profile", hint: request.tasking || "Select or type mission profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -40147,7 +40147,7 @@ const PrioritiesView = ({
       ignored: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
-    logAudit("Priorities", "Add", "Added tasking request row", `Tasking request ${nextRequest.id}`);
+    logAudit("Priorities", "Add", "Added mission request row", `Mission request ${nextRequest.id}`);
   };
   const isTaskingPriorityEventForRequest = (event, requestId) => event.taskingRequestId === requestId || String(event.id || "").startsWith(`tasking-${requestId}-`);
   const taskingPriorityEventMatchesActiveScope = (event) => {
@@ -40191,7 +40191,7 @@ const PrioritiesView = ({
   const buildTaskingPriorityEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => profile.trim().toLowerCase() === tasking.toLowerCase())?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || "Task";
+    const taskingDisplayLabel = abbreviation || tasking || "Mission";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -40203,7 +40203,7 @@ const PrioritiesView = ({
     const flightType = isSingleSeatAircraft || request.flightType === "Solo" ? "Solo" : "Dual";
     const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
     const notes = [
-      `Tasking request: ${tasking}`,
+      `Mission request: ${tasking}`,
       `Date: ${request.date || "Any build date"}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
@@ -40220,7 +40220,7 @@ const PrioritiesView = ({
       instructor: "",
       student: "",
       pilot: "",
-      group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : "Tasking",
+      group: aircraftCount > 1 ? `Mission ${index + 1} of ${aircraftCount}` : "Mission",
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
@@ -40269,13 +40269,13 @@ const PrioritiesView = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests((prev) => prev.map((item) => item.id === id ? nextRequest : item));
-    logAudit("Priorities", "Edit", "Set tasking scheduler priority", `${request.tasking || "Untitled tasking"}: ${schedulerPriority}`);
+    logAudit("Priorities", "Edit", "Set mission scheduler priority", `${request.tasking || "Untitled mission"}: ${schedulerPriority}`);
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
-    logAudit("Priorities", "Delete", "Removed tasking request", removed?.tasking || id);
+    logAudit("Priorities", "Delete", "Removed mission request", removed?.tasking || id);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -41411,7 +41411,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : "Flight School Course Priority" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after tasking and currency are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : "Set how Flight School training capacity is shared across active courses for this locality." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -42619,7 +42619,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "01",
       label: "Events Builder",
       shortLabel: "Events",
-      description: "Manage priority events, tasking and currency requests."
+      description: "Manage priority events, mission and currency requests."
     }
   ] : activeFixedCrewTab === "deployments" ? [
     {
@@ -48760,7 +48760,7 @@ const AirCombatIntelligenceTab = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Taskings", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked tasking requests", accent: "text-orange-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Missions", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked mission requests", accent: "text-orange-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Currency", value: numberLabel(analysis.currencyEvents.length), subtext: "Currency marked events", accent: "text-fuchsia-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Assessment events" : "Night", value: numberLabel(isFixedCrewLike ? analysis.assessmentEvents.length : analysis.nightEvents.length), subtext: isFixedCrewLike ? "Events requiring a training report/assessment" : "Night-coded events on this DFP", accent: "text-indigo-200" })
         ] })
@@ -75616,7 +75616,7 @@ const sectionGroups = [
   {
     label: "Crew Composition",
     shortLabel: "Crew",
-    description: "Aircraft-specific crew roles, standard crew makeup and alternate tasking compositions.",
+    description: "Aircraft-specific crew roles, standard crew makeup and alternate crew profiles.",
     accent: "cyan",
     defaultSection: "crew-composition",
     sections: [
@@ -88996,7 +88996,7 @@ const DfpSidePanelTimeline = ({
   const buildTaskRequestEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = taskProfileAbbreviations[tasking] || "";
-    const label = abbreviation ? `Task - ${abbreviation}` : "Task";
+    const label = abbreviation ? `Mission - ${abbreviation}` : tasking || "Mission";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -89007,7 +89007,7 @@ const DfpSidePanelTimeline = ({
       instructor: "",
       student: "",
       pilot: "",
-      group: aircraftCount > 1 ? `Tasking ${index + 1} of ${aircraftCount}` : "Tasking",
+      group: aircraftCount > 1 ? `Mission ${index + 1} of ${aircraftCount}` : "Mission",
       flightNumber: label,
       duration: Math.max(0.1, Number(request.duration) || defaultAssistTaskDuration),
       startTime: request.takeoff,
@@ -89033,7 +89033,7 @@ const DfpSidePanelTimeline = ({
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
-      notes: `NEO Assist tasking request: ${tasking}`,
+      notes: `NEO Assist mission request: ${tasking}`,
       priority: "High",
       aircraftConfigId: request.aircraftConfigId,
       acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -89669,7 +89669,7 @@ const DfpSidePanelTimeline = ({
             " active course/package streams and totals ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
             "."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed tasking and currency events will drive the build." }),
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed mission and currency events will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed events only" }),
@@ -99442,7 +99442,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       (left, right) => left.startTime - right.startTime || (left.taskingRequestId || "").localeCompare(right.taskingRequestId || "") || (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
     );
     let scheduledCount = 0;
-    buildDebugLog(`DEBUG Scheduling Tasking priority events: ${orderedTaskingEvents.length}`);
+    buildDebugLog(`DEBUG Scheduling mission priority events: ${orderedTaskingEvents.length}`);
     if (isAirCombatBuild) {
       neoBuildDiag.airCombatPriority.taskingQueue = orderedTaskingEvents.map((event) => ({
         ...getTaskingEventIdentity(event),
@@ -99836,9 +99836,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           });
         }
         scheduledCount++;
-        buildDebugLog(`[Tasking Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
+        buildDebugLog(`[Mission Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
       } else {
-        buildDebugLog(`[Tasking Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
+        buildDebugLog(`[Mission Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
       }
       if (isAirCombatBuild) {
         pushAirCombatDiag("taskingAttempts", {
@@ -102668,14 +102668,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           prioritizedFlightList,
           currentStart,
           endTimeBoundary,
-          `${normalLabel} Before Tasking ${segment}`,
-          `${formationLabel} Before Tasking ${segment}`,
+          `${normalLabel} Before Mission ${segment}`,
+          `${formationLabel} Before Mission ${segment}`,
           taskingTime
         );
       }
       const dueTaskingEvents = pendingTaskingEvents().filter((event) => getTaskingRequestedStart(event) <= taskingTime + 1e-3);
       if (dueTaskingEvents.length > 0) {
-        recordProgress({ message: "Scheduling Tasking Priority Events...", percentage: 45 });
+        recordProgress({ message: "Scheduling Mission Priority Events...", percentage: 45 });
         scheduleTaskingPriorityEvents(dueTaskingEvents);
       }
       currentStart = Math.max(currentStart, taskingTime);
@@ -104180,7 +104180,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const conclusions = [];
     if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
     if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.");
-    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat tasking events matched the build date.");
+    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat mission events matched the build date.");
     const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
     if (crewRoleShortfalls.length > 0) {
       conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || "selected unit"}: ${crewRoleShortfalls.map((shortfall) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(", ")}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
@@ -123918,14 +123918,14 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          console.log(`[PostFlight] Tasking request cleared after ${data.result}:`, completedTaskingRequestId);
+                          console.log(`[PostFlight] Mission request cleared after ${data.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
                         (prev) => prev.filter((event) => event.taskingRequestId !== completedTaskingRequestId)
                       );
                     } catch (taskingCleanupErr) {
-                      console.warn("[PostFlight] Failed to clear completed tasking request after post-flight result:", taskingCleanupErr);
+                      console.warn("[PostFlight] Failed to clear completed mission request after post-flight result:", taskingCleanupErr);
                     }
                   }
                 }
