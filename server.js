@@ -335,7 +335,7 @@ async function runPrismaRuntimeMaintenance(db) {
     await ensureAircraftAvailabilityTable(db);
     // Ensure AircraftAvailabilityEvent table exists (create if missing)
     await ensureAircraftAvailabilityEventTable(db);
-    // Ensure CancellationCode table exists. Starter cancellation codes are opt-in.
+    // Ensure CancellationCode table exists. Initial setup cancellation codes are opt-in.
     await ensureCancellationCodesTable(db);
     await seedCancellationCodesIfEmpty(db);
     // Ensure IndividualLMP table exists (create if missing)
@@ -8804,7 +8804,7 @@ async function seedCommercialLicenseIfEmpty(db) {
             THEN regexp_replace("licenseKey", '-EVAL$', '-STARTER')
           ELSE "licenseKey"
         END,
-        "licenseName" = regexp_replace(regexp_replace("licenseName", ' Evaluation Licence$', ' Initial Licence'), ' Evaluation License$', ' Initial Licence'),
+        "licenseName" = regexp_replace(regexp_replace(regexp_replace("licenseName", '^RAAF[[:space:]]+', ''), ' Evaluation Licence$', ' Initial Licence'), ' Evaluation License$', ' Initial Licence'),
         "features" = COALESCE("features", '{}'::jsonb) - 'developmentOnly' || '{"seededBy":"Initial licensing foundation"}'::jsonb,
         "notes" = CASE
           WHEN "notes" ILIKE 'Development licensing foundation record.%'
@@ -10262,7 +10262,7 @@ async function seedCancellationCodesIfEmpty(db) {
         d.code, d.category, d.description
       );
     }
-    console.log(`✅ Seeded ${defaults.length} default cancellation codes`);
+    console.log(`✅ Seeded ${defaults.length} setup cancellation codes`);
   } catch (err) {
     console.error('❌ Failed to seed cancellation codes:', err.message);
   }
