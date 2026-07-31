@@ -645,7 +645,7 @@ const LoginModal = ({ onLoginSuccess }) => {
             type: "text",
             value: userId,
             onChange: (e) => setUserId(e.target.value),
-            placeholder: "e.g. alexander.burns",
+            placeholder: "e.g. user.name",
             className: "w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500",
             style: { background: "rgba(255,255,255,0.05)" },
             autoComplete: "username",
@@ -712,7 +712,7 @@ const LoginModal = ({ onLoginSuccess }) => {
             type: "text",
             value: forgotUserId,
             onChange: (e) => setForgotUserId(e.target.value),
-            placeholder: "e.g. alexander.burns",
+            placeholder: "e.g. user.name",
             className: "w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500",
             style: { background: "rgba(255,255,255,0.05)" },
             autoFocus: true,
@@ -922,9 +922,6 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState("");
   const [activeTab, setActiveTab] = reactExports.useState("users");
-  const [cleanupLoading, setCleanupLoading] = reactExports.useState(false);
-  const [cleanupResult, setCleanupResult] = reactExports.useState(null);
-  const [cleanupError, setCleanupError] = reactExports.useState(null);
   const [resetTarget, setResetTarget] = reactExports.useState(null);
   const [resetPassword, setResetPassword] = reactExports.useState("");
   const [resetMustChange, setResetMustChange] = reactExports.useState(true);
@@ -1100,12 +1097,12 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-7 h-7 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center transition-colors", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex border-b border-gray-700/50", children: ["users", "create", "cleanup"].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex border-b border-gray-700/50", children: ["users", "create"].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         onClick: () => setActiveTab(tab),
         className: `px-6 py-3 text-xs font-medium transition-colors ${activeTab === tab ? "text-blue-400 border-b-2 border-blue-400" : "text-gray-400 hover:text-gray-300"}`,
-        children: tab === "users" ? "👥 Users" : tab === "create" ? "➕ Create User" : "🧹 DB Cleanup"
+        children: tab === "users" ? "👥 Users" : "➕ Create User"
       },
       tab
     )) }),
@@ -1373,94 +1370,6 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
             children: createLoading ? "Creating..." : "Create User"
           }
         )
-      ] }),
-      activeTab === "cleanup" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 rounded-lg bg-amber-900/30 border border-amber-700/50", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300 font-semibold", children: "⚠️ Database Cleanup Tools" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-200 mt-1", children: "These tools remove confirmed duplicate records. Actions are irreversible. Use with caution." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xs font-semibold text-white", children: "Step 1: Remove Duplicate Personnel Records" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Deletes confirmed duplicate Burns personnel records that have no linked user or are linked to the duplicate user account (8201112)." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: async () => {
-                setCleanupLoading(true);
-                setCleanupResult(null);
-                setCleanupError(null);
-                try {
-                  const res = await fetch("/api/cleanup-duplicate-personnel", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ confirmToken: "CONFIRM_DELETE_BURNS_DUPLICATES" })
-                  });
-                  const data = await res.json();
-                  if (res.ok && data.success) {
-                    setCleanupResult(`✅ Step 1 complete:
-${data.actions.join("\n")}
-
-Remaining Personnel: ${JSON.stringify(data.remainingPersonnel, null, 2)}`);
-                  } else {
-                    setCleanupError(`Step 1 failed: ${data.error || JSON.stringify(data)}`);
-                  }
-                } catch (e) {
-                  setCleanupError(`Network error: ${e.message}`);
-                } finally {
-                  setCleanupLoading(false);
-                }
-              },
-              disabled: cleanupLoading,
-              className: "w-full py-2.5 rounded-lg text-xs font-semibold text-white bg-red-800 hover:bg-red-700 transition-all disabled:opacity-50",
-              children: cleanupLoading ? "Running..." : "🗑️ Run Step 1: Delete Duplicate Personnel"
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xs font-semibold text-white", children: "Step 2: Merge Burns User Accounts" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
-            "Links the primary Personnel record to ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "alexander.burns" }),
-            " user account, deletes the old 8201112 duplicate user account, and sets role to ADMIN."
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: async () => {
-                setCleanupLoading(true);
-                setCleanupResult(null);
-                setCleanupError(null);
-                try {
-                  const res = await fetch("/api/merge-burns-accounts", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ confirmToken: "CONFIRM_MERGE_BURNS_ACCOUNTS" })
-                  });
-                  const data = await res.json();
-                  if (res.ok && data.success) {
-                    setCleanupResult(`✅ Step 2 complete:
-${data.actions.join("\n")}
-
-Primary User: ${JSON.stringify(data.primaryUser, null, 2)}`);
-                  } else {
-                    setCleanupError(`Step 2 failed: ${data.error || JSON.stringify(data)}`);
-                  }
-                } catch (e) {
-                  setCleanupError(`Network error: ${e.message}`);
-                } finally {
-                  setCleanupLoading(false);
-                }
-              },
-              disabled: cleanupLoading,
-              className: "w-full py-2.5 rounded-lg text-xs font-semibold text-white bg-orange-800 hover:bg-orange-700 transition-all disabled:opacity-50",
-              children: cleanupLoading ? "Running..." : "🔗 Run Step 2: Merge Burns Accounts"
-            }
-          )
-        ] }),
-        cleanupResult && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 rounded-lg bg-green-900/40 border border-green-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "text-xs text-green-300 whitespace-pre-wrap", children: cleanupResult }) }),
-        cleanupError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 rounded-lg bg-red-900/40 border border-red-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-red-300", children: cleanupError }) })
       ] })
     ] })
   ] }) });
@@ -73259,7 +73168,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.callsign, value: trainingReportPreviewCallsign }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.unit, value: trainingReportPreviewUnitCode }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.date, value: "07 Jun 26" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.assessor, value: "SQNLDR Burns" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.assessor, value: "Assessor Name" })
               ] }) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/60 p-3", children: [
@@ -73314,7 +73223,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 key
               )) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.comments.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.assessor, value: "SQNLDR Burns" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.assessor, value: "Assessor Name" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.weather, value: "VMC, light turbulence" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.nest, value: "NEST 2" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.comments.fields.profile, value: "Profile narrative appears here." }) }),
@@ -73662,7 +73571,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 value: personnelDisplaySettings.instructorLabel,
                 disabled: !canEditRankTerminology,
                 onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || "Instructor"}: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
+                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || "Instructor"}: Smith, Alex. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [

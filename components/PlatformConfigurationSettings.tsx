@@ -9105,7 +9105,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.callsign} value={trainingReportPreviewCallsign} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.unit} value={trainingReportPreviewUnitCode} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.date} value="07 Jun 26" />
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.assessor} value="SQNLDR Burns" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.assessor} value="Assessor Name" />
                   </div>
                 </TrainingReportModulePreview>
               </div>
@@ -9162,7 +9162,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.comments.title}>
                   <div className="grid gap-3 md:grid-cols-3">
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.assessor} value="SQNLDR Burns" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.assessor} value="Assessor Name" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.weather} value="VMC, light turbulence" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.comments.fields.nest} value="NEST 2" />
                     <div className="md:col-span-3">
@@ -9501,7 +9501,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 value={personnelDisplaySettings.instructorLabel}
                 disabled={!canEditRankTerminology}
                 onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
-                info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || 'Instructor'}: Brown, Ashley. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
+                info={`The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings.instructorLabel || 'Instructor'}: Smith, Alex. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`}
               />
               <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
                 Linked qualification label: <span className="font-semibold text-cyan-50">{linkedInstructorQualificationLabel}</span>. Rename this in{' '}

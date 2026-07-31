@@ -215,7 +215,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                   type="text"
                   value={userId}
                   onChange={e => setUserId(e.target.value)}
-                  placeholder="e.g. alexander.burns"
+                  placeholder="e.g. user.name"
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   style={{ background: 'rgba(255,255,255,0.05)' }}
                   autoComplete="username"
@@ -290,7 +290,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                   type="text"
                   value={forgotUserId}
                   onChange={e => setForgotUserId(e.target.value)}
-                  placeholder="e.g. alexander.burns"
+                  placeholder="e.g. user.name"
                   className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   style={{ background: 'rgba(255,255,255,0.05)' }}
                   autoFocus
