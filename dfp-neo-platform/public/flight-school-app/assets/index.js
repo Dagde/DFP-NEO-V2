@@ -7578,10 +7578,7 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
   ] }) });
 };
 const formatCourseName = (name) => {
-  if (name.startsWith("Course ")) {
-    return name.replace("Course ", "ADF");
-  }
-  return name.replace(/^CSE\s*/i, "ADF").replace(" ", "");
+  return String(name || "").trim();
 };
 const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);

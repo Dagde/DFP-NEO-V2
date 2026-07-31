@@ -25,10 +25,7 @@ interface SidebarProps {
 }
 
 const formatCourseName = (name: string): string => {
-  if (name.startsWith('Course ')) {
-    return name.replace('Course ', 'ADF');
-  }
-  return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
+  return String(name || '').trim();
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView, modelUnavailableViews = [], colourKeyItems = [], unreadMessageCount = 0 }) => {
