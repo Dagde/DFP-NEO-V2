@@ -11062,20 +11062,70 @@ const getRelevantResourcePoolsForUnit = (platformConfig, unit) => {
     return poolUnitCode === unitCode || !poolUnitCode && poolLocationCode && poolLocationCode === locationCode;
   });
 };
-const UnitSettingsField = ({ label, value, onChange, disabled = false }) => disabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: value || "Not set", muted: !value }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: unitSettingsRowClass, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: unitSettingsInputClass,
-      value: value || "",
-      disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(event.target.value)
-    }
-  )
-] });
+const insertUnitSettingsTextAtCursor = (field, text, onChange) => {
+  if (field.disabled || field.readOnly) return false;
+  const currentValue = field.value || "";
+  const selectionStart = field.selectionStart ?? currentValue.length;
+  const selectionEnd = field.selectionEnd ?? selectionStart;
+  const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
+  const nextCursor = Math.min(selectionStart + text.length, nextValue.length);
+  if (nextValue === currentValue && selectionStart === selectionEnd) return false;
+  onChange(nextValue);
+  window.requestAnimationFrame(() => {
+    field.setSelectionRange(nextCursor, nextCursor);
+  });
+  return true;
+};
+const handleUnitSettingsTextKeyDownCapture = (event, onChange) => {
+  if ((event.key === " " || event.code === "Space" || event.key === "Spacebar") && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    event.preventDefault();
+    event.stopPropagation();
+    insertUnitSettingsTextAtCursor(event.currentTarget, " ", onChange);
+    return;
+  }
+  stopEditableKeyPropagation(event);
+};
+const handleUnitSettingsTextBeforeInput = (event, onChange) => {
+  const inputEvent = event.nativeEvent;
+  if (inputEvent.inputType !== "insertText" || inputEvent.data !== " ") return;
+  event.preventDefault();
+  event.stopPropagation();
+  insertUnitSettingsTextAtCursor(event.currentTarget, " ", onChange);
+};
+const UnitSettingsField = ({ label, value, onChange, disabled = false }) => {
+  const [draft, setDraft] = reactExports.useState(value || "");
+  const [focused, setFocused] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!focused) setDraft(value || "");
+  }, [focused, value]);
+  const commitDraft = () => {
+    setFocused(false);
+    if (draft !== (value || "")) onChange(draft);
+  };
+  if (disabled) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: value || "Not set", muted: !value });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: unitSettingsRowClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: unitSettingsInputClass,
+        value: focused ? draft : value || "",
+        disabled,
+        onBeforeInput: (event) => handleUnitSettingsTextBeforeInput(event, setDraft),
+        onKeyDownCapture: (event) => handleUnitSettingsTextKeyDownCapture(event, setDraft),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setFocused(true);
+          setDraft(value || "");
+        },
+        onBlur: commitDraft,
+        onChange: (event) => setDraft(event.target.value)
+      }
+    )
+  ] });
+};
 const UnitSettingsSelect = ({ label, value, options, onChange, optionLabels = {}, disabled = false }) => disabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label, value: optionLabels[value] || value || "Not set", muted: !value }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `${unitSettingsRowClass} min-w-0`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: unitSettingsLabelClass, children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(

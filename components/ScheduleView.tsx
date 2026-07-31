@@ -1346,26 +1346,91 @@ const getRelevantResourcePoolsForUnit = (platformConfig: any, unit: any): any[] 
     });
 };
 
+const insertUnitSettingsTextAtCursor = (
+    field: HTMLInputElement,
+    text: string,
+    onChange: (value: string) => void,
+): boolean => {
+    if (field.disabled || field.readOnly) return false;
+    const currentValue = field.value || '';
+    const selectionStart = field.selectionStart ?? currentValue.length;
+    const selectionEnd = field.selectionEnd ?? selectionStart;
+    const nextValue = `${currentValue.slice(0, selectionStart)}${text}${currentValue.slice(selectionEnd)}`;
+    const nextCursor = Math.min(selectionStart + text.length, nextValue.length);
+    if (nextValue === currentValue && selectionStart === selectionEnd) return false;
+    onChange(nextValue);
+    window.requestAnimationFrame(() => {
+        field.setSelectionRange(nextCursor, nextCursor);
+    });
+    return true;
+};
+
+const handleUnitSettingsTextKeyDownCapture = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    onChange: (value: string) => void,
+) => {
+    if ((event.key === ' ' || event.code === 'Space' || event.key === 'Spacebar') && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        insertUnitSettingsTextAtCursor(event.currentTarget, ' ', onChange);
+        return;
+    }
+    stopEditableKeyPropagation(event);
+};
+
+const handleUnitSettingsTextBeforeInput = (
+    event: React.FormEvent<HTMLInputElement>,
+    onChange: (value: string) => void,
+) => {
+    const inputEvent = event.nativeEvent as InputEvent;
+    if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    insertUnitSettingsTextAtCursor(event.currentTarget, ' ', onChange);
+};
+
 const UnitSettingsField: React.FC<{
     label: string;
     value: string;
     onChange: (value: string) => void;
     disabled?: boolean;
-}> = ({ label, value, onChange, disabled = false }) => (
-    disabled ? (
-        <UnitSettingsReadRow label={label} value={value || 'Not set'} muted={!value} />
-    ) : <label className={unitSettingsRowClass}>
-        <span className={unitSettingsLabelClass}>{label}</span>
-        <input
-            className={unitSettingsInputClass}
-            value={value || ''}
-            disabled={disabled}
-            onKeyDownCapture={stopEditableKeyPropagation}
-            onKeyDown={stopEditableKeyPropagation}
-            onChange={(event) => onChange(event.target.value)}
-        />
-    </label>
-);
+}> = ({ label, value, onChange, disabled = false }) => {
+    const [draft, setDraft] = useState(value || '');
+    const [focused, setFocused] = useState(false);
+
+    useEffect(() => {
+        if (!focused) setDraft(value || '');
+    }, [focused, value]);
+
+    const commitDraft = () => {
+        setFocused(false);
+        if (draft !== (value || '')) onChange(draft);
+    };
+
+    if (disabled) {
+        return <UnitSettingsReadRow label={label} value={value || 'Not set'} muted={!value} />;
+    }
+
+    return (
+        <label className={unitSettingsRowClass}>
+            <span className={unitSettingsLabelClass}>{label}</span>
+            <input
+                className={unitSettingsInputClass}
+                value={focused ? draft : value || ''}
+                disabled={disabled}
+                onBeforeInput={(event) => handleUnitSettingsTextBeforeInput(event, setDraft)}
+                onKeyDownCapture={(event) => handleUnitSettingsTextKeyDownCapture(event, setDraft)}
+                onKeyDown={stopEditableKeyPropagation}
+                onFocus={() => {
+                    setFocused(true);
+                    setDraft(value || '');
+                }}
+                onBlur={commitDraft}
+                onChange={(event) => setDraft(event.target.value)}
+            />
+        </label>
+    );
+};
 
 const UnitSettingsSelect: React.FC<{
     label: string;
