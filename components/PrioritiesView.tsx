@@ -3770,7 +3770,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {renderStandardMissionTile('Flight Profile', isEditing ? (
                       <div className="space-y-2">
-                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Mission name')}
+                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Profile name')}
                         {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
                       </div>
                     ) : (

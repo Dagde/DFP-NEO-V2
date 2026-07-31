@@ -7254,7 +7254,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   const modeHint = mode === 'STANDARD'
                                     ? 'Use the aircraft standard crew.'
                                     : mode === 'ALTERNATE'
-                                      ? 'Use one alternate mission crew.'
+                                      ? 'Use one alternate crew profile.'
                                       : 'Use the manual role list below.';
                                   return (
                                     <button

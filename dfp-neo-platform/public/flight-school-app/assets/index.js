@@ -40853,7 +40853,7 @@ const PrioritiesView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
             renderStandardMissionTile("Flight Profile", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Mission name"),
+              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Profile name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Flight Profile" }),
@@ -71367,7 +71367,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
                       const selected = crewMode === mode;
                       const modeLabel = mode === "STANDARD" ? "Standard Crew" : mode === "ALTERNATE" ? "Alternate Crew" : "Custom Crew";
-                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate mission crew." : "Use the manual role list below.";
+                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate crew profile." : "Use the manual role list below.";
                       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "button",
                         {
