@@ -8992,8 +8992,8 @@ async function seedCommercialConfigIfEmpty(db) {
 
     await db.$executeRawUnsafe(`
       INSERT INTO "CommercialSchedulingRuleSet" ("id", "organisationCode", "unitCode", "aircraftTypeCode", "name", "scope", "rules", "isActive", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, 'PC-21', $2, 'Unit', $3::jsonb, true, $4::timestamp, $4::timestamp)
-    `, unit.code, `${unit.code} Default Scheduling Rules`, JSON.stringify({
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, 'Unit', $4::jsonb, true, $5::timestamp, $5::timestamp)
+    `, unit.code, seedAircraftCode, `${unit.code} Default Scheduling Rules`, JSON.stringify({
       preferredDutyPeriod: settings.preferredDutyPeriod ?? 10,
       maxCrewDutyPeriod: settings.maxCrewDutyPeriod ?? 12,
       maxDispatchPerHour: settings.maxDispatchPerHour ?? 4,
