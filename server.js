@@ -14314,7 +14314,7 @@ function mapRowToAssessment(row) {
   });
   scores = scores.filter(score => !(score && typeof score === 'object' && score.element === '__pt051FollowUp'));
 
-  // comments is the structured "QFI: ...\nWeather: ..." string
+  // comments is the structured "Assessor: ...\nWeather: ..." string
   // overallComments is extracted from it for backward compatibility
   const overallComments = extractOverallComment(row.comments);
   const rawOverallGrade = row.overallGrade;
@@ -14437,19 +14437,23 @@ app.get('/api/diagnostics/training-report-notes', (req, res) => {
   res.json({ entries, count: entries.length });
 });
 
-// Helper: Build "QFI: ...\nWeather: ..." string from Pt051Assessment fields
+// Helper: Build "Assessor: ...\nWeather: ..." string from report assessment fields
+function hasStructuredAssessmentComments(value) {
+  return /(?:^|\n)(?:Assessor|Instructor|Report Instructor|QFI):/i.test(String(value || ''));
+}
+
 function buildCommentsString(data) {
   // If already in structured format, return as-is
-  if (data.comments && data.comments.includes('QFI:')) return data.comments;
-  if (data.overallComments && data.overallComments.includes('QFI:')) return data.overallComments;
+  if (hasStructuredAssessmentComments(data.comments)) return data.comments;
+  if (hasStructuredAssessmentComments(data.overallComments)) return data.overallComments;
   // Build from individual fields (backward compat)
-  const qfi     = data.qfiComments     || '';
+  const assessor = data.assessorComments || data.instructorComments || data.qfiComments || '';
   const weather  = data.weatherComments || '';
   const profile  = data.profileComments || '';
   const overall  = data.overallComments || '';
   const nest     = data.nestComments    || '';
-  if (!qfi && !weather && !profile && !overall && !nest) return data.comments || null;
-  return `QFI: ${qfi}\nWeather: ${weather}\nProfile: ${profile}\nOverall: ${overall}\nNEST: ${nest}`;
+  if (!assessor && !weather && !profile && !overall && !nest) return data.comments || null;
+  return `Assessor: ${assessor}\nWeather: ${weather}\nProfile: ${profile}\nOverall: ${overall}\nNEST: ${nest}`;
 }
 
 // Helper: Extract "Overall" section from structured comments string
