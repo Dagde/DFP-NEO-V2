@@ -38458,7 +38458,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " task profile"
+            " task or mission profile"
           ] })
         ]
       },
@@ -38546,7 +38546,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Task Profile", hint: request.tasking || "Select or type task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Task / Mission Profile", hint: request.tasking || "Select or type task or mission profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -40960,7 +40960,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these task profile changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these task or mission profile changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -90528,15 +90528,15 @@ const DfpSidePanelTimeline = ({
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Task Profile",
+            "Task / Mission Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task or mission profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual task profile",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type task profile manually" })
+            "Manual task / mission profile",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type task or mission profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
