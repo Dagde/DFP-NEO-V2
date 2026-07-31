@@ -12,6 +12,7 @@ import { initDB } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { initialiseLiveChangeBus, LIVE_CHANGE_EVENT } from './utils/liveChangeBus';
+import { isEditableElement } from './utils/editableKeyEvents';
 import {
     buildPlatformDataScopeQuery,
     getPlatformDataScopeForLocation,
@@ -39261,6 +39262,10 @@ appliedUpdates.forEach(update => {
     const [lastPollTime, setLastPollTime] = useState<string>('');
     const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
     const isAddFlightTileModalOpen = isAddingTile;
+    const isUserEditing = useCallback(() => {
+        if (typeof document === 'undefined') return false;
+        return isEditableElement(document.activeElement);
+    }, []);
 
     useEffect(() => {
         try {
@@ -39279,6 +39284,7 @@ appliedUpdates.forEach(update => {
 
     const syncUnavailabilityFromDatabase = useCallback(async (): Promise<boolean> => {
         if (isSetupTestMode()) return false;
+        if (isUserEditing()) return false;
         try {
             const apiBase = getAppApiBase();
             const [personnelRes, traineesRes] = await Promise.all([
@@ -39333,7 +39339,7 @@ appliedUpdates.forEach(update => {
             console.error('[Poll] Error during poll:', e);
             return false;
         }
-    }, [buildUnavailHash]);
+    }, [buildUnavailHash, isUserEditing]);
 
     useEffect(() => {
         if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
@@ -39344,7 +39350,7 @@ appliedUpdates.forEach(update => {
 
     useEffect(() => {
         const handleLiveDfpSnapshotChange = (event: Event) => {
-            if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+            if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
             const change = (event as CustomEvent)?.detail || {};
             if (String(change.path || '') !== '/api/daily-snapshot/save') return;
             const snapshotDate = String(change.detail?.date || '').trim();
@@ -39373,11 +39379,11 @@ appliedUpdates.forEach(update => {
         };
         window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
         return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
-    }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
+    }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
 
     useEffect(() => {
         const handleLivePeopleChange = (event: Event) => {
-            if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+            if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
             const change = (event as CustomEvent)?.detail || {};
             const path = String(change.path || '');
             const isPeoplePath = path === '/api/personnel'
@@ -39389,12 +39395,13 @@ appliedUpdates.forEach(update => {
         };
         window.addEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
         return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
-    }, [handleDatabaseDataChanged, isAddFlightTileModalOpen, liveSyncEnabled, selectedEvent]);
+    }, [handleDatabaseDataChanged, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, selectedEvent]);
 
 
     // ── Alert response polling ──────────────────────────────────────────────
     // Poll alert statuses for the current date every 5 seconds
     const syncAlertsForCurrentDate = useCallback(async () => {
+        if (isUserEditing()) return;
         try {
             const apiBase = getAppApiBase();
             const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
@@ -39412,7 +39419,7 @@ appliedUpdates.forEach(update => {
         } catch (err) {
             // Silent fail - polling
         }
-    }, [date, school]);
+    }, [date, isUserEditing, school]);
 
     useEffect(() => {
         if (!liveSyncEnabled || isAddFlightTileModalOpen) return;

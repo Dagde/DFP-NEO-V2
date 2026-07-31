@@ -3144,6 +3144,16 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
     return false;
   }
 };
+const isEditableElement = (target) => {
+  const element = target;
+  if (!element) return false;
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
+};
+const stopEditableKeyPropagation = (event) => {
+  if (isEditableElement(event.target)) {
+    event.stopPropagation();
+  }
+};
 const DEFAULT_TASK_PROFILE_CONFIG = {
   flight_school: [
     "Transit",
@@ -10145,16 +10155,6 @@ const VisualAdjustGuide = ({
       ]
     }
   );
-};
-const isEditableElement = (target) => {
-  const element = target;
-  if (!element) return false;
-  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element.isContentEditable || Boolean(element.closest('[contenteditable="true"]'));
-};
-const stopEditableKeyPropagation = (event) => {
-  if (isEditableElement(event.target)) {
-    event.stopPropagation();
-  }
 };
 const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
@@ -119283,6 +119283,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   const [lastPollTime, setLastPollTime] = reactExports.useState("");
   const [lastPollChanged, setLastPollChanged] = reactExports.useState(false);
   const isAddFlightTileModalOpen = isAddingTile;
+  const isUserEditing = reactExports.useCallback(() => {
+    if (typeof document === "undefined") return false;
+    return isEditableElement(document.activeElement);
+  }, []);
   reactExports.useEffect(() => {
     try {
       window.localStorage.setItem("dfp_live_sync_enabled", liveSyncEnabled ? "true" : "false");
@@ -119294,6 +119298,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   }, []);
   const syncUnavailabilityFromDatabase = reactExports.useCallback(async () => {
     if (isSetupTestMode()) return false;
+    if (isUserEditing()) return false;
     try {
       const apiBase = getAppApiBase();
       const [personnelRes, traineesRes] = await Promise.all([
@@ -119348,7 +119353,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       console.error("[Poll] Error during poll:", e);
       return false;
     }
-  }, [buildUnavailHash]);
+  }, [buildUnavailHash, isUserEditing]);
   reactExports.useEffect(() => {
     if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncUnavailabilityFromDatabase();
@@ -119357,7 +119362,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
   }, [isAddFlightTileModalOpen, liveSyncEnabled, syncUnavailabilityFromDatabase]);
   reactExports.useEffect(() => {
     const handleLiveDfpSnapshotChange = (event) => {
-      if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+      if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
       const change = event?.detail || {};
       if (String(change.path || "") !== "/api/daily-snapshot/save") return;
       const snapshotDate = String(change.detail?.date || "").trim();
@@ -119384,10 +119389,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     };
     window.addEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
     return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLiveDfpSnapshotChange);
-  }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
+  }, [activeUnitCode, date, getDailySnapshotLocationAliases, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, loadSnapshotForDate, school, selectedEvent]);
   reactExports.useEffect(() => {
     const handleLivePeopleChange = (event) => {
-      if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent)) return;
+      if (!liveSyncEnabled || isAddFlightTileModalOpen || Boolean(selectedEvent) || isUserEditing()) return;
       const change = event?.detail || {};
       const path = String(change.path || "");
       const isPeoplePath = path === "/api/personnel" || path.startsWith("/api/personnel/") || path === "/api/trainees" || path.startsWith("/api/trainees/");
@@ -119396,8 +119401,9 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     };
     window.addEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
     return () => window.removeEventListener(LIVE_CHANGE_EVENT, handleLivePeopleChange);
-  }, [handleDatabaseDataChanged, isAddFlightTileModalOpen, liveSyncEnabled, selectedEvent]);
+  }, [handleDatabaseDataChanged, isAddFlightTileModalOpen, isUserEditing, liveSyncEnabled, selectedEvent]);
   const syncAlertsForCurrentDate = reactExports.useCallback(async () => {
+    if (isUserEditing()) return;
     try {
       const apiBase = getAppApiBase();
       const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
@@ -119413,7 +119419,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       }
     } catch (err) {
     }
-  }, [date, school]);
+  }, [date, isUserEditing, school]);
   reactExports.useEffect(() => {
     if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncAlertsForCurrentDate();
