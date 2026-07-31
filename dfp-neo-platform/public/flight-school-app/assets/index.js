@@ -53006,7 +53006,7 @@ const getStaffArchiveIdentifier = (instructor) => {
   return dbId || instructor.idNumber || null;
 };
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
-const isContractorStaffRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "SIM IP";
+const isContractorStaffRole = (instructor, staffQualificationCatalogue) => getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes("contractor") || String(instructor.role || "").trim().toUpperCase() === "SIM IP";
 const isOfiSupportRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "OFI" || instructor.isOFI === true;
 const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) => {
   const targetId = String(qualificationId).trim().toLowerCase();
@@ -53016,11 +53016,11 @@ const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) =
   return String(match?.name || match?.code || fallback).trim() || fallback;
 };
 const isConfiguredCrewPositionRole = (instructor, terminology) => Boolean(findCrewPositionEntry(instructor.role, terminology));
-const isSupportStaffRole = (instructor) => {
-  return isContractorStaffRole(instructor) || isOfiSupportRole(instructor);
+const isSupportStaffRole = (instructor, staffQualificationCatalogue) => {
+  return isContractorStaffRole(instructor, staffQualificationCatalogue) || isOfiSupportRole(instructor);
 };
-const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel) => {
-  if (instructor.isAdminStaff || isSupportStaffRole(instructor)) return false;
+const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel, staffQualificationCatalogue) => {
+  if (instructor.isAdminStaff || isSupportStaffRole(instructor, staffQualificationCatalogue)) return false;
   if (isFixedCrewModel) return true;
   return isQfiRole(instructor) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
 };
@@ -53176,8 +53176,8 @@ const InstructorListView = ({
     return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
   };
   const qfis = reactExports.useMemo(() => {
-    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
+    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
@@ -53242,7 +53242,7 @@ const InstructorListView = ({
     [qfisByFlight]
   );
   const simIps = reactExports.useMemo(() => {
-    const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(isContractorStaffRole);
+    const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => isContractorStaffRole(i, staffQualificationCatalogue));
     return simIpCandidates.sort((a, b) => {
       const unitA = a.unit || "Unassigned";
       const unitB = b.unit || "Unassigned";
@@ -53251,7 +53251,7 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, personnelDisplaySettings]);
+  }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue]);
   const ofis = reactExports.useMemo(() => {
     const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
       const isOfi = isOfiSupportRole(i);
@@ -53269,8 +53269,8 @@ const InstructorListView = ({
   }, [instructorsData, personnelDisplaySettings]);
   const otherStaff = reactExports.useMemo(() => {
     const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter((i) => {
-      const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
-      const isSimIp = isContractorStaffRole(i);
+      const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue);
+      const isSimIp = isContractorStaffRole(i, staffQualificationCatalogue);
       const isOfi = isOfiSupportRole(i);
       const isOther = !isMainStaff && !isSimIp && !isOfi;
       return isOther;
@@ -53283,7 +53283,7 @@ const InstructorListView = ({
       }
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
   const fixedCrewGroups = reactExports.useMemo(() => {
     if (!isFixedCrewModel) return {};
     const groups = {};
@@ -92551,7 +92551,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   const buildStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(config.staffQualificationCatalogue || null);
   const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
-  const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const isContractorStaffRole2 = (instructor) => Boolean(instructor) && (getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes("contractor") || String(instructor?.role || "").trim().toUpperCase() === "SIM IP");
   const canContractorStaffWorkEventType = (eventType) => {
     if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
@@ -108443,7 +108443,7 @@ const App = () => {
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
-  const isContractorStaffRole2 = (instructor) => String(instructor?.role || "").trim().toUpperCase() === "SIM IP";
+  const isContractorStaffRole2 = (instructor) => Boolean(instructor) && (getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor") || String(instructor?.role || "").trim().toUpperCase() === "SIM IP");
   const canContractorStaffWorkEventType = (eventType) => {
     if (!personnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();

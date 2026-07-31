@@ -24,7 +24,7 @@ import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
-import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
+import { getPersonAssignedQualificationIds, type StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
@@ -45,7 +45,11 @@ const isQfiRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
     instructor.isQFI === true ||
     String(instructor.role || '').trim().toUpperCase() === 'INSTRUCTOR';
-const isContractorStaffRole = (instructor: Instructor): boolean =>
+const isContractorStaffRole = (
+    instructor: Instructor,
+    staffQualificationCatalogue?: StaffQualificationCatalogue,
+): boolean =>
+    getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes('contractor') ||
     String(instructor.role || '').trim().toUpperCase() === 'SIM IP';
 const isOfiSupportRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'OFI' || instructor.isOFI === true;
@@ -64,15 +68,19 @@ const isConfiguredCrewPositionRole = (
     instructor: Instructor,
     terminology?: CrewPositionTerminology,
 ): boolean => Boolean(findCrewPositionEntry(instructor.role, terminology));
-const isSupportStaffRole = (instructor: Instructor): boolean => {
-    return isContractorStaffRole(instructor) || isOfiSupportRole(instructor);
+const isSupportStaffRole = (
+    instructor: Instructor,
+    staffQualificationCatalogue?: StaffQualificationCatalogue,
+): boolean => {
+    return isContractorStaffRole(instructor, staffQualificationCatalogue) || isOfiSupportRole(instructor);
 };
 const isActiveStaffListRole = (
     instructor: Instructor,
     terminology: CrewPositionTerminology | undefined,
     isFixedCrewModel: boolean,
+    staffQualificationCatalogue?: StaffQualificationCatalogue,
 ): boolean => {
-    if (instructor.isAdminStaff || isSupportStaffRole(instructor)) return false;
+    if (instructor.isAdminStaff || isSupportStaffRole(instructor, staffQualificationCatalogue)) return false;
     if (isFixedCrewModel) return true;
     return isQfiRole(instructor) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
 };
@@ -328,9 +336,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const qfis = useMemo(() => {
       return instructorsData
           .filter(isActiveStaffRecord)
-          .filter(i => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel))
+          .filter(i => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue))
           .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
-  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
+  }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
 
   const staffRoleFilterOptions = useMemo(() => {
       const optionMap = new Map<string, string>();
@@ -405,7 +413,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   [qfisByFlight]);
 
   const simIps = useMemo(() => {
-        const simIpCandidates = instructorsData.filter(isActiveStaffRecord).filter(isContractorStaffRole);
+        const simIpCandidates = instructorsData
+            .filter(isActiveStaffRecord)
+            .filter(i => isContractorStaffRole(i, staffQualificationCatalogue));
         return simIpCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -415,7 +425,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, personnelDisplaySettings]);
+    }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue]);
 
     const ofis = useMemo(() => {
         const ofiCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
@@ -439,8 +449,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     const otherStaff = useMemo(() => {
         const otherStaffCandidates = instructorsData.filter(isActiveStaffRecord).filter(i => {
             // Keep recognised active flying/crew staff in the main staff list.
-            const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel);
-            const isSimIp = isContractorStaffRole(i);
+            const isMainStaff = isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue);
+            const isSimIp = isContractorStaffRole(i, staffQualificationCatalogue);
             const isOfi = isOfiSupportRole(i);
 
             // Include everyone else
@@ -457,7 +467,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology]);
+    }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue]);
 
   const fixedCrewGroups = useMemo(() => {
       if (!isFixedCrewModel) return {};
