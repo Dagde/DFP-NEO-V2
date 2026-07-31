@@ -1,6 +1,3 @@
-console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
-console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from './context/ThemeContext';
 import { useSystemFreeze } from './context/SystemFreezeContext';
@@ -269,7 +266,6 @@ const downloadNeoBuildDiagnosticReport = (source: string = 'manual'): string | n
         return null;
     }
 
-    console.log('[NEO-BUILD-DIAG] Download triggered:', diagnosticExport.filename, { source });
     return diagnosticExport.filename;
 };
 
@@ -292,7 +288,6 @@ const downloadNeoTaskProvenanceReport = (source: string = 'manual'): string | nu
         return null;
     }
 
-    console.log('[NEO-TASK-PROVENANCE] Download triggered:', filename, { source });
     return filename;
 };
 import DarkMessageModal from './components/DarkMessageModal';
@@ -21461,13 +21456,9 @@ const App: React.FC = () => {
 
 
     const handleNavigateToProfile = (user: any) => {
-       console.log('🎹 Navigating to profile:', user);
-       console.log('user:', JSON.stringify(user));
-
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster
        if (user.userType === 'STAFF') {
-          console.log('Opening staff profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
@@ -21476,7 +21467,6 @@ const App: React.FC = () => {
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
-          console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
@@ -21498,7 +21488,6 @@ const App: React.FC = () => {
       console.error = function(...args) {
         const errorMsg = args.join(" ");
         if (errorMsg.includes("split") || errorMsg.includes("undefined")) {
-          console.log("🔴 SPLIT ERROR DETECTED:", errorMsg);
           console.trace("Stack trace:");
         }
         originalError.apply(console, args);
@@ -21506,22 +21495,18 @@ const App: React.FC = () => {
 
       window.addEventListener("error", (event) => {
         if (event.message.includes("split") || event.message.includes("undefined")) {
-          console.log("🔴 GLOBAL ERROR CAUGHT:", event.message);
-          console.log("🔴 Error at:", event.filename, "Line:", event.lineno, "Column:", event.colno);
-          console.log("🔴 Stack:", event.error?.stack);
+          console.error("🔴 GLOBAL ERROR CAUGHT:", event.message);
+          console.error("🔴 Error at:", event.filename, "Line:", event.lineno, "Column:", event.colno);
+          console.error("🔴 Stack:", event.error?.stack);
         }
       });
 
 
 
     const handleNavigateToProfile = (user: any) => {
-       console.log('🎹 Navigating to profile:', user);
-       console.log('user:', JSON.stringify(user));
-
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster
        if (user.userType === 'STAFF') {
-          console.log('Opening staff profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
@@ -21530,7 +21515,6 @@ const App: React.FC = () => {
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
-          console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
@@ -25007,12 +24991,6 @@ const App: React.FC = () => {
             if (!replace && prev[baselineKey] && events.length === 0) return prev;
             return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
-        console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || 'unit not set'}), ${events.length} events`);
-
-        if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
-            console.log(`[Snapshot] Ignored ${Object.keys(snap.pt051Assessments).length} training report snapshot records for ${targetDate}; TraineePerformance is authoritative`);
-        }
-
         if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
             setAlertsDataByDate(prev => ({ ...prev, [targetDate]: snap.alertsData }));
         }
@@ -26711,11 +26689,9 @@ const App: React.FC = () => {
 
     // Load continuation requests from database when sessionUser is available
     useEffect(() => {
-        console.log('[CONTINUATION] useEffect triggered - sessionUser?.userId:', sessionUser?.userId);
         if (!sessionUser?.userId) return;
         const loadSctRequests = async () => {
             try {
-                console.log('[CONTINUATION] Loading continuation requests from DB for userId:', sessionUser.userId);
                 const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
@@ -26735,7 +26711,6 @@ const App: React.FC = () => {
                     }
                     return undefined;
                 };
-                console.log('[CONTINUATION] Loaded', data.length, 'continuation requests from DB');
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
                     id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
@@ -27945,13 +27920,9 @@ const App: React.FC = () => {
 
 
     const handleNavigateToProfile = (user: any) => {
-       console.log('🎹 Navigating to profile:', user);
-       console.log('user:', JSON.stringify(user));
-
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster
        if (user.userType === 'STAFF') {
-          console.log('Opening staff profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
@@ -27960,7 +27931,6 @@ const App: React.FC = () => {
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
-          console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,

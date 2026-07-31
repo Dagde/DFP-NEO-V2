@@ -28,21 +28,8 @@ const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
 
   // Initialize with all trainees selected
   React.useEffect(() => {
-    console.log('🔍 MassBriefCompleteFlyout - isOpen:', isOpen);
-    console.log('🔍 MassBriefCompleteFlyout - trainees:', trainees);
-    console.log('🔍 MassBriefCompleteFlyout - trainees.length:', trainees.length);
-    
     if (isOpen && trainees.length > 0) {
-      console.log('🔍 MassBriefCompleteFlyout - Trainee details:');
-      trainees.forEach((trainee, index) => {
-        console.log(`  ${index}:`, trainee);
-        console.log(`    Name: ${trainee.name}`);
-        console.log(`    FullName: ${trainee.fullName}`);
-        console.log(`    ID: ${trainee.idNumber}`);
-        console.log(`    Rank: ${trainee.rank}`);
-      });
       const traineeFullNames = trainees.map(t => t.fullName);
-      console.log('🔍 MassBriefCompleteFlyout - traineeFullNames:', traineeFullNames);
       setSelectedTrainees(new Set(traineeFullNames));
     }
   }, [isOpen, trainees]);
@@ -100,13 +87,6 @@ const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
             </div>
           ) : (
             trainees.map(trainee => {
-              console.log('🔍 Rendering trainee:', trainee);
-              console.log('🔍 Trainee details:', {
-                fullName: trainee.fullName,
-                name: trainee.name,
-                rank: trainee.rank,
-                idNumber: trainee.idNumber
-              });
               const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || 'Trainee not recorded';
               return (
                 <div key={trainee.fullName || trainee.idNumber || trainee.id} className="flex items-center space-x-3">

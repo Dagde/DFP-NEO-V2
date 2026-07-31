@@ -157,7 +157,6 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         const unlocked = await verifyEditPassword(user.name);
         if (!unlocked) return;
         // Navigate to Staff or Trainee profile page
-        console.log('Navigate to Profile:', user);
         
         // Check if there's a navigation callback provided
         if (onNavigateToProfile) {

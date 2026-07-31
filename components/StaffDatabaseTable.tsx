@@ -135,7 +135,6 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   const addDebug = (msg: string) => {
-    console.log('[StaffDB Debug]', msg);
     setDebugInfo(prev => [...prev, `${new Date().toISOString().split('T')[1].split('.')[0]} ${msg}`]);
   };
 
@@ -218,7 +217,6 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
         onDataChanged();
       }
       
-      console.log(`✅ Deleted staff: ${staffName}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Error deleting staff:', err);

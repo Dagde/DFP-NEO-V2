@@ -264,7 +264,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     updatedTrainee.course !== selectedTrainee.course;
 
                 if (unavailChanged || otherChanged) {
-                    console.log('[CourseRosterView] Syncing selectedTrainee from updated traineesData - unavailChanged:', unavailChanged);
                     // Preserve any locally-edited currencyStatus so a background traineesData refresh
                     // doesn't overwrite currency saves that haven't propagated back to the master array yet.
                     setSelectedTrainee({

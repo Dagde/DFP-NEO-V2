@@ -592,13 +592,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   // ── Save ──
   const handleSave = async () => {
-    console.log('🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====');
-    console.log('🎓 [AcademicsTab.handleSave] selectedCourse:', selectedCourse);
-    console.log('🎓 [AcademicsTab.handleSave] selectedTrainees:', selectedTrainees, '(count:', selectedTrainees.length, ')');
-    console.log('🎓 [AcademicsTab.handleSave] tiles:', tiles, '(count:', tiles.length, ')');
-    console.log('🎓 [AcademicsTab.handleSave] selectedDate:', selectedDate);
-    console.log('🎓 [AcademicsTab.handleSave] workStart:', workStart, 'workEnd:', workEnd);
-    console.log('🎓 [AcademicsTab.handleSave] resourceId:', resourceId);
 
     if (!selectedCourse) {
       console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse');
@@ -636,21 +629,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       isAcademic: true as const,
     };
 
-    console.log('🎓 [AcademicsTab.handleSave] Calling onSave with data:', {
-      course: saveData.course,
-      date: saveData.date,
-      workStart: saveData.workStart,
-      workEnd: saveData.workEnd,
-      resourceId: saveData.resourceId,
-      selectedTrainees: saveData.selectedTrainees,
-      lessonsCount: saveData.lessons.length,
-      tilesCount: saveData.timeline.length,
-      isAcademic: saveData.isAcademic,
-    });
-    console.log('🎓 [AcademicsTab.handleSave] onSave function exists?', typeof onSave);
 
     onSave(saveData);
-    console.log('🎓 [AcademicsTab.handleSave] onSave() called successfully');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

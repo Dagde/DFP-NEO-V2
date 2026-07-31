@@ -183,13 +183,10 @@ export const loadSettingsFromDB = async (): Promise<AppSettingsData | null> => {
   try {
     const apiBase = getApiBase();
     const url = `${apiBase}/settings?orgId=${ORG_ID}`;
-    console.log('[Settings] 🔍 Loading settings from DB — URL:', url);
     const res = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
-
-    console.log('[Settings] 📥 GET /api/settings response status:', res.status);
 
     if (!res.ok) {
       console.warn('[Settings] ❌ Failed to load settings from DB:', res.status);
@@ -197,14 +194,10 @@ export const loadSettingsFromDB = async (): Promise<AppSettingsData | null> => {
     }
 
     const json = await res.json();
-    console.log('[Settings] 📦 Raw JSON from DB:', JSON.stringify(json).substring(0, 500));
-
     if (!json.settings) {
-      console.log('[Settings] ⚠️ No settings found in DB (json.settings is null/undefined), using defaults');
       return null;
     }
 
-    console.log('[Settings] ✅ Loaded settings from DB — version:', json.settings.version, '| organisationSettings:', JSON.stringify(json.settings.organisationSettings));
     return json.settings as AppSettingsData;
   } catch (error) {
     console.error('[Settings] 💥 Error loading settings from DB:', error);
@@ -225,7 +218,6 @@ const saveSettingsNow = async (settings: AppSettingsData, userId?: string): Prom
     return true;
   }
   if (isSaving) {
-    console.log('[Settings] ⏳ Already saving — queuing this save');
     pendingSettings = settings;
     return false;
   }
@@ -244,16 +236,11 @@ const saveSettingsNow = async (settings: AppSettingsData, userId?: string): Prom
       updatedBy: userId || null,
     };
 
-    console.log('[Settings] 📤 POST /api/settings — URL:', url);
-    console.log('[Settings] 📤 Saving organisationSettings:', JSON.stringify(payload.settings.organisationSettings));
-
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
-    console.log('[Settings] 📥 POST /api/settings response status:', res.status);
 
     if (!res.ok) {
       let errBody = '';
@@ -267,8 +254,7 @@ const saveSettingsNow = async (settings: AppSettingsData, userId?: string): Prom
       return false;
     }
 
-    const result = await res.json();
-    console.log('[Settings] ✅ Settings saved to DB — response:', JSON.stringify(result));
+    await res.json();
     return true;
   } catch (error) {
     console.error('[Settings] 💥 Error saving settings:', error);
@@ -416,7 +402,6 @@ export const saveCurrenciesToDB = async (
       console.error('[Currencies] Failed to save:', res.status);
       return false;
     }
-    console.log('[Currencies] ✅ Saved directly to /api/currencies');
     return true;
   } catch (error) {
     console.error('[Currencies] Error saving:', error);

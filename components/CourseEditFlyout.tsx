@@ -35,7 +35,6 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
 
     // Log on mount and when key props change
     useEffect(() => {
-        console.log(`[CourseEditFlyout] 🚀 Mounted/Updated - courseName: "${courseName}", courseUnit: "${courseUnit}"`);
     }, [courseName, courseUnit]);
 
     // Sync props to state when they change (e.g., after a save operation)
@@ -55,19 +54,15 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
     };
 
     const handleUnitChange = (value: string) => {
-        console.log(`[CourseEditFlyout] 🔽 Unit dropdown changed: "${courseUnit}" → "${value}", hasChanges will be: ${newCourseNumber !== courseName || value !== courseUnit}`);
         setNewUnit(value);
         setHasChanges(newCourseNumber !== courseName || value !== courseUnit);
     };
 
     const handleSaveCourseDetails = () => {
-        console.log(`[CourseEditFlyout] 💾 Save clicked - courseName: "${courseName}", newCourseNumber: "${newCourseNumber}", courseUnit: "${courseUnit}", newUnit: "${newUnit}"`);
         if (newCourseNumber !== courseName) {
-            console.log(`[CourseEditFlyout] 📝 Updating course number: ${courseName} → ${newCourseNumber}`);
             onUpdateCourseNumber(courseName, newCourseNumber);
         }
         if (newUnit !== courseUnit) {
-            console.log(`[CourseEditFlyout] 📝 Updating unit: ${courseUnit} → ${newUnit}`);
             onUpdateCourseUnit(courseName, newUnit);
         }
         setHasChanges(false);

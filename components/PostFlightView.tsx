@@ -446,7 +446,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 const row = traineeRow || instrRow;
                 if (!row) return;
 
-                console.log('[PostFlight] Restoring saved data from FlightLogEntry:', row);
 
                 const captSnap = traineeRow?.captainLogSnapshot || instrRow?.captainLogSnapshot;
                 const crewSnap = traineeRow?.crewLogSnapshot    || instrRow?.crewLogSnapshot;
@@ -504,7 +503,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         result: record.dcoResult,
                     };
                     setIsDirty(false);
-                    console.log('[PostFlight] Restored DCO result:', record.dcoResult);
                 }
             })
             .catch(err => console.warn('[PostFlight] Could not load EventCompletion:', err));
@@ -629,7 +627,6 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         };
         setIsDirty(false);
         setSaveStatus('Saved');
-        console.log(`[PostFlight] Restored saved form snapshot from ${source}:`, saved);
     }
 
     const handleCaptLogChange = (key: string, value: string) => {

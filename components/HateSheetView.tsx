@@ -154,10 +154,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                })
                .map(score => ({ ...score, type: 'LMP Score' as const }));
            
-           console.log('=== Building combinedHistory ===');
-           console.log('LMP Scores:', lmpScores.length, lmpScores);
-           console.log('All training report assessments:', assessments.length, assessments);
-           console.log('Completed training report assessments (filtered):', completedAssessments.length, completedAssessments);
            
            const normaliseEventCode = (value?: string | null) => String(value || '').replace(/\s+/g, '').toUpperCase();
            const lmpOrder = new Map<string, number>();
@@ -200,7 +196,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                const bCode = normaliseEventCode(b.type === 'LMP Score' ? b.event : b.flightNumber);
                return aCode.localeCompare(bCode);
            });
-           console.log('Combined History:', combined.length, combined);
            
            return combined;
        }, [lmpScores, assessments, traineeLmp]);
@@ -229,7 +224,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
         // Check for double marginal if this item has a marginal grade
         if (score === 1) {
-            console.log('Checking double marginal for:', item.type === 'LMP Score' ? item.event : item.flightNumber, 'ID:', item.id, 'on', item.date);
             
             // Find the index of this item in the combined history (newest first)
             const currentIndex = combinedHistory.findIndex(history => history.id === item.id);
@@ -238,14 +232,11 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             if (currentIndex > 0) {
                 const previousItem = combinedHistory[currentIndex - 1];
                 const prevScore = previousItem.type === 'LMP Score' ? previousItem.score : previousItem.overallGrade;
-                console.log('Previous item in timeline:', previousItem.type === 'LMP Score' ? previousItem.event : previousItem.flightNumber, 'score:', prevScore, 'type:', previousItem.type, 'ID:', previousItem.id);
                 
                 if (prevScore === 1) {
                     isDoubleMarginal = true;
-                    console.log('✅ DOUBLE MARGINAL DETECTED for', item.type === 'LMP Score' ? item.event : item.flightNumber, 'ID:', item.id, '- consecutive with previous event');
                 }
             } else {
-                console.log('No previous item found in timeline for', item.type === 'LMP Score' ? item.event : item.flightNumber);
             }
         }
 
@@ -346,35 +337,24 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             onAccessDenied?.(`delete ${trainingReportName} assessment`);
             return;
         }
-        console.log('🎯 handleDeletePT051 called with eventId:', eventId);
         
         // Find the assessment to delete
         const assessmentToDelete = localPt051Events.find(assessment => assessment.id === eventId || assessment.eventId === eventId);
-        console.log('🔍 Assessment found:', assessmentToDelete ? 'Yes' : 'No', 'Total assessments:', localPt051Events.length);
-        console.log("\ud83d\udd0d Looking for eventId:", eventId, "Available IDs:", localPt051Events.map(a => ({ id: a.id, eventId: a.eventId })));
         
         if (!assessmentToDelete) {
-            console.log('❌ Assessment not found with ID:', eventId);
             await showDarkAlert(`${trainingReportName} assessment not found.`, `${trainingReportName} Not Found`, 'warning');
             return;
         }
 
-        console.log('📋 Assessment details:', {
-            id: assessmentToDelete.id,
-            date: assessmentToDelete.date,
-            grade: assessmentToDelete.overallGrade
-        });
 
         // Confirm deletion
         const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nDate: ${assessmentToDelete.date}\nGrade: ${assessmentToDelete.overallGrade || 'N/A'}\nEvent: ${assessmentToDelete.flightNumber || 'N/A'}\n\nThis action cannot be undone.`;
         
         // Use custom dark confirm modal instead of browser default
         const confirmed = await showDarkConfirm(confirmMessage);
-        console.log('🤔 User confirmed deletion:', confirmed);
         if (!confirmed) return;
 
         try {
-            console.log('🗑️ Starting training report deletion process for:', assessmentToDelete.id);
             
             // Delete from the authoritative trainee performance table first.
             const response = await fetch(`/api/trainee-performance/${encodeURIComponent(assessmentToDelete.eventId)}`, {
@@ -384,27 +364,17 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                 },
             });
 
-            console.log('📡 Database deletion response:', response.status);
 
             if (!response.ok) {
                 console.error('❌ Database deletion failed:', response.statusText);
                 // Even if database deletion fails, we still want to log the attempt and remove from local state
-                console.log('⚠️ Continuing with local deletion despite database error');
             }
 
             // Record deletion in AUDIT before removing from local state
-            console.log('\ud83d\udccb Assessment object structure:', Object.keys(assessmentToDelete), assessmentToDelete);
             const auditDetails = `Assessment: ${assessmentToDelete.id || 'Unknown'}, Event: ${assessmentToDelete.eventId || 'Unknown'}, Date: ${assessmentToDelete.date || 'Unknown'}, Grade: ${assessmentToDelete.overallGrade || 'N/A'}, Instructor: ${assessmentToDelete.instructorName || assessmentToDelete.instructor || 'Unknown'}`;
             const traineeName = trainee.name || trainee.fullName || 'Trainee not recorded';
-            console.log('📋 About to log audit entry:', {
-                page: 'Performance History',
-                action: 'Delete',
-                description: `Deleted ${trainingReportName} assessment for ${traineeName}`,
-                details: auditDetails
-            });
             
             logAudit('Performance History', 'Delete', `Deleted ${trainingReportName} assessment for ${traineeName}`, auditDetails);
-            console.log('✅ Training report deletion recorded in audit log');
 
             // Remove from local state after database deletion and audit logging
             setLocalPt051Events(prev => prev.filter(assessment => assessment.id !== eventId));
@@ -416,7 +386,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                 }, 500);
             }
             
-            console.log('Training report deleted successfully:', assessmentToDelete.id);
             
         } catch (error) {
             console.error('Error deleting training report:', error);

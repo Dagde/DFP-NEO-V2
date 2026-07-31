@@ -1,6 +1,6 @@
 /**
  * Calculates the average aircraft availability across the day's flying window.
- * 
+ *
  * This function performs a time-weighted average calculation based on:
  * 1. The day's flying window (from Build Priorities → Build Factors → Day Flying Window)
  * 2. The aircraft availability timeline as a sequence of time-stamped values
@@ -36,7 +36,7 @@ export function calculateAverageAircraftAvailability(
   }
 
   // Step 1: Filter availability changes to only those within the flying window
-  const relevantChanges = availabilityTimeline.filter(change => 
+  const relevantChanges = availabilityTimeline.filter(change =>
     change.timestamp < flyingWindow.endTime
   );
 
@@ -46,7 +46,7 @@ export function calculateAverageAircraftAvailability(
     const lastChangeBeforeWindow = availabilityTimeline
       .filter(change => change.timestamp < flyingWindow.startTime)
       .sort((a, b) => b.timestamp - a.timestamp)[0];
-    
+
     return lastChangeBeforeWindow?.availability || 0;
   }
 
@@ -55,13 +55,13 @@ export function calculateAverageAircraftAvailability(
     const changeAtOrBeforeStart = availabilityTimeline
       .filter(change => change.timestamp <= flyingWindow.startTime)
       .sort((a, b) => b.timestamp - a.timestamp)[0];
-    
+
     return changeAtOrBeforeStart?.availability || 0;
   })();
 
   // Step 3: Create segments
   const segments: AvailabilitySegment[] = [];
-  
+
   // Start with window start
   let currentSegmentStart = flyingWindow.startTime;
   let currentAvailability = windowStartAvailability;
@@ -79,7 +79,7 @@ export function calculateAverageAircraftAvailability(
         availability: currentAvailability,
         duration: change.timestamp - currentSegmentStart
       });
-      
+
       // Start new segment
       currentSegmentStart = change.timestamp;
       currentAvailability = change.availability;
@@ -105,16 +105,6 @@ export function calculateAverageAircraftAvailability(
   const totalWindowDuration = flyingWindow.endTime - flyingWindow.startTime;
   const averageAvailability = totalAircraftHours / totalWindowDuration;
 
-  // Debug information
-  console.log('Aircraft Availability Calculation:', {
-    flyingWindow,
-    availabilityTimeline,
-    segments,
-    totalAircraftHours,
-    totalWindowDuration,
-    averageAvailability
-  });
-
   return averageAvailability;
 }
 
@@ -123,7 +113,7 @@ export function calculateAverageAircraftAvailability(
  */
 export function parseTimeString(timeString: string): number {
   if (typeof timeString === 'number') return timeString;
-  
+
   const cleanTime = timeString.replace(/[^0-9]/g, '');
   if (cleanTime.length === 4) {
     const hours = parseInt(cleanTime.substring(0, 2));
@@ -160,8 +150,7 @@ export function exampleCalculation() {
   ];
 
   const average = calculateAverageAircraftAvailability(flyingWindow, availabilityTimeline);
-  console.log(`Average aircraft availability: ${average}`);
-  
+
   // Expected output: Average aircraft availability: 15
   return average;
 }

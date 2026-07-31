@@ -1117,13 +1117,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           details,
       };
       try {
-          console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry);
           const existing = JSON.parse(window.localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
           const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-500);
           window.localStorage.setItem('dfp_setup_test_lmp_diag', JSON.stringify(next));
           (window as any).neoSetupTestLmpDiag = next;
-      } catch (error) {
-          console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry, error);
+      } catch {
       }
   };
   const getPackageSourceKey = (item: SyllabusItemDetail): string => {
@@ -1659,7 +1657,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
               getItemLmpDetailsTab(item) === activeTab &&
               (item.courses || []).includes(selectedCourseType)
           );
-          console.log(`🗑️ Deleting ${itemsToDelete.length} items for ${activeCollectionNoun}: ${selectedCourseType}`, itemsToDelete.map(i => i.id));
           
           if (itemsToDelete.length === 0) {
               console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);

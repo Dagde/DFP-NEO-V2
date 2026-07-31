@@ -225,21 +225,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     defaultUnitCode = '',
     defaultLocationName = '',
 }) => {
-  // Track which prop changed to diagnose render loop
-  const prevPropsRef = React.useRef<any>({});
-  const renderCountRef = React.useRef(0);
-  renderCountRef.current++;
-  const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, currentUserRole, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
-  Object.keys(currentProps).forEach(key => {
-    if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
-      changedProps.push(key);
-    }
-  });
-  prevPropsRef.current = currentProps;
-  if (changedProps.length > 0) {
-    console.log(`🏫 [INSTRUCTORLISTVIEW RENDER #${renderCountRef.current}] Changed props:`, changedProps.join(', '));
-  }
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
@@ -292,7 +277,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                 (updatedInstructor as any).isActive !== (selectedInstructor as any).isActive;
 
             if (unavailChanged || preferencesChanged || otherChanged) {
-                console.log('[InstructorListView] Syncing selectedInstructor from updated instructorsData - unavailChanged:', unavailChanged);
                 // Preserve any locally-edited currencyStatus so a background instructorsData refresh
                 // doesn't overwrite currency saves that haven't propagated back to the master array yet
                 setSelectedInstructor({
@@ -567,8 +551,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }
 
   const handleAddIndividual = () => {
-    console.log('🔍 [DATA TRACKING] Add Staff button clicked');
-    console.log('🔍 [DATA TRACKING] Current instructors count:', instructorsData.length);
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
@@ -578,7 +560,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology),
         activeOperationalModel === 'flight_school',
     );
-    console.log('🔍 [DATA TRACKING] New instructor template created:', newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
     setIsClosing(false);

@@ -297,8 +297,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Get all events from published schedules
     const allEvents = useMemo(() => {
         const events = Object.values(publishedSchedules).flat();
-        console.log('📊 Export View - All events from published schedules:', events.length);
-        console.log('📊 Export View - Published schedule dates:', Object.keys(publishedSchedules));
         return events;
     }, [publishedSchedules]);
 
@@ -358,8 +356,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Combine active and archived data
     const allTrainees = useMemo(() => {
         const combined = [...traineesData, ...archivedTraineesData];
-        console.log('📊 Export View - All trainees:', combined.length);
-        console.log('📊 Export View - ADF303 trainees:', combined.filter(t => t.course === 'ADF303').length);
         return combined;
     }, [traineesData, archivedTraineesData]);
     const allInstructors = useMemo(() => [...instructorsData, ...archivedInstructorsData], [instructorsData, archivedInstructorsData]);
@@ -491,26 +487,16 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Filter events based on current settings
     const filteredEvents = useMemo(() => {
         let filtered = [...exportSourceEvents];
-        console.log('🔍 FILTER DEBUG - Starting with events:', filtered.length);
-        console.log('🔍 FILTER DEBUG - timePeriod:', timePeriod);
-        console.log('🔍 FILTER DEBUG - singleDate:', singleDate);
-        console.log('🔍 FILTER DEBUG - startDate:', startDate);
-        console.log('🔍 FILTER DEBUG - endDate:', endDate);
 
         // Time period filter
         if (timePeriod === 'single-date' && singleDate) {
             filtered = filtered.filter(e => e.date === singleDate);
-            console.log('🔍 FILTER DEBUG - After single-date filter:', filtered.length);
         } else if (timePeriod === 'date-range' && startDate && endDate) {
             filtered = filtered.filter(e => e.date >= startDate && e.date <= endDate);
-            console.log('🔍 FILTER DEBUG - After date-range filter:', filtered.length);
         }
 
         // Event type filter
         if (selectedEventTypes.length > 0) {
-            console.log('🔍 FILTER DEBUG - selectedEventTypes:', selectedEventTypes);
-            console.log('🔍 FILTER DEBUG - Sample event types from data (first 5):', filtered.slice(0, 5).map(e => e.type));
-            console.log('🔍 FILTER DEBUG - Unique event types in data:', [...new Set(filtered.map(e => e.type))]);
             
             const selectedTypeSet = new Set(selectedEventTypes);
             filtered = filtered.filter(e => {
@@ -519,31 +505,22 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 return Boolean(exportType && selectedTypeSet.has(exportType));
             });
             
-            console.log('🔍 FILTER DEBUG - After event type filter:', filtered.length);
         }
 
         // Status filter - based on saved training report outcomes
-        console.log('🔍 FILTER DEBUG - statusFilter:', statusFilter);
-        console.log('🔍 FILTER DEBUG - Before status filter:', filtered.length);
         if (statusFilter !== 'all') {
             filtered = filtered.filter(e => getEventStatusBucket(e) === statusFilter);
         }
-        console.log('🔍 FILTER DEBUG - After all status filters:', filtered.length);
 
         // Remedial filter
-        console.log('🔍 FILTER DEBUG - remedialFilter:', remedialFilter);
         if (remedialFilter === 'yes') {
             filtered = filtered.filter(e => isExportEventRemedial(e));
-            console.log('🔍 FILTER DEBUG - After remedial=yes filter:', filtered.length);
         } else if (remedialFilter === 'no') {
             filtered = filtered.filter(e => !isExportEventRemedial(e));
-            console.log('🔍 FILTER DEBUG - After remedial=no filter:', filtered.length);
         }
 
         // People filter - FIXED: Handle course suffix in event names
         if (useSpecificTraineeFilter && selectedTrainees.length > 0) {
-            console.log('📊 Trainee filter - Selected trainees:', selectedTrainees);
-            console.log('📊 Trainee filter - Events before filter:', filtered.length);
             
             filtered = filtered.filter(e => {
                 const studentName = getEventPersonName(e);
@@ -554,7 +531,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 return matches;
             });
             
-            console.log('📊 Trainee filter - Events after filter:', filtered.length);
         }
         if (useSpecificStaffFilter && selectedStaff.length > 0) {
             filtered = filtered.filter(e => 
@@ -567,11 +543,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
             const courseTrainees = allTrainees.filter(t => selectedCourseSet.has(normaliseCourseFilterValue(t.course)));
             const traineeNames = courseTrainees.map(t => t.name);
-            console.log('📊 Course filter - Selected courses:', selectedCourses);
-            console.log('📊 Course filter - Trainees in selected courses:', courseTrainees.length);
-            console.log('📊 Course filter - Trainee names (first 5):', traineeNames.slice(0, 5));
-            console.log('📊 Course filter - Events before filter:', filtered.length);
-            console.log('📊 Course filter - Sample event student names (first 5):', filtered.slice(0, 5).map(e => e.student || e.pilot));
             
             // Match trainee names with or without course suffix (e.g., "Edwards, Charlotte" or "Edwards, Charlotte – ADF301")
             filtered = filtered.filter(e => {
@@ -586,14 +557,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     if (studentName.startsWith(traineeName + ' –') || studentName.startsWith(traineeName + ' -')) return true;
                     return false;
                 });
-                
-                if (!matches) {
-                    console.log('📊 No match for student:', studentName);
-                }
-                
                 return matches;
             });
-            console.log('📊 Course filter - Events after filter:', filtered.length);
         }
 
         return filtered;
@@ -649,10 +614,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Calculate filtered data based on record type
     const filteredData = useMemo(() => {
-        console.log('📊 filteredData calculation - recordType:', recordType);
-        console.log('📊 filteredData calculation - filteredEvents:', filteredEvents.length);
-        console.log('📊 filteredData calculation - allTrainees:', allTrainees.length);
-        console.log('📊 filteredData calculation - allInstructors:', allInstructors.length);
         const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
         const exportTrainees = selectedCourses.length > 0
             ? allTrainees.filter(t => selectedCourseSet.has(normaliseCourseFilterValue(t.course)))
@@ -673,14 +634,11 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // This matches user expectation: "Trainee records" = all trainees, not just those with events
         
         if (recordType === 'trainees' && canExportTraineeRecords) {
-            console.log('📊 Returning filtered trainees:', personFilteredTrainees.length);
             return { events: filteredEvents, trainees: personFilteredTrainees, staff: [] };
         } else if (recordType === 'staff') {
-            console.log('📊 Returning filtered staff:', exportStaff.length);
             return { events: filteredEvents, trainees: [], staff: exportStaff };
         } else {
             // recordType === 'all'
-            console.log('📊 Returning all permitted people and events');
             return {
                 events: filteredEvents,
                 trainees: canExportTraineeRecords ? personFilteredTrainees : [],
@@ -730,13 +688,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Handle export
     const handleExport = async () => {
-        console.log('🚀 Starting export...', {
-            recordType,
-            timePeriod,
-            outputFormat,
-            recordCount,
-            data: filteredData
-        });
         
         // Generate filename
         const timestamp = new Date().toISOString().split('T')[0];
@@ -744,7 +695,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const filename = `training_records_${timestamp}.${fileExtension}`;
         
         try {
-            console.log('📄 Export format:', outputFormat);
             
             // Show progress indicator
             setIsExporting(true);
@@ -752,29 +702,18 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             setExportStatus('Preparing export...');
             
             if (outputFormat === 'csv') {
-                console.log('📊 Exporting CSV...');
-                console.log('📊 Record count:', recordCount);
                 setExportStatus('Generating CSV file...');
                 exportToCSV(filename);
-                console.log('✅ CSV export completed');
             } else if (outputFormat === 'excel') {
-                console.log('📊 Exporting Excel...');
-                console.log('📊 Record count:', recordCount);
                 setExportStatus('Generating Excel file...');
                 exportToExcel(filename);
-                console.log('✅ Excel export completed');
             } else if (outputFormat === 'pdf') {
-                console.log('📄 Exporting PDF...');
-                console.log('📄 Record count:', recordCount);
-                console.log('📄 Events to export:', filteredData.events.length);
                 setExportStatus(`Generating PDF (${filteredData.events.length} records)...`);
                 await exportToPDF(filename);
-                console.log('✅ PDF export completed');
             }
             
             // Hide progress and show success message
             setIsExporting(false);
-            console.log('✅ Showing success message');
             setShowExportSuccess(true);
             setTimeout(() => setShowExportSuccess(false), 5000);
         } catch (error) {
@@ -883,30 +822,24 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     };
     
     const exportToPDF = async (filename: string) => {
-        console.log('📄 exportToPDF called with filename:', filename);
         
         // Generate configured training report forms for each event
         const eventsToExport = filteredData.events;
-        console.log('📄 Events to export:', eventsToExport.length);
         
         if (eventsToExport.length === 0) {
-            console.log('❌ No events to export');
             throw new Error('No events to export');
         }
         
-        console.log('📄 Creating PDF document...');
         const pdf = new jsPDF('p', 'mm', 'a4');
         let isFirstPage = true;
         
         try {
-            console.log('📄 Starting to process events...');
             for (let i = 0; i < eventsToExport.length; i++) {
                 const event = eventsToExport[i];
                 const progress = Math.round(((i + 1) / eventsToExport.length) * 100);
                 setExportProgress(progress);
                 setExportStatus(`Processing record ${i + 1} of ${eventsToExport.length}...`);
                 
-                console.log(`📄 Processing event ${i + 1}/${eventsToExport.length}:`, event.flightNumber);
                 
                 if (!isFirstPage) {
                     pdf.addPage();
@@ -915,15 +848,12 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 // Render the training report form using native PDF text
                 renderPT051ToPDF(pdf, event);
                 
-                console.log(`✅ ${exportReportName} added to PDF`);
                 isFirstPage = false;
             }
             
             // Download the PDF
             setExportStatus('Finalizing PDF...');
-            console.log('📄 Saving PDF:', filename);
             pdf.save(filename);
-            console.log('✅ PDF saved successfully!');
             
         } catch (error) {
             console.error('❌ Error during PDF generation:', error);

@@ -19,9 +19,6 @@ export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
     pixelsPerHour = 200,
     totalWidth
 }) => {
-    console.log('VisualAdjustGuide rendered with event:', event);
-    console.log('pixelsPerHour:', pixelsPerHour);
-    
     const [isDraggingStart, setIsDraggingStart] = useState(false);
     const [isDraggingEnd, setIsDraggingEnd] = useState(false);
     const [currentStartTime, setCurrentStartTime] = useState(event.startTime);
@@ -102,9 +99,6 @@ export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
 
     const startX = timeToPixels(currentStartTime);
     const endX = timeToPixels(currentEndTime);
-    
-    console.log('Guide positions - startX:', startX, 'endX:', endX);
-    console.log('Current times - start:', currentStartTime, 'end:', currentEndTime);
 
     return (
         <div 

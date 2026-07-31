@@ -94,7 +94,6 @@ const RecentCancellationsTable: React.FC<RecentCancellationsTableProps> = ({
     const date = new Date(cancelledAt);
     
     if (isNaN(date.getTime())) {
-      console.log('DATE FIX: Invalid date from:', cancelledAt);
       return 'Invalid Date';
     }
     

@@ -587,15 +587,6 @@ const convertTimeToDecimal = (timeStr: string): number => {
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = 'Training Report', onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = '', staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
     
-    console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
-    console.log('Event data:', {
-        eventCategory: event.eventCategory,
-        flightType: event.flightType,
-        instructor: event.instructor,
-        student: event.student,
-        pilot: event.pilot,
-        isSct: event.isSct
-    });
 
     const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
     const [isEditing, setIsEditing] = useState(isReadOnly ? false : isEditingDefault);
@@ -649,24 +640,18 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [aircraftNumberPrefix, aircraftNumberSettings]);
     const [crew, setCrew] = useState<CrewMember[]>(() => [makeInitialCrewMember(event)]);
     
-    console.log('Initial crew state:', crew);
 
     // Helper function to get Dual/Solo status from Individual LMP
     // Helper function to get Dual/Solo status from Individual LMP
     const getDualSoloFromIndividualLMP = (flightNumber: string, traineeName: string): 'Dual' | 'Solo' => {
-        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Called with flightNumber: ${flightNumber}, traineeName: ${traineeName}`);
-        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] traineeLMPs available: ${!!traineeLMPs}, traineeLMPs size: ${traineeLMPs?.size || 0}`);
         
         if (!traineeLMPs || !traineeName) {
-            console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - missing traineeLMPs or traineeName`);
             return 'Dual'; // Default to Dual if no data available
         }
 
         const individualLMP = traineeLMPs.get(traineeName);
-        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] individualLMP found for ${traineeName}:`, !!individualLMP, individualLMP ? individualLMP.length : 0, 'items');
         
         if (!individualLMP) {
-            console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no Individual LMP found for ${traineeName}`);
             return 'Dual'; // Default to Dual if no Individual LMP found
         }
 
@@ -674,21 +659,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             item.id === flightNumber || item.code === flightNumber
         );
         
-        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Searching for flightNumber: ${flightNumber}, found item:`, !!syllabusItem);
         if (syllabusItem) {
-            console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Found syllabus item:`, {
-                id: syllabusItem.id,
-                code: syllabusItem.code,
-                sortieType: syllabusItem.sortieType
-            });
         }
 
         if (syllabusItem && syllabusItem.sortieType) {
-            console.log(`ud83cudfaf [Dual/Solo] Found ${syllabusItem.sortieType} for ${traineeName} - ${flightNumber}`);
             return syllabusItem.sortieType;
         }
 
-        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no sortieType found for ${flightNumber}`);
         return 'Dual'; // Default to Dual if not specified
     };
 
@@ -711,7 +688,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     }
                     return newCrew;
                 });
-                console.log(`✈️ [Solo Logic] Applied: ${traineeName} as PIC, flightType set to Solo`);
             }
         }
     };
@@ -1763,7 +1739,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         }
                         return newCrew;
                     });
-                    console.log(`🎯 [Auto Dual/Solo] Set to ${individualLMPFlightType} from Individual LMP for ${traineeName}`);
                 }
             }
         }
@@ -1820,14 +1795,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     useEffect(() => {
         if (isAddingTile || (isEditingDefault && (!event.id || event.id.startsWith('2d1b6a22')))) {
             // This is a new event or tile (check for generated IDs that start with our prefix)
-            console.log(`\ud83d\udcdd [Flight Number Change] isAddingTile: ${isAddingTile}, isEditingDefault: ${isEditingDefault}, event.id: ${event.id}, flightNumber: ${flightNumber}`);
             
             if (flightNumber && crew[0] && traineeLMPs) {
                 const traineeName = crew[0]?.student || crew[0]?.pilot;
                 
                 if (traineeName) {
                     // If pilot is selected, use their Individual LMP
-                    console.log(`\ud83d\udcdd [Flight Number Change] Using selected trainee: ${traineeName}`);
                     const individualLMPFlightType = getDualSoloFromIndividualLMP(flightNumber, traineeName);
                     
                     if (crew[0].flightType !== individualLMPFlightType) {
@@ -1838,11 +1811,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                             }
                             return newCrew;
                         });
-                        console.log(`\ud83c\udfaf [Auto Dual/Solo] Set to ${individualLMPFlightType} from Individual LMP for selected trainee ${traineeName}`);
                     }
                 } else {
                     // No pilot selected yet - find first trainee with this LMP and use their Individual LMP as default
-                    console.log(`\ud83d\udcdd [Flight Number Change] No pilot selected - searching for default from any trainee with LMP ${flightNumber}`);
                     
                     let defaultFlightType: 'Dual' | 'Solo' = 'Dual'; // Default to Dual if nothing found
                     let foundTrainee = '';
@@ -1856,7 +1827,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         if (syllabusItem && syllabusItem.sortieType) {
                             defaultFlightType = syllabusItem.sortieType;
                             foundTrainee = traineeName;
-                            console.log(`\ud83d\udcdd [Flight Number Change] Found default ${defaultFlightType} from ${foundTrainee}'s Individual LMP`);
                             break; // Use the first one found
                         }
                     }
@@ -1869,7 +1839,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                             }
                             return newCrew;
                         });
-                        console.log(`\ud83c\udfaf [Auto Dual/Solo] Set to ${defaultFlightType} as default from ${foundTrainee || 'system'} for LMP ${flightNumber}`);
                     }
                 }
             }
@@ -1894,7 +1863,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                             }
                             return newCrew;
                         });
-                        console.log(`\ud83c\udfaf [Trainee Change] Updated to ${individualLMPFlightType} from Individual LMP for selected trainee ${traineeName}`);
                     }
                 }
             }
@@ -2338,7 +2306,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             }
         }
 
-        console.log('Flight number changed to:', newFlightNumber);
         const isNewContinuationFormation = isContinuationFormationFlight(newFlightNumber);
         if (isNewContinuationFormation && !formationType && formationTypes[0]) {
             setFormationType(formationTypes[0]);
@@ -2429,7 +2396,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
 
     const handleVisualAdjust = () => {
-        console.log("Visual Adjust clicked");
         // Call parent callback FIRST before changing local state
         if (onVisualAdjustStart) {
             onVisualAdjustStart(event);
@@ -2487,7 +2453,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 const selectedDeployment = getCurrentDeployments().find(d => d.id === selectedDeploymentId);
                 if (selectedDeployment) {
                     resourceId = selectedDeployment.resourceId;
-                    console.log(`Assigning event to deployment: ${selectedDeployment.id} (${resourceId})`);
                 }
             }
             
@@ -2558,36 +2523,16 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             
             // Debug logging for continuation events
             if (eventCategory === 'sct') {
-                console.log('💾 Saving continuation event:', {
-                    id: savedEvent.id,
-                    flightType: savedEvent.flightType,
-                    pilot: savedEvent.pilot,
-                    student: savedEvent.student,
-                    instructor: savedEvent.instructor,
-                    eventCategory: savedEvent.eventCategory,
-                    crewData: c,
-                    allCrew: crew
-                });
             }
             
             return savedEvent;
         });
         
         // Create Deployment Tile if deployment period is populated and isDeploy is true
-        console.log('Deployment Check:', {
-            eventType,
-            locationType,
-            isDeploy,
-            deploymentStartDate,
-            deploymentStartTime,
-            deploymentEndDate,
-            deploymentEndTime
-        });
         
         if (eventType === 'flight' && locationType === 'Land Away' && isDeploy && 
             deploymentStartDate && deploymentStartTime && deploymentEndDate && deploymentEndTime) {
             
-            console.log('Creating deployment tile...');
             
             // Convert deployment time strings to hours
             const deployStartHour = parseTimeStringToHours(deploymentStartTime);
@@ -2609,7 +2554,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             }
             
             // Create multiple deployment tiles based on aircraft count
-            console.log(`Creating ${deploymentAircraftCount} deployment tiles...`);
             
             for (let i = 0; i < deploymentAircraftCount; i++) {
                 const deploymentTile: ScheduleEvent = {
@@ -2636,12 +2580,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     deploymentAircraftCount: deploymentAircraftCount,
                 };
                 
-                console.log(`Deployment tile ${i + 1} created:`, deploymentTile);
                 eventsToSave.push(deploymentTile);
             }
         }
         
-        console.log('Events to save:', eventsToSave);
         onSave(eventsToSave);
     }
 
@@ -2731,7 +2673,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
 
     const handleMassBriefComplete = (confirmedTrainees: Trainee[]) => {
-        console.log('Mass Brief completed for trainees:', confirmedTrainees.map(t => t.fullName));
         
         const currentDate = new Date().toISOString().split('T')[0];
         const instructor = event.instructor || 'System';
@@ -2759,10 +2700,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     }
                 };
                 
-                console.log('Saving PT051 assessment for:', trainee.fullName, assessment);
                 onSavePT051Assessment(assessment);
             });
-            console.log('PT051 assessments saved successfully');
         } else {
             console.warn('onSavePT051Assessment callback is not defined!');
         }
@@ -4266,7 +4205,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         const finalDesc = alertDescription && alertUserNote
                                             ? alertDescription + ' | ' + alertUserNote
                                             : alertDescription || alertUserNote || '';
-                                        console.log('\ud83d\udd14 [Alert] Send button clicked - eventId:', event.id, 'recipients:', alertRecipients);
                                         logAudit('Alert:' + event.id, 'Add', `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(', ')} | Description: ${finalDesc}`);
                                         const sent = await onSendAlert(event.id, alertRecipients, finalDesc);
                                         if (sent) {
@@ -4486,34 +4424,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     event={event}
                     trainees={
                         (() => {
-                            console.log('🔍 Processing trainees for MassBriefCompleteFlyout');
-                            console.log('🔍 Event:', event);
-                            console.log('🔍 Event.attendees:', event.attendees);
-                            console.log('🔍 Event.group:', event.group);
-                            console.log('🔍 Event.selectedTrainees:', event.selectedTrainees);
-                            console.log('🔍 Event.trainees:', event.trainees);
-                            console.log('🔍 Event keys:', Object.keys(event));
-                            console.log('🔍 Available trainees (strings):', trainees);
-                            console.log('🔍 Available traineesData (objects):', traineesData);
                             
                             // First try attendees array
                             if (event.attendees) {
-                                console.log('🔍 Processing attendees array');
                                 const processedAttendees = event.attendees.map((attendeeName, index) => {
-                                    console.log(`🔍 Processing attendee ${index}: "${attendeeName}"`);
                                     
                                     // Find the trainee object from the traineesData list
                                     const trainee = traineesData.find(t => {
                                         const fullName = `${t.rank} ${t.name}`;
-                                        console.log(`🔍 Comparing "${fullName}" with "${attendeeName.split(' – ')[0]}"`);
                                         return fullName === attendeeName.split(' – ')[0];
                                     });
                                     
                                     if (trainee) {
-                                        console.log('🔍 Found matching trainee:', trainee);
                                         return trainee;
                                     } else {
-                                        console.log('🔍 Creating fallback trainee object');
                                         const nameParts = attendeeName.split(' – ');
                                         const fullName = nameParts[0];
                                         const course = nameParts[1] || '';
@@ -4546,30 +4470,25 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             seatConfig: 'Pilot' as any,
                                             id: fullName
                                         };
-                                        console.log('🔍 Fallback trainee:', fallbackTrainee);
                                         return fallbackTrainee;
                                     }
                                 });
-                                console.log('🔍 Final processed attendees:', processedAttendees);
                                 return processedAttendees;
                             }
                             
                             // If no attendees, try to get trainees from the course (for mass events)
                             if (event.group && event.group.includes('Trainees Selected')) {
-                                console.log('🔍 Mass event detected, filtering trainees by course');
                                 
                                 // Extract course from event if available
                                 let eventCourse = '';
                                 if (event.course) {
                                     eventCourse = event.course;
-                                    console.log('🔍 Event course:', eventCourse);
                                 } else if (trainees.length > 0 && typeof trainees[0] === 'string') {
                                     // Try to extract course from first trainee string
                                     const firstTrainee = trainees[0];
                                     const parts = firstTrainee.split(' – ');
                                     if (parts.length > 1) {
                                         eventCourse = parts[1];
-                                        console.log('🔍 Extracted course from trainees:', eventCourse);
                                     }
                                 }
                                 
@@ -4578,13 +4497,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     ? traineesData.filter(t => t.course === eventCourse)
                                     : traineesData;
                                 
-                                console.log('🔍 Filtered trainees count:', filteredTrainees.length);
-                                console.log('🔍 Filtered trainees:', filteredTrainees);
                                 
                                 return filteredTrainees;
                             }
                             
-                            console.log('🔍 No attendees or mass event, returning empty array');
                             return [];
                         })()
                     }

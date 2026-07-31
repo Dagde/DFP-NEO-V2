@@ -29,15 +29,7 @@ export function calculateCourseStatistics(
     traineeLMPs: Map<string, SyllabusItemDetail[]>,
     courses: Course[]
 ): CourseStatisticsResult {
-    console.log('[CourseStatistics] Input data:', {
-        traineesCount: trainees.length,
-        scoresMapSize: scores.size,
-        traineeLMPsMapSize: traineeLMPs.size,
-        coursesCount: courses.length
-    });
-
     if (trainees.length === 0) {
-        console.log('[CourseStatistics] No trainees provided');
         return {
             frontRunnerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
             backMarkerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
@@ -50,20 +42,11 @@ export function calculateCourseStatistics(
     for (const trainee of trainees) {
         const course = courses.find(c => c.name === trainee.course);
         if (!course) {
-            console.log(`[CourseStatistics] No course found for trainee ${trainee.fullName}, course: ${trainee.course}`);
             continue;
         }
 
         const traineeScores = scores.get(trainee.fullName) || [];
         const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
-
-        console.log(`[CourseStatistics] Processing trainee: ${trainee.fullName}`, {
-            scoresCount: traineeScores.length,
-            lmpCount: traineeLMP.length,
-            courseName: course.name,
-            courseStart: course.startDate,
-            courseGrad: course.gradDate
-        });
 
         // Count completed Flight and FTD events (excluding remedial)
         let completedEvents = 0;
@@ -84,10 +67,7 @@ export function calculateCourseStatistics(
             item => (item.type === 'Flight' || item.type === 'FTD') && !item.isRemedial
         ).length;
 
-        console.log(`[CourseStatistics] ${trainee.fullName}: completed=${completedEvents}, total=${totalRequired}`);
-
         if (totalRequired === 0) {
-            console.log(`[CourseStatistics] Skipping ${trainee.fullName} - no required events`);
             continue;
         }
 
@@ -108,8 +88,6 @@ export function calculateCourseStatistics(
         // Calculate events per week required to graduate on time
         const eventsPerWeek = weeksRemaining > 0 ? eventsRemaining / weeksRemaining : 0;
 
-        console.log(`[CourseStatistics] ${trainee.fullName}: weeksRemaining=${weeksRemaining.toFixed(1)}, eventsRemaining=${eventsRemaining}, eventsPerWeek=${eventsPerWeek.toFixed(1)}`);
-
         traineeStats.push({
             name: trainee.fullName,
             completedEvents,
@@ -122,15 +100,12 @@ export function calculateCourseStatistics(
     }
 
     if (traineeStats.length === 0) {
-        console.log('[CourseStatistics] No trainee stats calculated - returning zeros');
         return {
             frontRunnerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
             backMarkerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
             courseAverageStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 }
         };
     }
-
-    console.log(`[CourseStatistics] Calculated stats for ${traineeStats.length} trainees`);
 
     // Sort by completion rate to find front runner and back marker
     traineeStats.sort((a, b) => b.completionRate - a.completionRate);
@@ -164,12 +139,6 @@ export function calculateCourseStatistics(
             completionRate: averageCompletionRate
         }
     };
-
-    console.log('[CourseStatistics] Final result:', {
-        frontRunner: `${frontRunner.name}: ${frontRunner.eventsPerWeek.toFixed(1)}/wk`,
-        backMarker: `${backMarker.name}: ${backMarker.eventsPerWeek.toFixed(1)}/wk`,
-        average: `${averageEventsPerWeek.toFixed(1)}/wk`
-    });
 
     return result;
 }

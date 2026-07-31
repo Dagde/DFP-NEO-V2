@@ -2382,7 +2382,6 @@ const InitialSetupWizard: React.FC<{
         } catch (error: any) {
             const isQuotaError = /quota/i.test(String(error?.name || error?.message || ''));
             if (!isQuotaError) {
-                console.log('[SETUP-WIZARD-STORAGE] write failed', { key, error });
                 return false;
             }
             wizardDiagnosticStorageKeys.forEach((diagKey) => {
@@ -2390,10 +2389,8 @@ const InitialSetupWizard: React.FC<{
             });
             try {
                 window.localStorage.setItem(key, value);
-                console.log('[SETUP-WIZARD-STORAGE] cleared diagnostics after quota error', { key });
                 return true;
             } catch (retryError) {
-                console.log('[SETUP-WIZARD-STORAGE] write still failed after quota cleanup', { key, retryError });
                 return false;
             }
         }
@@ -2433,13 +2430,11 @@ const InitialSetupWizard: React.FC<{
             details: compactWizardDiagDetails(details),
         };
         try {
-            console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_import_diag') || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-30);
             safeSetWizardLocalStorage('dfp_setup_wizard_import_diag', JSON.stringify(next));
             (window as any).neoSetupWizardImportDiag = next;
         } catch (error) {
-            console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry, error);
         }
     };
     const pushWizardLmpDiag = (stage: string, details: Record<string, any> = {}) => {
@@ -2474,13 +2469,11 @@ const InitialSetupWizard: React.FC<{
             details: compactWizardDiagDetails(details),
         };
         try {
-            console.log(`[SETUP-TEST-LMP] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_test_lmp_diag') || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-50);
             safeSetWizardLocalStorage('dfp_setup_test_lmp_diag', JSON.stringify(next));
             (window as any).neoSetupTestLmpDiag = next;
         } catch (error) {
-            console.log(`[SETUP-TEST-LMP] ${stage}`, entry, error);
         }
     };
     const pushWizardOrgDiag = (stage: string, details: Record<string, any> = {}) => {
@@ -2494,13 +2487,11 @@ const InitialSetupWizard: React.FC<{
             details: compactWizardDiagDetails(details),
         };
         try {
-            console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry);
             const existing = JSON.parse(window.localStorage.getItem('dfp_setup_wizard_org_diag') || '[]');
             const next = [...(Array.isArray(existing) ? existing : []), entry].slice(-50);
             safeSetWizardLocalStorage('dfp_setup_wizard_org_diag', JSON.stringify(next));
             (window as any).neoSetupWizardOrgDiag = next;
         } catch (error) {
-            console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry, error);
         }
     };
 
@@ -7551,15 +7542,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
             if (draggingState) {
-                console.log('Global mouse move - drag state active');
                 handleMouseMove(e as any);
             }
         };
         
         const handleGlobalMouseUp = (e: MouseEvent) => {
-            console.log('Global mouse up called, draggingState exists:', !!draggingState);
             if (draggingState) {
-                console.log('Global mouse up - ending drag');
                 // Call the original handleMouseUp logic
                 document.body.classList.remove('no-select');
                 setDraggingState(null);
@@ -7734,9 +7722,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     }, [syllabusDetails]);
 
     const handleMouseDown = (e: MouseEvent<HTMLDivElement>, event?: ScheduleEvent) => {
-        console.log('handleMouseDown called, event:', event?.id, 'isMultiSelectMode:', isMultiSelectMode);
-        console.log('Event target:', e.target);
-        console.log('Current target:', e.currentTarget);
         if (e.button !== 0) return;
         if (isReadOnly && event) {
             didDragRef.current = false;
@@ -7770,16 +7755,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             const processEvent = (ev: ScheduleEvent) => {
                 if (processedDragEventIds.has(ev.id)) return;
                 processedDragEventIds.add(ev.id);
-                console.log('🐍 Processing event for drag:', ev.id, 'resourceId:', ev.resourceId);
-                console.log('🐍 Available resources:', resources);
                 const rowIndex = resources.indexOf(ev.resourceId);
-                console.log('🐍 Found row index:', rowIndex);
                 if (rowIndex !== -1) {
                     initialPositions.set(ev.id, { startTime: ev.startTime, rowIndex });
                     originalResourceIds.set(ev.id, ev.resourceId);
-                    console.log('🐍 Event added to initialPositions');
-                } else {
-                    console.log('🐍 Event NOT added - resourceId not found in resources');
                 }
             };
             const processEventWithFormation = (ev: ScheduleEvent) => {
@@ -7803,7 +7782,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }
 
             if (initialPositions.size > 0) {
-                   console.log('Setting dragging state with', initialPositions.size, 'events for event:', event.id);                   console.log('initialPositions:', initialPositions);
                 setDraggingState({
                     mainEventId: event.id,
                     xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -7811,9 +7789,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     initialPositions,
                     originalResourceIds,
                 });
-                   console.log('setDraggingState called with:', draggingState);
-            } else {
-                console.log('No initial positions - drag state not set');
             }
         } else {
             // Grid Selection Start (Marquee)
@@ -7830,9 +7805,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-        console.log('handleMouseMove called, draggingState exists:', !!draggingState);
         if (!scheduleGridRef.current) {
-            console.log('Early return: no scheduleGridRef');
             return;
         }
         didDragRef.current = true;
@@ -7847,13 +7820,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         }
 
         if (isOracleMode && oraclePreviewEvent) {
-            console.log('Early return: Oracle mode with preview event');
             const startTime = xInGrid / (PIXELS_PER_HOUR * zoomLevel) + START_HOUR;
             const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT)] || resources[0];
             onOracleMouseMove(startTime, resourceId);
         } else {
             if (selectionStartPoint.current) {
-                console.log('Early return: selectionStartPoint active (marquee selection)');
                 const currentX = e.clientX - gridRect.left;
                 const currentY = e.clientY - gridRect.top;
                 
@@ -7888,7 +7859,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             }
 
             if (!draggingState) {
-                    console.log('Early return: no draggingState');
                     return;
                 }
 
@@ -7897,7 +7867,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
             const timeShift = ((xInGrid / zoomLevel) - draggingState.xOffset) / PIXELS_PER_HOUR - mainEventInitialPos.startTime;
             const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT / 2) / ROW_HEIGHT) - mainEventInitialPos.rowIndex;
-            console.log('Drag calculation - timeShift:', timeShift, 'rowShift:', rowShift, 'xInGrid:', xInGrid, 'yInGrid:', yInGrid);
 
             const updates: { eventId: string, newStartTime: number, newResourceId: string }[] = [];
             const tempEvents = [...events];
@@ -7947,11 +7916,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 let conflictResult = null;
                 if (detectConflictsForEvent) {
                     conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-                    console.log('🔍 Drag conflict check:', {
-                        eventId: mainEvent.id,
-                        hasConflict: conflictResult.hasConflict,
-                        conflictType: conflictResult.conflictType
-                    });
                     if (conflictResult.hasConflict) {
                         setRealtimeConflict({ 
                             conflictingEventId: conflictResult.conflictingEventId!, 
@@ -7996,16 +7960,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             setRealtimeResourceConflictId(resourceConflictId);
             setDraggedCptConflict(tempCptConflict);
 
-            console.log('🐍 DRAG COMPLETE - Calling onUpdateEvent with', updates.length, 'updates:');
-               console.log('🐍 Updates:', updates);
                 onUpdateEvent(updates);
         }
     };
 
     const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
-        console.log('Local handleMouseUp called - ignoring when dragState exists:', !!draggingState);
         if (draggingState) {
-            console.log('Ignoring local mouse up - global handler will manage');
             return; // Don't clear drag state if we're in a drag operation
         }
         document.body.classList.remove('no-select');
@@ -8017,7 +7977,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (draggedCptConflict) {
             onCptConflict(draggedCptConflict);
         }
-        console.log('Clearing drag state in local handleMouseUp');
         setDraggingState(null);
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);

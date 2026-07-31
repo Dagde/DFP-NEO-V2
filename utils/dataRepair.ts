@@ -66,8 +66,7 @@ export function performDataRepair(): Trainee[] {
       
       // Store the repaired data back
       localStorage.setItem('traineesData', JSON.stringify(validatedData));
-      
-      console.log(`Repaired ${validatedData.length} trainee records`);
+
       return validatedData;
     }
   } catch (error) {

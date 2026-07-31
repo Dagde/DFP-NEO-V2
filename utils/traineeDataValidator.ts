@@ -114,20 +114,9 @@ export function validateTraineeData(trainees: any[]): ValidationResult {
  * Safe wrapper to process trainee data for display
  */
 export function safeProcessTrainees(trainees: any[]): Trainee[] {
-  console.log('🟡 ========== DATA VALIDATION START ==========');
-  console.log('🟡 Input trainees count:', trainees.length);
-  console.log('🟡 Input trainees sample:', trainees.slice(0, 3));
-  
   try {
     const result = validateTraineeData(trainees);
-    
-    console.log('🟡 Validation complete:');
-    console.log('🟡 - Cleaned data count:', result.cleanedData.length);
-    console.log('🟡 - Warnings count:', result.warnings.length);
-    console.log('🟡 - Errors count:', result.errors.length);
-    console.log('🟡 - Cleaned data sample:', result.cleanedData.slice(0, 3));
-    
-    // Log warnings and errors to console for debugging
+
     if (result.warnings.length > 0) {
       console.warn('🟡 Trainee data warnings:', result.warnings);
     }
@@ -135,7 +124,6 @@ export function safeProcessTrainees(trainees: any[]): Trainee[] {
       console.error('🟡 Trainee data errors:', result.errors);
     }
 
-    console.log('🟡 ========== DATA VALIDATION END ==========');
     return result.cleanedData;
   } catch (error) {
     console.error('🟡 Error processing trainee data:', error);
@@ -145,8 +133,6 @@ export function safeProcessTrainees(trainees: any[]): Trainee[] {
       fullName: t?.fullName ?? t?.name ?? '',
       course: t?.course ?? ''
     }));
-    console.log('🟡 Fallback data count:', fallbackData.length);
-    console.log('🟡 ========== DATA VALIDATION END ==========');
     return fallbackData;
   }
 }

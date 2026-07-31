@@ -432,10 +432,10 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       const now = new Date();
       setCurrentLocalTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     };
-    
+
     // Update immediately
     updateTime();
-    
+
     // Then update every minute
     const interval = setInterval(updateTime, 60 * 1000);
     return () => clearInterval(interval);
@@ -446,7 +446,6 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     setTodaysAverageLoading(true);
     try {
       const today = getLocalDateString();
-      console.log(`[AV-REFRESH] Refreshing average for date: ${today}, local time: ${new Date().getHours()}:${new Date().getMinutes()}`);
       const recalcRes = await fetch('/api/aircraft-availability-recalculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -458,7 +457,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           clientTimezoneOffsetHours: timezoneOffset,
         }),
       });
-      
+
       if (recalcRes.ok) {
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
@@ -545,7 +544,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
-  
+
   // Get local date string in YYYY-MM-DD format (respects timezone)
   const getLocalDateString = (d: Date = new Date()): string => {
     const year = d.getFullYear();
@@ -639,8 +638,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       setTodaysAverageLoading(true);
       try {
         const today = getLocalDateString();
-        console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${new Date().getHours()}:${new Date().getMinutes()}`);
-        
+
         // First, trigger a recalculation via the recalculate endpoint
         const recalcRes = await fetch('/api/aircraft-availability-recalculate', {
           method: 'POST',
@@ -653,7 +651,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
             clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
-        
+
         if (recalcRes.ok) {
             const recalcData = await recalcRes.json();
             if (recalcData.summary) {
@@ -666,7 +664,6 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         // DB has no events yet — fall back to localStorage
         const localAvg = computeAverageFromLocalStorage(today);
         if (localAvg !== null) {
-          console.log(`[AV-FETCH] Using localStorage fallback: avg=${localAvg.toFixed(2)}`);
           setTodaysAverageWithMetadata({
             dailyAverage: localAvg,
             date: today,
@@ -702,13 +699,13 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       }
     };
     fetchTodaysAverage();
-    
+
     // Periodic refresh every 5 minutes
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
     return () => clearInterval(interval);
   // timezoneOffset must be in deps so the closure captures the correct value
   }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]); // eslint-disable-line react-hooks/exhaustive-deps
-  
+
   // Refresh today's average when currentAircraftAvailable changes
   useEffect(() => {
     const timeoutId = setTimeout(async () => {
@@ -718,7 +715,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             date: today,
             flyingWindowStart: dayFlyingStart,
             flyingWindowEnd: dayFlyingEnd,
@@ -748,7 +745,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         });
       }
     }, 2000);
-    
+
     return () => clearTimeout(timeoutId);
   // timezoneOffset in deps so closure captures correct value
   }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -184,52 +184,11 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
 
 
 const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = 'Instructor', simIpDisplayLabel = 'Contractor Staff' }) => {
-  // ERROR TRACKING: Log all props to identify missing seatConfigs
-  console.log('🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:');
-  console.log('  - date:', date);
-  console.log('  - events count:', events?.length);
-  console.log('  - instructors count:', instructors?.length);
-  console.log('  - instructorsData count:', instructorsData?.length);
-  console.log('  - traineesData count:', traineesData?.length);
-  console.log('  - zoomLevel:', zoomLevel);
-  console.log('  - daylightTimes:', daylightTimes);
-  console.log('  - personnelData size:', personnelData?.size);
-  console.log('  - seatConfigs type:', typeof seatConfigs);
-  console.log('  - seatConfigs value:', seatConfigs);
-  console.log('  - seatConfigs === undefined:', seatConfigs === undefined);
-  console.log('  - seatConfigs === null:', seatConfigs === null);
-  console.log('  - syllabusDetails count:', syllabusDetails?.length);
-  console.log('  - conflictingEventIds size:', conflictingEventIds?.size);
-  console.log('  - showValidation:', showValidation);
-  console.log('  - unavailabilityConflicts size:', unavailabilityConflicts?.size);
-  console.log('  - Function props:');
-  console.log('    - onDateChange type:', typeof onDateChange);
-  console.log('    - onSelectEvent type:', typeof onSelectEvent);
-  console.log('    - onUpdateEvent type:', typeof onUpdateEvent);
-  console.log('    - onSelectInstructor type:', typeof onSelectInstructor);
-  
-  try {
-    // Test access to seatConfigs to trigger the error
-    const testAccess = seatConfigs;
-    console.log('✅ seatConfigs access successful in InstructorScheduleView');
-  } catch (error) {
-    console.error('❌ seatConfigs access failed in InstructorScheduleView:', error);
-    console.error('❌ Error stack:', error.stack);
-  }
-  
   // Validate critical props
   if (!date) console.error('❌ CRITICAL: date is undefined');
   if (!events) console.error('❌ CRITICAL: events is undefined');
   if (!instructors) console.error('❌ CRITICAL: instructors is undefined');
   if (!daylightTimes) console.error('❌ CRITICAL: daylightTimes is undefined');
-  
-  // Sample data validation
-  if (events?.length > 0) {
-    console.log('🔍 Sample event structure:', events[0]);
-  }
-  if (instructors?.length > 0) {
-    console.log('🔍 Sample instructor structure:', instructors[0]);
-  }
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(() => {
@@ -427,19 +386,10 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
   }, [instructors, showUnitHeadings]);
 
   const totalRows = scheduleRows.length;
-  console.log('📏 CALCULATING DIMENSIONS:');
-  console.log('  - TOTAL_HOURS:', TOTAL_HOURS);
-  console.log('  - PIXELS_PER_HOUR:', PIXELS_PER_HOUR);
-  console.log('  - zoomLevel:', zoomLevel);
-  console.log('  - ROW_HEIGHT:', ROW_HEIGHT);
-  console.log('  - totalRows (instructors.length):', totalRows);
   
   const timelineWidth = TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel;
   const containerHeight = totalRows * ROW_HEIGHT;
   
-  console.log('📏 CALCULATED VALUES:');
-  console.log('  - timelineWidth:', timelineWidth);
-  console.log('  - containerHeight:', containerHeight);
 
   const timeStringToHours = useCallback((timeString: string | null): number | null => {
     if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
@@ -589,11 +539,6 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
   
 
   // DEBUG: Pre-render validation
-  console.log('🎯 INSTRUCTOR SCHEDULE VIEW - About to render');
-  console.log('🎯 Final calculations:');
-  console.log('  - totalRows:', instructors?.length);
-  console.log('  - timelineWidth:', typeof timelineWidth !== 'undefined' ? timelineWidth : 'NOT_CALCULATED');
-  console.log('  - containerHeight:', typeof containerHeight !== 'undefined' ? containerHeight : 'NOT_CALCULATED');
   
   // Check for any undefined variables that might cause issues
   if (typeof timelineWidth === 'undefined') {
@@ -603,7 +548,6 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     console.error('❌ CRITICAL: containerHeight is undefined - this will cause rendering failure');
   }
   
-  console.log('🎯 Returning JSX...');
 
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900">

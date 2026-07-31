@@ -142,7 +142,6 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
       const traineeB = traineeMap.get(b);
       
       if (!traineeA || !traineeB) {
-        console.log('Missing trainee data:', a, b);
         return 0;
       }
       

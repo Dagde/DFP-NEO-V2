@@ -1729,8 +1729,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleSaveCustomUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
-        console.log('handleSaveCustomUnavailability called', { periodData, isCreating, traineeName: trainee.name });
-
         const newPeriod = {
             ...periodData,
             id: uuidv4(),
@@ -1738,13 +1736,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             endTime: periodData.allDay ? undefined : periodData.endTime,
         };
 
-        console.log('Created new period', newPeriod);
-
         if (isCreating) {
-            console.log('Adding to creating trainee unavailability');
             setUnavailability(prev => [...prev, newPeriod]);
         } else {
-            console.log('Updating existing trainee unavailability');
             const dateRange = periodData.startDate === periodData.endDate
                 ? periodData.startDate
                 : `${periodData.startDate} to ${periodData.endDate}`;
@@ -1757,7 +1751,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 page: 'Trainee Roster'
             });
             const updatedUnavailability = [...unavailability, newPeriod];
-            console.log('Calling onUpdateTrainee with updated unavailability', updatedUnavailability);
             setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
@@ -1787,19 +1780,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleRemoveUnavailability = (idToRemove: string) => {
-        console.log('🗑️ [TRAINEE] DELETE START - idToRemove:', idToRemove);
-        console.log('🗑️ [TRAINEE] Current unavailability state:', unavailability);
-        console.log('🗑️ [TRAINEE] isCreating:', isCreating);
-
         const periodToRemove = unavailability?.find(p => p.id === idToRemove);
-        console.log('🗑️ [TRAINEE] Period to remove:', periodToRemove);
-
         if (periodToRemove) {
             const dateRange = periodToRemove.startDate === periodToRemove.endDate
                 ? periodToRemove.startDate
                 : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
-
-            console.log('🗑️ [TRAINEE] Logging audit for:', { trainee, dateRange, reason: periodToRemove.reason });
 
             logAudit({
                 action: 'Delete',
@@ -1810,22 +1795,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
 
         const updatedUnavailability = unavailability.filter(p => p.id !== idToRemove);
-        console.log('🗑️ [TRAINEE] Updated unavailability after filter:', updatedUnavailability);
-        console.log('🗑️ [TRAINEE] Calling setUnavailability with filtered list');
-
         setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
-
-        console.log('🗑️ [TRAINEE] Calling onUpdateTrainee with trainee object');
-        console.log('🗑️ [TRAINEE] Trainee object to update:', {
-            id: (trainee as any).id,
-            idNumber: trainee.idNumber,
-            name: trainee.name,
-            unavailability: updatedUnavailability
-        });
-
         onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
-
-        console.log('🗑️ [TRAINEE] DELETE COMPLETE');
     };
 
     const formatMilitaryTime = (timeString: string | undefined): string => {

@@ -2943,23 +2943,18 @@ const loadSettingsFromDB = async () => {
   try {
     const apiBase = getApiBase$1();
     const url = `${apiBase}/settings?orgId=${ORG_ID}`;
-    console.log("[Settings] 🔍 Loading settings from DB — URL:", url);
     const res = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
-    console.log("[Settings] 📥 GET /api/settings response status:", res.status);
     if (!res.ok) {
       console.warn("[Settings] ❌ Failed to load settings from DB:", res.status);
       return null;
     }
     const json = await res.json();
-    console.log("[Settings] 📦 Raw JSON from DB:", JSON.stringify(json).substring(0, 500));
     if (!json.settings) {
-      console.log("[Settings] ⚠️ No settings found in DB (json.settings is null/undefined), using defaults");
       return null;
     }
-    console.log("[Settings] ✅ Loaded settings from DB — version:", json.settings.version, "| organisationSettings:", JSON.stringify(json.settings.organisationSettings));
     return json.settings;
   } catch (error) {
     console.error("[Settings] 💥 Error loading settings from DB:", error);
@@ -2976,7 +2971,6 @@ const saveSettingsNow = async (settings, userId) => {
     return true;
   }
   if (isSaving) {
-    console.log("[Settings] ⏳ Already saving — queuing this save");
     pendingSettings = settings;
     return false;
   }
@@ -2993,14 +2987,11 @@ const saveSettingsNow = async (settings, userId) => {
       },
       updatedBy: userId || null
     };
-    console.log("[Settings] 📤 POST /api/settings — URL:", url);
-    console.log("[Settings] 📤 Saving organisationSettings:", JSON.stringify(payload.settings.organisationSettings));
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    console.log("[Settings] 📥 POST /api/settings response status:", res.status);
     if (!res.ok) {
       let errBody = "";
       try {
@@ -3015,8 +3006,7 @@ const saveSettingsNow = async (settings, userId) => {
       }
       return false;
     }
-    const result = await res.json();
-    console.log("[Settings] ✅ Settings saved to DB — response:", JSON.stringify(result));
+    await res.json();
     return true;
   } catch (error) {
     console.error("[Settings] 💥 Error saving settings:", error);
@@ -3133,7 +3123,6 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
       console.error("[Currencies] Failed to save:", res.status);
       return false;
     }
-    console.log("[Currencies] ✅ Saved directly to /api/currencies");
     return true;
   } catch (error) {
     console.error("[Currencies] Error saving:", error);
@@ -9606,12 +9595,8 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
   }) }) });
 };
 function calculateDailyAverageAvailability(availabilityTimeline, windowStart, windowEnd) {
-  console.log("\n=== AIRCRAFT AVAILABILITY CALCULATION ===");
-  console.log("Flying Window:", windowStart, "-", windowEnd);
-  console.log("Timeline:", availabilityTimeline);
   const parseTime = (timeStr) => {
     if (!timeStr) {
-      console.log("❌ Invalid time string provided:", timeStr);
       return 0;
     }
     if (timeStr.includes(":")) {
@@ -9625,18 +9610,14 @@ function calculateDailyAverageAvailability(availabilityTimeline, windowStart, wi
   const startTime = parseTime(windowStart);
   const endTime = parseTime(windowEnd);
   const totalWindowDuration = endTime - startTime;
-  console.log("Parsed times: start=", startTime, "end=", endTime, "duration=", totalWindowDuration, "hours");
   if (totalWindowDuration <= 0) {
-    console.log("❌ Invalid flying window");
     return 0;
   }
   const sortedTimeline = availabilityTimeline.map((item) => ({ time: parseTime(item.time), availability: item.availability })).sort((a, b) => a.time - b.time).filter((item) => item.time < endTime);
-  console.log("Sorted timeline:", sortedTimeline);
   const availabilityAtStart = (() => {
     const changeAtOrBeforeStart = sortedTimeline.filter((item) => item.time <= startTime).pop();
     return changeAtOrBeforeStart?.availability || sortedTimeline[0]?.availability || 0;
   })();
-  console.log("Availability at window start:", availabilityAtStart);
   const segments = [];
   let currentSegmentStart = startTime;
   let currentAvailability = availabilityAtStart;
@@ -9651,7 +9632,6 @@ function calculateDailyAverageAvailability(availabilityTimeline, windowStart, wi
         duration: segmentDuration,
         contribution
       });
-      console.log(`Segment: ${currentSegmentStart.toFixed(2)}-${change.time.toFixed(2)} hours, availability=${currentAvailability}, duration=${segmentDuration.toFixed(2)}h, contribution=${contribution.toFixed(2)}`);
       currentSegmentStart = change.time;
       currentAvailability = change.availability;
     }
@@ -9666,15 +9646,9 @@ function calculateDailyAverageAvailability(availabilityTimeline, windowStart, wi
       duration: segmentDuration,
       contribution
     });
-    console.log(`Final segment: ${currentSegmentStart.toFixed(2)}-${endTime.toFixed(2)} hours, availability=${currentAvailability}, duration=${segmentDuration.toFixed(2)}h, contribution=${contribution.toFixed(2)}`);
   }
   const totalAircraftHours = segments.reduce((sum, segment) => sum + segment.contribution, 0);
   const averageAvailability = totalAircraftHours / totalWindowDuration;
-  console.log("\n=== CALCULATION SUMMARY ===");
-  console.log("Total window duration:", totalWindowDuration.toFixed(2), "hours");
-  console.log("Total aircraft-hours:", totalAircraftHours.toFixed(2));
-  console.log("Average availability:", averageAvailability.toFixed(2), "aircraft");
-  console.log("=== END CALCULATION ===\n");
   return Math.round(averageAvailability * 10) / 10;
 }
 function formatDate$5(date) {
@@ -10038,8 +10012,6 @@ const VisualAdjustGuide = ({
   pixelsPerHour = 200,
   totalWidth
 }) => {
-  console.log("VisualAdjustGuide rendered with event:", event);
-  console.log("pixelsPerHour:", pixelsPerHour);
   const [isDraggingStart, setIsDraggingStart] = reactExports.useState(false);
   const [isDraggingEnd, setIsDraggingEnd] = reactExports.useState(false);
   const [currentStartTime, setCurrentStartTime] = reactExports.useState(event.startTime);
@@ -10103,8 +10075,6 @@ const VisualAdjustGuide = ({
   }, [isDraggingStart, isDraggingEnd, currentStartTime, currentEndTime]);
   const startX = timeToPixels(currentStartTime);
   const endX = timeToPixels(currentEndTime);
-  console.log("Guide positions - startX:", startX, "endX:", endX);
-  console.log("Current times - start:", currentStartTime, "end:", currentEndTime);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -11774,7 +11744,6 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     } catch (error) {
       const isQuotaError = /quota/i.test(String(error?.name || error?.message || ""));
       if (!isQuotaError) {
-        console.log("[SETUP-WIZARD-STORAGE] write failed", { key, error });
         return false;
       }
       wizardDiagnosticStorageKeys.forEach((diagKey) => {
@@ -11785,10 +11754,8 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       });
       try {
         window.localStorage.setItem(key, value);
-        console.log("[SETUP-WIZARD-STORAGE] cleared diagnostics after quota error", { key });
         return true;
       } catch (retryError) {
-        console.log("[SETUP-WIZARD-STORAGE] write still failed after quota cleanup", { key, retryError });
         return false;
       }
     }
@@ -11828,13 +11795,11 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       details: compactWizardDiagDetails(details)
     };
     try {
-      console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry);
       const existing = JSON.parse(window.localStorage.getItem("dfp_setup_wizard_import_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-30);
       safeSetWizardLocalStorage("dfp_setup_wizard_import_diag", JSON.stringify(next));
       window.neoSetupWizardImportDiag = next;
     } catch (error) {
-      console.log(`[SETUP-WIZARD-IMPORT] ${stage}`, entry, error);
     }
   };
   const pushWizardLmpDiag = (stage, details = {}) => {
@@ -11867,13 +11832,11 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       details: compactWizardDiagDetails(details)
     };
     try {
-      console.log(`[SETUP-TEST-LMP] ${stage}`, entry);
       const existing = JSON.parse(window.localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-50);
       safeSetWizardLocalStorage("dfp_setup_test_lmp_diag", JSON.stringify(next));
       window.neoSetupTestLmpDiag = next;
     } catch (error) {
-      console.log(`[SETUP-TEST-LMP] ${stage}`, entry, error);
     }
   };
   const pushWizardOrgDiag = (stage, details = {}) => {
@@ -11887,13 +11850,11 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       details: compactWizardDiagDetails(details)
     };
     try {
-      console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry);
       const existing = JSON.parse(window.localStorage.getItem("dfp_setup_wizard_org_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-50);
       safeSetWizardLocalStorage("dfp_setup_wizard_org_diag", JSON.stringify(next));
       window.neoSetupWizardOrgDiag = next;
     } catch (error) {
-      console.log(`[SETUP-WIZARD-ORG] ${stage}`, entry, error);
     }
   };
   reactExports.useEffect(() => {
@@ -16418,14 +16379,11 @@ const ScheduleView = ({
     }, 1e3);
     const handleGlobalMouseMove = (e) => {
       if (draggingState) {
-        console.log("Global mouse move - drag state active");
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
-      console.log("Global mouse up called, draggingState exists:", !!draggingState);
       if (draggingState) {
-        console.log("Global mouse up - ending drag");
         document.body.classList.remove("no-select");
         setDraggingState(null);
         setRealtimeConflict(null);
@@ -16569,9 +16527,6 @@ const ScheduleView = ({
     return null;
   }, [syllabusDetails]);
   const handleMouseDown = (e, event) => {
-    console.log("handleMouseDown called, event:", event?.id, "isMultiSelectMode:", isMultiSelectMode);
-    console.log("Event target:", e.target);
-    console.log("Current target:", e.currentTarget);
     if (e.button !== 0) return;
     if (isReadOnly && event) {
       didDragRef.current = false;
@@ -16599,16 +16554,10 @@ const ScheduleView = ({
       const processEvent = (ev) => {
         if (processedDragEventIds.has(ev.id)) return;
         processedDragEventIds.add(ev.id);
-        console.log("🐍 Processing event for drag:", ev.id, "resourceId:", ev.resourceId);
-        console.log("🐍 Available resources:", resources);
         const rowIndex = resources.indexOf(ev.resourceId);
-        console.log("🐍 Found row index:", rowIndex);
         if (rowIndex !== -1) {
           initialPositions.set(ev.id, { startTime: ev.startTime, rowIndex });
           originalResourceIds.set(ev.id, ev.resourceId);
-          console.log("🐍 Event added to initialPositions");
-        } else {
-          console.log("🐍 Event NOT added - resourceId not found in resources");
         }
       };
       const processEventWithFormation = (ev) => {
@@ -16628,8 +16577,6 @@ const ScheduleView = ({
         processEventWithFormation(event);
       }
       if (initialPositions.size > 0) {
-        console.log("Setting dragging state with", initialPositions.size, "events for event:", event.id);
-        console.log("initialPositions:", initialPositions);
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -16637,9 +16584,6 @@ const ScheduleView = ({
           initialPositions,
           originalResourceIds
         });
-        console.log("setDraggingState called with:", draggingState);
-      } else {
-        console.log("No initial positions - drag state not set");
       }
     } else {
       if (!isMultiSelectMode) return;
@@ -16652,9 +16596,7 @@ const ScheduleView = ({
     }
   };
   const handleMouseMove = (e) => {
-    console.log("handleMouseMove called, draggingState exists:", !!draggingState);
     if (!scheduleGridRef.current) {
-      console.log("Early return: no scheduleGridRef");
       return;
     }
     didDragRef.current = true;
@@ -16666,13 +16608,11 @@ const ScheduleView = ({
       setValidateOverlayTime(mouseTimeInHours);
     }
     if (isOracleMode && oraclePreviewEvent) {
-      console.log("Early return: Oracle mode with preview event");
       const startTime = xInGrid / (PIXELS_PER_HOUR$6 * zoomLevel) + START_HOUR$6;
       const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$6)] || resources[0];
       onOracleMouseMove(startTime, resourceId);
     } else {
       if (selectionStartPoint.current) {
-        console.log("Early return: selectionStartPoint active (marquee selection)");
         const currentX = e.clientX - gridRect.left;
         const currentY = e.clientY - gridRect.top;
         const x = Math.min(selectionStartPoint.current.x, currentX);
@@ -16700,14 +16640,12 @@ const ScheduleView = ({
         return;
       }
       if (!draggingState) {
-        console.log("Early return: no draggingState");
         return;
       }
       const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
       if (!mainEventInitialPos) return;
       const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$6 - mainEventInitialPos.startTime;
       const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$6 / 2) / ROW_HEIGHT$6) - mainEventInitialPos.rowIndex;
-      console.log("Drag calculation - timeShift:", timeShift, "rowShift:", rowShift, "xInGrid:", xInGrid, "yInGrid:", yInGrid);
       const updates = [];
       const tempEvents = [...events];
       let resourceConflictId = null;
@@ -16742,11 +16680,6 @@ const ScheduleView = ({
         let conflictResult = null;
         if (detectConflictsForEvent) {
           conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-          console.log("🔍 Drag conflict check:", {
-            eventId: mainEvent.id,
-            hasConflict: conflictResult.hasConflict,
-            conflictType: conflictResult.conflictType
-          });
           if (conflictResult.hasConflict) {
             setRealtimeConflict({
               conflictingEventId: conflictResult.conflictingEventId,
@@ -16787,15 +16720,11 @@ const ScheduleView = ({
       }
       setRealtimeResourceConflictId(resourceConflictId);
       setDraggedCptConflict(tempCptConflict);
-      console.log("🐍 DRAG COMPLETE - Calling onUpdateEvent with", updates.length, "updates:");
-      console.log("🐍 Updates:", updates);
       onUpdateEvent(updates);
     }
   };
   const handleMouseUp = (e) => {
-    console.log("Local handleMouseUp called - ignoring when dragState exists:", !!draggingState);
     if (draggingState) {
-      console.log("Ignoring local mouse up - global handler will manage");
       return;
     }
     document.body.classList.remove("no-select");
@@ -16805,7 +16734,6 @@ const ScheduleView = ({
     if (draggedCptConflict) {
       onCptConflict(draggedCptConflict);
     }
-    console.log("Clearing drag state in local handleMouseUp");
     setDraggingState(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
@@ -18035,45 +17963,10 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   return unavailabilityEvents;
 };
 const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "Instructor", simIpDisplayLabel = "Contractor Staff" }) => {
-  console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
-  console.log("  - date:", date);
-  console.log("  - events count:", events?.length);
-  console.log("  - instructors count:", instructors?.length);
-  console.log("  - instructorsData count:", instructorsData?.length);
-  console.log("  - traineesData count:", traineesData?.length);
-  console.log("  - zoomLevel:", zoomLevel);
-  console.log("  - daylightTimes:", daylightTimes);
-  console.log("  - personnelData size:", personnelData?.size);
-  console.log("  - seatConfigs type:", typeof seatConfigs);
-  console.log("  - seatConfigs value:", seatConfigs);
-  console.log("  - seatConfigs === undefined:", seatConfigs === void 0);
-  console.log("  - seatConfigs === null:", seatConfigs === null);
-  console.log("  - syllabusDetails count:", syllabusDetails?.length);
-  console.log("  - conflictingEventIds size:", conflictingEventIds?.size);
-  console.log("  - showValidation:", showValidation);
-  console.log("  - unavailabilityConflicts size:", unavailabilityConflicts?.size);
-  console.log("  - Function props:");
-  console.log("    - onDateChange type:", typeof onDateChange);
-  console.log("    - onSelectEvent type:", typeof onSelectEvent);
-  console.log("    - onUpdateEvent type:", typeof onUpdateEvent);
-  console.log("    - onSelectInstructor type:", typeof onSelectInstructor);
-  try {
-    const testAccess = seatConfigs;
-    console.log("✅ seatConfigs access successful in InstructorScheduleView");
-  } catch (error) {
-    console.error("❌ seatConfigs access failed in InstructorScheduleView:", error);
-    console.error("❌ Error stack:", error.stack);
-  }
   if (!date) console.error("❌ CRITICAL: date is undefined");
   if (!events) console.error("❌ CRITICAL: events is undefined");
   if (!instructors) console.error("❌ CRITICAL: instructors is undefined");
   if (!daylightTimes) console.error("❌ CRITICAL: daylightTimes is undefined");
-  if (events?.length > 0) {
-    console.log("🔍 Sample event structure:", events[0]);
-  }
-  if (instructors?.length > 0) {
-    console.log("🔍 Sample instructor structure:", instructors[0]);
-  }
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
@@ -18231,17 +18124,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     return rows;
   }, [instructors, showUnitHeadings]);
   const totalRows = scheduleRows.length;
-  console.log("📏 CALCULATING DIMENSIONS:");
-  console.log("  - TOTAL_HOURS:", TOTAL_HOURS$5);
-  console.log("  - PIXELS_PER_HOUR:", PIXELS_PER_HOUR$5);
-  console.log("  - zoomLevel:", zoomLevel);
-  console.log("  - ROW_HEIGHT:", ROW_HEIGHT$5);
-  console.log("  - totalRows (instructors.length):", totalRows);
   const timelineWidth = TOTAL_HOURS$5 * PIXELS_PER_HOUR$5 * zoomLevel;
   const containerHeight = totalRows * ROW_HEIGHT$5;
-  console.log("📏 CALCULATED VALUES:");
-  console.log("  - timelineWidth:", timelineWidth);
-  console.log("  - containerHeight:", containerHeight);
   const timeStringToHours2 = reactExports.useCallback((timeString) => {
     if (!timeString || !/^\d{2}:\d{2}$/.test(timeString)) return null;
     const [hours, minutes] = timeString.split(":").map(Number);
@@ -18376,18 +18260,12 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       }
     );
   };
-  console.log("🎯 INSTRUCTOR SCHEDULE VIEW - About to render");
-  console.log("🎯 Final calculations:");
-  console.log("  - totalRows:", instructors?.length);
-  console.log("  - timelineWidth:", typeof timelineWidth !== "undefined" ? timelineWidth : "NOT_CALCULATED");
-  console.log("  - containerHeight:", typeof containerHeight !== "undefined" ? containerHeight : "NOT_CALCULATED");
   if (typeof timelineWidth === "undefined") {
     console.error("❌ CRITICAL: timelineWidth is undefined - this will cause rendering failure");
   }
   if (typeof containerHeight === "undefined") {
     console.error("❌ CRITICAL: containerHeight is undefined - this will cause rendering failure");
   }
-  console.log("🎯 Returning JSX...");
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "flex-1 overflow-auto relative bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -19529,7 +19407,6 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
     }
   }, [startDate, endDate, startTime, endTime, reason, showErrors]);
   const handleSave = () => {
-    console.log("handleSave called", { startDate, endDate, startTime, endTime, reason });
     const validationResult = validateUnavailabilityPeriod(
       startDate,
       endDate,
@@ -19549,7 +19426,6 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
       return;
     }
     const isAllDay = !startTime && !endTime;
-    console.log("Calling onSave with period data");
     onSave({
       startDate,
       endDate,
@@ -19842,11 +19718,9 @@ const CurrencyPanel = ({
   reactExports.useEffect(() => {
     if (!resolvedId) return;
     const endpoint = personType === "instructor" ? `/api/personnel/${resolvedId}/currencies` : `/api/trainees/${resolvedId}/currencies`;
-    console.log(`[CurrencyPanel] Fetching currencies from: ${endpoint} (resolvedId=${resolvedId})`);
     setIsLoading(true);
     fetch(endpoint, { credentials: "include" }).then((r) => r.ok ? r.json() : Promise.reject(r.statusText)).then((data) => {
       const status = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
-      console.log(`[CurrencyPanel] Fetched ${status.length} currency record(s):`, JSON.stringify(status));
       setCurrencyStatus(status);
     }).catch((err) => {
       console.warn("[CurrencyPanel] Could not load from API, using initial:", err);
@@ -19933,9 +19807,6 @@ const CurrencyPanel = ({
     setSaveError(null);
     setSaveSuccessMessage(null);
     const newStatus = [];
-    console.log("[CurrencyPanel] handleSaveClick — currencyStatus before save:", JSON.stringify(currencyStatus));
-    console.log("[CurrencyPanel] editedStatuses:", JSON.stringify(Array.from(editedStatuses.entries())));
-    console.log("[CurrencyPanel] originalStatuses:", JSON.stringify(Array.from(originalStatuses.entries())));
     visibleCurrencyDefinitions.forEach((def) => {
       const editedDate = editedStatuses.get(def.name);
       const originalDate = originalStatuses.get(def.name);
@@ -19954,14 +19825,12 @@ const CurrencyPanel = ({
           });
         } else {
           if (originalDate) {
-            console.log("[CurrencyPanel] User cleared " + def.name + " (was: " + originalDate + ")");
             if (isNowInactive) {
               newStatus.push({ currencyName: def.name, lastEventDate: "", isInactive: true });
             }
           } else {
             const existing = currencyStatus.find((s) => s.currencyName === def.name);
             if (existing) {
-              console.log("[CurrencyPanel] Preserving existing " + def.name + ":", existing.lastEventDate);
               newStatus.push({ ...existing, isInactive: isNowInactive || existing.isInactive });
             } else if (isNowInactive) {
               newStatus.push({ currencyName: def.name, lastEventDate: "", isInactive: true });
@@ -19980,7 +19849,6 @@ const CurrencyPanel = ({
         newStatus.push(status);
       }
     });
-    console.log("[CurrencyPanel] newStatus to save:", JSON.stringify(newStatus));
     const endpoint = personType === "instructor" ? `/api/personnel/${resolvedId}/currencies` : `/api/trainees/${resolvedId}/currencies`;
     try {
       const res = await fetch(endpoint, {
@@ -19993,10 +19861,8 @@ const CurrencyPanel = ({
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
-      console.log("[CurrencyPanel] ✅ Save successful — updating local state with", newStatus.length, "records");
       if (resolvedId) {
         savedCurrencyCache.set(resolvedId, newStatus);
-        console.log(`[CurrencyPanel] Cached saved status for ${resolvedId}`);
       }
       setCurrencyStatus(newStatus);
       setIsEditing(false);
@@ -20353,10 +20219,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const eventKey = `${trainee.fullName}|||${score.event}`;
       return !visiblePt051Keys.has(exactKey) && !visiblePt051EventKeys.has(eventKey);
     }).map((score) => ({ ...score, type: "LMP Score" }));
-    console.log("=== Building combinedHistory ===");
-    console.log("LMP Scores:", lmpScores.length, lmpScores);
-    console.log("All training report assessments:", assessments.length, assessments);
-    console.log("Completed training report assessments (filtered):", completedAssessments.length, completedAssessments);
     const normaliseEventCode = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
     const lmpOrder = /* @__PURE__ */ new Map();
     traineeLmp.forEach((item, index) => {
@@ -20390,7 +20252,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       const bCode = normaliseEventCode(b.type === "LMP Score" ? b.event : b.flightNumber);
       return aCode.localeCompare(bCode);
     });
-    console.log("Combined History:", combined.length, combined);
     return combined;
   }, [lmpScores, assessments, traineeLmp]);
   const getTypeDisplayLabel = (type) => type === "PT-051" ? trainingReportName : type;
@@ -20407,18 +20268,13 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "-" });
     }
     if (score === 1) {
-      console.log("Checking double marginal for:", item.type === "LMP Score" ? item.event : item.flightNumber, "ID:", item.id, "on", item.date);
       const currentIndex = combinedHistory.findIndex((history) => history.id === item.id);
       if (currentIndex > 0) {
         const previousItem = combinedHistory[currentIndex - 1];
         const prevScore = previousItem.type === "LMP Score" ? previousItem.score : previousItem.overallGrade;
-        console.log("Previous item in timeline:", previousItem.type === "LMP Score" ? previousItem.event : previousItem.flightNumber, "score:", prevScore, "type:", previousItem.type, "ID:", previousItem.id);
         if (prevScore === 1) {
           isDoubleMarginal = true;
-          console.log("✅ DOUBLE MARGINAL DETECTED for", item.type === "LMP Score" ? item.event : item.flightNumber, "ID:", item.id, "- consecutive with previous event");
         }
-      } else {
-        console.log("No previous item found in timeline for", item.type === "LMP Score" ? item.event : item.flightNumber);
       }
     }
     if (item.type === "LMP Score" && item.score === 5) {
@@ -22654,18 +22510,11 @@ Date: ${formatTrainingReportDisplayDate(assessment.date) || "N/A"}
 Grade: ${assessment.overallGrade || "N/A"}
 
 This action cannot be undone.`;
-    console.log("🗑️ TrainingReportView: Delete button clicked");
     if (await showDarkConfirm(confirmMessage)) {
-      console.log("✅ TrainingReportView: User confirmed deletion");
       if (onDeleteAssessment && assessment.id) {
-        console.log("🗑️ TrainingReportView: Calling onDeleteAssessment with ID:", assessment.id);
         await onDeleteAssessment(assessment.id);
         onBack();
-      } else {
-        console.log("❌ TrainingReportView: onDeleteAssessment or assessment.id is missing");
       }
-    } else {
-      console.log("❌ TrainingReportView: User cancelled deletion");
     }
   };
   reactExports.useEffect(() => {
@@ -22772,7 +22621,6 @@ This action cannot be undone.`;
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePrint, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Print" }),
             initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
-              console.log("Editing mode enabled for training report:", initialAssessment.id);
             }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : `Your permission profile does not allow ${trainingReportName} editing`, className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
             assessment.id && onDeleteAssessment && canEditPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -22798,23 +22646,17 @@ This action cannot be undone.`;
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: overviewFields.type }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm text-white", children: (() => {
                   const eventNum = (event.flightNumber || "").trim();
-                  console.log("🔍 Event Description Debug - Event Number:", eventNum);
-                  console.log("🔍 Event Description Debug - syllabusDetails count:", syllabusDetails.length);
-                  console.log("🔍 Event Description Debug - First 5 syllabus items:", syllabusDetails.slice(0, 5).map((d) => ({ id: d.id, code: d.code, title: d.title })));
                   let syllabusDetail = syllabusDetails.find((d) => {
                     const id = (d.id || "").trim();
                     const code = (d.code || "").trim();
                     if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
-                      console.log("🔍 Found exact match:", d);
                       return true;
                     }
                     if (id.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase() || code.replace(/\s+/g, "").toLowerCase() === eventNum.replace(/\s+/g, "").toLowerCase()) {
-                      console.log("🔍 Found match without spaces:", d);
                       return true;
                     }
                     return false;
                   });
-                  console.log("🔍 Event Description Debug - Found detail:", syllabusDetail);
                   return syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || "N/A";
                 })() })
               ] }),
@@ -24668,19 +24510,15 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleSaveCustomUnavailability = (periodData) => {
-    console.log("handleSaveCustomUnavailability called", { periodData, isCreating, traineeName: trainee.name });
     const newPeriod = {
       ...periodData,
       id: v4(),
       startTime: periodData.allDay ? void 0 : periodData.startTime,
       endTime: periodData.allDay ? void 0 : periodData.endTime
     };
-    console.log("Created new period", newPeriod);
     if (isCreating) {
-      console.log("Adding to creating trainee unavailability");
       setUnavailability((prev) => [...prev, newPeriod]);
     } else {
-      console.log("Updating existing trainee unavailability");
       const dateRange = periodData.startDate === periodData.endDate ? periodData.startDate : `${periodData.startDate} to ${periodData.endDate}`;
       const timeRange = periodData.allDay ? "All Day" : `${periodData.startTime} to ${periodData.endTime}`;
       logAudit({
@@ -24690,7 +24528,6 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
         page: "Trainee Roster"
       });
       const updatedUnavailability = [...unavailability, newPeriod];
-      console.log("Calling onUpdateTrainee with updated unavailability", updatedUnavailability);
       setUnavailability(updatedUnavailability);
       onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
     }
@@ -24715,14 +24552,9 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
     }
   };
   const handleRemoveUnavailability = (idToRemove) => {
-    console.log("🗑️ [TRAINEE] DELETE START - idToRemove:", idToRemove);
-    console.log("🗑️ [TRAINEE] Current unavailability state:", unavailability);
-    console.log("🗑️ [TRAINEE] isCreating:", isCreating);
     const periodToRemove = unavailability?.find((p) => p.id === idToRemove);
-    console.log("🗑️ [TRAINEE] Period to remove:", periodToRemove);
     if (periodToRemove) {
       const dateRange = periodToRemove.startDate === periodToRemove.endDate ? periodToRemove.startDate : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
-      console.log("🗑️ [TRAINEE] Logging audit for:", { trainee, dateRange, reason: periodToRemove.reason });
       logAudit({
         action: "Delete",
         description: `Removed unavailability for ${trainee.rank} ${trainee.name}`,
@@ -24731,18 +24563,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       });
     }
     const updatedUnavailability = unavailability.filter((p) => p.id !== idToRemove);
-    console.log("🗑️ [TRAINEE] Updated unavailability after filter:", updatedUnavailability);
-    console.log("🗑️ [TRAINEE] Calling setUnavailability with filtered list");
     setUnavailability((prev) => prev.filter((p) => p.id !== idToRemove));
-    console.log("🗑️ [TRAINEE] Calling onUpdateTrainee with trainee object");
-    console.log("🗑️ [TRAINEE] Trainee object to update:", {
-      id: trainee.id,
-      idNumber: trainee.idNumber,
-      name: trainee.name,
-      unavailability: updatedUnavailability
-    });
     onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
-    console.log("🗑️ [TRAINEE] DELETE COMPLETE");
   };
   const formatMilitaryTime2 = (timeString) => {
     if (!timeString) return "";
@@ -25935,7 +25757,6 @@ const CourseEditFlyout = ({
   useSystemFreeze();
   const [newUnit, setNewUnit] = reactExports.useState(courseUnit);
   reactExports.useEffect(() => {
-    console.log(`[CourseEditFlyout] 🚀 Mounted/Updated - courseName: "${courseName}", courseUnit: "${courseUnit}"`);
   }, [courseName, courseUnit]);
   reactExports.useEffect(() => {
     setNewCourseNumber(courseName);
@@ -25951,18 +25772,14 @@ const CourseEditFlyout = ({
     setHasChanges(value !== courseName || newUnit !== courseUnit);
   };
   const handleUnitChange = (value) => {
-    console.log(`[CourseEditFlyout] 🔽 Unit dropdown changed: "${courseUnit}" → "${value}", hasChanges will be: ${newCourseNumber !== courseName || value !== courseUnit}`);
     setNewUnit(value);
     setHasChanges(newCourseNumber !== courseName || value !== courseUnit);
   };
   const handleSaveCourseDetails = () => {
-    console.log(`[CourseEditFlyout] 💾 Save clicked - courseName: "${courseName}", newCourseNumber: "${newCourseNumber}", courseUnit: "${courseUnit}", newUnit: "${newUnit}"`);
     if (newCourseNumber !== courseName) {
-      console.log(`[CourseEditFlyout] 📝 Updating course number: ${courseName} → ${newCourseNumber}`);
       onUpdateCourseNumber(courseName, newCourseNumber);
     }
     if (newUnit !== courseUnit) {
-      console.log(`[CourseEditFlyout] 📝 Updating unit: ${courseUnit} → ${newUnit}`);
       onUpdateCourseUnit(courseName, newUnit);
     }
     setHasChanges(false);
@@ -26857,7 +26674,6 @@ const CourseRosterView = ({
         const unavailChanged = prevUnavailHash !== newUnavailHash;
         const otherChanged = updatedTrainee.fullName !== selectedTrainee.fullName || updatedTrainee.isPaused !== selectedTrainee.isPaused || updatedTrainee.course !== selectedTrainee.course;
         if (unavailChanged || otherChanged) {
-          console.log("[CourseRosterView] Syncing selectedTrainee from updated traineesData - unavailChanged:", unavailChanged);
           setSelectedTrainee({
             ...updatedTrainee,
             currencyStatus: selectedTrainee.currencyStatus ?? updatedTrainee.currencyStatus
@@ -27503,20 +27319,8 @@ const MassBriefCompleteFlyout = ({
 }) => {
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState(/* @__PURE__ */ new Set());
   React.useEffect(() => {
-    console.log("🔍 MassBriefCompleteFlyout - isOpen:", isOpen);
-    console.log("🔍 MassBriefCompleteFlyout - trainees:", trainees);
-    console.log("🔍 MassBriefCompleteFlyout - trainees.length:", trainees.length);
     if (isOpen && trainees.length > 0) {
-      console.log("🔍 MassBriefCompleteFlyout - Trainee details:");
-      trainees.forEach((trainee, index) => {
-        console.log(`  ${index}:`, trainee);
-        console.log(`    Name: ${trainee.name}`);
-        console.log(`    FullName: ${trainee.fullName}`);
-        console.log(`    ID: ${trainee.idNumber}`);
-        console.log(`    Rank: ${trainee.rank}`);
-      });
       const traineeFullNames = trainees.map((t) => t.fullName);
-      console.log("🔍 MassBriefCompleteFlyout - traineeFullNames:", traineeFullNames);
       setSelectedTrainees(new Set(traineeFullNames));
     }
   }, [isOpen, trainees]);
@@ -27557,13 +27361,6 @@ const MassBriefCompleteFlyout = ({
       }
     ) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 mb-6", children: trainees.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-yellow-400 text-center py-4", children: "No trainees found for this event." }) : trainees.map((trainee) => {
-      console.log("🔍 Rendering trainee:", trainee);
-      console.log("🔍 Trainee details:", {
-        fullName: trainee.fullName,
-        name: trainee.name,
-        rank: trainee.rank,
-        idNumber: trainee.idNumber
-      });
       const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || "Trainee not recorded";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28122,15 +27919,6 @@ const convertTimeToDecimal = (timeStr) => {
   return hours + minutes / 60;
 };
 const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode: activeUnitCode2 = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
-  console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
-  console.log("Event data:", {
-    eventCategory: event.eventCategory,
-    flightType: event.flightType,
-    instructor: event.instructor,
-    student: event.student,
-    pilot: event.pilot,
-    isSct: event.isSct
-  });
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -28172,36 +27960,20 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     }
   }, [aircraftNumberPrefix, aircraftNumberSettings]);
   const [crew, setCrew] = reactExports.useState(() => [makeInitialCrewMember(event)]);
-  console.log("Initial crew state:", crew);
   const getDualSoloFromIndividualLMP = (flightNumber2, traineeName) => {
-    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Called with flightNumber: ${flightNumber2}, traineeName: ${traineeName}`);
-    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] traineeLMPs available: ${!!traineeLMPs}, traineeLMPs size: ${traineeLMPs?.size || 0}`);
     if (!traineeLMPs || !traineeName) {
-      console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - missing traineeLMPs or traineeName`);
       return "Dual";
     }
     const individualLMP = traineeLMPs.get(traineeName);
-    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] individualLMP found for ${traineeName}:`, !!individualLMP, individualLMP ? individualLMP.length : 0, "items");
     if (!individualLMP) {
-      console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no Individual LMP found for ${traineeName}`);
       return "Dual";
     }
     const syllabusItem = individualLMP.find(
       (item) => item.id === flightNumber2 || item.code === flightNumber2
     );
-    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Searching for flightNumber: ${flightNumber2}, found item:`, !!syllabusItem);
-    if (syllabusItem) {
-      console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Found syllabus item:`, {
-        id: syllabusItem.id,
-        code: syllabusItem.code,
-        sortieType: syllabusItem.sortieType
-      });
-    }
     if (syllabusItem && syllabusItem.sortieType) {
-      console.log(`ud83cudfaf [Dual/Solo] Found ${syllabusItem.sortieType} for ${traineeName} - ${flightNumber2}`);
       return syllabusItem.sortieType;
     }
-    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no sortieType found for ${flightNumber2}`);
     return "Dual";
   };
   const applySoloLogic = () => {
@@ -28220,7 +27992,6 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           }
           return newCrew;
         });
-        console.log(`✈️ [Solo Logic] Applied: ${traineeName} as PIC, flightType set to Solo`);
       }
     }
   };
@@ -28981,7 +28752,6 @@ ${swapNote}` : swapNote
             }
             return newCrew;
           });
-          console.log(`🎯 [Auto Dual/Solo] Set to ${individualLMPFlightType} from Individual LMP for ${traineeName}`);
         }
       }
     }
@@ -29020,11 +28790,9 @@ ${swapNote}` : swapNote
   }, [flightNumber, eventCategory, syllabusDetails, selectedIndividualLmp]);
   reactExports.useEffect(() => {
     if (isAddingTile || isEditingDefault && (!event.id || event.id.startsWith("2d1b6a22"))) {
-      console.log(`📝 [Flight Number Change] isAddingTile: ${isAddingTile}, isEditingDefault: ${isEditingDefault}, event.id: ${event.id}, flightNumber: ${flightNumber}`);
       if (flightNumber && crew[0] && traineeLMPs) {
         const traineeName = crew[0]?.student || crew[0]?.pilot;
         if (traineeName) {
-          console.log(`📝 [Flight Number Change] Using selected trainee: ${traineeName}`);
           const individualLMPFlightType = getDualSoloFromIndividualLMP(flightNumber, traineeName);
           if (crew[0].flightType !== individualLMPFlightType) {
             setCrew((prevCrew) => {
@@ -29034,20 +28802,15 @@ ${swapNote}` : swapNote
               }
               return newCrew;
             });
-            console.log(`🎯 [Auto Dual/Solo] Set to ${individualLMPFlightType} from Individual LMP for selected trainee ${traineeName}`);
           }
         } else {
-          console.log(`📝 [Flight Number Change] No pilot selected - searching for default from any trainee with LMP ${flightNumber}`);
           let defaultFlightType = "Dual";
-          let foundTrainee = "";
           for (const [traineeName2, individualLMP] of traineeLMPs.entries()) {
             const syllabusItem = individualLMP.find(
               (item) => item.id === flightNumber || item.code === flightNumber
             );
             if (syllabusItem && syllabusItem.sortieType) {
               defaultFlightType = syllabusItem.sortieType;
-              foundTrainee = traineeName2;
-              console.log(`📝 [Flight Number Change] Found default ${defaultFlightType} from ${foundTrainee}'s Individual LMP`);
               break;
             }
           }
@@ -29059,7 +28822,6 @@ ${swapNote}` : swapNote
               }
               return newCrew;
             });
-            console.log(`🎯 [Auto Dual/Solo] Set to ${defaultFlightType} as default from ${foundTrainee || "system"} for LMP ${flightNumber}`);
           }
         }
       }
@@ -29079,7 +28841,6 @@ ${swapNote}` : swapNote
               }
               return newCrew;
             });
-            console.log(`🎯 [Trainee Change] Updated to ${individualLMPFlightType} from Individual LMP for selected trainee ${traineeName}`);
           }
         }
       }
@@ -29415,7 +29176,6 @@ ${swapNote}` : swapNote
         }
       }
     }
-    console.log("Flight number changed to:", newFlightNumber);
     const isNewContinuationFormation = isContinuationFormationFlight(newFlightNumber);
     if (isNewContinuationFormation && !formationType && formationTypes[0]) {
       setFormationType(formationTypes[0]);
@@ -29481,7 +29241,6 @@ ${swapNote}` : swapNote
     }
   };
   const handleVisualAdjust = () => {
-    console.log("Visual Adjust clicked");
     if (onVisualAdjustStart) {
       onVisualAdjustStart(event);
     }
@@ -29531,7 +29290,6 @@ ${swapNote}` : swapNote
         const selectedDeployment = getCurrentDeployments().find((d) => d.id === selectedDeploymentId);
         if (selectedDeployment) {
           resourceId = selectedDeployment.resourceId;
-          console.log(`Assigning event to deployment: ${selectedDeployment.id} (${resourceId})`);
         }
       }
       const isContinuationFormation = isContinuationFormationFlight(flightNumber);
@@ -29588,31 +29346,9 @@ ${swapNote}` : swapNote
         // Save event category for LMP Currency handling
         eventCategory
       };
-      if (eventCategory === "sct") {
-        console.log("💾 Saving continuation event:", {
-          id: savedEvent.id,
-          flightType: savedEvent.flightType,
-          pilot: savedEvent.pilot,
-          student: savedEvent.student,
-          instructor: savedEvent.instructor,
-          eventCategory: savedEvent.eventCategory,
-          crewData: c,
-          allCrew: crew
-        });
-      }
       return savedEvent;
     });
-    console.log("Deployment Check:", {
-      eventType,
-      locationType,
-      isDeploy,
-      deploymentStartDate,
-      deploymentStartTime,
-      deploymentEndDate,
-      deploymentEndTime
-    });
     if (eventType === "flight" && locationType === "Land Away" && isDeploy && deploymentStartDate && deploymentStartTime && deploymentEndDate && deploymentEndTime) {
-      console.log("Creating deployment tile...");
       const deployStartHour = parseTimeStringToHours(deploymentStartTime);
       const deployEndHour = parseTimeStringToHours(deploymentEndTime);
       const startDate = new Date(deploymentStartDate);
@@ -29622,7 +29358,6 @@ ${swapNote}` : swapNote
       if (deployDuration <= 0) {
         deployDuration = 1;
       }
-      console.log(`Creating ${deploymentAircraftCount} deployment tiles...`);
       for (let i = 0; i < deploymentAircraftCount; i++) {
         const deploymentTile = {
           id: `deployment-${event.id}-${i}-${Date.now()}`,
@@ -29649,11 +29384,9 @@ ${swapNote}` : swapNote
           deploymentEndTime,
           deploymentAircraftCount
         };
-        console.log(`Deployment tile ${i + 1} created:`, deploymentTile);
         eventsToSave.push(deploymentTile);
       }
     }
-    console.log("Events to save:", eventsToSave);
     onSave(eventsToSave);
   };
   const timeOptions = reactExports.useMemo(() => {
@@ -29726,7 +29459,6 @@ ${swapNote}` : swapNote
     }
   };
   const handleMassBriefComplete = (confirmedTrainees) => {
-    console.log("Mass Brief completed for trainees:", confirmedTrainees.map((t) => t.fullName));
     const currentDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const instructor = event.instructor || "System";
     if (onSavePT051Assessment) {
@@ -29755,10 +29487,8 @@ ${swapNote}` : swapNote
             result: 0
           }
         };
-        console.log("Saving PT051 assessment for:", trainee.fullName, assessment);
         onSavePT051Assessment(assessment);
       });
-      console.log("PT051 assessments saved successfully");
     } else {
       console.warn("onSavePT051Assessment callback is not defined!");
     }
@@ -31065,7 +30795,6 @@ ${swapNote}` : swapNote
             disabled: alertRecipients.length === 0,
             onClick: async () => {
               const finalDesc = alertDescription && alertUserNote ? alertDescription + " | " + alertUserNote : alertDescription || alertUserNote || "";
-              console.log("🔔 [Alert] Send button clicked - eventId:", event.id, "recipients:", alertRecipients);
               logAudit("Alert:" + event.id, "Add", `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(", ")} | Description: ${finalDesc}`);
               const sent = await onSendAlert(event.id, alertRecipients, finalDesc);
               if (sent) {
@@ -31246,29 +30975,15 @@ ${swapNote}` : swapNote
         onClose: () => setShowMassBriefComplete(false),
         event,
         trainees: (() => {
-          console.log("🔍 Processing trainees for MassBriefCompleteFlyout");
-          console.log("🔍 Event:", event);
-          console.log("🔍 Event.attendees:", event.attendees);
-          console.log("🔍 Event.group:", event.group);
-          console.log("🔍 Event.selectedTrainees:", event.selectedTrainees);
-          console.log("🔍 Event.trainees:", event.trainees);
-          console.log("🔍 Event keys:", Object.keys(event));
-          console.log("🔍 Available trainees (strings):", trainees);
-          console.log("🔍 Available traineesData (objects):", traineesData);
           if (event.attendees) {
-            console.log("🔍 Processing attendees array");
             const processedAttendees = event.attendees.map((attendeeName, index) => {
-              console.log(`🔍 Processing attendee ${index}: "${attendeeName}"`);
               const trainee = traineesData.find((t) => {
                 const fullName = `${t.rank} ${t.name}`;
-                console.log(`🔍 Comparing "${fullName}" with "${attendeeName.split(" – ")[0]}"`);
                 return fullName === attendeeName.split(" – ")[0];
               });
               if (trainee) {
-                console.log("🔍 Found matching trainee:", trainee);
                 return trainee;
               } else {
-                console.log("🔍 Creating fallback trainee object");
                 const nameParts = attendeeName.split(" – ");
                 const fullName = nameParts[0];
                 const course = nameParts[1] || "";
@@ -31297,33 +31012,25 @@ ${swapNote}` : swapNote
                   seatConfig: "Pilot",
                   id: fullName
                 };
-                console.log("🔍 Fallback trainee:", fallbackTrainee);
                 return fallbackTrainee;
               }
             });
-            console.log("🔍 Final processed attendees:", processedAttendees);
             return processedAttendees;
           }
           if (event.group && event.group.includes("Trainees Selected")) {
-            console.log("🔍 Mass event detected, filtering trainees by course");
             let eventCourse = "";
             if (event.course) {
               eventCourse = event.course;
-              console.log("🔍 Event course:", eventCourse);
             } else if (trainees.length > 0 && typeof trainees[0] === "string") {
               const firstTrainee = trainees[0];
               const parts = firstTrainee.split(" – ");
               if (parts.length > 1) {
                 eventCourse = parts[1];
-                console.log("🔍 Extracted course from trainees:", eventCourse);
               }
             }
             const filteredTrainees = eventCourse ? traineesData.filter((t) => t.course === eventCourse) : traineesData;
-            console.log("🔍 Filtered trainees count:", filteredTrainees.length);
-            console.log("🔍 Filtered trainees:", filteredTrainees);
             return filteredTrainees;
           }
-          console.log("🔍 No attendees or mass event, returning empty array");
           return [];
         })(),
         onConfirm: handleMassBriefComplete
@@ -34487,13 +34194,6 @@ Do you still want to include them in this academic session?`,
     );
   };
   const handleSave = async () => {
-    console.log("🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====");
-    console.log("🎓 [AcademicsTab.handleSave] selectedCourse:", selectedCourse);
-    console.log("🎓 [AcademicsTab.handleSave] selectedTrainees:", selectedTrainees, "(count:", selectedTrainees.length, ")");
-    console.log("🎓 [AcademicsTab.handleSave] tiles:", tiles, "(count:", tiles.length, ")");
-    console.log("🎓 [AcademicsTab.handleSave] selectedDate:", selectedDate);
-    console.log("🎓 [AcademicsTab.handleSave] workStart:", workStart, "workEnd:", workEnd);
-    console.log("🎓 [AcademicsTab.handleSave] resourceId:", resourceId);
     if (!selectedCourse) {
       console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse");
       await showDarkAlert("Please select a course.", "Academic Event", "warning");
@@ -34525,20 +34225,7 @@ Do you still want to include them in this academic session?`,
       instructor,
       isAcademic: true
     };
-    console.log("🎓 [AcademicsTab.handleSave] Calling onSave with data:", {
-      course: saveData.course,
-      date: saveData.date,
-      workStart: saveData.workStart,
-      workEnd: saveData.workEnd,
-      resourceId: saveData.resourceId,
-      selectedTrainees: saveData.selectedTrainees,
-      lessonsCount: saveData.lessons.length,
-      tilesCount: saveData.timeline.length,
-      isAcademic: saveData.isAcademic
-    });
-    console.log("🎓 [AcademicsTab.handleSave] onSave function exists?", typeof onSave);
     onSave(saveData);
-    console.log("🎓 [AcademicsTab.handleSave] onSave() called successfully");
   };
   const hourMarkers = reactExports.useMemo(() => {
     const marks = [];
@@ -35423,23 +35110,9 @@ const AddGroundEventFlyout = ({
                     onUpdatePersistedAcademicLmp,
                     instructors,
                     onSave: (data) => {
-                      console.log("🎓 [AddGroundEventFlyout] AcademicsTab onSave triggered");
-                      console.log("🎓 [AddGroundEventFlyout] onSaveAcademic prop exists?", typeof onSaveAcademic);
-                      console.log("🎓 [AddGroundEventFlyout] data passed up:", {
-                        course: data.course,
-                        date: data.date,
-                        workStart: data.workStart,
-                        workEnd: data.workEnd,
-                        resourceId: data.resourceId,
-                        selectedTrainees: data.selectedTrainees,
-                        tilesCount: data.timeline?.length,
-                        lessonsCount: data.lessons?.length
-                      });
                       if (onSaveAcademic) {
-                        console.log("🎓 [AddGroundEventFlyout] → calling onSaveAcademic");
                         onSaveAcademic(data);
                       } else {
-                        console.warn("🎓 [AddGroundEventFlyout] ⚠️ onSaveAcademic not provided, falling back to onSave");
                         onSave(data);
                       }
                     },
@@ -49446,7 +49119,6 @@ const ACHistoryAircraftAvailability = ({
     setTodaysAverageLoading(true);
     try {
       const today = getLocalDateString2();
-      console.log(`[AV-REFRESH] Refreshing average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
       const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49620,7 +49292,6 @@ const ACHistoryAircraftAvailability = ({
       setTodaysAverageLoading(true);
       try {
         const today = getLocalDateString2();
-        console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
         const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -49642,7 +49313,6 @@ const ACHistoryAircraftAvailability = ({
         }
         const localAvg = computeAverageFromLocalStorage(today);
         if (localAvg !== null) {
-          console.log(`[AV-FETCH] Using localStorage fallback: avg=${localAvg.toFixed(2)}`);
           setTodaysAverageWithMetadata({
             dailyAverage: localAvg,
             date: today,
@@ -50202,7 +49872,6 @@ const RecentCancellationsTable = ({
     }
     const date = new Date(cancelledAt);
     if (isNaN(date.getTime())) {
-      console.log("DATE FIX: Invalid date from:", cancelledAt);
       return "Invalid Date";
     }
     return date.toLocaleDateString("en-US", {
@@ -53414,20 +53083,6 @@ const InstructorListView = ({
   defaultUnitCode = "",
   defaultLocationName = ""
 }) => {
-  const prevPropsRef = React.useRef({});
-  const renderCountRef = React.useRef(0);
-  renderCountRef.current++;
-  const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, scheduleHistoryEvents, syllabusDetails, insertEventTypes, aircraftConfigurations, onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, currentUserRole, resourceDisplayNames, personnelDisplaySettings, instructorLabel, operationalModel, crewPositionTerminology, sctTerminology, defaultUnitCode };
-  Object.keys(currentProps).forEach((key) => {
-    if (prevPropsRef.current[key] !== currentProps[key]) {
-      changedProps.push(key);
-    }
-  });
-  prevPropsRef.current = currentProps;
-  if (changedProps.length > 0) {
-    console.log(`🏫 [INSTRUCTORLISTVIEW RENDER #${renderCountRef.current}] Changed props:`, changedProps.join(", "));
-  }
   const [hoveredInstructor, setHoveredInstructor] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedInstructor, setSelectedInstructor] = reactExports.useState(null);
@@ -53465,7 +53120,6 @@ const InstructorListView = ({
         const preferencesChanged = JSON.stringify(selectedInstructor.preferences || {}) !== JSON.stringify(updatedInstructor.preferences || {});
         const otherChanged = updatedInstructor.name !== selectedInstructor.name || updatedInstructor.isActive !== selectedInstructor.isActive;
         if (unavailChanged || preferencesChanged || otherChanged) {
-          console.log("[InstructorListView] Syncing selectedInstructor from updated instructorsData - unavailChanged:", unavailChanged);
           setSelectedInstructor({
             ...updatedInstructor,
             currencyStatus: selectedInstructor.currencyStatus ?? updatedInstructor.currencyStatus
@@ -53696,8 +53350,6 @@ const InstructorListView = ({
     setShowAddChoice(true);
   };
   const handleAddIndividual = () => {
-    console.log("🔍 [DATA TRACKING] Add Staff button clicked");
-    console.log("🔍 [DATA TRACKING] Current instructors count:", instructorsData.length);
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
@@ -53707,7 +53359,6 @@ const InstructorListView = ({
       getDefaultNewStaffRole(activeOperationalModel, crewPositionTerminology),
       activeOperationalModel === "flight_school"
     );
-    console.log("🔍 [DATA TRACKING] New instructor template created:", newTemplate);
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
     setIsClosing(false);
@@ -55823,13 +55474,11 @@ const SyllabusView = ({
       details
     };
     try {
-      console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry);
       const existing = JSON.parse(window.localStorage.getItem("dfp_setup_test_lmp_diag") || "[]");
       const next = [...Array.isArray(existing) ? existing : [], entry].slice(-500);
       window.localStorage.setItem("dfp_setup_test_lmp_diag", JSON.stringify(next));
       window.neoSetupTestLmpDiag = next;
-    } catch (error) {
-      console.log(`[SETUP-TEST-LMP:VIEW] ${stage}`, entry, error);
+    } catch {
     }
   };
   const getPackageSourceKey = (item) => {
@@ -56287,7 +55936,6 @@ const SyllabusView = ({
       const itemsToDelete = unitScopedSyllabusDetails.filter(
         (item) => getItemLmpDetailsTab(item) === activeTab && (item.courses || []).includes(selectedCourseType)
       );
-      console.log(`🗑️ Deleting ${itemsToDelete.length} items for ${activeCollectionNoun}: ${selectedCourseType}`, itemsToDelete.map((i) => i.id));
       if (itemsToDelete.length === 0) {
         console.warn(`⚠️ No items found for ${activeCollectionNoun} ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
       } else {
@@ -57781,7 +57429,6 @@ const CurrencyStatusPage = ({
   const personType = personTypeProp || ("course" in person ? "trainee" : "instructor");
   const dbId = person.id || person.idNumber;
   const currencyEndpoint = personType === "trainee" ? `/api/trainees/${dbId}/currencies` : `/api/personnel/${dbId}/currencies`;
-  console.log(`[CurrencyStatusPage] personType=${personType}, dbId=${dbId}, endpoint=${currencyEndpoint}`);
   reactExports.useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
@@ -57794,7 +57441,6 @@ const CurrencyStatusPage = ({
       const loaded = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
       setCurrencyStatus(loaded);
       setIsLoading(false);
-      console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for ${personType} ${dbId}`);
     }).catch((err) => {
       if (cancelled) return;
       console.error("❌ CurrencyStatusPage load error:", err);
@@ -57882,7 +57528,6 @@ const CurrencyStatusPage = ({
         const freshData = await freshRes.json();
         if (Array.isArray(freshData.currencyStatus)) {
           latestStatus = freshData.currencyStatus;
-          console.log(`[CurrencyStatusPage] Fetched fresh before save: ${latestStatus.length} records`);
         }
       }
     } catch (freshErr) {
@@ -57961,7 +57606,6 @@ const CurrencyStatusPage = ({
         setSaveState("error");
         setSaveMessage(`Save failed: ${data.error || response.statusText}`);
       } else {
-        console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB via ${currencyEndpoint}`);
         setSaveState("saved");
         setSaveMessage(`✅ Saved ${newStatus.length} currency entries`);
         setTimeout(() => setSaveState("idle"), 3e3);
@@ -63351,7 +62995,6 @@ const UserListSection = ({
   const handleEditProfile = async (user) => {
     const unlocked = await verifyEditPassword(user.name);
     if (!unlocked) return;
-    console.log("Navigate to Profile:", user);
     if (onNavigateToProfile) {
       onNavigateToProfile(user);
       return;
@@ -63616,7 +63259,6 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
   }, []);
   const [debugInfo, setDebugInfo] = reactExports.useState([]);
   const addDebug = (msg) => {
-    console.log("[StaffDB Debug]", msg);
     setDebugInfo((prev) => [...prev, `${(/* @__PURE__ */ new Date()).toISOString().split("T")[1].split(".")[0]} ${msg}`]);
   };
   const fetchDatabaseStaff = async () => {
@@ -63679,7 +63321,6 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
       if (onDataChanged) {
         onDataChanged();
       }
-      console.log(`✅ Deleted staff: ${staffName}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       console.error("❌ Error deleting staff:", err);
@@ -63968,7 +63609,6 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
   }, []);
   const [debugInfo, setDebugInfo] = reactExports.useState([]);
   const addDebug = (msg) => {
-    console.log("[TraineeDB Debug]", msg);
     setDebugInfo((prev) => [...prev, `${(/* @__PURE__ */ new Date()).toISOString().split("T")[1].split(".")[0]} ${msg}`]);
   };
   const fetchDatabaseTrainees = async () => {
@@ -64030,7 +63670,6 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
       if (onDataChanged) {
         onDataChanged();
       }
-      console.log(`✅ Deleted trainee: ${traineeName}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       console.error("❌ Error deleting trainee:", err);
@@ -76755,7 +76394,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       const instrRow = json.entries.find((e) => e.personRole === "instructor");
       const row = traineeRow || instrRow;
       if (!row) return;
-      console.log("[PostFlight] Restoring saved data from FlightLogEntry:", row);
       const captSnap = traineeRow?.captainLogSnapshot || instrRow?.captainLogSnapshot;
       const crewSnap = traineeRow?.crewLogSnapshot || instrRow?.crewLogSnapshot;
       applySavedFormState({
@@ -76783,7 +76421,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         },
         captainLog: captSnap,
         crewLog: crewSnap
-      }, "FlightLogEntry");
+      });
     }).catch((err) => console.warn("[PostFlight] Could not load saved FlightLogEntry:", err));
   }, [event?.id, aircraftNumberSettings]);
   reactExports.useEffect(() => {
@@ -76801,7 +76439,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
           result: record.dcoResult
         };
         setIsDirty(false);
-        console.log("[PostFlight] Restored DCO result:", record.dcoResult);
       }
     }).catch((err) => console.warn("[PostFlight] Could not load EventCompletion:", err));
   }, [event?.id]);
@@ -76900,7 +76537,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     };
     setIsDirty(false);
     setSaveStatus("Saved");
-    console.log(`[PostFlight] Restored saved form snapshot from ${source}:`, saved2);
   }
   const handleCaptLogChange = (key, value) => {
     setCaptLogTouched((prev) => new Set(prev).add(key));
@@ -81007,8 +80643,6 @@ const TrainingRecordsExportView = ({
   };
   const allEvents = reactExports.useMemo(() => {
     const events2 = Object.values(publishedSchedules).flat();
-    console.log("📊 Export View - All events from published schedules:", events2.length);
-    console.log("📊 Export View - Published schedule dates:", Object.keys(publishedSchedules));
     return events2;
   }, [publishedSchedules]);
   const allReportEvents = reactExports.useMemo(() => {
@@ -81048,8 +80682,6 @@ const TrainingRecordsExportView = ({
   const exportSourceEvents = allReportEvents.length > 0 ? allReportEvents : allEvents;
   const allTrainees = reactExports.useMemo(() => {
     const combined = [...traineesData, ...archivedTraineesData];
-    console.log("📊 Export View - All trainees:", combined.length);
-    console.log("📊 Export View - ADF303 trainees:", combined.filter((t) => t.course === "ADF303").length);
     return combined;
   }, [traineesData, archivedTraineesData]);
   const allInstructors = reactExports.useMemo(() => [...instructorsData, ...archivedInstructorsData], [instructorsData, archivedInstructorsData]);
@@ -81142,54 +80774,34 @@ const TrainingRecordsExportView = ({
   }, [allInstructors, staffSearch]);
   const filteredEvents = reactExports.useMemo(() => {
     let filtered = [...exportSourceEvents];
-    console.log("🔍 FILTER DEBUG - Starting with events:", filtered.length);
-    console.log("🔍 FILTER DEBUG - timePeriod:", timePeriod);
-    console.log("🔍 FILTER DEBUG - singleDate:", singleDate);
-    console.log("🔍 FILTER DEBUG - startDate:", startDate);
-    console.log("🔍 FILTER DEBUG - endDate:", endDate);
     if (timePeriod === "single-date" && singleDate) {
       filtered = filtered.filter((e) => e.date === singleDate);
-      console.log("🔍 FILTER DEBUG - After single-date filter:", filtered.length);
     } else if (timePeriod === "date-range" && startDate && endDate) {
       filtered = filtered.filter((e) => e.date >= startDate && e.date <= endDate);
-      console.log("🔍 FILTER DEBUG - After date-range filter:", filtered.length);
     }
     if (selectedEventTypes.length > 0) {
-      console.log("🔍 FILTER DEBUG - selectedEventTypes:", selectedEventTypes);
-      console.log("🔍 FILTER DEBUG - Sample event types from data (first 5):", filtered.slice(0, 5).map((e) => e.type));
-      console.log("🔍 FILTER DEBUG - Unique event types in data:", [...new Set(filtered.map((e) => e.type))]);
       const selectedTypeSet = new Set(selectedEventTypes);
       filtered = filtered.filter((e) => {
         const syllabusDetail = findSyllabusDetailForEventNumber(e.flightNumber);
         const exportType = normaliseExportEventType(e, syllabusDetail);
         return Boolean(exportType && selectedTypeSet.has(exportType));
       });
-      console.log("🔍 FILTER DEBUG - After event type filter:", filtered.length);
     }
-    console.log("🔍 FILTER DEBUG - statusFilter:", statusFilter);
-    console.log("🔍 FILTER DEBUG - Before status filter:", filtered.length);
     if (statusFilter !== "all") {
       filtered = filtered.filter((e) => getEventStatusBucket(e) === statusFilter);
     }
-    console.log("🔍 FILTER DEBUG - After all status filters:", filtered.length);
-    console.log("🔍 FILTER DEBUG - remedialFilter:", remedialFilter);
     if (remedialFilter === "yes") {
       filtered = filtered.filter((e) => isExportEventRemedial(e));
-      console.log("🔍 FILTER DEBUG - After remedial=yes filter:", filtered.length);
     } else if (remedialFilter === "no") {
       filtered = filtered.filter((e) => !isExportEventRemedial(e));
-      console.log("🔍 FILTER DEBUG - After remedial=no filter:", filtered.length);
     }
     if (useSpecificTraineeFilter && selectedTrainees.length > 0) {
-      console.log("📊 Trainee filter - Selected trainees:", selectedTrainees);
-      console.log("📊 Trainee filter - Events before filter:", filtered.length);
       filtered = filtered.filter((e) => {
         const studentName = getEventPersonName(e);
         if (!studentName) return false;
         const matches = selectedTrainees.some((selectedTrainee) => eventPersonMatchesSelection(studentName, selectedTrainee));
         return matches;
       });
-      console.log("📊 Trainee filter - Events after filter:", filtered.length);
     }
     if (useSpecificStaffFilter && selectedStaff.length > 0) {
       filtered = filtered.filter(
@@ -81200,11 +80812,6 @@ const TrainingRecordsExportView = ({
       const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
       const courseTrainees = allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course)));
       const traineeNames = courseTrainees.map((t) => t.name);
-      console.log("📊 Course filter - Selected courses:", selectedCourses);
-      console.log("📊 Course filter - Trainees in selected courses:", courseTrainees.length);
-      console.log("📊 Course filter - Trainee names (first 5):", traineeNames.slice(0, 5));
-      console.log("📊 Course filter - Events before filter:", filtered.length);
-      console.log("📊 Course filter - Sample event student names (first 5):", filtered.slice(0, 5).map((e) => e.student || e.pilot));
       filtered = filtered.filter((e) => {
         const studentName = getEventPersonName(e);
         if (!studentName) return false;
@@ -81213,12 +80820,8 @@ const TrainingRecordsExportView = ({
           if (studentName.startsWith(traineeName + " –") || studentName.startsWith(traineeName + " -")) return true;
           return false;
         });
-        if (!matches) {
-          console.log("📊 No match for student:", studentName);
-        }
         return matches;
       });
-      console.log("📊 Course filter - Events after filter:", filtered.length);
     }
     return filtered;
   }, [
@@ -81272,10 +80875,6 @@ const TrainingRecordsExportView = ({
     return scheduledTraineeNames;
   }, [allEvents, selectedCourses, timePeriod, singleDate, startDate, endDate, allTrainees]);
   const filteredData = reactExports.useMemo(() => {
-    console.log("📊 filteredData calculation - recordType:", recordType);
-    console.log("📊 filteredData calculation - filteredEvents:", filteredEvents.length);
-    console.log("📊 filteredData calculation - allTrainees:", allTrainees.length);
-    console.log("📊 filteredData calculation - allInstructors:", allInstructors.length);
     const selectedCourseSet = new Set(selectedCourses.map(normaliseCourseFilterValue));
     const exportTrainees = selectedCourses.length > 0 ? allTrainees.filter((t) => selectedCourseSet.has(normaliseCourseFilterValue(t.course))) : allTrainees;
     const personFilteredTrainees = useSpecificTraineeFilter && selectedTrainees.length > 0 ? exportTrainees.filter((trainee) => selectedTrainees.some((selectedTrainee) => eventPersonMatchesSelection(trainee.name, selectedTrainee))) : exportTrainees;
@@ -81284,13 +80883,10 @@ const TrainingRecordsExportView = ({
       return { events: filteredEvents, trainees: [], staff: [] };
     }
     if (recordType === "trainees" && canExportTraineeRecords) {
-      console.log("📊 Returning filtered trainees:", personFilteredTrainees.length);
       return { events: filteredEvents, trainees: personFilteredTrainees, staff: [] };
     } else if (recordType === "staff") {
-      console.log("📊 Returning filtered staff:", exportStaff.length);
       return { events: filteredEvents, trainees: [], staff: exportStaff };
     } else {
-      console.log("📊 Returning all permitted people and events");
       return {
         events: filteredEvents,
         trainees: canExportTraineeRecords ? personFilteredTrainees : [],
@@ -81328,43 +80924,24 @@ const TrainingRecordsExportView = ({
     return "Event records";
   };
   const handleExport = async () => {
-    console.log("🚀 Starting export...", {
-      recordType,
-      timePeriod,
-      outputFormat,
-      recordCount,
-      data: filteredData
-    });
     const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const fileExtension = outputFormat === "excel" ? "xlsx" : outputFormat;
     const filename = `training_records_${timestamp}.${fileExtension}`;
     try {
-      console.log("📄 Export format:", outputFormat);
       setIsExporting(true);
       setExportProgress(0);
       setExportStatus("Preparing export...");
       if (outputFormat === "csv") {
-        console.log("📊 Exporting CSV...");
-        console.log("📊 Record count:", recordCount);
         setExportStatus("Generating CSV file...");
         exportToCSV(filename);
-        console.log("✅ CSV export completed");
       } else if (outputFormat === "excel") {
-        console.log("📊 Exporting Excel...");
-        console.log("📊 Record count:", recordCount);
         setExportStatus("Generating Excel file...");
         exportToExcel(filename);
-        console.log("✅ Excel export completed");
       } else if (outputFormat === "pdf") {
-        console.log("📄 Exporting PDF...");
-        console.log("📄 Record count:", recordCount);
-        console.log("📄 Events to export:", filteredData.events.length);
         setExportStatus(`Generating PDF (${filteredData.events.length} records)...`);
         await exportToPDF(filename);
-        console.log("✅ PDF export completed");
       }
       setIsExporting(false);
-      console.log("✅ Showing success message");
       setShowExportSuccess(true);
       setTimeout(() => setShowExportSuccess(false), 5e3);
     } catch (error) {
@@ -81453,35 +81030,26 @@ const TrainingRecordsExportView = ({
     XLSX.writeFile(wb, filename);
   };
   const exportToPDF = async (filename) => {
-    console.log("📄 exportToPDF called with filename:", filename);
     const eventsToExport = filteredData.events;
-    console.log("📄 Events to export:", eventsToExport.length);
     if (eventsToExport.length === 0) {
-      console.log("❌ No events to export");
       throw new Error("No events to export");
     }
-    console.log("📄 Creating PDF document...");
     const pdf = new E("p", "mm", "a4");
     let isFirstPage = true;
     try {
-      console.log("📄 Starting to process events...");
       for (let i = 0; i < eventsToExport.length; i++) {
         const event = eventsToExport[i];
         const progress = Math.round((i + 1) / eventsToExport.length * 100);
         setExportProgress(progress);
         setExportStatus(`Processing record ${i + 1} of ${eventsToExport.length}...`);
-        console.log(`📄 Processing event ${i + 1}/${eventsToExport.length}:`, event.flightNumber);
         if (!isFirstPage) {
           pdf.addPage();
         }
         renderPT051ToPDF(pdf, event);
-        console.log(`✅ ${exportReportName} added to PDF`);
         isFirstPage = false;
       }
       setExportStatus("Finalizing PDF...");
-      console.log("📄 Saving PDF:", filename);
       pdf.save(filename);
-      console.log("✅ PDF saved successfully!");
     } catch (error) {
       console.error("❌ Error during PDF generation:", error);
       throw error;
@@ -82856,8 +82424,6 @@ const formatTime = (time) => {
 const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
   const { event, errors } = problemTile;
   const instructorSwapRemedies = remedies.filter((r) => r.type === "instructor");
-  console.log("🔧 NeoRemedyFlyout: Received remedies:", remedies.length);
-  console.log("🔧 NeoRemedyFlyout: Remedies:", remedies);
   const timeShiftRemedies = remedies.filter((r) => r.type === "timeshift");
   const traineeSwapRemedies = remedies.filter((r) => r.type === "trainee");
   const groupedTimeShifts = reactExports.useMemo(() => {
@@ -82928,7 +82494,6 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT
             "button",
             {
               onClick: () => {
-                console.log("🔘 NeoRemedyFlyout: Instructor button clicked", remedy);
                 onApplyRemedy(remedy);
               },
               className: "w-full text-left p-3 bg-gray-700/50 rounded-md hover:bg-sky-700 transition-colors",
@@ -82970,7 +82535,6 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT
               "button",
               {
                 onClick: () => {
-                  console.log("🔘 NeoRemedyFlyout: Time shift instructor button clicked", remedy);
                   onApplyRemedy(remedy);
                 },
                 className: "w-full text-left p-2 bg-gray-700/50 rounded-md hover:bg-sky-700 transition-colors",
@@ -84107,7 +83671,6 @@ const NextDayTraineeScheduleView = ({
       const traineeA = traineeMap.get(a);
       const traineeB = traineeMap.get(b);
       if (!traineeA || !traineeB) {
-        console.log("Missing trainee data:", a, b);
         return 0;
       }
       if (traineeA.course !== traineeB.course) {
@@ -87475,8 +87038,6 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
     masters: enrichedMasters
   };
 };
-console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
-console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 const stripGeneratedTrainingReportFollowUpLines = (value) => String(value || "").split(/\r?\n/).flatMap((line) => {
   const trimmedLine = line.trim();
   return /^(?:\d+(?:\.\d+)?\s+hrs?\s+added to\s+.+|Re-fly requested:\s+.+)$/i.test(trimmedLine) ? [] : [line];
@@ -87553,7 +87114,6 @@ const downloadNeoBuildDiagnosticReport = (source = "manual") => {
     console.error("[NEO-BUILD-DIAG] Browser download API is unavailable.");
     return null;
   }
-  console.log("[NEO-BUILD-DIAG] Download triggered:", diagnosticExport.filename, { source });
   return diagnosticExport.filename;
 };
 const downloadNeoTaskProvenanceReport = (source = "manual") => {
@@ -87573,7 +87133,6 @@ const downloadNeoTaskProvenanceReport = (source = "manual") => {
     console.error("[NEO-TASK-PROVENANCE] Browser download API is unavailable.");
     return null;
   }
-  console.log("[NEO-TASK-PROVENANCE] Download triggered:", filename, { source });
   return filename;
 };
 const ASSIST_PRIORITY_STEP = 5;
@@ -104859,16 +104418,15 @@ const App = () => {
     console.error = function(...args) {
       const errorMsg = args.join(" ");
       if (errorMsg.includes("split") || errorMsg.includes("undefined")) {
-        console.log("🔴 SPLIT ERROR DETECTED:", errorMsg);
         console.trace("Stack trace:");
       }
       originalError.apply(console, args);
     };
     window.addEventListener("error", (event) => {
       if (event.message.includes("split") || event.message.includes("undefined")) {
-        console.log("🔴 GLOBAL ERROR CAUGHT:", event.message);
-        console.log("🔴 Error at:", event.filename, "Line:", event.lineno, "Column:", event.colno);
-        console.log("🔴 Stack:", event.error?.stack);
+        console.error("🔴 GLOBAL ERROR CAUGHT:", event.message);
+        console.error("🔴 Error at:", event.filename, "Line:", event.lineno, "Column:", event.colno);
+        console.error("🔴 Stack:", event.error?.stack);
       }
     });
     return () => {
@@ -107738,10 +107296,6 @@ const App = () => {
       if (!replace && prev[baselineKey] && events2.length === 0) return prev;
       return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
     });
-    console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool} - ${snapshotUnit || "unit not set"}), ${events2.length} events`);
-    if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
-      console.log(`[Snapshot] Ignored ${Object.keys(snap2.pt051Assessments).length} training report snapshot records for ${targetDate}; TraineePerformance is authoritative`);
-    }
     if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
       setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
     }
@@ -109177,11 +108731,9 @@ const App = () => {
     return null;
   };
   reactExports.useEffect(() => {
-    console.log("[CONTINUATION] useEffect triggered - sessionUser?.userId:", sessionUser?.userId);
     if (!sessionUser?.userId) return;
     const loadSctRequests = async () => {
       try {
-        console.log("[CONTINUATION] Loading continuation requests from DB for userId:", sessionUser.userId);
         const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -109201,7 +108753,6 @@ const App = () => {
           }
           return void 0;
         };
-        console.log("[CONTINUATION] Loaded", data.length, "continuation requests from DB");
         setSctFlights(data.filter((r) => r.requestType === "flight").map((r) => ({
           id: r.id,
           name: r.name,

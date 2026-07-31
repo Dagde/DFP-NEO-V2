@@ -92,7 +92,6 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   const addDebug = (msg: string) => {
-    console.log('[TraineeDB Debug]', msg);
     setDebugInfo(prev => [...prev, `${new Date().toISOString().split('T')[1].split('.')[0]} ${msg}`]);
   };
 
@@ -173,7 +172,6 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
         onDataChanged();
       }
       
-      console.log(`✅ Deleted trainee: ${traineeName}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('❌ Error deleting trainee:', err);

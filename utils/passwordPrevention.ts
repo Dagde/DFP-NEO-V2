@@ -31,8 +31,6 @@ export class PasswordPrevention {
         
         // Prevent context menu on password-like fields
         document.addEventListener('contextmenu', this.handleContextMenu);
-        
-        console.log('Aggressive password prevention activated');
     }
 
     private handleFocusIn = (event: FocusEvent) => {

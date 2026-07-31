@@ -57,7 +57,6 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
     }, [startDate, endDate, startTime, endTime, reason, showErrors]);
 
     const handleSave = () => {
-        console.log('handleSave called', { startDate, endDate, startTime, endTime, reason });
         
         // Perform comprehensive validation
         const validationResult = validateUnavailabilityPeriod(
@@ -86,7 +85,6 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
         // The logic for 'end date' is that it's the first day of return.
         const isAllDay = !startTime && !endTime;
         
-        console.log('Calling onSave with period data');
         onSave({
             startDate,
             endDate,

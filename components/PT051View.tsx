@@ -1322,19 +1322,14 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         // Simple confirmation - no PIN required
         const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${formatTrainingReportDisplayDate(assessment.date) || 'N/A'}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
         
-        console.log('🗑️ TrainingReportView: Delete button clicked');
         // Use custom dark confirm modal instead of browser default
         if (await showDarkConfirm(confirmMessage)) {
-            console.log('✅ TrainingReportView: User confirmed deletion');
             if (onDeleteAssessment && assessment.id) {
-                console.log('🗑️ TrainingReportView: Calling onDeleteAssessment with ID:', assessment.id);
                 await onDeleteAssessment(assessment.id);
                 onBack();
             } else {
-                console.log('❌ TrainingReportView: onDeleteAssessment or assessment.id is missing');
             }
         } else {
-            console.log('❌ TrainingReportView: User cancelled deletion');
         }
     };
 
@@ -1436,7 +1431,6 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
                             // Enable editing mode - you could add state to track this
-                            console.log('Editing mode enabled for training report:', initialAssessment.id);
                         }} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
                             Edit
                         </button>
@@ -1473,9 +1467,6 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                             <dd className="mt-1 text-sm text-white">
                                 {(() => {
                                     const eventNum = (event.flightNumber || '').trim();
-                                    console.log('🔍 Event Description Debug - Event Number:', eventNum);
-                                    console.log('🔍 Event Description Debug - syllabusDetails count:', syllabusDetails.length);
-                                    console.log('🔍 Event Description Debug - First 5 syllabus items:', syllabusDetails.slice(0, 5).map(d => ({ id: d.id, code: d.code, title: d.title })));
                                     
                                     // Try multiple matching strategies
                                     let syllabusDetail = syllabusDetails.find(d => {
@@ -1483,19 +1474,16 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                         const code = (d.code || '').trim();
                                         // Exact match (case-insensitive)
                                         if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
-                                            console.log('🔍 Found exact match:', d);
                                             return true;
                                         }
                                         // Match without spaces
                                         if (id.replace(/\s+/g, '').toLowerCase() === eventNum.replace(/\s+/g, '').toLowerCase() ||
                                             code.replace(/\s+/g, '').toLowerCase() === eventNum.replace(/\s+/g, '').toLowerCase()) {
-                                            console.log('🔍 Found match without spaces:', d);
                                             return true;
                                         }
                                         return false;
                                     });
                                     
-                                    console.log('🔍 Event Description Debug - Found detail:', syllabusDetail);
                                     return syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || 'N/A';
                                 })()}
                             </dd>

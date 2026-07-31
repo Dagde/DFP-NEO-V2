@@ -134,14 +134,12 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       ? `/api/personnel/${resolvedId}/currencies`
       : `/api/trainees/${resolvedId}/currencies`;
 
-    console.log(`[CurrencyPanel] Fetching currencies from: ${endpoint} (resolvedId=${resolvedId})`);
     setIsLoading(true);
 
     fetch(endpoint, { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
       .then(data => {
         const status: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
-        console.log(`[CurrencyPanel] Fetched ${status.length} currency record(s):`, JSON.stringify(status));
         setCurrencyStatus(status);
       })
       .catch(err => {
@@ -247,9 +245,6 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     setSaveSuccessMessage(null);
 
     const newStatus: PersonCurrencyStatus[] = [];
-    console.log('[CurrencyPanel] handleSaveClick — currencyStatus before save:', JSON.stringify(currencyStatus));
-    console.log('[CurrencyPanel] editedStatuses:', JSON.stringify(Array.from(editedStatuses.entries())));
-    console.log('[CurrencyPanel] originalStatuses:', JSON.stringify(Array.from(originalStatuses.entries())));
 
     visibleCurrencyDefinitions.forEach(def => {
       const editedDate = editedStatuses.get(def.name);
@@ -272,7 +267,6 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
           if (originalDate) {
             // User actively cleared a field that had a value — honour the clear (remove it)
             // But preserve isInactive flag if set
-            console.log('[CurrencyPanel] User cleared ' + def.name + ' (was: ' + originalDate + ')');
             if (isNowInactive) {
               newStatus.push({ currencyName: def.name, lastEventDate: '', isInactive: true });
             }
@@ -280,7 +274,6 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
             // Field was already empty when edit started — preserve any existing DB record
             const existing = currencyStatus.find(s => s.currencyName === def.name);
             if (existing) {
-              console.log('[CurrencyPanel] Preserving existing ' + def.name + ':', existing.lastEventDate);
               newStatus.push({ ...existing, isInactive: isNowInactive || existing.isInactive });
             } else if (isNowInactive) {
               newStatus.push({ currencyName: def.name, lastEventDate: '', isInactive: true });
@@ -302,7 +295,6 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       }
     });
 
-    console.log('[CurrencyPanel] newStatus to save:', JSON.stringify(newStatus));
 
     const endpoint = personType === 'instructor'
       ? `/api/personnel/${resolvedId}/currencies`
@@ -320,13 +312,11 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         throw new Error((err as any).error || `HTTP ${res.status}`);
       }
 
-      console.log('[CurrencyPanel] ✅ Save successful — updating local state with', newStatus.length, 'records');
 
       // Store in module-level cache — survives component unmount/remount
       // This means closing and reopening the tab will show saved data immediately
       if (resolvedId) {
         savedCurrencyCache.set(resolvedId, newStatus);
-        console.log(`[CurrencyPanel] Cached saved status for ${resolvedId}`);
       }
 
       // Update local state immediately — this is what the user sees

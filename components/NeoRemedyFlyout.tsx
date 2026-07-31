@@ -21,8 +21,6 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
     const { event, errors } = problemTile;
 
     const instructorSwapRemedies = remedies.filter((r): r is NeoInstructorRemedy => r.type === 'instructor');
-    console.log('🔧 NeoRemedyFlyout: Received remedies:', remedies.length);
-    console.log('🔧 NeoRemedyFlyout: Remedies:', remedies);
     const timeShiftRemedies = remedies.filter((r): r is NeoTimeShiftRemedy => r.type === 'timeshift');
     const traineeSwapRemedies = remedies.filter((r): r is NeoTraineeRemedy => r.type === 'trainee');
 
@@ -94,7 +92,6 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
                                         {instructorSwapRemedies.map((remedy, index) => (
                                             <button 
                                                 onClick={() => {
-                                                    console.log('🔘 NeoRemedyFlyout: Instructor button clicked', remedy);
                                                     onApplyRemedy(remedy);
                                                 }} 
                                                 className="w-full text-left p-3 bg-gray-700/50 rounded-md hover:bg-sky-700 transition-colors"
@@ -125,7 +122,6 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
                                                     <button 
                                                         key={index} 
                                                         onClick={() => {
-                                                            console.log('🔘 NeoRemedyFlyout: Time shift instructor button clicked', remedy);
                                                             onApplyRemedy(remedy);
                                                         }} 
                                                         className="w-full text-left p-2 bg-gray-700/50 rounded-md hover:bg-sky-700 transition-colors"

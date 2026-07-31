@@ -52,7 +52,6 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     ? `/api/trainees/${dbId}/currencies`
     : `/api/personnel/${dbId}/currencies`;
 
-  console.log(`[CurrencyStatusPage] personType=${personType}, dbId=${dbId}, endpoint=${currencyEndpoint}`);
 
   // ── LOAD FROM DB ON MOUNT ────────────────────────────────────────────────
   useEffect(() => {
@@ -70,7 +69,6 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
         const loaded: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
         setCurrencyStatus(loaded);
         setIsLoading(false);
-        console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for ${personType} ${dbId}`);
       })
       .catch(err => {
         if (cancelled) return;
@@ -179,7 +177,6 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
         const freshData = await freshRes.json();
         if (Array.isArray(freshData.currencyStatus)) {
           latestStatus = freshData.currencyStatus;
-          console.log(`[CurrencyStatusPage] Fetched fresh before save: ${latestStatus.length} records`);
         }
       }
     } catch (freshErr) {
@@ -281,7 +278,6 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
         setSaveState('error');
         setSaveMessage(`Save failed: ${data.error || response.statusText}`);
       } else {
-        console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB via ${currencyEndpoint}`);
         setSaveState('saved');
         setSaveMessage(`✅ Saved ${newStatus.length} currency entries`);
         setTimeout(() => setSaveState('idle'), 3000);
