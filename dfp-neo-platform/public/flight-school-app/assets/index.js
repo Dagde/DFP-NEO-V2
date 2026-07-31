@@ -66807,9 +66807,9 @@ const downloadTextFile = (filename, content, mimeType) => {
   URL.revokeObjectURL(url);
 };
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
-  event: "The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a mission code.",
-  training: "The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, mission stream or assigned training sequence.",
-  type: "The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, mission sortie or other model-specific event type.",
+  event: "The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a task code.",
+  training: "The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, task stream or assigned training sequence.",
+  type: "The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, task sortie or other model-specific event type.",
   timing: "The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.",
   resource: "The label for the platform or resource used during the event. This may be an aircraft, simulator, procedural trainer, ground room or another configured resource.",
   callsign: "The label for the operational callsign recorded against the event. For formation sorties this helps connect the report to the correct formation element.",
@@ -66818,8 +66818,8 @@ const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
   assessor: "The label for the person completing or signing the report. Organisations may call this instructor, assessor, supervisor, check pilot or another local term."
 };
 const TRAINING_REPORT_OVERALL_FIELD_INFO = {
-  result: "The label for the mission status outcome. If no mission status options are enabled, reports default to Complete. If options are enabled, only those configured options are shown.",
-  overallGrade: "The label for the assessor’s whole-mission grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.",
+  result: "The label for the event status outcome. If no status options are enabled, reports default to Complete. If options are enabled, only those configured options are shown.",
+  overallGrade: "The label for the assessor’s whole-event grade. This is the single grade used for progression, repeat-rule checks and historical trend analysis.",
   overallResult: "The label for the final satisfactory/unsatisfactory style outcome. The organisation can rename the visible text while the system keeps the underlying success/unsuccessful function intact.",
   groundSchoolAssessment: "The label for an optional ground-school assessment result. This is used when an event also records a separate academic or ground assessment percentage."
 };
@@ -74769,53 +74769,113 @@ const AirfieldLookupField = ({
     )) }) : null
   ] });
 };
-const NumberField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: fieldClass,
-      type: "number",
-      value: value ?? 0,
-      disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(Number(event.target.value))
-    }
-  )
-] });
+const NumberField = ({ label, value, disabled, onChange, info }) => {
+  const normaliseNumberDraft = (nextValue) => String(nextValue ?? "");
+  const [draftValue, setDraftValue] = reactExports.useState(() => normaliseNumberDraft(value ?? 0));
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : normaliseNumberDraft(value ?? 0);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(normaliseNumberDraft(value ?? 0));
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    const nextNumber = Number(draftValue);
+    const safeNumber = Number.isFinite(nextNumber) ? nextNumber : 0;
+    if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
+    setDraftValue(normaliseNumberDraft(safeNumber));
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        type: "number",
+        value: displayedValue,
+        disabled,
+        onKeyDownCapture: stopEditableKeyPropagation,
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setIsEditing(true);
+          setDraftValue(normaliseNumberDraft(value ?? 0));
+        },
+        onBlur: commitDraftValue,
+        onChange: (event) => setDraftValue(event.target.value)
+      }
+    )
+  ] });
+};
 const formatDateInput = (value) => value ? String(value).slice(0, 10) : "";
-const DateField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: fieldClass,
-      type: "date",
-      value: formatDateInput(value),
-      disabled,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(event.target.value)
-    }
-  )
-] });
-const OptionalNumberField = ({ label, value, disabled, onChange, info, placeholder = "Unlimited" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: fieldClass,
-      type: "number",
-      value: value ?? "",
-      disabled,
-      placeholder,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => onChange(event.target.value === "" ? null : Number(event.target.value))
-    }
-  )
-] });
+const DateField = ({ label, value, disabled, onChange, info }) => {
+  const [draftValue, setDraftValue] = reactExports.useState(() => formatDateInput(value));
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : formatDateInput(value);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(formatDateInput(value));
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    const nextValue = formatDateInput(draftValue);
+    setDraftValue(nextValue);
+    if (nextValue !== formatDateInput(value)) onChange(nextValue);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        type: "date",
+        value: displayedValue,
+        disabled,
+        onKeyDownCapture: stopEditableKeyPropagation,
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setIsEditing(true);
+          setDraftValue(formatDateInput(value));
+        },
+        onBlur: commitDraftValue,
+        onChange: (event) => setDraftValue(event.target.value)
+      }
+    )
+  ] });
+};
+const OptionalNumberField = ({ label, value, disabled, onChange, info, placeholder = "Unlimited" }) => {
+  const [draftValue, setDraftValue] = reactExports.useState(() => String(value ?? ""));
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : String(value ?? "");
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(String(value ?? ""));
+  }, [isEditing, value]);
+  const commitDraftValue = () => {
+    setIsEditing(false);
+    const nextValue = draftValue.trim() === "" ? null : Number(draftValue);
+    const safeValue = nextValue === null || Number.isFinite(nextValue) ? nextValue : null;
+    if (safeValue !== (value ?? null)) onChange(safeValue);
+    setDraftValue(String(safeValue ?? ""));
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        type: "number",
+        value: displayedValue,
+        disabled,
+        placeholder,
+        onKeyDownCapture: stopEditableKeyPropagation,
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setIsEditing(true);
+          setDraftValue(String(value ?? ""));
+        },
+        onBlur: commitDraftValue,
+        onChange: (event) => setDraftValue(event.target.value)
+      }
+    )
+  ] });
+};
 const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS" }) => {
   const normaliseTasValue = (nextValue) => String(nextValue ?? "").replace(/[^\d]/g, "").slice(0, 4);
   const [draftValue, setDraftValue] = reactExports.useState(() => normaliseTasValue(value));
