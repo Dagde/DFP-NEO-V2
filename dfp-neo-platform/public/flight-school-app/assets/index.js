@@ -4607,7 +4607,7 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
   grades: {
     scaleMin: 0,
     scaleMax: 10,
-    includeDemo: true,
+    includeDemo: false,
     showNumbers: true,
     options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
       value,
@@ -4808,8 +4808,8 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   return JSON.parse(JSON.stringify(source));
 };
 const DEFAULT_SCT_TERMINOLOGY = {
-  shortLabel: "SCT",
-  longLabel: "Staff Continuation Training"
+  shortLabel: "ContT",
+  longLabel: "Continuation Training"
 };
 const SCT_SHORT_LABEL_MAX_LENGTH = 12;
 const SCT_LONG_LABEL_MAX_LENGTH = 40;
@@ -21850,15 +21850,16 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   ], [gradeOptions]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(gradeOptions.map((option) => [option.value, option.label])), [gradeOptions]);
   gradeOptions.length > 6;
+  const formatLegacyNoGrade = (grade) => grade === "DEMO" ? "No Grade" : String(grade);
   const formatGradeOption = (grade) => {
-    if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return String(grade);
+    if (grade === "No Grade" || grade === "DEMO" || grade === "MIN") return formatLegacyNoGrade(grade);
     const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
     return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
   };
   const formatGradeValue = (grade) => grade === "No Grade" ? "None" : String(grade);
   const formatGradeText = (grade) => {
     if (grade === "No Grade") return "No Grade";
-    if (grade === "DEMO" || grade === "MIN") return String(grade);
+    if (grade === "DEMO" || grade === "MIN") return formatLegacyNoGrade(grade);
     return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
   };
   const formatOverallGradeTileText = (grade) => grade === "No Grade" ? "No Grade" : formatGradeText(grade);
@@ -21879,7 +21880,7 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   };
   const formatGradeNumber = (grade) => {
     if (grade === "No Grade") return "None";
-    if (grade === "DEMO" || grade === "MIN") return String(grade);
+    if (grade === "DEMO" || grade === "MIN") return formatLegacyNoGrade(grade);
     return String(grade);
   };
   const formatTrainingReportResource = (resourceId) => {
@@ -21902,6 +21903,9 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   const [showPhraseModal, setShowPhraseModal] = reactExports.useState(false);
   const [currentPhraseElement, setCurrentPhraseElement] = reactExports.useState(null);
   const getRadioAccentColor = (grade) => {
+    if (grade === "DEMO") {
+      return "accent-slate-300";
+    }
     if (grade === 0) {
       return "accent-red-500";
     }
@@ -22558,7 +22562,7 @@ This action cannot be undone.`;
   }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
   const gradeHeaderColors = {
     "MIN": "bg-red-800/50",
-    "DEMO": "bg-red-950/35 border-red-500/20",
+    "DEMO": "bg-slate-900/60 border-slate-500/25",
     "0": "bg-red-950/35 border-red-500/20",
     "1": "bg-orange-950/35 border-orange-500/20",
     "2": "bg-amber-950/35 border-amber-500/20",
@@ -58326,19 +58330,20 @@ const AirCombatTrainingReportModal = ({
   };
   const enabledGradeOptions = reactExports.useMemo(() => reportTemplate.grades.options.filter((option) => option.enabled !== false && String(option.label || "").trim()), [reportTemplate.grades.options]);
   const gradeLabelMap = reactExports.useMemo(() => new Map(enabledGradeOptions.map((option) => [option.value, option.label])), [enabledGradeOptions]);
+  const formatLegacyNoGrade = (value) => String(value).toUpperCase() === "DEMO" ? "No Grade" : String(value);
   const formatGradeOption = (value) => {
-    if (String(value).toUpperCase() === "DEMO") return "DEMO";
+    if (String(value).toUpperCase() === "DEMO") return formatLegacyNoGrade(value);
     const numericValue = Number(value);
     const label = gradeLabelMap.get(numericValue) || `Grade ${value}`;
     return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
   };
   const formatGradeHeaderText = (value) => {
-    if (String(value).toUpperCase() === "DEMO") return "DEMO";
+    if (String(value).toUpperCase() === "DEMO") return formatLegacyNoGrade(value);
     const label = gradeLabelMap.get(Number(value)) || String(value);
     return reportTemplate.grades.showNumbers ? label : formatGradeOption(value);
   };
   const formatOverallGradeTileText = (value) => value ? gradeLabelMap.get(Number(value)) || String(value) : "No Grade";
-  const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? "DEMO" : String(value);
+  const formatGradeNumber = (value) => String(value).toUpperCase() === "DEMO" ? formatLegacyNoGrade(value) : String(value);
   const [isEditMode, setIsEditMode] = reactExports.useState(startInEditMode);
   const [showRecentEventPicker, setShowRecentEventPicker] = reactExports.useState(false);
   const [selectedSourceEvent, setSelectedSourceEvent] = reactExports.useState(sourceEvent);
@@ -58545,11 +58550,14 @@ const AirCombatTrainingReportModal = ({
   const getElementScore = (element) => elementScores.find((score) => score.element === element) || { element, grade: "", comment: "" };
   const gradeOptions = enabledGradeOptions.map((option) => String(option.value));
   const overallGradeOptions = ["", ...gradeOptions];
-  const assessmentGradeOptions = ["DEMO", ...gradeOptions];
+  const assessmentGradeOptions = [
+    ...reportTemplate.grades.includeDemo ? ["DEMO"] : [],
+    ...gradeOptions
+  ];
   const awardedOverallGrade = String(overallGrade || "").trim();
   const gradeDrivenOverallResult = awardedOverallGrade ? awardedOverallGrade === "0" ? "F" : "P" : "";
   const gradeHeaderColors = {
-    DEMO: "bg-red-950/35 border-red-500/20",
+    DEMO: "bg-slate-900/60 border-slate-500/25",
     "0": "bg-red-950/35 border-red-500/20",
     "1": "bg-orange-950/35 border-orange-500/20",
     "2": "bg-amber-950/35 border-amber-500/20",
@@ -58558,7 +58566,8 @@ const AirCombatTrainingReportModal = ({
     "5": "bg-emerald-950/25 border-emerald-500/20"
   };
   const getRadioAccentColor = (grade) => {
-    if (grade === "DEMO" || grade === "0") return "accent-red-500";
+    if (grade === "DEMO") return "accent-slate-300";
+    if (grade === "0") return "accent-red-500";
     if (grade === "1") return "accent-orange-500";
     if (grade === "2") return "accent-amber-500";
     if (grade === "3") return "accent-yellow-400";
@@ -73208,7 +73217,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             ToggleField,
             {
-              label: "Include DEMO Grade",
+              label: "Include No Grade option",
               checked: trainingReportTemplate.grades.includeDemo,
               disabled: !canEditTrainingReportTemplate,
               onChange: (checked) => updateTrainingReportTemplate((template) => ({
@@ -73217,7 +73226,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   includeDemo: checked
                 }
               })),
-              info: "Adds DEMO as a selectable non-numeric instructional grade alongside the 0 to 10 assessment grades."
+              info: "Adds a selectable non-numeric No Grade option alongside the numeric assessment grades."
             }
           )
         ] }),

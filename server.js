@@ -8788,7 +8788,36 @@ async function migrateKnownCommercialLocationCodes(db) {
 
 async function seedCommercialLicenseIfEmpty(db) {
   const existing = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLicense"`);
-  if (existing?.[0]?.count > 0) return;
+  if (existing?.[0]?.count > 0) {
+    await db.$executeRawUnsafe(`
+      UPDATE "CommercialLicense"
+      SET
+        "licenseKey" = CASE
+          WHEN "licenseKey" LIKE '%-EVAL'
+            AND NOT EXISTS (
+              SELECT 1
+              FROM "CommercialLicense" existing_license
+              WHERE existing_license."id" <> "CommercialLicense"."id"
+                AND existing_license."licenseKey" = regexp_replace("CommercialLicense"."licenseKey", '-EVAL$', '-STARTER')
+            )
+            THEN regexp_replace("licenseKey", '-EVAL$', '-STARTER')
+          ELSE "licenseKey"
+        END,
+        "licenseName" = regexp_replace("licenseName", ' Evaluation Licence$', ' Starter Licence'),
+        "features" = COALESCE("features", '{}'::jsonb) - 'developmentOnly' || '{"seededBy":"Starter licensing foundation"}'::jsonb,
+        "notes" = CASE
+          WHEN "notes" ILIKE 'Development licensing foundation record.%'
+            THEN 'Starter licensing foundation record. Replace with signed licence files for production or offline customer deployments.'
+          ELSE "notes"
+        END,
+        "updatedAt" = NOW()
+      WHERE
+        ("features"->>'seededBy' = 'Development licensing foundation'
+          OR "licenseName" ILIKE '% Evaluation Licence'
+          OR "licenseKey" LIKE '%-EVAL')
+    `);
+    return;
+  }
 
   const now = new Date().toISOString();
   const organisations = await db.$queryRawUnsafe(`
@@ -8821,16 +8850,15 @@ async function seedCommercialLicenseIfEmpty(db) {
     ON CONFLICT ("licenseKey") DO NOTHING
   `,
     organisationCode,
-    `${organisationCode}-EVAL`,
-    `${organisationName} Evaluation Licence`,
+    `${organisationCode}-STARTER`,
+    `${organisationName} Starter Licence`,
     moduleCodes,
     JSON.stringify({
       enforcementMode: 'Monitor Only',
       offlineCapable: false,
-      developmentOnly: true,
-      seededBy: 'Development licensing foundation',
+      seededBy: 'Starter licensing foundation',
     }),
-    'Development licensing foundation record. Use signed licence files for production or offline customer deployments.',
+    'Starter licensing foundation record. Replace with signed licence files for production or offline customer deployments.',
     now
   );
 }

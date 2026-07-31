@@ -9036,7 +9036,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <ToggleField
-              label="Include DEMO Grade"
+              label="Include No Grade option"
               checked={trainingReportTemplate.grades.includeDemo}
               disabled={!canEditTrainingReportTemplate}
               onChange={(checked) => updateTrainingReportTemplate((template) => ({
@@ -9045,7 +9045,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   includeDemo: checked,
                 },
               }))}
-              info="Adds DEMO as a selectable non-numeric instructional grade alongside the 0 to 10 assessment grades."
+              info="Adds a selectable non-numeric No Grade option alongside the numeric assessment grades."
             />
           </div>
 

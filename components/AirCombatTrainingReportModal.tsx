@@ -215,14 +215,17 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const gradeLabelMap = useMemo(() => (
     new Map(enabledGradeOptions.map((option) => [option.value, option.label]))
   ), [enabledGradeOptions]);
+  const formatLegacyNoGrade = (value: number | string): string => (
+    String(value).toUpperCase() === 'DEMO' ? 'No Grade' : String(value)
+  );
   const formatGradeOption = (value: number | string) => {
-    if (String(value).toUpperCase() === 'DEMO') return 'DEMO';
+    if (String(value).toUpperCase() === 'DEMO') return formatLegacyNoGrade(value);
     const numericValue = Number(value);
     const label = gradeLabelMap.get(numericValue) || `Grade ${value}`;
     return reportTemplate.grades.showNumbers ? `${value} - ${label}` : label;
   };
   const formatGradeHeaderText = (value: number | string): string => {
-    if (String(value).toUpperCase() === 'DEMO') return 'DEMO';
+    if (String(value).toUpperCase() === 'DEMO') return formatLegacyNoGrade(value);
     const label = gradeLabelMap.get(Number(value)) || String(value);
     return reportTemplate.grades.showNumbers ? label : formatGradeOption(value);
   };
@@ -230,7 +233,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     value ? (gradeLabelMap.get(Number(value)) || String(value)) : 'No Grade'
   );
   const formatGradeNumber = (value: number | string): string => (
-    String(value).toUpperCase() === 'DEMO' ? 'DEMO' : String(value)
+    String(value).toUpperCase() === 'DEMO' ? formatLegacyNoGrade(value) : String(value)
   );
   const [isEditMode, setIsEditMode] = useState(startInEditMode);
   const [showRecentEventPicker, setShowRecentEventPicker] = useState(false);
@@ -500,13 +503,16 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   );
   const gradeOptions = enabledGradeOptions.map(option => String(option.value));
   const overallGradeOptions = ['', ...gradeOptions];
-  const assessmentGradeOptions = ['DEMO', ...gradeOptions];
+  const assessmentGradeOptions = [
+    ...(reportTemplate.grades.includeDemo ? ['DEMO'] : []),
+    ...gradeOptions,
+  ];
   const awardedOverallGrade = String(overallGrade || '').trim();
   const gradeDrivenOverallResult: '' | 'P' | 'F' = awardedOverallGrade
     ? awardedOverallGrade === '0' ? 'F' : 'P'
     : '';
   const gradeHeaderColors: Record<string, string> = {
-    DEMO: 'bg-red-950/35 border-red-500/20',
+    DEMO: 'bg-slate-900/60 border-slate-500/25',
     '0': 'bg-red-950/35 border-red-500/20',
     '1': 'bg-orange-950/35 border-orange-500/20',
     '2': 'bg-amber-950/35 border-amber-500/20',
@@ -515,7 +521,8 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     '5': 'bg-emerald-950/25 border-emerald-500/20',
   };
   const getRadioAccentColor = (grade: string) => {
-    if (grade === 'DEMO' || grade === '0') return 'accent-red-500';
+    if (grade === 'DEMO') return 'accent-slate-300';
+    if (grade === '0') return 'accent-red-500';
     if (grade === '1') return 'accent-orange-500';
     if (grade === '2') return 'accent-amber-500';
     if (grade === '3') return 'accent-yellow-400';

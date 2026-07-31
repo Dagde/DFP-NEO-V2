@@ -77,7 +77,7 @@ export interface AppSettingsData {
   tileStatusSettings: TileStatusSettings;
   emergencyFreezeAuthority: EmergencyFreezeAuthoritySettings;
 
-  // SCT Events
+  // Continuation and currency events
   sctEvents: any[];
 
   // Formation Callsigns

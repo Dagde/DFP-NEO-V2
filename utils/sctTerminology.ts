@@ -6,8 +6,8 @@ export interface SctTerminology {
 }
 
 export const DEFAULT_SCT_TERMINOLOGY: SctTerminology = {
-  shortLabel: 'SCT',
-  longLabel: 'Staff Continuation Training',
+  shortLabel: 'ContT',
+  longLabel: 'Continuation Training',
 };
 
 export const SCT_SHORT_LABEL_MAX_LENGTH = 12;

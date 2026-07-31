@@ -660,7 +660,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }));
     };
     
-    // SCT Events State
+    // Continuation and currency event state
     const [isEditingSctEvents, setIsEditingSctEvents] = useState(false);
     
     const [tempSctEvents, setTempSctEvents] = useState<ContinuationEventSetting[]>([]);
@@ -904,7 +904,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setIsEditingBusinessRules(false);
     };
 
-    // SCT Events Handlers
+    // Continuation and currency event handlers
     const handleEditSctEvents = () => {
         setTempSctEvents(normaliseContinuationEventSettings(sctEvents).map(applyContinuationEventDefaults));
         setIsEditingSctEvents(true);

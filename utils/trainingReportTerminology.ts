@@ -168,7 +168,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
   grades: {
     scaleMin: 0,
     scaleMax: 10,
-    includeDemo: true,
+    includeDemo: false,
     showNumbers: true,
     options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => ({
       value,

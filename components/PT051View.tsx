@@ -404,8 +404,11 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         new Map(gradeOptions.map((option) => [option.value, option.label]))
     ), [gradeOptions]);
     const isLongGradeScale = gradeOptions.length > 6;
+    const formatLegacyNoGrade = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO' | 'MIN') => (
+        grade === 'DEMO' ? 'No Grade' : String(grade)
+    );
     const formatGradeOption = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
-        if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return String(grade);
+        if (grade === 'No Grade' || grade === 'DEMO' || grade === 'MIN') return formatLegacyNoGrade(grade);
         const label = gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
         return reportTemplate.grades.showNumbers ? `${grade} - ${label}` : label;
     };
@@ -414,7 +417,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     );
     const formatGradeText = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         if (grade === 'No Grade') return 'No Grade';
-        if (grade === 'DEMO' || grade === 'MIN') return String(grade);
+        if (grade === 'DEMO' || grade === 'MIN') return formatLegacyNoGrade(grade);
         return gradeLabelMap.get(Number(grade)) || `Grade ${grade}`;
     };
     const formatOverallGradeTileText = (grade: Pt051OverallGrade) => (
@@ -437,7 +440,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     };
     const formatGradeNumber = (grade: Pt051OverallGrade | Pt051Grade | 'DEMO') => {
         if (grade === 'No Grade') return 'None';
-        if (grade === 'DEMO' || grade === 'MIN') return String(grade);
+        if (grade === 'DEMO' || grade === 'MIN') return formatLegacyNoGrade(grade);
         return String(grade);
     };
     const formatTrainingReportResource = (resourceId?: string): string => {
@@ -468,6 +471,9 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     const [currentPhraseElement, setCurrentPhraseElement] = useState<string | null>(null);
 
     const getRadioAccentColor = (grade: Pt051Grade | 'MIN' | 'DEMO') => {
+        if (grade === 'DEMO') {
+            return 'accent-slate-300';
+        }
         if (grade === 0) {
             return 'accent-red-500';
         }
@@ -1249,7 +1255,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
-        'DEMO': 'bg-red-950/35 border-red-500/20',
+        'DEMO': 'bg-slate-900/60 border-slate-500/25',
         '0': 'bg-red-950/35 border-red-500/20',
         '1': 'bg-orange-950/35 border-orange-500/20',
         '2': 'bg-amber-950/35 border-amber-500/20',
