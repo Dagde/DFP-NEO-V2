@@ -108,6 +108,8 @@ export const isContinuationScheduleEvent = (event: unknown): boolean => {
   if (!event || typeof event !== 'object') return false;
   const source = event as Record<string, unknown>;
   if (String(source.eventCategory || '').trim().toLowerCase() === 'sct') return true;
+  if (source.isSct === true || source.isContinuation === true || source.isContinuationTraining === true) return true;
+  if (source.sctRequestId || source.continuationRequestId || source.continuationEventId || source.continuationProfileId) return true;
   const flightNumber = String(source.flightNumber || '').trim().toUpperCase();
   return flightNumber === 'SCT' || flightNumber === 'SCT FORM' || flightNumber.startsWith('SCT ');
 };

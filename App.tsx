@@ -27177,6 +27177,10 @@ const App: React.FC = () => {
         () => normaliseContinuationEventSettings(sctEvents),
         [sctEvents],
     );
+    const configuredContinuationFormationLabel = useMemo(
+        () => `${getSctTerminology(platformConfig, activeUnitCode).shortLabel} FORM`,
+        [activeUnitCode, platformConfig],
+    );
 
     const getConfiguredContinuationEventByFlightNumber = useCallback((value?: string | null) => {
         const normalisedValue = String(value || '').trim().toUpperCase();
@@ -27196,7 +27200,16 @@ const App: React.FC = () => {
     const isConfiguredContinuationFormationEvent = useCallback((event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean => {
         if (Number(event.formationSize || 0) > 1 || Boolean(event.formationId)) return true;
         const flightNumber = String(event.flightNumber || '').trim();
-        if (flightNumber.toUpperCase() === 'SCT FORM') return true;
+        const normalisedFlightNumber = flightNumber.toUpperCase();
+        const compactFlightNumber = normalisedFlightNumber.replace(/[^A-Z0-9]/g, '');
+        const configuredFormationLabel = configuredContinuationFormationLabel.toUpperCase();
+        const compactConfiguredFormationLabel = configuredFormationLabel.replace(/[^A-Z0-9]/g, '');
+        if (
+            normalisedFlightNumber === 'SCT FORM'
+            || normalisedFlightNumber === configuredFormationLabel
+            || compactFlightNumber === 'SCTFORM'
+            || compactFlightNumber === compactConfiguredFormationLabel
+        ) return true;
         const configuredEvent = getConfiguredContinuationEventByFlightNumber(flightNumber);
         if (!configuredEvent) return false;
         if (Math.max(1, Math.floor(Number(configuredEvent.aircraftCount) || 1)) > 1) return true;
@@ -27205,7 +27218,7 @@ const App: React.FC = () => {
             .filter(Boolean)
             .join(' ');
         return configuredText.includes('FORM');
-    }, [getConfiguredContinuationEventByFlightNumber]);
+    }, [configuredContinuationFormationLabel, getConfiguredContinuationEventByFlightNumber]);
 
     const activeTrainingAreas = useMemo(() => {
         const normalise = (value: unknown) => String(value || '').trim().toUpperCase();

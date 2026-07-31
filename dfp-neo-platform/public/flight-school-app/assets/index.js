@@ -5042,6 +5042,8 @@ const isContinuationScheduleEvent = (event) => {
   if (!event || typeof event !== "object") return false;
   const source = event;
   if (String(source.eventCategory || "").trim().toLowerCase() === "sct") return true;
+  if (source.isSct === true || source.isContinuation === true || source.isContinuationTraining === true) return true;
+  if (source.sctRequestId || source.continuationRequestId || source.continuationEventId || source.continuationProfileId) return true;
   const flightNumber = String(source.flightNumber || "").trim().toUpperCase();
   return flightNumber === "SCT" || flightNumber === "SCT FORM" || flightNumber.startsWith("SCT ");
 };
@@ -74644,27 +74646,49 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
     }
   )
 ] });
-const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      className: fieldClass,
-      type: "text",
-      inputMode: "numeric",
-      pattern: "[0-9]*",
-      value: value === null || value === void 0 ? "" : String(value),
-      disabled,
-      placeholder,
-      onKeyDownCapture: stopEditableKeyPropagation,
-      onKeyDown: stopEditableKeyPropagation,
-      onChange: (event) => {
-        const digitsOnly = event.target.value.replace(/[^\d]/g, "").slice(0, 4);
-        onChange(digitsOnly || null);
+const TasField = ({ label, value, disabled, onChange, info, placeholder = "KTAS" }) => {
+  const normaliseTasValue = (nextValue) => String(nextValue ?? "").replace(/[^\d]/g, "").slice(0, 4);
+  const [draftValue, setDraftValue] = reactExports.useState(() => normaliseTasValue(value));
+  const [isEditing, setIsEditing] = reactExports.useState(false);
+  const displayedValue = isEditing ? draftValue : normaliseTasValue(value);
+  reactExports.useEffect(() => {
+    if (!isEditing) setDraftValue(normaliseTasValue(value));
+  }, [isEditing, value]);
+  const updateDraftValue = (nextValue) => {
+    setDraftValue(normaliseTasValue(nextValue));
+  };
+  const commitDraftValue = () => {
+    const nextValue = normaliseTasValue(draftValue);
+    const currentValue = normaliseTasValue(value);
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    if (nextValue !== currentValue) onChange(nextValue || null);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        type: "text",
+        inputMode: "numeric",
+        pattern: "[0-9]*",
+        value: displayedValue,
+        disabled,
+        placeholder,
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraftValue, 4),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraftValue, 4),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setIsEditing(true);
+          setDraftValue(normaliseTasValue(value));
+        },
+        onBlur: commitDraftValue,
+        onChange: (event) => updateDraftValue(event.target.value)
       }
-    }
-  )
-] });
+    )
+  ] });
+};
 const TextAreaField = ({
   label,
   value,
@@ -109135,6 +109159,10 @@ ${"=".repeat(60)}`);
     () => normaliseContinuationEventSettings(sctEvents),
     [sctEvents]
   );
+  const configuredContinuationFormationLabel = reactExports.useMemo(
+    () => `${getSctTerminology(platformConfig2, activeUnitCode2).shortLabel} FORM`,
+    [activeUnitCode2, platformConfig2]
+  );
   const getConfiguredContinuationEventByFlightNumber = reactExports.useCallback((value) => {
     const normalisedValue = String(value || "").trim().toUpperCase();
     const compactValue = normalisedValue.replace(/[^A-Z0-9]/g, "");
@@ -109147,13 +109175,17 @@ ${"=".repeat(60)}`);
   const isConfiguredContinuationFormationEvent = reactExports.useCallback((event) => {
     if (Number(event.formationSize || 0) > 1 || Boolean(event.formationId)) return true;
     const flightNumber = String(event.flightNumber || "").trim();
-    if (flightNumber.toUpperCase() === "SCT FORM") return true;
+    const normalisedFlightNumber = flightNumber.toUpperCase();
+    const compactFlightNumber = normalisedFlightNumber.replace(/[^A-Z0-9]/g, "");
+    const configuredFormationLabel = configuredContinuationFormationLabel.toUpperCase();
+    const compactConfiguredFormationLabel = configuredFormationLabel.replace(/[^A-Z0-9]/g, "");
+    if (normalisedFlightNumber === "SCT FORM" || normalisedFlightNumber === configuredFormationLabel || compactFlightNumber === "SCTFORM" || compactFlightNumber === compactConfiguredFormationLabel) return true;
     const configuredEvent = getConfiguredContinuationEventByFlightNumber(flightNumber);
     if (!configuredEvent) return false;
     if (Math.max(1, Math.floor(Number(configuredEvent.aircraftCount) || 1)) > 1) return true;
     const configuredText = [configuredEvent.name, configuredEvent.code, configuredEvent.currency].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).join(" ");
     return configuredText.includes("FORM");
-  }, [getConfiguredContinuationEventByFlightNumber]);
+  }, [configuredContinuationFormationLabel, getConfiguredContinuationEventByFlightNumber]);
   const activeTrainingAreas = reactExports.useMemo(() => {
     const normalise = (value) => String(value || "").trim().toUpperCase();
     const selectedAliases = new Set(

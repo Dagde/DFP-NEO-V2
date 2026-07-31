@@ -10841,26 +10841,52 @@ const OptionalNumberField = ({ label, value, disabled, onChange, info, placehold
   </label>
 );
 
-const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS' }: { label: string; value: number | string | null; disabled: boolean; onChange: (value: string | null) => void; info?: string; placeholder?: string }) => (
-  <label>
-    <FieldLabel label={label} info={info} />
-    <input
-      className={fieldClass}
-      type="text"
-      inputMode="numeric"
-      pattern="[0-9]*"
-      value={value === null || value === undefined ? '' : String(value)}
-      disabled={disabled}
-      placeholder={placeholder}
-      onKeyDownCapture={stopEditableKeyPropagation}
-      onKeyDown={stopEditableKeyPropagation}
-      onChange={(event) => {
-        const digitsOnly = event.target.value.replace(/[^\d]/g, '').slice(0, 4);
-        onChange(digitsOnly || null);
-      }}
-    />
-  </label>
-);
+const TasField = ({ label, value, disabled, onChange, info, placeholder = 'KTAS' }: { label: string; value: number | string | null; disabled: boolean; onChange: (value: string | null) => void; info?: string; placeholder?: string }) => {
+  const normaliseTasValue = (nextValue: unknown) => String(nextValue ?? '').replace(/[^\d]/g, '').slice(0, 4);
+  const [draftValue, setDraftValue] = useState(() => normaliseTasValue(value));
+  const [isEditing, setIsEditing] = useState(false);
+  const displayedValue = isEditing ? draftValue : normaliseTasValue(value);
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(normaliseTasValue(value));
+  }, [isEditing, value]);
+
+  const updateDraftValue = (nextValue: string) => {
+    setDraftValue(normaliseTasValue(nextValue));
+  };
+
+  const commitDraftValue = () => {
+    const nextValue = normaliseTasValue(draftValue);
+    const currentValue = normaliseTasValue(value);
+    setDraftValue(nextValue);
+    setIsEditing(false);
+    if (nextValue !== currentValue) onChange(nextValue || null);
+  };
+
+  return (
+    <label>
+      <FieldLabel label={label} info={info} />
+      <input
+        className={fieldClass}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={displayedValue}
+        disabled={disabled}
+        placeholder={placeholder}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraftValue, 4)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraftValue, 4)}
+        onKeyDown={stopEditableKeyPropagation}
+        onFocus={() => {
+          setIsEditing(true);
+          setDraftValue(normaliseTasValue(value));
+        }}
+        onBlur={commitDraftValue}
+        onChange={(event) => updateDraftValue(event.target.value)}
+      />
+    </label>
+  );
+};
 
 const TextAreaField = ({
   label,
