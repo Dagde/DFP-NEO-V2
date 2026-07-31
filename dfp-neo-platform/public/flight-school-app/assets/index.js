@@ -110343,17 +110343,25 @@ ${"=".repeat(60)}`);
     staffAvailabilityDiagnosticEvents,
     staffAvailabilityPointer.time
   ]);
+  const logNeoBuildUiDebug = (...args) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage?.getItem("neo_build_verbose_diag") === "true") {
+        console.log(...args);
+      }
+    } catch {
+    }
+  };
   const nextDayEventSegments = reactExports.useMemo(() => {
-    console.log("🚀 [NEO-Build] nextDayEventSegments useMemo recalculating");
-    console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
-    console.log("🚀 [NEO-Build] nextDayBuildEvents.length:", nextDayBuildEvents.length);
+    logNeoBuildUiDebug("🚀 [NEO-Build] nextDayEventSegments useMemo recalculating");
+    logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
+    logNeoBuildUiDebug("🚀 [NEO-Build] nextDayBuildEvents.length:", nextDayBuildEvents.length);
     const segments = [];
     const todayStart = (/* @__PURE__ */ new Date(`${buildDfpDate}T00:00:00Z`)).getTime();
     const todayEnd = new Date(todayStart);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
     const buildEventsWithDate = nextDayBuildEvents.map(decorateEventWithForwardedPreFlightNotes).map((e) => ({ ...e, date: buildDfpDate }));
-    console.log("🚀 [NEO-Build] buildEventsWithDate.length:", buildEventsWithDate.length);
+    logNeoBuildUiDebug("🚀 [NEO-Build] buildEventsWithDate.length:", buildEventsWithDate.length);
     if (shouldRecordDfpRenderDiagnostics()) {
       pushDfpDataDiag("render:next-day-build-segments-input", {
         buildDate: buildDfpDate,
@@ -110409,7 +110417,7 @@ ${"=".repeat(60)}`);
       seenIds.add(seg.id);
       return true;
     });
-    console.log("🚀 [NEO-Build] Final segments.length:", segments.length, "→ after dedup:", uniqueSegments.length);
+    logNeoBuildUiDebug("🚀 [NEO-Build] Final segments.length:", segments.length, "→ after dedup:", uniqueSegments.length);
     if (shouldRecordDfpRenderDiagnostics()) {
       pushDfpDataDiag("render:next-day-build-segments-output", {
         buildDate: buildDfpDate,
@@ -110561,7 +110569,7 @@ ${"=".repeat(60)}`);
       );
       for (const formationEvent of formationEvents) {
         if (formationEvent.pilot === targetEvent.pilot && targetEvent.pilot !== "") {
-          console.log(`🚨 DUPLICATE PILOT IN FORMATION: ${targetEvent.pilot} assigned to multiple aircraft`);
+          logNeoBuildUiDebug(`🚨 DUPLICATE PILOT IN FORMATION: ${targetEvent.pilot} assigned to multiple aircraft`);
           return {
             hasConflict: true,
             conflictingEventId: formationEvent.id,
@@ -110575,9 +110583,9 @@ ${"=".repeat(60)}`);
       (e) => e.id !== targetEvent.id && e.type !== "deployment"
     );
     if (isConfiguredContinuationFormationEvent(targetEvent)) {
-      console.log(`🔍 Checking conflicts for continuation formation event ${targetEvent.id}`);
-      console.log(`   Instructor: "${targetEvent.instructor || "EMPTY"}"`);
-      console.log(`   Personnel:`, getPersonnel(targetEvent));
+      logNeoBuildUiDebug(`🔍 Checking conflicts for continuation formation event ${targetEvent.id}`);
+      logNeoBuildUiDebug(`   Instructor: "${targetEvent.instructor || "EMPTY"}"`);
+      logNeoBuildUiDebug(`   Personnel:`, getPersonnel(targetEvent));
     }
     let requiredTurnaround = 0;
     if (targetEvent.type === "flight") requiredTurnaround = flightTurnaround;
@@ -110636,8 +110644,8 @@ ${"=".repeat(60)}`);
     const targetEventWithDate = "date" in targetEvent ? targetEvent : { ...targetEvent };
     const targetWindow = getEventBookingWindow(targetEventWithDate, syllabusDetails);
     if (isConfiguredContinuationFormationEvent(targetEvent)) {
-      console.log(`   Target personnel for conflict check:`, targetPersonnel);
-      console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
+      logNeoBuildUiDebug(`   Target personnel for conflict check:`, targetPersonnel);
+      logNeoBuildUiDebug(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
     }
     for (const event of validEvents) {
       const commonPersonnel = getCommonPersonnel(targetEvent, event);
@@ -110646,11 +110654,11 @@ ${"=".repeat(60)}`);
         const eventWindow = getEventBookingWindow(eventWithDate, syllabusDetails);
         if (targetWindow.start < eventWindow.end && targetWindow.end > eventWindow.start) {
           if (isConfiguredContinuationFormationEvent(targetEvent)) {
-            console.log(`   ❌ PERSONNEL CONFLICT FOUND!`);
-            console.log(`      Conflicting with event: ${event.id} (${event.flightNumber})`);
-            console.log(`      Common personnel:`, commonPersonnel);
-            console.log(`      Event personnel:`, getPersonnel(event));
-            console.log(`      Event window: ${eventWindow.start} - ${eventWindow.end}`);
+            logNeoBuildUiDebug(`   ❌ PERSONNEL CONFLICT FOUND!`);
+            logNeoBuildUiDebug(`      Conflicting with event: ${event.id} (${event.flightNumber})`);
+            logNeoBuildUiDebug(`      Common personnel:`, commonPersonnel);
+            logNeoBuildUiDebug(`      Event personnel:`, getPersonnel(event));
+            logNeoBuildUiDebug(`      Event window: ${eventWindow.start} - ${eventWindow.end}`);
           }
           return {
             hasConflict: true,
@@ -115592,9 +115600,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
   };
   const startBuildProcess = async () => {
     const continuationShortLabel = getSctTerminology(platformConfig2, activeUnitCode2).shortLabel;
-    console.log("🚀 [NEO-Build] startBuildProcess called");
-    console.log("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
-    console.log(`🚀 [NEO-Build] Pre-Build Step 1: Syncing ${continuationShortLabel} and Remedial requests...`);
+    logNeoBuildUiDebug("🚀 [NEO-Build] startBuildProcess called");
+    logNeoBuildUiDebug("🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====");
+    logNeoBuildUiDebug(`🚀 [NEO-Build] Pre-Build Step 1: Syncing ${continuationShortLabel} and Remedial requests...`);
     const taskTraceLabels = Array.from(/* @__PURE__ */ new Set([
       ...activeTaskProfiles || [],
       "Task",
@@ -115678,7 +115686,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const requestId = String(event.taskingRequestId || "").trim();
         const stillRequested = !!requestId && submittedTaskingRequestIds.has(requestId);
         if (!stillRequested) {
-          console.log(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || "none"})`);
+          logNeoBuildUiDebug(`DEBUG Removing stale tasking priority before build: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${requestId || "none"})`);
         }
         return stillRequested;
       }
@@ -115686,7 +115694,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const requestId = getSctRequestIdFromEvent(event);
         const stillRequested = !!requestId && liveSctRequestIds.has(requestId);
         if (!stillRequested) {
-          console.log(`DEBUG Removing stale ${continuationShortLabel} priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || "none"})`);
+          logNeoBuildUiDebug(`DEBUG Removing stale ${continuationShortLabel} priority before build: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${requestId || "none"})`);
         }
         return stillRequested;
       }
@@ -115713,7 +115721,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     if (syncedPriorityEvents.length !== rawSyncedPriorityEvents.length) {
       setHighestPriorityEvents(syncedPriorityEvents);
     }
-    console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
+    logNeoBuildUiDebug(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
     const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
     const currentTaskingPriorityIds = new Set(
       syncedPriorityEvents.filter(isTaskingEvent2).map((event) => event.id)
@@ -115737,18 +115745,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const fixedExistingEventsForDate = existingEventsForDate.filter((event) => {
       if (!event.isTimeFixed) return false;
       if (isSctPriorityEvent(event)) {
-        console.log(`DEBUG Skipping fixed ${continuationShortLabel} event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
+        logNeoBuildUiDebug(`DEBUG Skipping fixed ${continuationShortLabel} event from Active DFP preservation so live requests can regenerate it: ${event.flightNumber} (ID: ${event.id}, sctRequestId: ${getSctRequestIdFromEvent(event) || "none"})`);
         return false;
       }
       if (!isTaskingEvent2(event)) return true;
       const stillRequestedTasking = isCurrentTaskingEvent(event);
       if (!stillRequestedTasking) {
-        console.log(`DEBUG Skipping stale fixed tasking event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${event.taskingRequestId || "none"})`);
+        logNeoBuildUiDebug(`DEBUG Skipping stale fixed tasking event from Active DFP preservation: ${event.flightNumber} (ID: ${event.id}, taskingRequestId: ${event.taskingRequestId || "none"})`);
       }
       return stillRequestedTasking;
     });
     if (staleExistingTaskingEventsForDate.length > 0) {
-      console.log(`DEBUG Removed ${staleExistingTaskingEventsForDate.length} stale tasking event(s) from build-date published schedule before NEO Build input handoff.`);
+      logNeoBuildUiDebug(`DEBUG Removed ${staleExistingTaskingEventsForDate.length} stale tasking event(s) from build-date published schedule before NEO Build input handoff.`);
       window.__lastTaskingProvenancePreBuild = {
         ...window.__lastTaskingProvenancePreBuild || {},
         removedStalePublishedTaskingEvents: staleExistingTaskingEventsForDate.map((event) => summariseTaskTraceEvent(event, "removed-stale-published-tasking-before-build-handoff")),
@@ -115756,18 +115764,18 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       };
     }
     if (staleExistingSctEventsForDate.length > 0) {
-      console.log(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale ${continuationShortLabel} event(s) from build-date published schedule before NEO Build input handoff.`);
+      logNeoBuildUiDebug(`DEBUG Removed ${staleExistingSctEventsForDate.length} stale ${continuationShortLabel} event(s) from build-date published schedule before NEO Build input handoff.`);
     }
-    console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
+    logNeoBuildUiDebug(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
     let newHighestPriorityEvents = [...syncedPriorityEvents];
     let addedCount = 0;
     if (fixedExistingEventsForDate.length > 0) {
-      console.log(`DEBUG Preserving ${fixedExistingEventsForDate.length} explicitly fixed Active DFP event(s); ${existingEventsForDate.length - fixedExistingEventsForDate.length} non-fixed event(s) will be rebuilt.`);
-      console.log("DEBUG Fixed existing event details:");
+      logNeoBuildUiDebug(`DEBUG Preserving ${fixedExistingEventsForDate.length} explicitly fixed Active DFP event(s); ${existingEventsForDate.length - fixedExistingEventsForDate.length} non-fixed event(s) will be rebuilt.`);
+      logNeoBuildUiDebug("DEBUG Fixed existing event details:");
       fixedExistingEventsForDate.forEach((event, index) => {
-        console.log(`  ${index + 1}. ${event.flightNumber} - ${event.student || event.pilot || "N/A"} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id}, isTimeFixed: ${event.isTimeFixed})`);
+        logNeoBuildUiDebug(`  ${index + 1}. ${event.flightNumber} - ${event.student || event.pilot || "N/A"} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id}, isTimeFixed: ${event.isTimeFixed})`);
       });
-      console.log("Adding explicitly fixed Active DFP events to Highest Priority to preserve them...");
+      logNeoBuildUiDebug("Adding explicitly fixed Active DFP events to Highest Priority to preserve them...");
       fixedExistingEventsForDate.forEach((event) => {
         const alreadyExists = newHighestPriorityEvents.some(
           (hpe) => hpe.id === event.id
@@ -115780,29 +115788,29 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           };
           newHighestPriorityEvents.push(preservedEvent);
           addedCount++;
-          console.log(`  DEBUG LOCKED: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id})`);
+          logNeoBuildUiDebug(`  DEBUG LOCKED: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id})`);
         } else {
-          console.log(`  DEBUG SKIP: ${event.flightNumber} already in highest priority (ID: ${event.id})`);
+          logNeoBuildUiDebug(`  DEBUG SKIP: ${event.flightNumber} already in highest priority (ID: ${event.id})`);
         }
       });
       if (addedCount > 0) {
         setHighestPriorityEvents(newHighestPriorityEvents);
-        console.log(`DEBUG Pre-Build Complete: ${addedCount} events LOCKED as highest priority (MUST be included in build)`);
-        console.log(`DEBUG Total Highest Priority Events: ${newHighestPriorityEvents.length}`);
+        logNeoBuildUiDebug(`DEBUG Pre-Build Complete: ${addedCount} events LOCKED as highest priority (MUST be included in build)`);
+        logNeoBuildUiDebug(`DEBUG Total Highest Priority Events: ${newHighestPriorityEvents.length}`);
       } else {
-        console.log("DEBUG Pre-Build Complete: All existing events already locked");
+        logNeoBuildUiDebug("DEBUG Pre-Build Complete: All existing events already locked");
       }
     } else {
-      console.log(`DEBUG Pre-Build Analysis: No fixed Active DFP events found for this date; ${existingEventsForDate.length} non-fixed event(s) will be rebuilt`);
+      logNeoBuildUiDebug(`DEBUG Pre-Build Analysis: No fixed Active DFP events found for this date; ${existingEventsForDate.length} non-fixed event(s) will be rebuilt`);
     }
-    console.log("DEBUG ===== PRE-BUILD ANALYSIS END =====");
+    logNeoBuildUiDebug("DEBUG ===== PRE-BUILD ANALYSIS END =====");
     const resolvedPicCrewPriorityEvents = await resolveFixedCrewPicPriorityEventsWithoutCrew(newHighestPriorityEvents);
     if (!resolvedPicCrewPriorityEvents) {
-      console.log("DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.");
+      logNeoBuildUiDebug("DEBUG NEO Build paused: fixed crew PIC priority event requires crew selection.");
       return;
     }
     const finalPreservedEvents = resolvedPicCrewPriorityEvents;
-    console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
+    logNeoBuildUiDebug(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
     const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
     activeTrainees.forEach((trainee) => {
@@ -115835,17 +115843,17 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         return;
       }
     }
-    console.log("🚀 [NEO-Build] handleBuildDfp called");
-    console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
+    logNeoBuildUiDebug("🚀 [NEO-Build] handleBuildDfp called");
+    logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
     const todayStr = getLocalDateString2();
-    console.log("🚀 [NEO-Build] todayStr:", todayStr);
-    console.log("🚀 [NEO-Build] Date comparison:", buildDfpDate, "<=", todayStr, "=", buildDfpDate <= todayStr);
+    logNeoBuildUiDebug("🚀 [NEO-Build] todayStr:", todayStr);
+    logNeoBuildUiDebug("🚀 [NEO-Build] Date comparison:", buildDfpDate, "<=", todayStr, "=", buildDfpDate <= todayStr);
     if (buildDfpDate <= todayStr) {
-      console.log("🚀 [NEO-Build] Build date is today or in the past, showing warning");
+      logNeoBuildUiDebug("🚀 [NEO-Build] Build date is today or in the past, showing warning");
       setShowDateWarning(true);
       return;
     }
-    console.log("🚀 [NEO-Build] Starting build process");
+    logNeoBuildUiDebug("🚀 [NEO-Build] Starting build process");
     void startBuildProcess();
   };
   const handleConfirmDateAndBuild = () => {
@@ -115853,10 +115861,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     void startBuildProcess();
   };
   const runBuildAlgorithm = async (preservedEvents, buildPublishedSchedulesOverride) => {
-    console.log("🚀 [NEO-Build] runBuildAlgorithm called");
-    console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
-    console.log("🚀 [NEO-Build] preservedEvents:", preservedEvents?.length || 0);
-    console.log("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
+    logNeoBuildUiDebug("🚀 [NEO-Build] runBuildAlgorithm called");
+    logNeoBuildUiDebug("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
+    logNeoBuildUiDebug("🚀 [NEO-Build] preservedEvents:", preservedEvents?.length || 0);
+    logNeoBuildUiDebug("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
     const buildPublishedSchedules = buildPublishedSchedulesOverride || publishedSchedules;
     const normaliseBuildUnitCode = (value) => String(value || "").split("/")[0].trim().toUpperCase();
     const assignableFlightSchoolBuildSyllabus = activeOperationalModel === "flight_school" ? getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign").filter((item) => item.type !== "Academics" && item.lmpType !== "Staff CAT") : [];
@@ -115956,7 +115964,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           dbElceMap = new Map(Object.entries(elceData.elceMap));
           const withElce = [...dbElceMap.values()].filter(Boolean).length;
           markNeoBuildTiming(timingReport, "elce:json-parsed", { trainees: dbElceMap.size, withElce });
-          console.log(`[ELCE] Bulk fetch complete — ${dbElceMap.size} trainees, ${withElce} with DB ELCE record`);
+          logNeoBuildUiDebug(`[ELCE] Bulk fetch complete — ${dbElceMap.size} trainees, ${withElce} with DB ELCE record`);
         } else {
           console.warn(`[ELCE] Bulk fetch failed (status ${elceRes.status}) — falling back to DFP-scan ELCE`);
         }
@@ -115978,7 +115986,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       const apiBase = getApiBaseUrl();
       const assignableBuildSyllabus = activeOperationalModel === "flight_school" ? assignableFlightSchoolBuildSyllabus : filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
       const syllabusData = groupSyllabusByConfiguredCourses(assignableBuildSyllabus);
-      console.log("[NEO-Build] Refreshing composed Individual LMPs before build...");
+      logNeoBuildUiDebug("[NEO-Build] Refreshing composed Individual LMPs before build...");
       markNeoBuildTiming(timingReport, "lmp-sync:request-start", {
         syllabusGroups: Object.keys(syllabusData).length
       });
@@ -116005,17 +116013,17 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           if (lmp.traineeFullName && Array.isArray(lmp.events)) {
             const traineeForLmp = traineesForBuildScope.find((candidate) => candidate.fullName === lmp.traineeFullName || candidate.name === lmp.traineeFullName);
             if (activeOperationalModel === "flight_school" && !traineeForLmp) {
-              console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
+              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP outside active Flight School build scope`);
               return;
             }
             const lmpEventsForBuild = activeOperationalModel === "flight_school" ? filterFlightSchoolLmpEventsForBuildScope(lmp.events) : lmp.events;
             if (activeOperationalModel === "flight_school" && lmpEventsForBuild.length === 0) {
-              console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
+              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP because it has no events in the active Flight School Master LMP scope`);
               return;
             }
             const traineeUnitCode = activeOperationalModel === "flight_school" ? resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, "Assign") : traineeForLmp?.unit || activeUnitCode2;
             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, "Assign")) {
-              console.log(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
+              logNeoBuildUiDebug(`[NEO-Build] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || "unknown"}`);
               return;
             }
             freshLMPs.set(lmp.traineeFullName, lmpEventsForBuild);
@@ -116030,7 +116038,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           buildTraineeLMPs = freshLMPs;
           setTraineeLMPs(freshLMPs);
           markNeoBuildTiming(timingReport, "lmp-fetch:state-updated", { lmps: freshLMPs.size });
-          console.log(`[NEO-Build] ✅ Loaded ${freshLMPs.size} fresh composed Individual LMPs for build`);
+          logNeoBuildUiDebug(`[NEO-Build] ✅ Loaded ${freshLMPs.size} fresh composed Individual LMPs for build`);
         } else {
           console.warn("[NEO-Build] Pre-build LMP refresh returned no events; using current in-memory LMPs");
         }
@@ -116367,7 +116375,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         });
       }
     }
-    console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
+    logNeoBuildUiDebug(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
     const staffDataSourceAllowedForBuild = (staff) => {
       const isDatabase = staff._dataSource === "database";
       const isMock = !isDatabase;
@@ -116394,7 +116402,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     if (activeOperationalModel === "flight_school") {
       const scopedLmpEntries = Array.from(buildTraineeLMPs.entries()).map(([traineeName, events2]) => [traineeName, filterFlightSchoolLmpEventsForBuildScope(events2)]).filter(([traineeName, events2]) => traineeNamesForBuildScope.has(String(traineeName || "").trim()) && events2.length > 0);
       if (scopedLmpEntries.length !== buildTraineeLMPs.size) {
-        console.log("[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:", {
+        logNeoBuildUiDebug("[NEO-Build] Scoped Flight School Individual LMPs to active build trainees:", {
           before: buildTraineeLMPs.size,
           after: scopedLmpEntries.length,
           activeContextUnitCodes,
@@ -116406,10 +116414,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     }
     const storedRemedialRequestsForBuild = loadStoredRemedialRequests();
     const remedialRequestsForBuild = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequestsForBuild;
-    console.log("🔍 [NEO BUILD CONFIG DEBUG] Data source settings:", dataSourceSettings);
-    console.log("🔍 [NEO BUILD CONFIG DEBUG] instructorsData (filtered):", instructorsInBuild.length, "| mockData count:", instructorsInBuild.filter((i) => i._dataSource !== "database").length, "| DB count:", instructorsInBuild.filter((i) => i._dataSource === "database").length);
+    logNeoBuildUiDebug("🔍 [NEO BUILD CONFIG DEBUG] Data source settings:", dataSourceSettings);
+    logNeoBuildUiDebug("🔍 [NEO BUILD CONFIG DEBUG] instructorsData (filtered):", instructorsInBuild.length, "| mockData count:", instructorsInBuild.filter((i) => i._dataSource !== "database").length, "| DB count:", instructorsInBuild.filter((i) => i._dataSource === "database").length);
     if (activeOperationalModel === "air_combat") {
-      console.log("🔍 [NEO BUILD CONFIG DEBUG] Air Combat build staff scope:", {
+      logNeoBuildUiDebug("🔍 [NEO BUILD CONFIG DEBUG] Air Combat build staff scope:", {
         activeContextUnitCodes,
         staffSharingEnabled: organisationSettings.staffSharingEnabled,
         includedStaffUnits: Array.from(new Set(instructorsInBuild.map((staff) => normaliseBuildUnitCode(staff.unit)).filter(Boolean))).sort(),
@@ -116420,8 +116428,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         }, {})
       });
     }
-    console.log("🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):", traineesInBuild.length, "| mockData count:", traineesInBuild.filter((t) => t._dataSource !== "database").length, "| DB count:", traineesInBuild.filter((t) => t._dataSource === "database").length);
-    console.log("🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:", instructorsInBuild.slice(0, 5).map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: i._dataSource })));
+    logNeoBuildUiDebug("🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):", traineesInBuild.length, "| mockData count:", traineesInBuild.filter((t) => t._dataSource !== "database").length, "| DB count:", traineesInBuild.filter((t) => t._dataSource === "database").length);
+    logNeoBuildUiDebug("🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:", instructorsInBuild.slice(0, 5).map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: i._dataSource })));
     const effectiveInstructorPriority = isFixedCrewLikeOperationalModel(activeOperationalModel) ? { ...instructorPriority, enabled: false } : instructorPriority;
     const config = {
       operationalModel: activeOperationalModel,
@@ -116504,8 +116512,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     setTimeout(() => {
       try {
         markNeoBuildTiming(timingReport, "generate:setTimeout-fired");
-        console.log("🚀 [NEO-Build] Starting DFP build process for", buildDfpDate);
-        console.log("🚀 [NEO-Build] Config:", {
+        logNeoBuildUiDebug("🚀 [NEO-Build] Starting DFP build process for", buildDfpDate);
+        logNeoBuildUiDebug("🚀 [NEO-Build] Config:", {
           instructors: config.instructors.length,
           trainees: config.trainees.length,
           syllabus: config.syllabus.length,
@@ -116566,7 +116574,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             }))
           }
         };
-        console.info("[NEO-Build][InputTrace]", buildInputTrace);
+        logNeoBuildUiDebug("[NEO-Build][InputTrace]", buildInputTrace);
         try {
           localStorage.setItem("neo_build_input_trace", JSON.stringify(buildInputTrace));
         } catch (error) {
@@ -116575,8 +116583,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         markNeoBuildTiming(timingReport, "generateDfpInternal:start");
         const generated = generateDfpInternal(config, setDfpBuildProgress, buildPublishedSchedules);
         markNeoBuildTiming(timingReport, "generateDfpInternal:complete", { generated: generated.length });
-        console.log("🚀 [NEO-Build] DFP build completed, generated", generated.length, "events");
-        console.log("🚀 [NEO-Build] Generated events sample:", generated.slice(0, 3));
+        logNeoBuildUiDebug("🚀 [NEO-Build] DFP build completed, generated", generated.length, "events");
+        logNeoBuildUiDebug("🚀 [NEO-Build] Generated events sample:", generated.slice(0, 3));
         pushDfpDataDiag("build:replace-visible-draft-with-generated", {
           buildDate: buildDfpDate,
           previousDraftEvents: nextDayBuildEvents.length,
@@ -116600,7 +116608,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           [getDailySnapshotKey(buildDfpDate)]: currentAircraftConfigState
         }));
         markNeoBuildTiming(timingReport, "state:setNextDayBuildEvents", { generated: generated.length });
-        console.log("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
+        logNeoBuildUiDebug("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
         const consumedRemedialPriorityIds = new Set(
           config.remedialRequests.filter((request) => request.forceSchedule).map((request) => `remedial-${request.traineeId}-${request.eventCode}`)
         );
@@ -116655,7 +116663,7 @@ ${conflictLines.join("\n")}${moreText}`,
           }
         }));
         markNeoBuildTiming(timingReport, "analysis:stored");
-        console.log("Build analysis:", analysis);
+        logNeoBuildUiDebug("Build analysis:", analysis);
         markNeoBuildTiming(timingReport, "notifications:start");
         const notifications = [];
         const allPersonnel = [...allInstructorsData, ...allTraineesData];
@@ -116781,7 +116789,7 @@ ${conflictLines.join("\n")}${moreText}`,
         markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: 1e3 });
         setTimeout(() => {
           markNeoBuildTiming(timingReport, "navigation:setTimeout-fired");
-          console.log("🚀 [NEO-Build] Build process complete, navigating to NextDayBuild");
+          logNeoBuildUiDebug("🚀 [NEO-Build] Build process complete, navigating to NextDayBuild");
           setIsBuildingDfp(false);
           handleNavigation("NextDayBuild");
           markNeoBuildTiming(timingReport, "runBuildAlgorithm:complete");
