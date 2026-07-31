@@ -4727,7 +4727,7 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
                     {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
                     {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
-                    {wizardField('Include DEMO grade', row.demoGrade, (value) => updateRow('demoGrade', value), ['No', 'Yes'])}
+                    {wizardField('Include No Grade option', row.demoGrade, (value) => updateRow('demoGrade', value), ['No', 'Yes'])}
                     {wizardField('Satisfactory label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'Satisfactory')}
                     {wizardField('Unsatisfactory label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'Unsatisfactory')}
                 </div>
