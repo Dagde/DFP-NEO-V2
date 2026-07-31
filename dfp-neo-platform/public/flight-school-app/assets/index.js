@@ -70564,8 +70564,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-[1fr_1fr_1fr_auto]", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { code: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit || !organisationStructureUnlocked, onChange: (value) => updateRow("organisations", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Organisation Code", value: org.code, disabled: !canEdit || !organisationStructureUnlocked, onCommit: (value) => updateRow("organisations", index, { code: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Organisation Name", value: org.name, disabled: !canEdit || !organisationStructureUnlocked, onCommit: (value) => updateRow("organisations", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit || !organisationStructureUnlocked, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
