@@ -115,7 +115,7 @@ const DEFAULT_GRADE_LABELS: Record<number, string> = {
 export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
   version: 1,
   genericName: 'Training Report',
-  displayName: 'PT-051',
+  displayName: 'Report',
   modules: {
     overview: {
       title: 'Event Details',
@@ -128,7 +128,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
         callsign: 'Callsign',
         unit: 'Unit',
         date: 'Date',
-        assessor: 'Report Instructor',
+        assessor: 'Instructor',
       },
     },
     overallAssessment: {
@@ -143,7 +143,7 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
     comments: {
       title: 'Comments',
       fields: {
-        assessor: 'QFI',
+        assessor: 'Instructor',
         weather: 'Weather',
         profile: 'Profile',
         overall: 'Overall',

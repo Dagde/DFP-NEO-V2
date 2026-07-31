@@ -193,7 +193,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     pt051Assessments,
     onSavePT051Assessment,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-    instructorLabel = 'Report Instructor',
+    instructorLabel = 'Instructor',
     trainingReportTemplate = null,
     phraseBank,
     hasTraineesEnabled = true
@@ -204,7 +204,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     );
     const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || 'Training Report';
     const exportAssessmentTitle = `${exportReportName} Training Assessment`;
-    const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || 'Report Instructor';
+    const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || 'Instructor';
     const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
     const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
     const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce<Record<string, string>>((acc, result) => {

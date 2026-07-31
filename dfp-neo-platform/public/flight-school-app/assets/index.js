@@ -4559,7 +4559,7 @@ const DEFAULT_GRADE_LABELS = {
 const DEFAULT_TRAINING_REPORT_TEMPLATE = {
   version: 1,
   genericName: "Training Report",
-  displayName: "PT-051",
+  displayName: "Report",
   modules: {
     overview: {
       title: "Event Details",
@@ -4572,7 +4572,7 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
         callsign: "Callsign",
         unit: "Unit",
         date: "Date",
-        assessor: "Report Instructor"
+        assessor: "Instructor"
       }
     },
     overallAssessment: {
@@ -4587,7 +4587,7 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     comments: {
       title: "Comments",
       fields: {
-        assessor: "QFI",
+        assessor: "Instructor",
         weather: "Weather",
         profile: "Profile",
         overall: "Overall",
@@ -25196,7 +25196,7 @@ ${errorText || `HTTP ${response.status}`}`);
                     trainee,
                     event: inlinePt051Event,
                     initialAssessment: currentAssessment,
-                    instructorLabel: activeTrainingReportTemplate.modules.comments.fields.assessor || "Report Instructor",
+                    instructorLabel: activeTrainingReportTemplate.modules.comments.fields.assessor || "Instructor",
                     trainingReportTerminology,
                     trainingReportTemplate: activeTrainingReportTemplate,
                     trainingReportUnitCode: activeTrainingReportUnitCode,
@@ -80793,7 +80793,7 @@ const TrainingRecordsExportView = ({
   pt051Assessments,
   onSavePT051Assessment,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "Report Instructor",
+  instructorLabel = "Instructor",
   trainingReportTemplate = null,
   phraseBank,
   hasTraineesEnabled = true
@@ -80804,7 +80804,7 @@ const TrainingRecordsExportView = ({
   );
   const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || "Training Report";
   const exportAssessmentTitle = `${exportReportName} Training Assessment`;
-  const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || "Report Instructor";
+  const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || "Instructor";
   const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
   const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
   const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce((acc, result) => {
@@ -82514,7 +82514,7 @@ const TrainingRecordsView = ({
   platformConfig = null,
   serviceDefinitions = [],
   resourceDisplayNames,
-  instructorLabel = "Report Instructor",
+  instructorLabel = "Instructor",
   trainingReportTemplate = null,
   phraseBank,
   hasTraineesEnabled = true

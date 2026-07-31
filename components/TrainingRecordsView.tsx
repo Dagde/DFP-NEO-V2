@@ -70,7 +70,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     platformConfig = null,
     serviceDefinitions = [],
     resourceDisplayNames,
-    instructorLabel = 'Report Instructor',
+    instructorLabel = 'Instructor',
     trainingReportTemplate = null,
     phraseBank,
     hasTraineesEnabled = true,
