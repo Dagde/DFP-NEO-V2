@@ -66962,7 +66962,6 @@ const PlatformConfigurationSettings = ({
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = reactExports.useState("idle");
   const [airfieldCatalogueError, setAirfieldCatalogueError] = reactExports.useState("");
   const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = reactExports.useState(false);
-  const [organisationStructureOptionDrafts, setOrganisationStructureOptionDrafts] = reactExports.useState({});
   const [organisationStructureImportError, setOrganisationStructureImportError] = reactExports.useState("");
   const organisationStructureFileInputRef = reactExports.useRef(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
@@ -70670,31 +70669,27 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-white", children: levelIndex })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Field,
+                DraftField,
                 {
                   label: "Level Name",
                   value: level.name,
                   disabled: !canEdit || !organisationStructureUnlocked,
-                  onChange: (value) => updateOrganisationStructureLevel(levelIndex, { name: value })
+                  onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { name: value })
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0", children: [
+              organisationStructureUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                DraftTextAreaField,
+                {
+                  label: `Options (${level.options.length})`,
+                  value: level.options.join("\n"),
+                  disabled: !canEdit,
+                  onCommit: (value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) }),
+                  className: "min-w-0",
+                  fieldSizingClassName: "min-h-[76px]"
+                }
+              ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label: `Options (${level.options.length})` }),
-                organisationStructureUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "textarea",
-                  {
-                    className: `${fieldClass} min-h-[76px] resize-y`,
-                    value: organisationStructureOptionDrafts[level.id] ?? level.options.join("\n"),
-                    disabled: !canEdit,
-                    onKeyDownCapture: stopEditableKeyPropagation,
-                    onKeyDown: stopEditableKeyPropagation,
-                    onChange: (event) => {
-                      const nextText = event.target.value;
-                      setOrganisationStructureOptionDrafts((prev) => ({ ...prev, [level.id]: nextText }));
-                      updateOrganisationStructureLevel(levelIndex, { options: nextText.split(/\r?\n/) });
-                    }
-                  }
-                ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: level.options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-max items-center gap-2 pb-1", children: level.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No options defined" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300", children: level.options.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex min-w-max items-center gap-2 pb-1", children: level.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "max-w-[220px] shrink-0 truncate rounded border border-gray-700 bg-gray-900 px-2 py-1 text-xs font-semibold text-gray-200", title: option, children: option }, option)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500", children: "No options defined" }) })
               ] })
             ] }, level.id || `org-structure-level-${levelIndex}`)) })
           ] })

@@ -1835,7 +1835,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
   const [organisationStructureUnlocked, setOrganisationStructureUnlocked] = useState(false);
-  const [organisationStructureOptionDrafts, setOrganisationStructureOptionDrafts] = useState<Record<string, string>>({});
   const [organisationStructureImportError, setOrganisationStructureImportError] = useState('');
   const organisationStructureFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
@@ -6439,28 +6438,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60">Level</div>
                       <div className="mt-1 text-lg font-black text-white">{levelIndex}</div>
                     </div>
-                    <Field
+                    <DraftField
                       label="Level Name"
                       value={level.name}
                       disabled={!canEdit || !organisationStructureUnlocked}
-                      onChange={(value) => updateOrganisationStructureLevel(levelIndex, { name: value })}
+                      onCommit={(value) => updateOrganisationStructureLevel(levelIndex, { name: value })}
                     />
-                    <label className="min-w-0">
-                      <FieldLabel label={`Options (${level.options.length})`} />
-                      {organisationStructureUnlocked ? (
-                        <textarea
-                          className={`${fieldClass} min-h-[76px] resize-y`}
-                          value={organisationStructureOptionDrafts[level.id] ?? level.options.join('\n')}
-                          disabled={!canEdit}
-                          onKeyDownCapture={stopEditableKeyPropagation}
-                          onKeyDown={stopEditableKeyPropagation}
-                          onChange={(event) => {
-                            const nextText = event.target.value;
-                            setOrganisationStructureOptionDrafts((prev) => ({ ...prev, [level.id]: nextText }));
-                            updateOrganisationStructureLevel(levelIndex, { options: nextText.split(/\r?\n/) });
-                          }}
-                        />
-                      ) : (
+                    {organisationStructureUnlocked ? (
+                      <DraftTextAreaField
+                        label={`Options (${level.options.length})`}
+                        value={level.options.join('\n')}
+                        disabled={!canEdit}
+                        onCommit={(value) => updateOrganisationStructureLevel(levelIndex, { options: value.split(/\r?\n/) })}
+                        className="min-w-0"
+                        fieldSizingClassName="min-h-[76px]"
+                      />
+                    ) : (
+                      <label className="min-w-0">
+                        <FieldLabel label={`Options (${level.options.length})`} />
                         <div className="max-w-full overflow-x-auto rounded border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-300">
                           {level.options.length > 0 ? (
                             <div className="flex min-w-max items-center gap-2 pb-1">
@@ -6472,8 +6467,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <span className="text-xs text-gray-500">No options defined</span>
                           )}
                         </div>
-                      )}
-                    </label>
+                      </label>
+                    )}
                   </div>
                 ))}
               </div>
