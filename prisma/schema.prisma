@@ -170,7 +170,7 @@ model Trainee {
   role                String?
   service             String?
   course              String?
-  lmpType             String?   @default("BPC+IPC")
+  lmpType             String?   @default("")
   academicLmpType     String?   @default("")
   traineeCallsign     String?
   seatConfig          String?

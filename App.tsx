@@ -1861,7 +1861,7 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'flying', label: 'Flying Window' },
         { id: 'resources', label: 'Resources Available' },
         { id: 'training', label: 'Training Priority' },
-        { id: 'taskings', label: 'Directed Events' },
+        { id: 'taskings', label: 'Mission Requests' },
         { id: 'currency', label: 'Currency events' },
         { id: 'crew', label: 'Crew' },
         { id: 'course', label: 'Course events' },
@@ -2950,10 +2950,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (wizardStep === 8) {
             return questionShell(
-                'Which saved directed events must be scheduled?',
+                'Which saved mission requests must be scheduled?',
                 wizardTaskRows.length
-                    ? <p>Select events from Highest Priority Events and the Directed Events section, then continue.</p>
-                    : <p>No saved directed events are waiting in NEO Assist.</p>,
+                    ? <p>Select events from Highest Priority Events and the Mission Requests section, then continue.</p>
+                    : <p>No saved mission requests are waiting in NEO Assist.</p>,
                 wizardTaskRows.length ? wizardTaskRows.map(request => (
                     <button
                         key={request.selectionId}
@@ -3028,7 +3028,7 @@ const DfpSidePanelTimeline: React.FC<{
                         : <p>Routine Fixed Crew course/package training is currently off, so directed event and currency events will drive the build.</p>,
                     <>
                         <button type="button" className={wizardChoiceClass} onClick={useRoutineTraining}>Yes, use normal training</button>
-                        <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, directed events only</button>
+                        <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, mission requests only</button>
                         <div className="sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4">
                             <div className="mb-3 flex items-center justify-between gap-3">
                                 <div>
@@ -3086,7 +3086,7 @@ const DfpSidePanelTimeline: React.FC<{
                 <p>Current routine training mix is <strong>{airCombatSchedulingWeights.courses}% course events</strong> and <strong>{airCombatSchedulingWeights.trainingPackages}% package events</strong>.</p>,
                 <>
                     <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAirCombatSchedulingWeights({ courses: 60, trainingPackages: 40 }); advanceWizard(); }}>Yes, use normal training</button>
-                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAirCombatSchedulingWeights({ courses: 0, trainingPackages: 0 }); advanceWizard(); }}>No, directed events only</button>
+                    <button type="button" className={wizardChoiceClass} onClick={() => { onUpdateAirCombatSchedulingWeights({ courses: 0, trainingPackages: 0 }); advanceWizard(); }}>No, mission requests only</button>
                     <div className="sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4">
                         <div className="mb-3 flex items-center justify-between text-sm font-bold text-slate-800">
                             <span>Course {airCombatSchedulingWeights.courses}%</span>
@@ -3707,7 +3707,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Directed Events</p>
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Mission Requests</p>
                             <p className="mt-2 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
                             <p className="mt-0.5 text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>
@@ -3835,7 +3835,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <p className="mb-2 font-semibold text-cyan-100">Priority order</p>
                                 <div className="space-y-1">
                                     {[
-                                        ['01', 'Mandatory directed events', `${scheduledTaskCount} scheduled`],
+                                        ['01', 'Mandatory mission requests', `${scheduledTaskCount} scheduled`],
                                         ['02', 'Directed currency', `${scheduledCurrencyCount} scheduled`],
                                         ['03', 'Training packages', `${airCombatSchedulingWeights.trainingPackages}% training share`],
                                         ['04', 'Course events', `${airCombatSchedulingWeights.courses}% training share`],
@@ -3852,7 +3852,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <div>
                                         <p className="font-semibold text-violet-100">Course/Package</p>
-                                        <p className="text-[9px] text-violet-100/65">Balances routine Air Combat training after directed events.</p>
+                                        <p className="text-[9px] text-violet-100/65">Balances routine Air Combat training after mission requests.</p>
                                     </div>
                                     <span className="rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100">
                                         {airCombatSchedulingWeights.courses}/{airCombatSchedulingWeights.trainingPackages}
@@ -3922,7 +3922,7 @@ const DfpSidePanelTimeline: React.FC<{
             return (
                 <div className="space-y-2 text-[10px] text-slate-200">
                     <div className="max-h-40 space-y-1 overflow-y-auto pr-1">
-                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No directed events entered.</p>}
+                        {rows.length === 0 && <p className="rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500">No mission requests entered.</p>}
                         {rows.map(row => (
                             <div key={`${row.source}-${row.id}`} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
                                 <span className="min-w-0 truncate">
@@ -18843,7 +18843,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             scheduleAirCombatTrainingPriorityEvents('night');
         }
         if (airCombatDayTaskingEvents.length > 0) {
-            recordProgress({ message: 'Scheduling Air Combat mandatory directed events...', percentage: 45 });
+            recordProgress({ message: 'Scheduling Air Combat mandatory mission requests...', percentage: 45 });
             scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
         }
         if (airCombatDayCurrencyEvents.length > 0) {
@@ -20725,7 +20725,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const conclusions: string[] = [];
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
         if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.');
-        if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat directed events matched the build date.');
+        if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat mission requests matched the build date.');
         const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
         if (crewRoleShortfalls.length > 0) {
             conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || 'selected unit'}: ${crewRoleShortfalls.map((shortfall: any) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(', ')}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);

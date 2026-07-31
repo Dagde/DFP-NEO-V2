@@ -6830,7 +6830,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Mission Profiles"
-          subtitle="Model-specific mission profile lists used by Directed Events. Users can still type a profile manually if the assigned profile is not listed."
+          subtitle="Model-specific mission profile lists used by mission requests. Users can still type a profile manually if the assigned profile is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6852,7 +6852,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the mission profile names available for each operational model. Unit abbreviations are optional and only change the short text shown on schedule tiles.
+            Set the mission profile names available for each operational model. Unit tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6884,7 +6884,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
           <div id="platform-task-tile-abbreviations" className="mt-5">
-            <h4 className="mb-2 text-sm font-bold text-white">Unit Mission Tile Abbreviations</h4>
+            <h4 className="mb-2 text-sm font-bold text-white">Unit Mission Tile Labels</h4>
             <div className="grid gap-4 lg:grid-cols-2">
               {visibleUnitRows.filter(({ unit }) => isActiveRecord(unit)).map(({ unit }) => {
                 const unitIndex = config.units.findIndex((candidate) => candidate === unit);
@@ -6904,11 +6904,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </span>
                     </div>
                     <TextAreaField
-                      label="Tile Abbreviations"
+                      label="Schedule Tile Labels"
                       value={taskProfilesUnlocked ? (taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations)) : formatTaskProfileAbbreviationText(abbreviations)}
                       disabled={!canEditTaskProfiles}
                       onChange={(value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value }))}
-                      info="One abbreviation per line, for example Close Air Support - CAS. Equals signs are also accepted."
+                      info="One label per line, for example Close Air Support - CAS. Equals signs are also accepted."
                     />
                   </div>
                 );

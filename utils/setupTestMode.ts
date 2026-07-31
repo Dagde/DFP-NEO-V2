@@ -51,8 +51,8 @@ export const resetSetupTestProfile = (profile: string): void => {
   win.localStorage.setItem(`${setupPrefix}settings`, JSON.stringify({}));
   win.localStorage.setItem(`${setupPrefix}currencies`, JSON.stringify({ masterCurrencies: [], currencyRequirements: [] }));
   win.localStorage.setItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY, JSON.stringify({
-    location: 'ESL',
-    unit: '1FTS',
+    location: '',
+    unit: '',
   }));
   win.sessionStorage.removeItem('dfp_setup_test_profile');
   win.dispatchEvent(new CustomEvent(SETUP_TEST_PLATFORM_EVENT, { detail: { config: emptyConfig } }));

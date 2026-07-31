@@ -150,7 +150,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         {
             id: 'directed-events' as const,
             step: '04',
-            label: 'Directed Events',
+            label: 'Mission Requests',
             shortLabel: 'Exceptions',
             description: 'Manage currency requests and high-priority events.',
         },
@@ -165,7 +165,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     const fixedCrewPlannerSections = {
         'events-builder': [
             { label: 'Highest Priority Table', target: '.highest-priority-events-card' },
-            { label: 'Directed Events', target: '.tasking-events-card' },
+            { label: 'Mission Requests', target: '.tasking-events-card' },
             { label: 'Continuation / Currency Requests', target: '.specific-currency-card' },
             { label: 'Saved Special Events', target: '.saved-special-events-card' },
         ],
@@ -187,7 +187,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 step: '01',
                 label: 'Events Builder',
                 shortLabel: 'Events',
-                description: 'Manage priority events, directed event and currency requests.',
+                description: 'Manage priority events, mission requests and currency requests.',
             },
         ]
         : activeFixedCrewTab === 'deployments'
@@ -568,7 +568,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         <h1 className={`${isFixedCrewModel ? 'mt-1 text-xl' : 'mt-1 text-2xl'} font-bold text-white`}>{isFixedCrewModel ? 'Build Planner' : 'Build Priorities'}</h1>
                         <p className={`${isFixedCrewModel ? 'mt-1 text-xs leading-5' : 'mt-2 text-sm'} text-slate-300`}>
                             {isFixedCrewModel
-                                ? 'Plan directed events and build weighting for the Fixed Crew model.'
+                                ? 'Plan mission requests and build weighting for the Fixed Crew model.'
                                 : 'Configure the build in the same order a supervisor would plan the DFP by hand.'}
                         </p>
                     </div>

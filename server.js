@@ -8899,6 +8899,14 @@ async function ensureCourseLmpTypeColumn(db) {
 
 async function ensureAcademicLmpTypeColumns(db) {
   try {
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ALTER COLUMN "lmpType" SET DEFAULT '';
+    `);
+    console.log('✅ Trainee.lmpType default ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Trainee.lmpType default:', err.message);
+  }
+  try {
     // Add academicLmpType column to Trainee table if it doesn't exist
     await db.$executeRawUnsafe(`
       ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
