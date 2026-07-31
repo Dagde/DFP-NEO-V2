@@ -632,8 +632,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
     const canEditEmergencyAuthority = ['Super Admin', 'Admin'].includes(currentUserPermission);
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
-    const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel;
-    const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY.longLabel;
+    const sctShortLabel = sctTerminology.shortLabel;
+    const sctLongLabel = sctTerminology.longLabel;
     const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
     const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
     const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;

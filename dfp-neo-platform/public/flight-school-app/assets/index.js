@@ -4846,16 +4846,21 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
-const DEFAULT_SCT_TERMINOLOGY$1 = {
+const DEFAULT_SCT_TERMINOLOGY = {
   shortLabel: "ContT",
   longLabel: "Continuation Training"
 };
 const SCT_SHORT_LABEL_MAX_LENGTH = 12;
 const SCT_LONG_LABEL_MAX_LENGTH = 40;
-const normaliseSctTerminology = (input) => ({
-  shortLabel: String(input?.shortLabel || "").trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY$1.shortLabel,
-  longLabel: String(input?.longLabel || "").trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY$1.longLabel
-});
+const hasOwn = (input, key) => Object.prototype.hasOwnProperty.call(input, key);
+const cleanTerminologyLabel = (value, maxLength) => String(value ?? "").trim().slice(0, maxLength);
+const normaliseSctTerminology = (input) => {
+  if (!input || typeof input !== "object") return DEFAULT_SCT_TERMINOLOGY;
+  return {
+    shortLabel: hasOwn(input, "shortLabel") ? cleanTerminologyLabel(input.shortLabel, SCT_SHORT_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY.shortLabel,
+    longLabel: hasOwn(input, "longLabel") ? cleanTerminologyLabel(input.longLabel, SCT_LONG_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY.longLabel
+  };
+};
 const normaliseUnitCode$4 = (value) => String(value || "").trim().toUpperCase();
 const getSctTerminology = (config, unitCode) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
@@ -28116,7 +28121,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode: activeUnitCode2 = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode: activeUnitCode2 = "", staffQualificationCatalogue, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -31999,7 +32004,7 @@ const AddFlightTileModal = ({
     personDropdownColumnState.clear();
   }, []);
   const resolvedSctTerminology = reactExports.useMemo(
-    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY$1),
+    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
     [sctTerminology]
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
@@ -36014,7 +36019,7 @@ const MyDashboard = ({
   selectedStaffName,
   onSelectStaffName,
   onUnreadMessageCountChange,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   currentLocationCode
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
@@ -50947,7 +50952,7 @@ const InstructorProfileFlyout = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   trainingReportDisplayName = "Training Report"
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
@@ -62183,7 +62188,7 @@ const SettingsView = ({
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
   emergencyFreezeAuthority,
@@ -62199,8 +62204,8 @@ const SettingsView = ({
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const canEditEmergencyAuthority = ["Super Admin", "Admin"].includes(currentUserPermission);
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeOperationalModel);
-  const sctShortLabel = sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel;
-  const sctLongLabel = sctTerminology.longLabel || DEFAULT_SCT_TERMINOLOGY$1.longLabel;
+  const sctShortLabel = sctTerminology.shortLabel;
+  const sctLongLabel = sctTerminology.longLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEnabled = personnelDisplaySettings.simIpDisplayEnabled !== false;
   const contractorStaffLimitLabel = simIpDisplayLabel.trim() || DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel;
@@ -67475,7 +67480,7 @@ const PlatformConfigurationSettings = ({
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
-  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events`;
+  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -75905,9 +75910,9 @@ const SettingsViewWithMenu = (props) => {
   const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
-  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
-  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel} / Currency Events` : sectionLabels[section];
-  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel} and currency event defaults` : sectionDescriptions[section];
+  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
+  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel} / Currency Events` : sectionLabels[section];
+  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel} and currency event defaults` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -83176,7 +83181,7 @@ const DutyWarningFlyout = ({ onConfirm, onCancel, instructorName, dutyHours }) =
     ] })
   ] }) });
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode: activeUnitCode2 = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode: activeUnitCode2 = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;

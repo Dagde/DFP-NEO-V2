@@ -791,12 +791,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
     const getSectionLabel = (section: SettingsMenuSection): string => (
         section === 'sct-events'
-            ? `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events`
+            ? `${sctTerminology.shortLabel} / Currency Events`
             : sectionLabels[section]
     );
     const getSectionDescription = (section: SettingsMenuSection): string => (
         section === 'sct-events'
-            ? `Configure ${(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel)} and currency event defaults`
+            ? `Configure ${sctTerminology.shortLabel} and currency event defaults`
             : sectionDescriptions[section]
     );
 

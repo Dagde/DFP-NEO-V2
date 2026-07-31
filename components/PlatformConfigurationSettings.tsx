@@ -2287,7 +2287,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null,
   );
-  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel} / Currency Events`;
+  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );

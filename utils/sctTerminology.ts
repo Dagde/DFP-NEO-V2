@@ -13,10 +13,26 @@ export const DEFAULT_SCT_TERMINOLOGY: SctTerminology = {
 export const SCT_SHORT_LABEL_MAX_LENGTH = 12;
 export const SCT_LONG_LABEL_MAX_LENGTH = 40;
 
-export const normaliseSctTerminology = (input?: Partial<SctTerminology> | null): SctTerminology => ({
-  shortLabel: String(input?.shortLabel || '').trim().slice(0, SCT_SHORT_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.shortLabel,
-  longLabel: String(input?.longLabel || '').trim().slice(0, SCT_LONG_LABEL_MAX_LENGTH) || DEFAULT_SCT_TERMINOLOGY.longLabel,
-});
+const hasOwn = (input: object, key: keyof SctTerminology): boolean => (
+  Object.prototype.hasOwnProperty.call(input, key)
+);
+
+const cleanTerminologyLabel = (value: unknown, maxLength: number): string => (
+  String(value ?? '').trim().slice(0, maxLength)
+);
+
+export const normaliseSctTerminology = (input?: Partial<SctTerminology> | null): SctTerminology => {
+  if (!input || typeof input !== 'object') return DEFAULT_SCT_TERMINOLOGY;
+
+  return {
+    shortLabel: hasOwn(input, 'shortLabel')
+      ? cleanTerminologyLabel(input.shortLabel, SCT_SHORT_LABEL_MAX_LENGTH)
+      : DEFAULT_SCT_TERMINOLOGY.shortLabel,
+    longLabel: hasOwn(input, 'longLabel')
+      ? cleanTerminologyLabel(input.longLabel, SCT_LONG_LABEL_MAX_LENGTH)
+      : DEFAULT_SCT_TERMINOLOGY.longLabel,
+  };
+};
 
 const normaliseUnitCode = (value?: string | null): string => String(value || '').trim().toUpperCase();
 
