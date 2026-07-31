@@ -15,6 +15,7 @@ interface AddRemedialPackageFlyoutProps {
   traineeLmp: SyllabusItemDetail[];
   resourceDisplayNames?: ResourceDisplayNames;
   trainingReportName?: string;
+  instructorLabel?: string;
   onClose: () => void;
   onSave: (
     trainee: Trainee,
@@ -29,6 +30,7 @@ interface RemedialInputRowProps {
   state: RemedialRowState;
   setState: React.Dispatch<React.SetStateAction<RemedialRowState>>;
   instructors: Instructor[];
+  instructorLabel: string;
   openInstructorMenu: string | null;
   setOpenInstructorMenu: React.Dispatch<React.SetStateAction<string | null>>;
   setValidationMessage: React.Dispatch<React.SetStateAction<string>>;
@@ -40,6 +42,7 @@ const RemedialInputRow: React.FC<RemedialInputRowProps> = React.memo(({
   state,
   setState,
   instructors,
+  instructorLabel,
   openInstructorMenu,
   setOpenInstructorMenu,
   setValidationMessage
@@ -72,7 +75,7 @@ const RemedialInputRow: React.FC<RemedialInputRowProps> = React.memo(({
           </div>
       </div>
       <div className="relative flex-grow">
-          <label className="block text-xs font-medium text-gray-400">Instructor</label>
+          <label className="block text-xs font-medium text-gray-400">{instructorLabel}</label>
           <button
             type="button"
             onMouseDown={event => {
@@ -87,7 +90,7 @@ const RemedialInputRow: React.FC<RemedialInputRowProps> = React.memo(({
             }}
             className="mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
           >
-            <span className={state.instructor ? 'truncate' : 'truncate text-gray-400'}>{state.instructor || 'Select instructor...'}</span>
+            <span className={state.instructor ? 'truncate' : 'truncate text-gray-400'}>{state.instructor || `Select ${instructorLabel.toLowerCase()}...`}</span>
             <span className="ml-2 text-gray-400">▾</span>
           </button>
           {openInstructorMenu === menuKey && (
@@ -129,6 +132,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   trainingReportName = 'Training Report',
+  instructorLabel = 'Instructor',
   onClose,
   onSave
 }) => {
@@ -454,8 +458,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                       menuKey="tutorials"
                       state={tutState}
                       setState={setTutState}
-                      instructors={instructors}
-                      openInstructorMenu={openInstructorMenu}
+                instructors={instructors}
+                instructorLabel={instructorLabel}
+                openInstructorMenu={openInstructorMenu}
                       setOpenInstructorMenu={setOpenInstructorMenu}
                       setValidationMessage={setValidationMessage}
                     />
@@ -464,8 +469,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                       menuKey="ftd"
                       state={ftdState}
                       setState={setFtdState}
-                      instructors={instructors}
-                      openInstructorMenu={openInstructorMenu}
+                instructors={instructors}
+                instructorLabel={instructorLabel}
+                openInstructorMenu={openInstructorMenu}
                       setOpenInstructorMenu={setOpenInstructorMenu}
                       setValidationMessage={setValidationMessage}
                     />
@@ -474,8 +480,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                       menuKey="flights"
                       state={flightState}
                       setState={setFlightState}
-                      instructors={instructors}
-                      openInstructorMenu={openInstructorMenu}
+                instructors={instructors}
+                instructorLabel={instructorLabel}
+                openInstructorMenu={openInstructorMenu}
                       setOpenInstructorMenu={setOpenInstructorMenu}
                       setValidationMessage={setValidationMessage}
                     />

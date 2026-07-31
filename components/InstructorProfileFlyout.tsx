@@ -1390,7 +1390,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Training</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Report</th>
                               <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">Result</th>
-                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Instructor</th>
+                              <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">{instructorLabel}</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Unit</th>
                               <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300">Delete</th>
                             </tr>

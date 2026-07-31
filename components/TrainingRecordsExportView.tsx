@@ -892,7 +892,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     exportCommentFieldLabels.assessor,
                     exportAssessorLabel,
                     instructorLabel,
-                    'Instructor',
+                    exportAssessorLabel,
                     'Report Instructor',
                     'Assessor',
                 ),
@@ -1865,7 +1865,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                         <th className="px-4 py-2">Type</th>
                                         <th className="px-4 py-2">Event</th>
                                         <th className="px-4 py-2">Trainee</th>
-                                        <th className="px-4 py-2">Instructor</th>
+                                        <th className="px-4 py-2">{exportAssessorLabel}</th>
                                         <th className="px-4 py-2">Status</th>
                                     </tr>
                                 </thead>

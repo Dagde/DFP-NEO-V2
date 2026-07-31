@@ -20065,6 +20065,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
     [trainingReportTemplate, trainingReportTerminology]
   );
+  const reportAssessorLabel = reportTemplate.modules.comments.fields.assessor || "Instructor";
   const missionStatusLabelMap = React.useMemo(() => {
     const options = getTrainingReportCompletionResultOptions(reportTemplate);
     return new Map(options.map((option) => [option.code, option.label]));
@@ -20278,7 +20279,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Status" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: reportAssessorLabel })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "text-center py-14 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
@@ -33977,6 +33978,7 @@ const AcademicsTab = ({
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
   instructors = [],
+  instructorLabel = "Instructor",
   onSave,
   onClose
 }) => {
@@ -34536,7 +34538,7 @@ Do you still want to include them in this academic session?`,
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }, children: [
           instructors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Instructor" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: instructorLabel }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { style: { ...S.select, width: 160 }, value: instructor, onChange: (e) => setInstructor(e.target.value), children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Unallocated —" }),
               instructors.map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i, children: i }, i))
@@ -35125,6 +35127,7 @@ const AddGroundEventFlyout = ({
                     persistedAcademicLmp,
                     onUpdatePersistedAcademicLmp,
                     instructors,
+                    instructorLabel,
                     onSave: (data) => {
                       if (onSaveAcademic) {
                         onSaveAcademic(data);
@@ -38696,7 +38699,8 @@ const PrioritiesView = ({
   standardMissionProfiles = [],
   onSaveStandardMissionProfile,
   unitCallsignSettings,
-  staffQualificationCatalogue
+  staffQualificationCatalogue,
+  instructorLabel = "Instructor"
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -40470,7 +40474,7 @@ const PrioritiesView = ({
                 },
                 className: controlClass,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select pilot" : "Select Instructor" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select pilot" : `Select ${instructorLabel.toLowerCase()}` }),
                   instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
                 ]
               }
@@ -41616,9 +41620,16 @@ const PrioritiesView = ({
     !isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-people-rules space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Second Input" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Instructor Allocation Rules" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "mt-1 text-xl font-semibold text-white", children: [
+          instructorLabel,
+          " Allocation Rules"
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
-          "Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and ",
+          "Set whether the build should prefer or require the trainee's assigned ",
+          instructorLabel.toLowerCase(),
+          " chain before using a wider ",
+          instructorLabel.toLowerCase(),
+          " pool for flight and ",
           ftdLabel,
           " events."
         ] })
@@ -41631,7 +41642,7 @@ const PrioritiesView = ({
               {
                 onClick: () => {
                   const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
-                  logAudit("Priorities", "Edit", "Instructor Priority Mode toggled", `${instructorPriority.enabled} → ${next.enabled}`);
+                  logAudit("Priorities", "Edit", `${instructorLabel} Priority Mode toggled`, `${instructorPriority.enabled} → ${next.enabled}`);
                   onUpdateInstructorPriority(next);
                 },
                 className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? "bg-sky-500" : "bg-gray-600"}`,
@@ -41643,7 +41654,17 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: [
             "When on, flight and ",
             ftdLabel,
-            " events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected."
+            " events follow the ",
+            instructorLabel.toLowerCase(),
+            " groups selected below. Primary ",
+            instructorLabel,
+            " tries to roster the trainee with their primary ",
+            instructorLabel.toLowerCase(),
+            " first; fallback to the secondary ",
+            instructorLabel.toLowerCase(),
+            " or an alternate ",
+            instructorLabel.toLowerCase(),
+            " from the same flight only occurs when those options are also selected."
           ] })
         ] }),
         instructorPriority.enabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 pl-2", children: [
@@ -41654,7 +41675,7 @@ const PrioritiesView = ({
               {
                 onClick: () => {
                   const next = { ...instructorPriority, mode: m };
-                  logAudit("Priorities", "Edit", "Instructor Priority mode changed", `${instructorPriority.mode} → ${m}`);
+                  logAudit("Priorities", "Edit", `${instructorLabel} Priority mode changed`, `${instructorPriority.mode} → ${m}`);
                   onUpdateInstructorPriority(next);
                 },
                 className: `px-4 py-1.5 rounded-md text-sm font-medium transition-all ${instructorPriority.mode === m ? m === "hard" ? "bg-red-600 text-white shadow" : "bg-sky-600 text-white shadow" : "text-gray-400 hover:text-white"}`,
@@ -41664,13 +41685,29 @@ const PrioritiesView = ({
             )) }),
             instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Soft:" }),
-              " The scheduler attempts the selected instructor chain first. If the primary instructor is unavailable, it can fall back to selected secondary or same-flight instructors; if none are available, it may use any otherwise eligible instructor so the event can still be placed."
+              " The scheduler attempts the selected ",
+              instructorLabel.toLowerCase(),
+              " chain first. If the primary ",
+              instructorLabel.toLowerCase(),
+              " is unavailable, it can fall back to selected secondary or same-flight ",
+              instructorLabel.toLowerCase(),
+              " options; if none are available, it may use any otherwise eligible ",
+              instructorLabel.toLowerCase(),
+              " so the event can still be placed."
             ] }),
             instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-medium", children: "Hard:" }),
               " Flight and ",
               ftdLabel,
-              " events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. ",
+              " events are only placed when one of the selected ",
+              instructorLabel.toLowerCase(),
+              " groups is available. If Primary ",
+              instructorLabel,
+              " is selected, the primary ",
+              instructorLabel.toLowerCase(),
+              " must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no ",
+              instructorLabel.toLowerCase(),
+              ". ",
               cptLabel,
               " and Ground are unaffected."
             ] })
@@ -41681,9 +41718,9 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(select one or more)" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [
-              { key: "primary", label: "Primary Instructor", desc: "Try the trainee's primary instructor first where possible." },
-              { key: "secondary", label: "Secondary Instructor", desc: "Allow the trainee's secondary instructor as a fallback when the primary is unavailable." },
-              { key: "sameFlight", label: "Same Flight Instructor", desc: "Allow another qualified instructor from the trainee's allocated flight as a fallback." }
+              { key: "primary", label: `Primary ${instructorLabel}`, desc: `Try the trainee's primary ${instructorLabel.toLowerCase()} first where possible.` },
+              { key: "secondary", label: `Secondary ${instructorLabel}`, desc: `Allow the trainee's secondary ${instructorLabel.toLowerCase()} as a fallback when the primary is unavailable.` },
+              { key: "sameFlight", label: `Same Flight ${instructorLabel}`, desc: `Allow another qualified ${instructorLabel.toLowerCase()} from the trainee's allocated flight as a fallback.` }
             ].map(({ key, label, desc }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -41718,14 +41755,22 @@ const PrioritiesView = ({
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mb-2", children: [
-                "Select which instructor groups are authorised for flight and ",
+                "Select which ",
+                instructorLabel.toLowerCase(),
+                " groups are authorised for flight and ",
                 ftdLabel,
-                " placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned."
+                " placement. With Primary ",
+                instructorLabel,
+                " selected, the build requires the trainee's primary ",
+                instructorLabel.toLowerCase(),
+                " unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no ",
+                instructorLabel.toLowerCase(),
+                " assigned."
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3", children: [
-                { key: "primary", label: "Primary Instructor", desc: "Require the trainee's primary instructor unless an authorised fallback group is also selected and available." },
-                { key: "secondary", label: "Secondary Instructor", desc: "Permit the trainee's secondary instructor as an authorised fallback." },
-                { key: "sameFlight", label: "Same Flight Instructor", desc: "Permit another qualified instructor from the trainee's allocated flight as an authorised fallback." }
+                { key: "primary", label: `Primary ${instructorLabel}`, desc: `Require the trainee's primary ${instructorLabel.toLowerCase()} unless an authorised fallback group is also selected and available.` },
+                { key: "secondary", label: `Secondary ${instructorLabel}`, desc: `Permit the trainee's secondary ${instructorLabel.toLowerCase()} as an authorised fallback.` },
+                { key: "sameFlight", label: `Same Flight ${instructorLabel}`, desc: `Permit another qualified ${instructorLabel.toLowerCase()} from the trainee's allocated flight as an authorised fallback.` }
               ].map(({ key, label, desc }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -51636,7 +51681,7 @@ const InstructorProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Training" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Report" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Result" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Instructor" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: instructorLabel }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Unit" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Delete" })
                 ] }) }),
@@ -77830,6 +77875,7 @@ const RemedialInputRow = React.memo(({
   state,
   setState,
   instructors,
+  instructorLabel,
   openInstructorMenu,
   setOpenInstructorMenu,
   setValidationMessage
@@ -77857,7 +77903,7 @@ const RemedialInputRow = React.memo(({
     )) })
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-grow", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Instructor" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: instructorLabel }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
       {
@@ -77874,7 +77920,7 @@ const RemedialInputRow = React.memo(({
         },
         className: "mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || "Select instructor..." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || `Select ${instructorLabel.toLowerCase()}...` }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-gray-400", children: "▾" })
         ]
       }
@@ -77915,6 +77961,7 @@ const AddRemedialPackageFlyout = ({
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   trainingReportName = "Training Report",
+  instructorLabel = "Instructor",
   onClose,
   onSave
 }) => {
@@ -78150,6 +78197,7 @@ const AddRemedialPackageFlyout = ({
                 state: tutState,
                 setState: setTutState,
                 instructors,
+                instructorLabel,
                 openInstructorMenu,
                 setOpenInstructorMenu,
                 setValidationMessage
@@ -78163,6 +78211,7 @@ const AddRemedialPackageFlyout = ({
                 state: ftdState,
                 setState: setFtdState,
                 instructors,
+                instructorLabel,
                 openInstructorMenu,
                 setOpenInstructorMenu,
                 setValidationMessage
@@ -78176,6 +78225,7 @@ const AddRemedialPackageFlyout = ({
                 state: flightState,
                 setState: setFlightState,
                 instructors,
+                instructorLabel,
                 openInstructorMenu,
                 setOpenInstructorMenu,
                 setValidationMessage
@@ -81347,7 +81397,7 @@ const TrainingRecordsExportView = ({
           exportCommentFieldLabels.assessor,
           exportAssessorLabel,
           instructorLabel,
-          "Instructor",
+          exportAssessorLabel,
           "Report Instructor",
           "Assessor"
         )
@@ -82200,7 +82250,7 @@ const TrainingRecordsExportView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Type" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Event" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Trainee" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Instructor" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: exportAssessorLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2", children: "Status" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: filteredData.events.slice(0, 5).map((event, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
@@ -121952,6 +122002,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             standardMissionProfiles: activeStandardMissionProfiles,
             onSaveStandardMissionProfile: handleSaveStandardMissionProfileFromPlanner,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
+            instructorLabel,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,
             onAddPriorityEvents: (eventsToAdd) => {
@@ -124695,6 +124746,7 @@ Do you want to replace the existing entry?`,
           ),
           traineeLmp: traineeLMPs.get(selectedTraineeForRemedial.fullName) || [],
           trainingReportName: configuredTrainingReportDisplayName,
+          instructorLabel,
           onClose: () => setShowAddRemedialPackage(false),
           onSave: handleSaveRemedialPackage
         }

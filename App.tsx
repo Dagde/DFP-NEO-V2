@@ -42565,6 +42565,7 @@ appliedUpdates.forEach(update => {
                     standardMissionProfiles={activeStandardMissionProfiles}
                     onSaveStandardMissionProfile={handleSaveStandardMissionProfileFromPlanner}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
+                    instructorLabel={instructorLabel}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {
@@ -45522,6 +45523,7 @@ appliedUpdates.forEach(update => {
                     )}
                     traineeLmp={traineeLMPs.get(selectedTraineeForRemedial.fullName) || []}
                     trainingReportName={configuredTrainingReportDisplayName}
+                    instructorLabel={instructorLabel}
                     onClose={() => setShowAddRemedialPackage(false)}
                     onSave={handleSaveRemedialPackage}
                 />

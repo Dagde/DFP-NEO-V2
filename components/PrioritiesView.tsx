@@ -279,6 +279,7 @@ interface PrioritiesViewProps {
   onSaveStandardMissionProfile?: (profileId: string, changes: Partial<StandardMissionProfile>) => void;
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  instructorLabel?: string;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -1050,6 +1051,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onSaveStandardMissionProfile,
   unitCallsignSettings,
   staffQualificationCatalogue,
+  instructorLabel = 'Instructor',
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -3273,7 +3275,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                               }}
                                               className={controlClass}
                                           >
-                                              <option value="">{isFlightSchoolCurrencyRequest ? 'Select pilot' : 'Select Instructor'}</option>
+                                              <option value="">{isFlightSchoolCurrencyRequest ? 'Select pilot' : `Select ${instructorLabel.toLowerCase()}`}</option>
                                               {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
                                           </select>
                                       )}
@@ -4595,8 +4597,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Second Input</p>
-                        <h2 className="mt-1 text-xl font-semibold text-white">Instructor Allocation Rules</h2>
-                        <p className="mt-1 text-sm text-slate-300">Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and {ftdLabel} events.</p>
+                        <h2 className="mt-1 text-xl font-semibold text-white">{instructorLabel} Allocation Rules</h2>
+                        <p className="mt-1 text-sm text-slate-300">Set whether the build should prefer or require the trainee's assigned {instructorLabel.toLowerCase()} chain before using a wider {instructorLabel.toLowerCase()} pool for flight and {ftdLabel} events.</p>
                     </div>
                     <div className="p-4 space-y-5">
 
@@ -4606,7 +4608,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <div
                                     onClick={() => {
                                         const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
-                                        logAudit("Priorities", "Edit", "Instructor Priority Mode toggled", `${instructorPriority.enabled} → ${next.enabled}`);
+                                        logAudit("Priorities", "Edit", `${instructorLabel} Priority Mode toggled`, `${instructorPriority.enabled} → ${next.enabled}`);
                                         onUpdateInstructorPriority(next);
                                     }}
                                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? 'bg-sky-500' : 'bg-gray-600'}`}
@@ -4616,7 +4618,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <span className="font-semibold text-sky-400">Priority Mode</span>
                             </label>
                             <p className="text-xs text-gray-400 mt-1 ml-14">
-                                When on, flight and {ftdLabel} events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected.
+                                When on, flight and {ftdLabel} events follow the {instructorLabel.toLowerCase()} groups selected below. Primary {instructorLabel} tries to roster the trainee with their primary {instructorLabel.toLowerCase()} first; fallback to the secondary {instructorLabel.toLowerCase()} or an alternate {instructorLabel.toLowerCase()} from the same flight only occurs when those options are also selected.
                             </p>
                         </div>
 
@@ -4632,7 +4634,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 key={m}
                                                 onClick={() => {
                                                     const next = { ...instructorPriority, mode: m };
-                                                    logAudit("Priorities", "Edit", "Instructor Priority mode changed", `${instructorPriority.mode} → ${m}`);
+                                                    logAudit("Priorities", "Edit", `${instructorLabel} Priority mode changed`, `${instructorPriority.mode} → ${m}`);
                                                     onUpdateInstructorPriority(next);
                                                 }}
                                                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
@@ -4647,12 +4649,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </div>
                                     {instructorPriority.mode === 'soft' && (
                                         <p className="text-xs text-gray-400 mt-1">
-                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler attempts the selected instructor chain first. If the primary instructor is unavailable, it can fall back to selected secondary or same-flight instructors; if none are available, it may use any otherwise eligible instructor so the event can still be placed.
+                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler attempts the selected {instructorLabel.toLowerCase()} chain first. If the primary {instructorLabel.toLowerCase()} is unavailable, it can fall back to selected secondary or same-flight {instructorLabel.toLowerCase()} options; if none are available, it may use any otherwise eligible {instructorLabel.toLowerCase()} so the event can still be placed.
                                         </p>
                                     )}
                                     {instructorPriority.mode === 'hard' && (
                                         <p className="text-xs text-gray-400 mt-1">
-                                            <span className="text-red-400 font-medium">Hard:</span> Flight and {ftdLabel} events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. {cptLabel} and Ground are unaffected.
+                                            <span className="text-red-400 font-medium">Hard:</span> Flight and {ftdLabel} events are only placed when one of the selected {instructorLabel.toLowerCase()} groups is available. If Primary {instructorLabel} is selected, the primary {instructorLabel.toLowerCase()} must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no {instructorLabel.toLowerCase()}. {cptLabel} and Ground are unaffected.
                                         </p>
                                     )}
                                 </div>
@@ -4665,9 +4667,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         </p>
                                         <div className="space-y-2">
                                             {([ 
-                                                { key: 'primary',    label: 'Primary Instructor',         desc: "Try the trainee's primary instructor first where possible." },
-                                                { key: 'secondary',  label: 'Secondary Instructor',       desc: "Allow the trainee's secondary instructor as a fallback when the primary is unavailable." },
-                                                { key: 'sameFlight', label: 'Same Flight Instructor',     desc: "Allow another qualified instructor from the trainee's allocated flight as a fallback." },
+                                                { key: 'primary',    label: `Primary ${instructorLabel}`,         desc: `Try the trainee's primary ${instructorLabel.toLowerCase()} first where possible.` },
+                                                { key: 'secondary',  label: `Secondary ${instructorLabel}`,       desc: `Allow the trainee's secondary ${instructorLabel.toLowerCase()} as a fallback when the primary is unavailable.` },
+                                                { key: 'sameFlight', label: `Same Flight ${instructorLabel}`,     desc: `Allow another qualified ${instructorLabel.toLowerCase()} from the trainee's allocated flight as a fallback.` },
                                             ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
                                                 <label key={key} className="flex items-start space-x-3 cursor-pointer group">
                                                     <input
@@ -4701,13 +4703,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 <span className="text-xs text-gray-400 font-normal ml-2">(flight/{ftdLabel} will go to STBY if none available)</span>
                                             </p>
                                             <p className="text-xs text-gray-400 mb-2">
-                                                Select which instructor groups are authorised for flight and {ftdLabel} placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned.
+                                                Select which {instructorLabel.toLowerCase()} groups are authorised for flight and {ftdLabel} placement. With Primary {instructorLabel} selected, the build requires the trainee's primary {instructorLabel.toLowerCase()} unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no {instructorLabel.toLowerCase()} assigned.
                                             </p>
                                             <div className="space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3">
                                                 {([
-                                                    { key: 'primary',    label: 'Primary Instructor',     desc: "Require the trainee's primary instructor unless an authorised fallback group is also selected and available." },
-                                                    { key: 'secondary',  label: 'Secondary Instructor',   desc: "Permit the trainee's secondary instructor as an authorised fallback." },
-                                                    { key: 'sameFlight', label: 'Same Flight Instructor', desc: "Permit another qualified instructor from the trainee's allocated flight as an authorised fallback." },
+                                                    { key: 'primary',    label: `Primary ${instructorLabel}`,     desc: `Require the trainee's primary ${instructorLabel.toLowerCase()} unless an authorised fallback group is also selected and available.` },
+                                                    { key: 'secondary',  label: `Secondary ${instructorLabel}`,   desc: `Permit the trainee's secondary ${instructorLabel.toLowerCase()} as an authorised fallback.` },
+                                                    { key: 'sameFlight', label: `Same Flight ${instructorLabel}`, desc: `Permit another qualified ${instructorLabel.toLowerCase()} from the trainee's allocated flight as an authorised fallback.` },
                                                 ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
                                                     <label key={key} className="flex items-start space-x-3 cursor-pointer group">
                                                         <input

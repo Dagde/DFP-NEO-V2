@@ -34,6 +34,7 @@ interface AcademicsTabProps {
   persistedAcademicLmp?: string;
   onUpdatePersistedAcademicLmp?: (lmp: string) => void;
   instructors?: string[];    // list of instructor names for allocation dropdown
+  instructorLabel?: string;
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -308,6 +309,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
   instructors = [],
+  instructorLabel = 'Instructor',
   onSave,
   onClose,
 }) => {
@@ -901,7 +903,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             {/* Instructor allocation */}
             {instructors.length > 0 && (
               <>
-                <div style={S.label}>Instructor</div>
+                <div style={S.label}>{instructorLabel}</div>
                 <select style={{ ...S.select, width: 160 }} value={instructor} onChange={e => setInstructor(e.target.value)}>
                   <option value="">— Unallocated —</option>
                   {instructors.map(i => (

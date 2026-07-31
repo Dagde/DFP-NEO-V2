@@ -426,6 +426,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 persistedAcademicLmp={persistedAcademicLmp}
                                 onUpdatePersistedAcademicLmp={onUpdatePersistedAcademicLmp}
                                 instructors={instructors}
+                                instructorLabel={instructorLabel}
                                 onSave={(data) => {
                                     if (onSaveAcademic) {
                                         onSaveAcademic(data);

@@ -56,6 +56,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
         [trainingReportTemplate, trainingReportTerminology]
     );
+    const reportAssessorLabel = reportTemplate.modules.comments.fields.assessor || 'Instructor';
     const missionStatusLabelMap = React.useMemo(() => {
         const options = getTrainingReportCompletionResultOptions(reportTemplate);
         return new Map(options.map(option => [option.code, option.label]));
@@ -429,7 +430,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Overall Score</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Instructor</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">{reportAssessorLabel}</th>
                                     
                                 </tr>
                             </thead>

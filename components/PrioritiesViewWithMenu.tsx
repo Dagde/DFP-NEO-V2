@@ -101,6 +101,7 @@ interface PrioritiesViewWithMenuProps {
   onSaveStandardMissionProfile?: (profileId: string, changes: Partial<StandardMissionProfile>) => void;
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
+  instructorLabel?: string;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events' | 'deployments';
