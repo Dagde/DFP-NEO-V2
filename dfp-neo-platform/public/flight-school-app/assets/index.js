@@ -119533,8 +119533,8 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [allTraineesData, traineeLMPs, scores, publishedSchedules, buildDfpDate, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const generateInstructorRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
-    console.log("🔍 generateInstructorRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
-    console.log("🔍 Total instructors to check:", instructorsData.length);
+    logNeoBuildUiDebug("🔍 generateInstructorRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
+    logNeoBuildUiDebug("🔍 Total instructors to check:", instructorsData.length);
     let qualificationFailures = 0, unavailabilityFailures = 0, overlapFailures = 0;
     const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
     for (const instructor of instructorsData) {
@@ -119567,11 +119567,11 @@ ${error instanceof Error ? error.message : String(error)}`,
         }
       });
     }
-    console.log("🔍 Instructor remedy generation complete:");
-    console.log("🔍 - Qualification failures:", qualificationFailures);
-    console.log("🔍 - Unavailability failures:", unavailabilityFailures);
-    console.log("🔍 - Overlap failures:", overlapFailures);
-    console.log("🔍 - Total suggestions:", suggestions.length);
+    logNeoBuildUiDebug("🔍 Instructor remedy generation complete:");
+    logNeoBuildUiDebug("🔍 - Qualification failures:", qualificationFailures);
+    logNeoBuildUiDebug("🔍 - Unavailability failures:", unavailabilityFailures);
+    logNeoBuildUiDebug("🔍 - Overlap failures:", overlapFailures);
+    logNeoBuildUiDebug("🔍 - Total suggestions:", suggestions.length);
     return suggestions.sort((a, b) => {
       const eventCountA = a.instructor.flightsToday + a.instructor.ftdsToday + a.instructor.cptsToday + a.instructor.groundToday;
       const eventCountB = b.instructor.flightsToday + b.instructor.ftdsToday + b.instructor.cptsToday + b.instructor.groundToday;
@@ -119581,14 +119581,14 @@ ${error instanceof Error ? error.message : String(error)}`,
   }, [instructorsData, syllabusDetails, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const generatePilotRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
-    console.log("🔍 generatePilotRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
-    console.log("🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
-    console.log("🔍 [PILOT REMEDIES DEBUG] School:", school);
+    logNeoBuildUiDebug("🔍 generatePilotRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
+    logNeoBuildUiDebug("🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
+    logNeoBuildUiDebug("🔍 [PILOT REMEDIES DEBUG] School:", school);
     const locationFilteredInstructors = instructorsData.filter((i) => personMatchesConfiguredLocation(platformConfig2, i, school));
-    console.log("🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:", locationFilteredInstructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+    logNeoBuildUiDebug("🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:", locationFilteredInstructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
     const qualifiedPilots = locationFilteredInstructors.filter((i) => isInstructorEligibleForBuildEventType(i, "flight"));
-    console.log("🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:", qualifiedPilots.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
-    console.log("🔍 Total qualified pilots to check:", qualifiedPilots.length);
+    logNeoBuildUiDebug("🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:", qualifiedPilots.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+    logNeoBuildUiDebug("🔍 Total qualified pilots to check:", qualifiedPilots.length);
     let unavailabilityFailures = 0, overlapFailures = 0;
     const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
     for (const pilot of qualifiedPilots) {
@@ -119617,10 +119617,10 @@ ${error instanceof Error ? error.message : String(error)}`,
         }
       });
     }
-    console.log("🔍 Pilot remedy generation complete:");
-    console.log("🔍 - Unavailability failures:", unavailabilityFailures);
-    console.log("🔍 - Overlap failures:", overlapFailures);
-    console.log("🔍 - Total suggestions:", suggestions.length);
+    logNeoBuildUiDebug("🔍 Pilot remedy generation complete:");
+    logNeoBuildUiDebug("🔍 - Unavailability failures:", unavailabilityFailures);
+    logNeoBuildUiDebug("🔍 - Overlap failures:", overlapFailures);
+    logNeoBuildUiDebug("🔍 - Total suggestions:", suggestions.length);
     return suggestions.sort((a, b) => {
       const eventCountA = a.instructor.flightsToday + a.instructor.ftdsToday + a.instructor.cptsToday + a.instructor.groundToday;
       const eventCountB = b.instructor.flightsToday + b.instructor.ftdsToday + b.instructor.cptsToday + b.instructor.groundToday;
@@ -119764,7 +119764,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const latestEvent = currentEvents.find((e) => e.id === event.id) || event;
     const eventForNeo = normaliseCrewFieldsForSave(latestEvent);
     const allEvents = currentEvents.map((e) => e.id === eventForNeo.id ? eventForNeo : e);
-    console.log("NEO: Resolved event for analysis:", {
+    logNeoBuildUiDebug("NEO: Resolved event for analysis:", {
       id: eventForNeo.id,
       originalInstructor: event.instructor,
       latestInstructor: latestEvent.instructor,
@@ -119795,8 +119795,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       return;
     }
     if (showValidation && isValidateFlagged) {
-      console.log(`NEO: Analyzing validate-mode conflict for event ${eventForNeo.flightNumber} (${eventForNeo.id})`);
-      console.log(`Validation errors found:`, errors);
+      logNeoBuildUiDebug(`NEO: Analyzing validate-mode conflict for event ${eventForNeo.flightNumber} (${eventForNeo.id})`);
+      logNeoBuildUiDebug(`Validation errors found:`, errors);
       setNeoProblemTileForFlyout({ event: eventForNeo, errors });
     } else {
       setNeoProblemTileForFlyout({ event: eventForNeo, errors });
@@ -119828,7 +119828,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const isSctEvent = isContinuationScheduleEvent(eventForNeo);
     if (isSctEvent) {
-      console.log("🔧 continuation event detected, generating pilot remedies");
+      logNeoBuildUiDebug("🔧 continuation event detected, generating pilot remedies");
       const remedies = generatePilotRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
       if (remedies.length > 0) {
         setNeoRemediesForFlyout(remedies);
@@ -119847,21 +119847,21 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
   };
   const handleApplyNeoRemedy = (remedy) => {
-    console.log("🔧 handleApplyNeoRemedy called with remedy:", remedy);
-    console.log("🔧 neoProblemTileForFlyout:", neoProblemTileForFlyout);
+    logNeoBuildUiDebug("🔧 handleApplyNeoRemedy called with remedy:", remedy);
+    logNeoBuildUiDebug("🔧 neoProblemTileForFlyout:", neoProblemTileForFlyout);
     if (!neoProblemTileForFlyout) {
-      console.log("❌ No problem tile found, returning early");
+      logNeoBuildUiDebug("❌ No problem tile found, returning early");
       return;
     }
-    console.log("🔧 Remedy type:", remedy.type);
-    console.log("🔧 Instructor duty hours:", remedy.type !== "trainee" ? remedy.instructor.dutyHours : "N/A");
-    console.log("🔧 Preferred duty period:", preferredDutyPeriod);
+    logNeoBuildUiDebug("🔧 Remedy type:", remedy.type);
+    logNeoBuildUiDebug("🔧 Instructor duty hours:", remedy.type !== "trainee" ? remedy.instructor.dutyHours : "N/A");
+    logNeoBuildUiDebug("🔧 Preferred duty period:", preferredDutyPeriod);
     if (remedy.type !== "trainee" && remedy.instructor.dutyHours > preferredDutyPeriod) {
-      console.log("⚠️ Duty warning triggered");
+      logNeoBuildUiDebug("⚠️ Duty warning triggered");
       setDutyWarningRemedy(remedy);
       setShowDutyWarning(true);
     } else {
-      console.log("✅ Executing remedy directly");
+      logNeoBuildUiDebug("✅ Executing remedy directly");
       executeNeoRemedy(remedy, neoProblemTileForFlyout.event);
     }
   };
@@ -119889,13 +119889,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     setShowTimeOnlyRemedyConfirm(false);
     setTimeOnlyRemedyForConfirmation(null);
     if (neoProblemTileForFlyout) {
-      console.log("🔧 DEBUG: Generating instructor remedies for event:", neoProblemTileForFlyout.event.flightNumber);
+      logNeoBuildUiDebug("🔧 DEBUG: Generating instructor remedies for event:", neoProblemTileForFlyout.event.flightNumber);
       const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
       const allEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate;
-      console.log("🔧 DEBUG: Total events in context:", allEvents.length);
+      logNeoBuildUiDebug("🔧 DEBUG: Total events in context:", allEvents.length);
       const remedies = generateInstructorRemediesAtTime(neoProblemTileForFlyout.event, allEvents, neoProblemTileForFlyout.event.startTime);
-      console.log("🔧 DEBUG: Generated remedies:", remedies.length);
-      console.log("🔧 DEBUG: Remedies:", remedies);
+      logNeoBuildUiDebug("🔧 DEBUG: Generated remedies:", remedies.length);
+      logNeoBuildUiDebug("🔧 DEBUG: Remedies:", remedies);
       setNeoRemediesForFlyout(remedies);
     }
   };
@@ -120007,27 +120007,27 @@ ${error instanceof Error ? error.message : String(error)}`,
     return [...new Set(errors)];
   };
   const executeNeoRemedy = (remedy, problemTile) => {
-    console.log("🟣 ========== NEO REMEDY START ==========");
-    console.log("🟣 NEO: executeNeoRemedy called");
-    console.log("🟣 NEO: Remedy type:", remedy.type);
-    console.log("🟣 NEO: Problem tile ID:", problemTile.id);
-    console.log("🟣 NEO: Problem tile instructor:", problemTile.instructor);
-    console.log("🟣 NEO: Problem tile student:", problemTile.student);
-    console.log("🟣 NEO: Problem tile pilot:", problemTile.pilot);
+    logNeoBuildUiDebug("🟣 ========== NEO REMEDY START ==========");
+    logNeoBuildUiDebug("🟣 NEO: executeNeoRemedy called");
+    logNeoBuildUiDebug("🟣 NEO: Remedy type:", remedy.type);
+    logNeoBuildUiDebug("🟣 NEO: Problem tile ID:", problemTile.id);
+    logNeoBuildUiDebug("🟣 NEO: Problem tile instructor:", problemTile.instructor);
+    logNeoBuildUiDebug("🟣 NEO: Problem tile student:", problemTile.student);
+    logNeoBuildUiDebug("🟣 NEO: Problem tile pilot:", problemTile.pilot);
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const targetDate = isNextDayContext ? buildDfpDate : date;
-    console.log("🟣 NEO: isNextDayContext:", isNextDayContext);
-    console.log("🟣 NEO: targetDate:", targetDate);
-    console.log("🟣 NEO: activeView:", activeView);
+    logNeoBuildUiDebug("🟣 NEO: isNextDayContext:", isNextDayContext);
+    logNeoBuildUiDebug("🟣 NEO: targetDate:", targetDate);
+    logNeoBuildUiDebug("🟣 NEO: activeView:", activeView);
     const currentEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : publishedSchedules[targetDate] || [];
-    console.log("🟣 NEO: currentEvents count:", currentEvents.length);
+    logNeoBuildUiDebug("🟣 NEO: currentEvents count:", currentEvents.length);
     const eventToUpdate = currentEvents.find((e) => e.id === problemTile.id);
     if (!eventToUpdate) {
       console.error("🟣 ❌ NEO: Event not found:", problemTile.id);
-      console.log("🟣 NEO: Available event IDs:", currentEvents.map((e) => e.id));
+      logNeoBuildUiDebug("🟣 NEO: Available event IDs:", currentEvents.map((e) => e.id));
       return;
     }
-    console.log("🟣 NEO: Found event to update:", {
+    logNeoBuildUiDebug("🟣 NEO: Found event to update:", {
       id: eventToUpdate.id,
       instructor: eventToUpdate.instructor,
       student: eventToUpdate.student,
@@ -120045,24 +120045,24 @@ ${error instanceof Error ? error.message : String(error)}`,
         if (individualLMPFlightType === "Solo" && traineeName) {
           updatedEvent.pilot = traineeName;
           updatedEvent.crew = "";
-          console.log(`✈️ [NEO Solo Logic] Applied: ${traineeName} as PIC, crew cleared for ${updatedEvent.flightNumber}`);
+          logNeoBuildUiDebug(`✈️ [NEO Solo Logic] Applied: ${traineeName} as PIC, crew cleared for ${updatedEvent.flightNumber}`);
         }
       }
     }
     if (remedy.type === "instructor") {
       if (isSctEvent) {
-        console.log("🟣 NEO: Applying pilot change for continuation event:", eventToUpdate.pilot, "→", remedy.instructor.name);
+        logNeoBuildUiDebug("🟣 NEO: Applying pilot change for continuation event:", eventToUpdate.pilot, "→", remedy.instructor.name);
         updatedEvent.pilot = remedy.instructor.name;
         updatedEvent.instructor = "";
       } else {
-        console.log("🟣 NEO: Applying instructor change:", eventToUpdate.instructor, "→", remedy.instructor.name);
+        logNeoBuildUiDebug("🟣 NEO: Applying instructor change:", eventToUpdate.instructor, "→", remedy.instructor.name);
         updatedEvent.instructor = remedy.instructor.name;
         if ((updatedEvent.type === "flight" || updatedEvent.type === "ftd") && updatedEvent.flightType !== "Solo") {
           updatedEvent.pilot = remedy.instructor.name;
         }
       }
     } else if (remedy.type === "trainee") {
-      console.log("🟣 NEO: Applying trainee change:", eventToUpdate.student, "→", remedy.trainee.name);
+      logNeoBuildUiDebug("🟣 NEO: Applying trainee change:", eventToUpdate.student, "→", remedy.trainee.name);
       if (updatedEvent.flightType === "Solo") {
         updatedEvent.pilot = remedy.trainee.name;
         updatedEvent.student = "";
@@ -120070,7 +120070,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         updatedEvent.student = remedy.trainee.name;
       }
     } else if (remedy.type === "timeshift") {
-      console.log("🟣 NEO: Applying time shift:", eventToUpdate.startTime, "→", remedy.newStartTime);
+      logNeoBuildUiDebug("🟣 NEO: Applying time shift:", eventToUpdate.startTime, "→", remedy.newStartTime);
       updatedEvent.startTime = remedy.newStartTime;
       if (remedy.instructor.name) {
         if (isSctEvent) {
@@ -120084,7 +120084,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         }
       }
     }
-    console.log("🟣 NEO: Updated event created:", {
+    logNeoBuildUiDebug("🟣 NEO: Updated event created:", {
       id: updatedEvent.id,
       instructor: updatedEvent.instructor,
       student: updatedEvent.student,
@@ -120092,7 +120092,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       date: updatedEvent.date,
       resourceId: updatedEvent.resourceId
     });
-    console.log("🟣 NEO: Calling handleSaveEvents...");
+    logNeoBuildUiDebug("🟣 NEO: Calling handleSaveEvents...");
     const savedUpdatedEvent = normaliseCrewFieldsForSave(updatedEvent);
     handleSaveEvents([savedUpdatedEvent], false);
     if (isNextDayContext) {
@@ -120126,46 +120126,46 @@ ${error instanceof Error ? error.message : String(error)}`,
     setTimeOnlyRemedyForConfirmation(null);
     setShowTimeOnlyRemedyConfirm(false);
     setSelectedEvent(null);
-    console.log("🟣 NEO: handleSaveEvents returned, closing NEO and Flight Details windows");
-    console.log("🟣 ========== NEO REMEDY END ==========");
+    logNeoBuildUiDebug("🟣 NEO: handleSaveEvents returned, closing NEO and Flight Details windows");
+    logNeoBuildUiDebug("🟣 ========== NEO REMEDY END ==========");
   };
   reactExports.useEffect(() => {
-    console.log("🟠 ========== NEO USEEFFECT TRIGGERED ==========");
-    console.log("🟠 neoProblemTileForFlyout:", neoProblemTileForFlyout ? "OPEN" : "CLOSED");
+    logNeoBuildUiDebug("🟠 ========== NEO USEEFFECT TRIGGERED ==========");
+    logNeoBuildUiDebug("🟠 neoProblemTileForFlyout:", neoProblemTileForFlyout ? "OPEN" : "CLOSED");
     if (!neoProblemTileForFlyout) {
-      console.log("🟠 NEO flyout is closed, skipping useEffect");
-      console.log("🟠 ========== NEO USEEFFECT END (CLOSED) ==========");
+      logNeoBuildUiDebug("🟠 NEO flyout is closed, skipping useEffect");
+      logNeoBuildUiDebug("🟠 ========== NEO USEEFFECT END (CLOSED) ==========");
       return;
     }
-    console.log("🟠 NEO flyout is open, processing...");
-    console.log("🟠 Problem tile ID:", neoProblemTileForFlyout.event.id);
-    console.log("🟠 Problem tile instructor:", neoProblemTileForFlyout.event.instructor);
+    logNeoBuildUiDebug("🟠 NEO flyout is open, processing...");
+    logNeoBuildUiDebug("🟠 Problem tile ID:", neoProblemTileForFlyout.event.id);
+    logNeoBuildUiDebug("🟠 Problem tile instructor:", neoProblemTileForFlyout.event.instructor);
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const currentEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate;
-    console.log("🟠 isNextDayContext:", isNextDayContext);
-    console.log("🟠 currentEvents count:", currentEvents.length);
+    logNeoBuildUiDebug("🟠 isNextDayContext:", isNextDayContext);
+    logNeoBuildUiDebug("🟠 currentEvents count:", currentEvents.length);
     const updatedProblemTile = currentEvents.find((e) => e.id === neoProblemTileForFlyout.event.id);
     if (!updatedProblemTile) {
-      console.log("🟠 ❌ Event not found in current state, closing flyout");
+      logNeoBuildUiDebug("🟠 ❌ Event not found in current state, closing flyout");
       setNeoProblemTileForFlyout(null);
       setNeoRemediesForFlyout([]);
-      console.log("🟠 ========== NEO USEEFFECT END (NOT FOUND) ==========");
+      logNeoBuildUiDebug("🟠 ========== NEO USEEFFECT END (NOT FOUND) ==========");
       return;
     }
-    console.log("🟠 Found updated problem tile:", {
+    logNeoBuildUiDebug("🟠 Found updated problem tile:", {
       id: updatedProblemTile.id,
       instructor: updatedProblemTile.instructor,
       student: updatedProblemTile.student,
       pilot: updatedProblemTile.pilot
     });
-    console.log("🟠 Running findHardErrors on updated tile...");
+    logNeoBuildUiDebug("🟠 Running findHardErrors on updated tile...");
     const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: true });
-    console.log("🟠 Errors found:", newErrors.length);
+    logNeoBuildUiDebug("🟠 Errors found:", newErrors.length);
     if (newErrors.length > 0) {
-      console.log("🟠 Error details:", newErrors);
+      logNeoBuildUiDebug("🟠 Error details:", newErrors);
     }
     if (newErrors.length === 0) {
-      console.log("🟠 ✅ All conflicts resolved! Closing flyout and showing success message");
+      logNeoBuildUiDebug("🟠 ✅ All conflicts resolved! Closing flyout and showing success message");
       setSuccessMessage(`All conflicts for ${updatedProblemTile.flightNumber} resolved.`);
       setNeoProblemTileForFlyout(null);
       setNeoRemediesForFlyout([]);
@@ -120174,24 +120174,24 @@ ${error instanceof Error ? error.message : String(error)}`,
       setTimeOnlyRemedyForConfirmation(null);
       setShowTimeOnlyRemedyConfirm(false);
     } else {
-      console.log("🟠 ⚠️ Conflicts still exist, generating new remedies...");
+      logNeoBuildUiDebug("🟠 ⚠️ Conflicts still exist, generating new remedies...");
       const instructorErrors = newErrors.filter((e) => e.toLowerCase().includes("instructor") || updatedProblemTile.instructor && e.includes(updatedProblemTile.instructor.split(",")[0]));
       const traineeErrors = newErrors.filter((e) => updatedProblemTile.student && e.includes(updatedProblemTile.student.split(",")[0]));
-      console.log("🟠 Instructor errors:", instructorErrors.length);
-      console.log("🟠 Trainee errors:", traineeErrors.length);
+      logNeoBuildUiDebug("🟠 Instructor errors:", instructorErrors.length);
+      logNeoBuildUiDebug("🟠 Trainee errors:", traineeErrors.length);
       let newRemedies = [];
       if (instructorErrors.length === 0 && traineeErrors.length > 0) {
-        console.log("🟠 Generating trainee remedies...");
+        logNeoBuildUiDebug("🟠 Generating trainee remedies...");
         newRemedies = generateTraineeRemedies(updatedProblemTile, currentEvents);
       } else {
-        console.log("🟠 Generating instructor remedies...");
+        logNeoBuildUiDebug("🟠 Generating instructor remedies...");
         newRemedies = generateInstructorRemediesAtTime(updatedProblemTile, currentEvents, updatedProblemTile.startTime);
       }
-      console.log("🟠 Generated", newRemedies.length, "new remedies");
+      logNeoBuildUiDebug("🟠 Generated", newRemedies.length, "new remedies");
       setNeoProblemTileForFlyout({ event: updatedProblemTile, errors: newErrors });
       setNeoRemediesForFlyout(newRemedies);
     }
-    console.log("🟠 ========== NEO USEEFFECT END ==========");
+    logNeoBuildUiDebug("🟠 ========== NEO USEEFFECT END ==========");
   }, [publishedSchedules, nextDayBuildEvents, neoProblemTileForFlyout?.event.id, eventsForDate, activeView, buildDfpDate]);
   const handleCancelNeo = () => {
     setNeoProblemTileForFlyout(null);
