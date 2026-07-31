@@ -11,7 +11,7 @@ import CancelEventFlyout from './CancelEventFlyout';
 import PinEntryFlyout from './PinEntryFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
-import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames, isAircraftResourceId } from '../utils/resourceDisplayNames';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import {
@@ -2142,7 +2142,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         // Filter deployments to show only those that could accommodate this event type
         const compatibleDeployments = deployments.filter(deployment => {
             if (eventType === 'flight') {
-                return deployment.resourceId?.startsWith('PC-21') || deployment.resourceId?.startsWith('Deployed');
+                return isAircraftResourceId(deployment.resourceId);
             } else if (eventType === 'ftd') {
                 return deployment.resourceId?.startsWith('FTD');
             } else if (eventType === 'cpt') {

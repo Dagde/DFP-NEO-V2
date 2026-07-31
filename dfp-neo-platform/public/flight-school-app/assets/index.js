@@ -29184,7 +29184,7 @@ ${swapNote}` : swapNote
     }
     const compatibleDeployments = deployments.filter((deployment) => {
       if (eventType === "flight") {
-        return deployment.resourceId?.startsWith("PC-21") || deployment.resourceId?.startsWith("Deployed");
+        return isAircraftResourceId(deployment.resourceId);
       } else if (eventType === "ftd") {
         return deployment.resourceId?.startsWith("FTD");
       } else if (eventType === "cpt") {
