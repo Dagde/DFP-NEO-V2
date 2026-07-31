@@ -92098,11 +92098,19 @@ const getAssignableMasterLmpItemsForType = (syllabusItems2, lmpType, unitCode, f
   if (!requestedType) return [];
   const requestedTypeKey = requestedType.toUpperCase();
   return filterForAccess(syllabusItems2, "Assign", unitCode).filter((item) => {
-    if (requestedTypeKey === "BPC+IPC") {
-      return (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics";
-    }
     return Array.isArray(item.courses) && item.courses.some((course) => String(course || "").trim().toUpperCase() === requestedTypeKey);
   });
+};
+const groupSyllabusByConfiguredCourses = (syllabusItems2) => {
+  return (Array.isArray(syllabusItems2) ? syllabusItems2 : []).reduce((groups, item) => {
+    (Array.isArray(item.courses) ? item.courses : []).forEach((course) => {
+      const label = String(course || "").trim();
+      if (!label) return;
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(item);
+    });
+    return groups;
+  }, {});
 };
 const timeStringToHours = (timeStr) => {
   if (!timeStr) return null;
@@ -107189,23 +107197,13 @@ const App = () => {
           const lmpSyncStartedAt = performance.now();
           try {
             const assignableSyncSyllabus = getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, "Assign");
-            const bpcIpcSyllabus = assignableSyncSyllabus.filter(
-              (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
-            );
-            const ficSyllabus = assignableSyncSyllabus.filter(
-              (item) => item.courses && item.courses.includes("FIC")
-            );
-            const syllabusData = {
-              "BPC+IPC": bpcIpcSyllabus,
-              "FIC": ficSyllabus
-            };
+            const syllabusData = groupSyllabusByConfiguredCourses(assignableSyncSyllabus);
             const apiBase = getAppApiBase();
             pushDfpDataDiag("startup:lmp-sync:start", {
               apiBase,
               syllabusItems: syllabusDetails.length,
               assignableSyllabusItems: assignableSyncSyllabus.length,
-              bpcIpcItems: bpcIpcSyllabus.length,
-              ficItems: ficSyllabus.length,
+              syllabusGroups: Object.keys(syllabusData).length,
               trainees: data.trainees?.length || 0
             });
             const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
@@ -116590,20 +116588,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     } else try {
       const apiBase = getApiBaseUrl();
       const assignableBuildSyllabus = activeOperationalModel === "flight_school" ? assignableFlightSchoolBuildSyllabus : filterSyllabusForMasterLmpAccess(syllabusDetails, "Assign", activeUnitCode2);
-      const bpcIpcSyllabus = assignableBuildSyllabus.filter(
-        (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
-      );
-      const ficSyllabus = assignableBuildSyllabus.filter(
-        (item) => item.courses && item.courses.includes("FIC")
-      );
-      const syllabusData = {
-        "BPC+IPC": bpcIpcSyllabus,
-        "FIC": ficSyllabus
-      };
+      const syllabusData = groupSyllabusByConfiguredCourses(assignableBuildSyllabus);
       console.log("[NEO-Build] Refreshing composed Individual LMPs before build...");
       markNeoBuildTiming(timingReport, "lmp-sync:request-start", {
-        bpcIpcSyllabus: bpcIpcSyllabus.length,
-        ficSyllabus: ficSyllabus.length
+        syllabusGroups: Object.keys(syllabusData).length
       });
       const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
         method: "POST",

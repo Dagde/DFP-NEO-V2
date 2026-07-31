@@ -52,6 +52,36 @@ function normaliseSyllabusCourses(courses) {
   return [];
 }
 
+function normaliseCourseKey(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function syllabusItemMatchesConfiguredCourse(item, courseOrLmpType) {
+  const requestedKey = normaliseCourseKey(courseOrLmpType);
+  if (!requestedKey) return false;
+  return normaliseSyllabusCourses(item?.courses).some(course => normaliseCourseKey(course) === requestedKey);
+}
+
+function groupSyllabusByConfiguredCourses(items) {
+  return (Array.isArray(items) ? items : []).reduce((groups, item) => {
+    normaliseSyllabusCourses(item?.courses).forEach(course => {
+      const label = String(course || '').trim();
+      if (!label) return;
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(item);
+    });
+    return groups;
+  }, {});
+}
+
+function getSyllabusGroupForLmpType(syllabusData, lmpType) {
+  const requestedKey = normaliseCourseKey(lmpType);
+  if (!requestedKey || !syllabusData || typeof syllabusData !== 'object') return [];
+  const matchingKey = Object.keys(syllabusData).find(key => normaliseCourseKey(key) === requestedKey);
+  const items = matchingKey ? syllabusData[matchingKey] : [];
+  return Array.isArray(items) ? items : [];
+}
+
 function getAuthoritativeSyllabusDuration(item) {
   const flightOrSimHours = Number(item?.flightOrSimHours);
   if (Number.isFinite(flightOrSimHours) && flightOrSimHours > 0) return flightOrSimHours;
@@ -4339,9 +4369,8 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
       );
       const parsedSyllabus = (allSyllabusItems || []).map(normaliseSyllabusItemForRuntime);
       const getMasterSyllabus = (lmpType) => {
-        if (lmpType === 'FIC') return parsedSyllabus.filter(item => item.courses.includes('FIC'));
-        if (lmpType && lmpType !== 'BPC+IPC') return parsedSyllabus.filter(item => item.courses.includes(lmpType));
-        return parsedSyllabus.filter(item => !item.courses.includes('FIC') && item.type !== 'Academics');
+        if (!lmpType) return [];
+        return parsedSyllabus.filter(item => syllabusItemMatchesConfiguredCourse(item, lmpType));
       };
       const compactLmpEventForBuild = (item) => ({
         id: item.id,
@@ -4772,15 +4801,9 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
       );
       if (allItems && allItems.length > 0) {
-        // courses is stored as JSON array in DB; parse if needed
         const parsed = allItems.map(normaliseSyllabusItemForRuntime);
-        const ficItems = parsed.filter(item => item.courses.includes('FIC'));
-        const bpcIpcItems = parsed.filter(item => !item.courses.includes('FIC'));
-        dbSyllabusData = {
-          'FIC': ficItems,
-          'BPC+IPC': bpcIpcItems,
-        };
-        console.log(`[LMP Sync] Loaded syllabus from DB: ${ficItems.length} FIC items, ${bpcIpcItems.length} BPC+IPC items`);
+        dbSyllabusData = groupSyllabusByConfiguredCourses(parsed);
+        console.log(`[LMP Sync] Loaded syllabus from DB for ${Object.keys(dbSyllabusData).length} configured course/LMP group(s)`);
       }
     } catch (syllabusErr) {
       console.warn('[LMP Sync] Could not load syllabus from DB, falling back to client syllabusData:', syllabusErr.message);
@@ -4822,19 +4845,9 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     const results = [];
 
     for (const trainee of trainees) {
-      // Determine LMP type
-      let lmpType = trainee.lmpType || 'BPC+IPC';
-      if (lmpType === 'BPC+IPC' && trainee.course) {
-        if (trainee.course.toUpperCase().startsWith('FIC')) {
-          lmpType = 'FIC';
-        }
-      }
+      const lmpType = String(trainee.lmpType || trainee.course || '').trim();
 
-      // Get master syllabus for this LMP type
-      let masterSyllabus = syllabusData[lmpType];
-      if (!masterSyllabus || masterSyllabus.length === 0) {
-        masterSyllabus = syllabusData['BPC+IPC'] || [];
-      }
+      const masterSyllabus = getSyllabusGroupForLmpType(syllabusData, lmpType);
       if (!masterSyllabus || masterSyllabus.length === 0) {
         results.push({
           traineeFullName: trainee.fullName,
@@ -9909,14 +9922,13 @@ async function loadTraineeLmpOverlays(db, traineeId) {
 
 async function loadMasterSyllabusForLmpType(db, lmpType) {
   try {
+    if (!String(lmpType || '').trim()) return [];
     const allItems = await db.$queryRawUnsafe(
       `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
     );
     if (!allItems || allItems.length === 0) return [];
     const parsed = allItems.map(normaliseSyllabusItemForRuntime);
-    if (lmpType === 'FIC') return parsed.filter(item => item.courses.includes('FIC'));
-    if (lmpType && lmpType !== 'BPC+IPC') return parsed.filter(item => item.courses.includes(lmpType));
-    return parsed.filter(item => !item.courses.includes('FIC') && item.type !== 'Academics');
+    return parsed.filter(item => syllabusItemMatchesConfiguredCourse(item, lmpType));
   } catch (err) {
     console.warn('[Individual LMP] Could not load master syllabus for composition:', err.message);
     return [];
@@ -9936,9 +9948,7 @@ function composeIndividualLmpEvents(storedEvents, masterSyllabus, overlayEvents,
 }
 
 function resolveTraineeLmpType(trainee) {
-  if (trainee?.lmpType) return trainee.lmpType;
-  if (trainee?.course && String(trainee.course).toUpperCase().startsWith('FIC')) return 'FIC';
-  return 'BPC+IPC';
+  return String(trainee?.lmpType || trainee?.course || '').trim();
 }
 
 async function ensureInitialIndividualLmpForTrainee(db, trainee) {

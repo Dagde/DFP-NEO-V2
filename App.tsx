@@ -5757,11 +5757,20 @@ const getAssignableMasterLmpItemsForType = (
     if (!requestedType) return [];
     const requestedTypeKey = requestedType.toUpperCase();
     return filterForAccess(syllabusItems, 'Assign', unitCode).filter(item => {
-        if (requestedTypeKey === 'BPC+IPC') {
-            return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
-        }
         return Array.isArray(item.courses) && item.courses.some(course => String(course || '').trim().toUpperCase() === requestedTypeKey);
     });
+};
+
+const groupSyllabusByConfiguredCourses = (syllabusItems: SyllabusItemDetail[]): Record<string, SyllabusItemDetail[]> => {
+    return (Array.isArray(syllabusItems) ? syllabusItems : []).reduce((groups, item) => {
+        (Array.isArray(item.courses) ? item.courses : []).forEach(course => {
+            const label = String(course || '').trim();
+            if (!label) return;
+            if (!groups[label]) groups[label] = [];
+            groups[label].push(item);
+        });
+        return groups;
+    }, {} as Record<string, SyllabusItemDetail[]>);
 };
 
 const calculateTotalDutyHoursForPeriod = (instructorName: string, events: ScheduleEvent[], startTime: number, endTime: number, syllabusDetails: SyllabusItemDetail[]): number => {
@@ -24260,27 +24269,16 @@ const App: React.FC = () => {
                     console.log(`[LMP Sync] Starting optional startup Individual LMP sync...`);
                     const lmpSyncStartedAt = performance.now();
                     try {
-                        // Build syllabusData payload — master syllabus split by lmpType
-                        // The backend has no knowledge of syllabus structure, so we send it from the frontend.
+                        // Build syllabusData payload from the configured course/LMP labels on each syllabus item.
                         const assignableSyncSyllabus = getFlightSchoolAssignableSyllabusForActiveScope(syllabusDetails, 'Assign');
-                        const bpcIpcSyllabus = assignableSyncSyllabus.filter(
-                            (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
-                        );
-                        const ficSyllabus = assignableSyncSyllabus.filter(
-                            (item: any) => item.courses && item.courses.includes('FIC')
-                        );
-                        const syllabusData: Record<string, any[]> = {
-                            'BPC+IPC': bpcIpcSyllabus,
-                            'FIC': ficSyllabus,
-                        };
+                        const syllabusData = groupSyllabusByConfiguredCourses(assignableSyncSyllabus);
 
                         const apiBase = getAppApiBase();
                         pushDfpDataDiag('startup:lmp-sync:start', {
                             apiBase,
                             syllabusItems: syllabusDetails.length,
                             assignableSyllabusItems: assignableSyncSyllabus.length,
-                            bpcIpcItems: bpcIpcSyllabus.length,
-                            ficItems: ficSyllabus.length,
+                            syllabusGroups: Object.keys(syllabusData).length,
                             trainees: data.trainees?.length || 0,
                         });
 
@@ -35769,21 +35767,11 @@ const App: React.FC = () => {
             const assignableBuildSyllabus = activeOperationalModel === 'flight_school'
                 ? assignableFlightSchoolBuildSyllabus
                 : filterSyllabusForMasterLmpAccess(syllabusDetails, 'Assign', activeUnitCode);
-            const bpcIpcSyllabus = assignableBuildSyllabus.filter(
-                (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
-            );
-            const ficSyllabus = assignableBuildSyllabus.filter(
-                (item: any) => item.courses && item.courses.includes('FIC')
-            );
-            const syllabusData: Record<string, any[]> = {
-                'BPC+IPC': bpcIpcSyllabus,
-                'FIC': ficSyllabus,
-            };
+            const syllabusData = groupSyllabusByConfiguredCourses(assignableBuildSyllabus);
 
             console.log('[NEO-Build] Refreshing composed Individual LMPs before build...');
             markNeoBuildTiming(timingReport, 'lmp-sync:request-start', {
-                bpcIpcSyllabus: bpcIpcSyllabus.length,
-                ficSyllabus: ficSyllabus.length,
+                syllabusGroups: Object.keys(syllabusData).length,
             });
             const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                 method: 'POST',
