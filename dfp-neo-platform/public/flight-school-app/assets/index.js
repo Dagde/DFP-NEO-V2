@@ -75606,6 +75606,7 @@ const sectionGroups = [
       "platform-organisation-locations",
       "platform-units",
       "platform-task-profiles",
+      "standard-missions",
       "platform-master-lmp-access",
       "platform-resource-pools",
       "platform-unit-modules",
@@ -75624,8 +75625,7 @@ const sectionGroups = [
     accent: "cyan",
     defaultSection: "crew-composition",
     sections: [
-      "crew-composition",
-      "standard-missions"
+      "crew-composition"
     ]
   },
   {
