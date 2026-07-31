@@ -1029,7 +1029,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         );
         y += eventNumberRowHeight;
         pdf.setFontSize(8);
-        y += drawLabelValue('Event Description', flightDesc || 'N/A', col1X, col1X + 34, y, contentWidth - 36);
+        y += drawLabelValue('Event Description', flightDesc || 'N/A', col1X, col1X + 28, y, contentWidth - 30);
         pdf.setFontSize(9);
         y += 8;
         

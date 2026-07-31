@@ -67288,6 +67288,7 @@ const PlatformConfigurationSettings = ({
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
+  const contractorStaffDisplayLabel = personnelDisplaySettings.simIpDisplayLabel?.trim() || "Contractor Staff";
   const staffRankEquivalency = personnelDisplaySettings.staffRankEquivalency;
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
@@ -73638,7 +73639,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[220px] flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Contractor Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: contractorStaffDisplayLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs leading-relaxed text-cyan-50/75", children: "Use this staff type for contracted or civilian personnel, then choose what event types they may be assigned to." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[220px] items-center justify-between gap-3 rounded border border-cyan-400/20 bg-gray-950/60 px-3 py-2", children: [
@@ -73714,7 +73715,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   option.key
                 );
               }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: "NEO Build only assigns Contractor Staff to the selected event types." })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-[11px] leading-relaxed text-gray-500", children: [
+                "NEO Build only assigns ",
+                contractorStaffDisplayLabel,
+                " to the selected event types."
+              ] })
             ] })
           ] })
         ] }),
@@ -81443,7 +81448,7 @@ const TrainingRecordsExportView = ({
     );
     y += eventNumberRowHeight;
     pdf.setFontSize(8);
-    y += drawLabelValue("Event Description", flightDesc || "N/A", col1X, col1X + 34, y, contentWidth - 36);
+    y += drawLabelValue("Event Description", flightDesc || "N/A", col1X, col1X + 28, y, contentWidth - 30);
     pdf.setFontSize(9);
     y += 8;
     pdf.setFillColor(243, 244, 246);

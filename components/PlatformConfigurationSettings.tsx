@@ -2283,6 +2283,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null,
   );
+  const contractorStaffDisplayLabel = personnelDisplaySettings.simIpDisplayLabel?.trim() || 'Contractor Staff';
   const staffRankEquivalency = personnelDisplaySettings.staffRankEquivalency;
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null,
@@ -9535,7 +9536,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-[220px] flex-1">
-                <h5 className="text-sm font-bold text-cyan-100">Contractor Staff</h5>
+                <h5 className="text-sm font-bold text-cyan-100">{contractorStaffDisplayLabel}</h5>
                 <p className="mt-1 max-w-3xl text-xs leading-relaxed text-cyan-50/75">
                   Use this staff type for contracted or civilian personnel, then choose what event types they may be assigned to.
                 </p>
@@ -9612,7 +9613,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 })}
                 </div>
                 <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-                  NEO Build only assigns Contractor Staff to the selected event types.
+                  NEO Build only assigns {contractorStaffDisplayLabel} to the selected event types.
                 </p>
               </div>
             </div>
