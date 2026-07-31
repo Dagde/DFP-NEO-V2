@@ -24112,6 +24112,15 @@ const App: React.FC = () => {
                         return false;
                     }
                 })();
+                const logLmpDebug = (...args: any[]) => {
+                    try {
+                        if (window.localStorage?.getItem('dfp_lmp_debug') === 'true') {
+                            console.log(...args);
+                        }
+                    } catch {
+                        // Debug logging must never affect LMP startup loading.
+                    }
+                };
                 if (!shouldRunStartupLmpSync) {
                     pushDfpDataDiag('startup:lmp-sync:skipped', {
                         reason: 'Automatic startup LMP POST sync is disabled for startup performance. Scores are loaded directly from the database.',
@@ -24204,7 +24213,7 @@ const App: React.FC = () => {
                         });
                     }
                 } else {
-                    console.log(`[LMP Sync] Starting optional startup Individual LMP sync...`);
+                    logLmpDebug(`[LMP Sync] Starting optional startup Individual LMP sync...`);
                     const lmpSyncStartedAt = performance.now();
                     try {
                         // Build syllabusData payload from the configured course/LMP labels on each syllabus item.
@@ -24234,7 +24243,7 @@ const App: React.FC = () => {
 
                         if (syncRes.ok) {
                             const syncData = await syncRes.json();
-                            console.log(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
+                            logLmpDebug(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
                             pushDfpDataDiag('startup:lmp-sync:post-json', {
                                 durationMs: Math.round(performance.now() - lmpSyncStartedAt),
                                 summary: syncData.summary || null,
@@ -24294,9 +24303,9 @@ const App: React.FC = () => {
                                             if (completionOnlyRecords.length > 0) {
                                                 merged.set(lmp.traineeFullName, [...existingScores, ...completionOnlyRecords]);
                                             }
-                                            console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
+                                            logLmpDebug(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
                                         });
-                                        console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
+                                        logLmpDebug(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
                                         return merged;
                                     });
 
@@ -24308,7 +24317,7 @@ const App: React.FC = () => {
                                             const traineeUnitCode = resolveMasterLmpUnitForTrainee(traineeForLmp, lmp.lmpType, 'Assign');
                                             if (!hasMasterLmpUnitAccess(lmp.lmpType, traineeUnitCode, 'Assign')) {
                                                 newLMPs.delete(lmp.traineeFullName);
-                                                console.log(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                                                logLmpDebug(`[LMP Sync] Skipped ${lmp.traineeFullName} ${lmp.lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                                                 return;
                                             }
                                             const existingLMP = newLMPs.get(lmp.traineeFullName);
@@ -24337,9 +24346,9 @@ const App: React.FC = () => {
                                                 ? mergeIndividualLmpWithMaster(updatedLMP, masterLMP)
                                                 : updatedLMP;
                                             newLMPs.set(lmp.traineeFullName, scopedLMP);
-                                            console.log(`[LMP Sync] Updated Individual LMP for ${lmp.traineeFullName} with ${lmp.completedEventIds.length} completed events`);
+                                            logLmpDebug(`[LMP Sync] Updated Individual LMP for ${lmp.traineeFullName} with ${lmp.completedEventIds.length} completed events`);
                                         });
-                                        console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs updated with completion status`);
+                                        logLmpDebug(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs updated with completion status`);
                                         return newLMPs;
                                     });
                                 }
@@ -24412,13 +24421,13 @@ const App: React.FC = () => {
                             const lmpType = getConfiguredLmpTypeForTrainee(trainee, data.courses || []);
                             if (!lmpType) {
                                 newLMPs.delete(trainee.fullName);
-                                console.log(`[LMP Init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
+                                logLmpDebug(`[LMP Init] Skipped ${trainee.fullName}: no Master LMP assigned on trainee or course`);
                                 return;
                             }
                             const traineeUnitCode = resolveMasterLmpUnitForTrainee(trainee, lmpType, 'Assign');
                             if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, 'Assign')) {
                                 newLMPs.delete(trainee.fullName);
-                                console.log(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
+                                logLmpDebug(`[LMP Init] Skipped ${trainee.fullName} ${lmpType} LMP for unauthorised unit ${traineeUnitCode || 'unknown'}`);
                                 return;
                             }
 
@@ -24428,7 +24437,7 @@ const App: React.FC = () => {
                                 const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
                                 if (masterLMP.length > 0) {
                                     newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
-                                    console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)`);
+                                    logLmpDebug(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)`);
                                 }
                             }
                         });
