@@ -2023,8 +2023,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
       if (!newLMPName.trim()) { alert(`Please enter a ${activeCollectionNoun} title.`); return; }
       // For Academic Training courses, use the full name as the course code/identifier.
       // This is critical: the academicLmpType field on trainees/courses stores the FULL NAME
-      // (e.g. 'PC-21 Ground School'), and syllabus items are filtered by courses.includes(academicLmpType).
-      // Using autoCode (initials) would cause a mismatch — 'PC-21 Ground School' → 'PGS' not equal to 'PC-21 Ground School'.
+      // and syllabus items are filtered by courses.includes(academicLmpType).
+      // Using autoCode (initials) would cause a mismatch for multi-word academic course names.
       // For Flight Training courses, use the traditional short auto-generated code.
       const words = newLMPName.trim().split(/\s+/);
       const shortCode = words.length === 1

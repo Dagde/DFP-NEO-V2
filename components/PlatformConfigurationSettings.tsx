@@ -1575,13 +1575,13 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit profiles need per-unit copies',
-      `${missingCompositeClones} Mission Profile, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped mission, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
       'Open Standard Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.',
       { section: 'platform-standard-missions', label: 'Standard Mission Profiles', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Standard Mission Profiles, Alternate Crew profiles and Currency Profiles have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Mission profiles, alternate crew profiles and currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();

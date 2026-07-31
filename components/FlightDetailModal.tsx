@@ -1806,7 +1806,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [eventCategory]);
 
     // Effect to pull Type (Dual/Solo) from syllabus when flight number changes
-    // IMPORTANT: SCT is explicitly excluded because SCT events default to Solo and should not be overridden by syllabus
+    // IMPORTANT: SCT is explicitly excluded because continuation events default to Solo and should not be overridden by syllabus
     useEffect(() => {
         if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && eventCategory !== 'sct') {
             const syllabusItem = getSyllabusItemForOption(flightNumber);
@@ -2221,7 +2221,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     setDuration(detail.duration);
                 }
             } else {
-                // Instructor selected, but no SCT requests. So, no options.
+                // Instructor selected, but no continuation requests. So, no options.
                 setDynamicSyllabusOptions([]);
                 setFlightNumber('');
             }
@@ -2556,9 +2556,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 eventCategory: eventCategory,
             };
             
-            // Debug logging for SCT events
+            // Debug logging for continuation events
             if (eventCategory === 'sct') {
-                console.log('💾 Saving SCT event:', {
+                console.log('💾 Saving continuation event:', {
                     id: savedEvent.id,
                     flightType: savedEvent.flightType,
                     pilot: savedEvent.pilot,
@@ -2916,7 +2916,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             (value) => handleCrewChange(index, 'student', value),
                             'Crew',
                             isDeploy,
-                            eventCategory === 'sct' // Include PAX option for SCT events
+                            eventCategory === 'sct' // Include PAX option for continuation events
                         )
                     )}
                 </>

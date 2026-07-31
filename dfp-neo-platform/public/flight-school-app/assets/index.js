@@ -29501,7 +29501,7 @@ ${swapNote}` : swapNote
         eventCategory
       };
       if (eventCategory === "sct") {
-        console.log("💾 Saving SCT event:", {
+        console.log("💾 Saving continuation event:", {
           id: savedEvent.id,
           flightType: savedEvent.flightType,
           pilot: savedEvent.pilot,
@@ -29787,7 +29787,7 @@ ${swapNote}` : swapNote
           "Crew",
           isDeploy,
           eventCategory === "sct"
-          // Include PAX option for SCT events
+          // Include PAX option for continuation events
         )
       ] }) : (
         // Solo - Use staff dropdown for SCT and Staff CAT
@@ -66777,13 +66777,13 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} Mission Profile, Alternate Crew or Currency Profile unit record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped mission, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
       "Open Standard Mission Profiles, press Edit, then Save. If the missing records are Alternate Crew or Currency records, also open Crew Composition and save that section.",
       { section: "platform-standard-missions", label: "Standard Mission Profiles", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Standard Mission Profiles, Alternate Crew profiles and Currency Profiles have per-unit records where needed.", "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Mission profiles, alternate crew profiles and currency events have per-unit records where needed.", "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -75568,7 +75568,7 @@ const sectionDescriptions = {
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Model-specific directed mission profile lists",
+  "platform-task-profiles": "Directed mission profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -109189,15 +109189,15 @@ const App = () => {
     return null;
   };
   reactExports.useEffect(() => {
-    console.log("[SCT] useEffect triggered - sessionUser?.userId:", sessionUser?.userId);
+    console.log("[CONTINUATION] useEffect triggered - sessionUser?.userId:", sessionUser?.userId);
     if (!sessionUser?.userId) return;
     const loadSctRequests = async () => {
       try {
-        console.log("[SCT] Loading SCT requests from DB for userId:", sessionUser.userId);
+        console.log("[CONTINUATION] Loading continuation requests from DB for userId:", sessionUser.userId);
         const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          console.error("[SCT] Failed to load from DB:", res.status, errData);
+          console.error("[CONTINUATION] Failed to load from DB:", res.status, errData);
           return;
         }
         const data = await res.json();
@@ -109213,7 +109213,7 @@ const App = () => {
           }
           return void 0;
         };
-        console.log("[SCT] Loaded", data.length, "SCT requests from DB");
+        console.log("[CONTINUATION] Loaded", data.length, "continuation requests from DB");
         setSctFlights(data.filter((r) => r.requestType === "flight").map((r) => ({
           id: r.id,
           name: r.name,
@@ -109265,7 +109265,7 @@ const App = () => {
           aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1))
         })));
       } catch (err) {
-        console.error("[SCT] Failed to load SCT requests from DB:", err);
+        console.error("[CONTINUATION] Failed to load continuation requests from DB:", err);
       }
     };
     loadSctRequests();
@@ -114686,7 +114686,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const isNextDayView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
         saveToNextDayBuild2 = mainEvent.date === buildDfpDate && isNextDayView;
         if (mainEvent.eventCategory === "sct") {
-          console.log("🔍 SCT Save Decision:", {
+          console.log("🔍 Continuation Save Decision:", {
             activeView,
             isNextDayView,
             mainEventDate: mainEvent.date,
@@ -114713,7 +114713,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const eventsForBuild = eventsToSave.map(({ date: date2, ...rest }) => rest);
         eventsToSave.forEach((e) => {
           if (e.eventCategory === "sct") {
-            console.log("🔄 Updating SCT event in nextDayBuildEvents:", {
+            console.log("🔄 Updating continuation event in nextDayBuildEvents:", {
               id: e.id,
               student: e.student,
               pilot: e.pilot,
@@ -115401,7 +115401,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           resourceId: "",
           // Will be assigned during scheduling
           color: "bg-gray-500/80",
-          // SCT events use grey color (red is for conflicts)
+          // continuation events use grey color (red is for conflicts)
           flightType: sctReq.flightType,
           soloOrDual: sctReq.flightType,
           locationType: "Local",
@@ -115410,7 +115410,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           isTimeFixed: true,
           isSct: true,
           eventCategory: "sct",
-          // This is the key field that makes it use SCT logic
+          // Saved compatibility category for continuation scheduling logic.
           sctRequestId: sctReq.id,
           sctRequestType: "flight",
           currency: sctReq.currency,
@@ -115500,7 +115500,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           resourceId: "",
           // Will be assigned during scheduling
           color: "bg-gray-500/80",
-          // SCT events use grey color (red is for conflicts)
+          // continuation events use grey color (red is for conflicts)
           flightType: "Dual",
           soloOrDual: "Dual",
           locationType: "Local",
@@ -115509,7 +115509,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           isTimeFixed: true,
           isSct: true,
           eventCategory: "sct",
-          // This is the key field that makes it use SCT logic
+          // Saved compatibility category for continuation scheduling logic.
           sctRequestId: sctReq.id,
           sctRequestType: "ftd",
           currency: sctReq.currency,
@@ -118106,7 +118106,7 @@ ${conflictLines.join("\n")}${moreText}`,
     }
     if (publishedSctRequestIds.length > 0) {
       publishedSctRequestIds.forEach((requestId) => {
-        fetch(`/api/sct-requests/${requestId}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published SCT request:", err));
+        fetch(`/api/sct-requests/${requestId}`, { method: "DELETE" }).catch((err) => console.error("Failed to delete published continuation request:", err));
       });
     }
     if (publishedPriorityEventIds.size > 0 || publishedCurrencyDraftIds.size > 0 || publishedTaskingRequestIds.size > 0 || publishedSctRequestIdsFromEvents.size > 0) {
@@ -120354,7 +120354,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const isSctEvent = isContinuationScheduleEvent(eventForNeo);
     if (isSctEvent) {
-      console.log("🔧 SCT event detected, generating pilot remedies");
+      console.log("🔧 continuation event detected, generating pilot remedies");
       const remedies = generatePilotRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
       if (remedies.length > 0) {
         setNeoRemediesForFlyout(remedies);
@@ -120577,7 +120577,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     if (remedy.type === "instructor") {
       if (isSctEvent) {
-        console.log("🟣 NEO: Applying pilot change for SCT event:", eventToUpdate.pilot, "→", remedy.instructor.name);
+        console.log("🟣 NEO: Applying pilot change for continuation event:", eventToUpdate.pilot, "→", remedy.instructor.name);
         updatedEvent.pilot = remedy.instructor.name;
         updatedEvent.instructor = "";
       } else {
@@ -122224,7 +122224,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             sctFtds,
             sctEvents,
             onAddSctRequest: async (type) => {
-              console.log("[SCT] onAddSctRequest called with type:", type);
+              console.log("[CONTINUATION] onAddSctRequest called with type:", type);
               const newReq = {
                 id: v4(),
                 name: "",
@@ -122248,36 +122248,36 @@ ${error instanceof Error ? error.message : String(error)}`,
                 crewIndividual: "",
                 aircraftCount: 1
               };
-              console.log("[SCT] Created new request:", newReq.id);
+              console.log("[CONTINUATION] Created new request:", newReq.id);
               if (type === "flight") setSctFlights((prev) => [...prev, newReq]);
               else setSctFtds((prev) => [...prev, newReq]);
               const userId = getCurrentUserId();
-              console.log("[SCT] Attempting to save - userId from getCurrentUserId():", userId);
+              console.log("[CONTINUATION] Attempting to save - userId from getCurrentUserId():", userId);
               if (userId) {
                 try {
                   const payload = { ...newReq, userId, requestType: type };
-                  console.log("[SCT] POST payload:", JSON.stringify(payload));
+                  console.log("[CONTINUATION] POST payload:", JSON.stringify(payload));
                   const res = await fetch("/api/sct-requests", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                   });
-                  console.log("[SCT] POST response status:", res.status);
+                  console.log("[CONTINUATION] POST response status:", res.status);
                   if (res.ok) {
                     const saved2 = await res.json();
                     const updater = (prev) => prev.map((r) => r.id === newReq.id ? { ...r, id: saved2.id } : r);
                     if (type === "flight") setSctFlights(updater);
                     else setSctFtds(updater);
-                    console.log("[SCT] Saved to DB:", saved2.id, "userId:", saved2.userId);
+                    console.log("[CONTINUATION] Saved to DB:", saved2.id, "userId:", saved2.userId);
                   } else {
                     const errData = await res.json().catch(() => ({}));
-                    console.error("[SCT] Failed to save to DB:", res.status, errData);
+                    console.error("[CONTINUATION] Failed to save to DB:", res.status, errData);
                   }
                 } catch (err) {
-                  console.error("[SCT] Failed to save SCT request:", err);
+                  console.error("[CONTINUATION] Failed to save continuation request:", err);
                 }
               } else {
-                console.warn("[SCT] No userId available from any source - SCT request NOT saved to DB");
+                console.warn("[CONTINUATION] No userId available from any source - continuation request NOT saved to DB");
               }
             },
             onRemoveSctRequest: async (id, type) => {
@@ -122286,7 +122286,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               try {
                 await fetch(`/api/sct-requests/${id}`, { method: "DELETE" });
               } catch (err) {
-                console.error("Failed to delete SCT request:", err);
+                console.error("Failed to delete continuation request:", err);
               }
             },
             onUpdateSctRequest: async (id, field, value, type) => {
@@ -122302,7 +122302,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   body: JSON.stringify({ [field]: effectiveValue })
                 });
               } catch (err) {
-                console.error("Failed to update SCT request:", err);
+                console.error("Failed to update continuation request:", err);
               }
               setTimeout(() => {
                 const requests = type === "flight" ? sctFlights : sctFtds;
@@ -122329,7 +122329,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   body: JSON.stringify(normalisedUpdates)
                 });
               } catch (err) {
-                console.error("Failed to patch SCT request:", err);
+                console.error("Failed to patch continuation request:", err);
               }
               setTimeout(() => {
                 const requests = type === "flight" ? sctFlights : sctFtds;
@@ -122353,7 +122353,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   body: JSON.stringify({ submitted: true })
                 });
               } catch (err) {
-                console.error("Failed to submit SCT request:", err);
+                console.error("Failed to submit continuation request:", err);
               }
             },
             onToggleSctInclude: async (id, type) => {
@@ -122372,7 +122372,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   body: JSON.stringify({ includeInBuild: newValue })
                 });
               } catch (err) {
-                console.error("Failed to update SCT includeInBuild:", err);
+                console.error("Failed to update continuation includeInBuild:", err);
               }
               setTimeout(() => {
                 syncPriorityEventsWithSctAndRemedial();
@@ -124364,7 +124364,7 @@ Do you want to replace the existing entry?`,
                               else setSctFtds(updater);
                             }
                           } catch (err) {
-                            console.error("Failed to save NEO Assist SCT request:", err);
+                            console.error("Failed to save NEO Assist continuation request:", err);
                           }
                         },
                         onPatchSctRequestFromAssist: async (id, updates, type) => {
@@ -124379,7 +124379,7 @@ Do you want to replace the existing entry?`,
                               body: JSON.stringify(updates)
                             });
                           } catch (err) {
-                            console.error("Failed to patch NEO Assist SCT request:", err);
+                            console.error("Failed to patch NEO Assist continuation request:", err);
                           }
                         },
                         onSyncSctRequestsFromAssist: syncPriorityEventsWithSctAndRemedial,
@@ -124922,7 +124922,7 @@ Do you want to replace the existing entry?`,
           instructor: instructorForSct,
           onClose: () => setShowSctRequest(false),
           onSave: async (request) => {
-            console.log("[SCT] SctRequestFlyout onSave called with request:", request);
+            console.log("[CONTINUATION] SctRequestFlyout onSave called with request:", request);
             const requestWithDefaults = {
               ...request,
               aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
@@ -124938,7 +124938,7 @@ Do you want to replace the existing entry?`,
               try {
                 const requestType = requestWithDefaults.event.includes("FTD") ? "ftd" : "flight";
                 const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
-                console.log("[SCT] POST from SctRequestFlyout:", JSON.stringify(payload));
+                console.log("[CONTINUATION] POST from SctRequestFlyout:", JSON.stringify(payload));
                 const res = await fetch("/api/sct-requests", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -124946,7 +124946,7 @@ Do you want to replace the existing entry?`,
                 });
                 if (res.ok) {
                   const saved2 = await res.json();
-                  console.log("[SCT] Saved from Flyout:", saved2.id, "userId:", saved2.userId);
+                  console.log("[CONTINUATION] Saved from Flyout:", saved2.id, "userId:", saved2.userId);
                   if (requestWithDefaults.event.includes("FTD")) {
                     setSctFtds((prev) => prev.map((r) => r.id === requestWithDefaults.id ? { ...r, id: saved2.id } : r));
                   } else {
@@ -124954,13 +124954,13 @@ Do you want to replace the existing entry?`,
                   }
                 } else {
                   const errData = await res.json().catch(() => ({}));
-                  console.error("[SCT] Failed to save from Flyout:", res.status, errData);
+                  console.error("[CONTINUATION] Failed to save from Flyout:", res.status, errData);
                 }
               } catch (err) {
-                console.error("[SCT] Error saving from Flyout:", err);
+                console.error("[CONTINUATION] Error saving from Flyout:", err);
               }
             } else {
-              console.warn("[SCT] No userId available from any source - Flyout request NOT saved to DB");
+              console.warn("[CONTINUATION] No userId available from any source - Flyout request NOT saved to DB");
             }
             setShowSctRequest(false);
             setSuccessMessage(`${getSctTerminology(platformConfig2, activeUnitCode2).shortLabel} request submitted for ${instructorForSct.name}`);

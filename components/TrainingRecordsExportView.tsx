@@ -1216,7 +1216,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 pdf.text('  ' + elem, margin + 2, y);
                 
                 // Grade cell with color background
-                const grade = '3'; // Sample grade
+                const grade = '3'; // Placeholder grade used only for the export preview row.
                 const gradeColor = gradeColors[grade] || [243, 244, 246];
                 
                 // Draw colored grade cell

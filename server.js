@@ -886,7 +886,7 @@ async function migrateIntegratedCombatOperationsTiming(db) {
 }
 
 // Fix Academics syllabus items that have courses[] pointing to their own code
-// instead of the parent course name (e.g. ['AERODY1'] → ['PC-21 Ground School'])
+// instead of the parent course name.
 // This runs at startup and corrects any items created before the fix was deployed.
 async function migrateAcademicsCoursesField(db) {
   try {

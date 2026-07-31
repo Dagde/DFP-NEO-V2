@@ -24,7 +24,7 @@ import type { FlyingWindowExclusionPeriod } from '../types';
 
 export interface ServiceDefinition {
   longName: string;   // e.g. "Air Force"
-  shortName: string;  // e.g. "RAAF"
+  shortName: string;  // e.g. "AF"
 }
 
 export interface AppSettingsData {

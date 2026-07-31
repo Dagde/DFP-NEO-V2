@@ -26705,17 +26705,17 @@ const App: React.FC = () => {
         return null;
     };
 
-    // Load SCT requests from database when sessionUser is available
+    // Load continuation requests from database when sessionUser is available
     useEffect(() => {
-        console.log('[SCT] useEffect triggered - sessionUser?.userId:', sessionUser?.userId);
+        console.log('[CONTINUATION] useEffect triggered - sessionUser?.userId:', sessionUser?.userId);
         if (!sessionUser?.userId) return;
         const loadSctRequests = async () => {
             try {
-                console.log('[SCT] Loading SCT requests from DB for userId:', sessionUser.userId);
+                console.log('[CONTINUATION] Loading continuation requests from DB for userId:', sessionUser.userId);
                 const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    console.error('[SCT] Failed to load from DB:', res.status, errData);
+                    console.error('[CONTINUATION] Failed to load from DB:', res.status, errData);
                     return;
                 }
                 const data = await res.json();
@@ -26731,7 +26731,7 @@ const App: React.FC = () => {
                     }
                     return undefined;
                 };
-                console.log('[SCT] Loaded', data.length, 'SCT requests from DB');
+                console.log('[CONTINUATION] Loaded', data.length, 'continuation requests from DB');
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
                     id: r.id, name: r.name, event: r.event, eventCode: r.eventCode || '', flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
@@ -26765,7 +26765,7 @@ const App: React.FC = () => {
                     aircraftCount: Math.max(1, Math.floor(Number(r.aircraftCount) || 1)),
                 })));
             } catch (err) {
-                console.error('[SCT] Failed to load SCT requests from DB:', err);
+                console.error('[CONTINUATION] Failed to load continuation requests from DB:', err);
             }
         };
         loadSctRequests();
@@ -27876,7 +27876,7 @@ const App: React.FC = () => {
         }
     }, [activeView, publishedSchedules, pt051Assessments]);
 
-    // Sync priority events when SCT requests change
+    // Sync priority events when continuation requests change
     useEffect(() => {
         if (activeView === 'Priorities' || activeView === 'ProgramData') {
             syncPriorityEventsWithSctAndRemedial();
@@ -33500,9 +33500,9 @@ const App: React.FC = () => {
                 const isNextDayView = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
                 saveToNextDayBuild = mainEvent.date === buildDfpDate && isNextDayView;
 
-                // Debug logging for SCT events
+                // Debug logging for continuation events
                 if (mainEvent.eventCategory === 'sct') {
-                    console.log('🔍 SCT Save Decision:', {
+                    console.log('🔍 Continuation Save Decision:', {
                         activeView,
                         isNextDayView,
                         mainEventDate: mainEvent.date,
@@ -33534,10 +33534,10 @@ const App: React.FC = () => {
                 const otherEvents = nextDayBuildEvents.filter(e => !existingEventIds.has(e.id) && !removedNextDayConflictIds.has(e.id));
                 const eventsForBuild = eventsToSave.map(({ date, ...rest }) => rest);
 
-                // Debug logging for SCT event updates
+                // Debug logging for continuation event updates
                 eventsToSave.forEach(e => {
                     if (e.eventCategory === 'sct') {
-                        console.log('🔄 Updating SCT event in nextDayBuildEvents:', {
+                        console.log('🔄 Updating continuation event in nextDayBuildEvents:', {
                             id: e.id,
                             student: e.student,
                             pilot: e.pilot,
@@ -34314,7 +34314,7 @@ const App: React.FC = () => {
             ? FIXED_CREW_DEFAULT_CURRENCY_DURATION_HOURS
             : null;
 
-        // Process SCT Flights
+        // Process continuation flights
         highPrioritySctFlights.forEach(sctReq => {
             const sctEventCode = String(sctReq.eventCode || sctReq.event || '').trim().toUpperCase().slice(0, 8) || sctReq.event;
             const sctCrewGroupKey = getSctCrewGroupKey(sctReq);
@@ -34341,7 +34341,7 @@ const App: React.FC = () => {
                     startTime = hours + (minutes / 60);
                 }
 
-                // Update the existing event with new data from SCT request
+                // Update the existing event with new data from continuation request
                 const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
                 const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
                 newPriorityEvents[existingInPriorityIndex] = {
@@ -34393,7 +34393,7 @@ const App: React.FC = () => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-gray-500/80', // SCT events use grey color (red is for conflicts)
+                    color: 'bg-gray-500/80', // continuation events use grey color (red is for conflicts)
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
                     locationType: 'Local',
@@ -34401,7 +34401,7 @@ const App: React.FC = () => {
                     destination: school,
                     isTimeFixed: true,
                     isSct: true,
-                    eventCategory: 'sct', // This is the key field that makes it use SCT logic
+                    eventCategory: 'sct', // Saved compatibility category for continuation scheduling logic.
                     sctRequestId: sctReq.id,
                     sctRequestType: 'flight',
                     currency: sctReq.currency,
@@ -34446,7 +34446,7 @@ const App: React.FC = () => {
                     startTime = hours + (minutes / 60);
                 }
 
-                // Update the existing event with new data from SCT request
+                // Update the existing event with new data from continuation request
                 const aircraftConfigId = sctReq.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id;
                 const acceptableAircraftConfigs = getSctAcceptableAircraftConfigs(sctReq, aircraftConfigId);
                 newPriorityEvents[existingInPriorityIndex] = {
@@ -34498,7 +34498,7 @@ const App: React.FC = () => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-gray-500/80', // SCT events use grey color (red is for conflicts)
+                    color: 'bg-gray-500/80', // continuation events use grey color (red is for conflicts)
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
                     locationType: 'Local',
@@ -34506,7 +34506,7 @@ const App: React.FC = () => {
                     destination: school,
                     isTimeFixed: true,
                     isSct: true,
-                    eventCategory: 'sct', // This is the key field that makes it use SCT logic
+                    eventCategory: 'sct', // Saved compatibility category for continuation scheduling logic.
                     sctRequestId: sctReq.id,
                     sctRequestType: 'ftd',
                     currency: sctReq.currency,
@@ -37678,7 +37678,7 @@ const App: React.FC = () => {
         if (publishedSctRequestIds.length > 0) {
             publishedSctRequestIds.forEach(requestId => {
                 fetch(`/api/sct-requests/${requestId}`, { method: 'DELETE' })
-                    .catch(err => console.error('Failed to delete published SCT request:', err));
+                    .catch(err => console.error('Failed to delete published continuation request:', err));
             });
         }
         if (
@@ -40116,7 +40116,7 @@ appliedUpdates.forEach(update => {
         });
     }, [instructorsData, syllabusDetails, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
 
-    // Generate pilot remedies for SCT events
+    // Generate pilot remedies for continuation events
     const generatePilotRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
         const suggestions: NeoInstructorRemedy[] = [];
         console.log('🔍 generatePilotRemediesAtTime called for:', conflictedEvent.flightNumber, 'at time:', atTime);
@@ -40446,11 +40446,11 @@ appliedUpdates.forEach(update => {
             }
         }
 
-        // Check if this is an SCT event - if so, generate pilot remedies instead of instructor remedies
+        // Check if this is a continuation event - if so, generate pilot remedies instead of instructor remedies.
         const isSctEvent = isContinuationScheduleEvent(eventForNeo);
 
         if (isSctEvent) {
-            console.log('🔧 SCT event detected, generating pilot remedies');
+            console.log('🔧 continuation event detected, generating pilot remedies');
             const remedies = generatePilotRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
             if (remedies.length > 0) {
                 setNeoRemediesForFlyout(remedies);
@@ -40771,10 +40771,10 @@ appliedUpdates.forEach(update => {
         // Apply the remedy to create the updated event
         const updatedEvent = { ...eventToUpdate };
 
-        // Check if this is an SCT event
+        // Check if this is a continuation event.
         const isSctEvent = isContinuationScheduleEvent(eventToUpdate);
 
-        // Apply Dual/Solo logic from Individual LMP (for LMP events, not SCT)
+        // Apply Dual/Solo logic from Individual LMP for LMP events.
         if (!isSctEvent) {
             const traineeName = updatedEvent.student || updatedEvent.pilot;
             if (traineeName && updatedEvent.flightNumber) {
@@ -40793,10 +40793,10 @@ appliedUpdates.forEach(update => {
 
         if (remedy.type === 'instructor') {
             if (isSctEvent) {
-                // For SCT events, change the pilot (PIC) instead of instructor
-                console.log('🟣 NEO: Applying pilot change for SCT event:', eventToUpdate.pilot, '→', remedy.instructor.name);
+                // For continuation events, change the pilot (PIC) instead of instructor
+                console.log('🟣 NEO: Applying pilot change for continuation event:', eventToUpdate.pilot, '→', remedy.instructor.name);
                 updatedEvent.pilot = remedy.instructor.name;
-                // Clear instructor field for SCT events (they don't have instructors)
+                // Clear instructor field for continuation events (they don't have instructors)
                 updatedEvent.instructor = '';
             } else {
                 // For training flights, change the instructor
@@ -42677,7 +42677,7 @@ appliedUpdates.forEach(update => {
                     sctFtds={sctFtds}
                     sctEvents={sctEvents}
                     onAddSctRequest={async (type) => {
-                      console.log('[SCT] onAddSctRequest called with type:', type);
+                      console.log('[CONTINUATION] onAddSctRequest called with type:', type);
                       const newReq: SctRequest = {
                           id: uuidv4(),
                           name: '',
@@ -42701,36 +42701,36 @@ appliedUpdates.forEach(update => {
                           crewIndividual: '',
                           aircraftCount: 1,
                       };
-                      console.log('[SCT] Created new request:', newReq.id);
+                      console.log('[CONTINUATION] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
                       // Persist to DB using robust userId lookup
                       const userId = getCurrentUserId();
-                      console.log('[SCT] Attempting to save - userId from getCurrentUserId():', userId);
+                      console.log('[CONTINUATION] Attempting to save - userId from getCurrentUserId():', userId);
                       if (userId) {
                         try {
                           const payload = { ...newReq, userId, requestType: type };
-                          console.log('[SCT] POST payload:', JSON.stringify(payload));
+                          console.log('[CONTINUATION] POST payload:', JSON.stringify(payload));
                           const res = await fetch('/api/sct-requests', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                           });
-                          console.log('[SCT] POST response status:', res.status);
+                          console.log('[CONTINUATION] POST response status:', res.status);
                           if (res.ok) {
                             const saved = await res.json();
                             // Update local state with DB-assigned id
                             const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
                             if (type === 'flight') setSctFlights(updater);
                             else setSctFtds(updater);
-                            console.log('[SCT] Saved to DB:', saved.id, 'userId:', saved.userId);
+                            console.log('[CONTINUATION] Saved to DB:', saved.id, 'userId:', saved.userId);
                           } else {
                             const errData = await res.json().catch(() => ({}));
-                            console.error('[SCT] Failed to save to DB:', res.status, errData);
+                            console.error('[CONTINUATION] Failed to save to DB:', res.status, errData);
                           }
-                        } catch (err) { console.error('[SCT] Failed to save SCT request:', err); }
+                        } catch (err) { console.error('[CONTINUATION] Failed to save continuation request:', err); }
                       } else {
-                        console.warn('[SCT] No userId available from any source - SCT request NOT saved to DB');
+                        console.warn('[CONTINUATION] No userId available from any source - continuation request NOT saved to DB');
                       }
                     }}
                     onRemoveSctRequest={async (id, type) => {
@@ -42739,7 +42739,7 @@ appliedUpdates.forEach(update => {
                       // Delete from DB
                       try {
                         await fetch(`/api/sct-requests/${id}`, { method: 'DELETE' });
-                      } catch (err) { console.error('Failed to delete SCT request:', err); }
+                      } catch (err) { console.error('Failed to delete continuation request:', err); }
                     }}
                     onUpdateSctRequest={async (id, field, value, type) => {
                       const effectiveValue = type === 'flight' && field === 'flightType' && activeAircraftCrewComposition.crewCount === 1
@@ -42756,7 +42756,7 @@ appliedUpdates.forEach(update => {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ [field]: effectiveValue })
                         });
-                      } catch (err) { console.error('Failed to update SCT request:', err); }
+                      } catch (err) { console.error('Failed to update continuation request:', err); }
                       // Trigger priority sync
                       setTimeout(() => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
@@ -42782,7 +42782,7 @@ appliedUpdates.forEach(update => {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify(normalisedUpdates)
                         });
-                      } catch (err) { console.error('Failed to patch SCT request:', err); }
+                      } catch (err) { console.error('Failed to patch continuation request:', err); }
                       setTimeout(() => {
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
@@ -42805,7 +42805,7 @@ appliedUpdates.forEach(update => {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ submitted: true })
                         });
-                      } catch (err) { console.error('Failed to submit SCT request:', err); }
+                      } catch (err) { console.error('Failed to submit continuation request:', err); }
                     }}
                     onToggleSctInclude={async (id, type) => {
                       const requests = type === 'flight' ? sctFlights : sctFtds;
@@ -42823,8 +42823,8 @@ appliedUpdates.forEach(update => {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ includeInBuild: newValue })
                         });
-                      } catch (err) { console.error('Failed to update SCT includeInBuild:', err); }
-                      // Trigger priority sync to include the newly selected SCT event
+                      } catch (err) { console.error('Failed to update continuation includeInBuild:', err); }
+                      // Trigger priority sync to include the newly selected continuation event
                       setTimeout(() => {
                         syncPriorityEventsWithSctAndRemedial();
                       }, 100);
@@ -45006,7 +45006,7 @@ appliedUpdates.forEach(update => {
                                                 else setSctFtds(updater);
                                             }
                                         } catch (err) {
-                                            console.error('Failed to save NEO Assist SCT request:', err);
+                                            console.error('Failed to save NEO Assist continuation request:', err);
                                         }
                                     }}
                                     onPatchSctRequestFromAssist={async (id, updates, type) => {
@@ -45023,7 +45023,7 @@ appliedUpdates.forEach(update => {
                                                 body: JSON.stringify(updates),
                                             });
                                         } catch (err) {
-                                            console.error('Failed to patch NEO Assist SCT request:', err);
+                                            console.error('Failed to patch NEO Assist continuation request:', err);
                                         }
                                     }}
                                     onSyncSctRequestsFromAssist={syncPriorityEventsWithSctAndRemedial}
@@ -45584,13 +45584,13 @@ appliedUpdates.forEach(update => {
                     instructor={instructorForSct}
                     onClose={() => setShowSctRequest(false)}
                     onSave={async (request) => {
-                        console.log('[SCT] SctRequestFlyout onSave called with request:', request);
+                        console.log('[CONTINUATION] SctRequestFlyout onSave called with request:', request);
                         const requestWithDefaults = {
                             ...request,
                             aircraftConfigId: request.aircraftConfigId || BASE_AIRCRAFT_CONFIG.id,
                             aircraftCount: Math.max(1, Math.floor(Number((request as SctRequest).aircraftCount) || 1)),
                         };
-                        // Add the SCT request to the appropriate list
+                        // Add the continuation request to the appropriate list
                         if (requestWithDefaults.event.includes('FTD')) {
                             setSctFtds(prev => [...prev, requestWithDefaults]);
                         } else {
@@ -45602,7 +45602,7 @@ appliedUpdates.forEach(update => {
                             try {
                                 const requestType = requestWithDefaults.event.includes('FTD') ? 'ftd' : 'flight';
                                 const payload = { ...requestWithDefaults, userId: flyoutUserId, requestType };
-                                console.log('[SCT] POST from SctRequestFlyout:', JSON.stringify(payload));
+                                console.log('[CONTINUATION] POST from SctRequestFlyout:', JSON.stringify(payload));
                                 const res = await fetch('/api/sct-requests', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -45610,7 +45610,7 @@ appliedUpdates.forEach(update => {
                                 });
                                 if (res.ok) {
                                     const saved = await res.json();
-                                    console.log('[SCT] Saved from Flyout:', saved.id, 'userId:', saved.userId);
+                                    console.log('[CONTINUATION] Saved from Flyout:', saved.id, 'userId:', saved.userId);
                                     // Update local state with DB-assigned id
                                     if (requestWithDefaults.event.includes('FTD')) {
                                         setSctFtds(prev => prev.map(r => r.id === requestWithDefaults.id ? { ...r, id: saved.id } : r));
@@ -45619,13 +45619,13 @@ appliedUpdates.forEach(update => {
                                     }
                                 } else {
                                     const errData = await res.json().catch(() => ({}));
-                                    console.error('[SCT] Failed to save from Flyout:', res.status, errData);
+                                    console.error('[CONTINUATION] Failed to save from Flyout:', res.status, errData);
                                 }
                             } catch (err) {
-                                console.error('[SCT] Error saving from Flyout:', err);
+                                console.error('[CONTINUATION] Error saving from Flyout:', err);
                             }
                         } else {
-                            console.warn('[SCT] No userId available from any source - Flyout request NOT saved to DB');
+                            console.warn('[CONTINUATION] No userId available from any source - Flyout request NOT saved to DB');
                         }
                         setShowSctRequest(false);
                         // Show success message

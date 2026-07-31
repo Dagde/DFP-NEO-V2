@@ -104,8 +104,8 @@ const subjectColor = (subject: string): string => {
   return map[subject] || '#1f2937';
 };
 
-// Lesson-code prefix → subtle tile colour for the schedule tile insets
-// Covers common RAAF/ADF academic module codes. All colours are desaturated
+// Lesson-code prefix → subtle tile colour for the schedule tile insets.
+// Covers common academic module codes. All colours are desaturated
 // enough to remain readable against white label text at small sizes.
 const LESSON_CODE_COLORS: Record<string, string> = {
   // Aerodynamics
@@ -224,7 +224,7 @@ function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label:
   // (not just the course title repeated on every item)
   const moduleValues = items.map(i => i.module?.trim()).filter(Boolean);
   const uniqueModules = new Set(moduleValues);
-  // If all items share the same module value (e.g. all = "PC-21 Ground School"),
+  // If all items share the same module value (for example, a ground school course name),
   // or module values are missing, fall back to grouping by description prefix
   const hasMeaningfulModules = uniqueModules.size > 1 ||
     (uniqueModules.size === 1 && /^\d+$/.test([...uniqueModules][0] || ''));
@@ -410,8 +410,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic LMP courses — includes ALL syllabus types (not just 'Academics')
-  // so Ground School, PC-21 Ground School etc are all selectable ──────────────
+  // Academic LMP courses include all syllabus types, not just Academics,
+  // so configured ground school courses are selectable.
   const academicLmpCourses = useMemo(() => {
     const courseCodeSet = new Set<string>();
     syllabusDetails.forEach(s => {
@@ -419,7 +419,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     });
     return Array.from(courseCodeSet).map(code => {
       const firstItem = syllabusDetails.find(s => s.courses?.includes(code));
-      // module field holds the full course title (e.g. "PC-21 Ground School")
+      // The module field holds the full course title for academic courses.
       const title = firstItem?.module?.trim() || code;
       return { code, title };
     }).sort((a, b) => a.title.localeCompare(b.title));
