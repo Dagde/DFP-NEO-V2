@@ -4762,11 +4762,12 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       }
     },
     completionResults: DEFAULT_TRAINING_REPORT_TEMPLATE.completionResults.map((result) => {
-      const existing = Array.isArray(source.completionResults) ? source.completionResults.find((option) => option?.code === result.code) : null;
+      const hasConfiguredCompletionResults = Array.isArray(source.completionResults);
+      const existing = hasConfiguredCompletionResults ? source.completionResults.find((option) => option?.code === result.code) : null;
       return {
         code: result.code,
         label: cleanLabel$1(existing?.label, result.label, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
-        enabled: cleanBoolean(existing?.enabled, result.enabled)
+        enabled: existing ? cleanBoolean(existing.enabled, result.enabled) : hasConfiguredCompletionResults ? false : result.enabled
       };
     }),
     overallResults: {
@@ -75647,7 +75648,7 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Reusable flight mission profiles for regular unit scheduling",
+  "standard-missions": "Mission profiles for regular unit scheduling",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",

@@ -319,13 +319,18 @@ export const normaliseTrainingReportTemplate = (
       },
     },
     completionResults: DEFAULT_TRAINING_REPORT_TEMPLATE.completionResults.map((result) => {
-      const existing = Array.isArray(source.completionResults)
+      const hasConfiguredCompletionResults = Array.isArray(source.completionResults);
+      const existing = hasConfiguredCompletionResults
         ? source.completionResults.find((option: any) => option?.code === result.code)
         : null;
       return {
         code: result.code,
         label: cleanLabel(existing?.label, result.label, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
-        enabled: cleanBoolean(existing?.enabled, result.enabled),
+        enabled: existing
+          ? cleanBoolean(existing.enabled, result.enabled)
+          : hasConfiguredCompletionResults
+            ? false
+            : result.enabled,
       };
     }),
     overallResults: {
