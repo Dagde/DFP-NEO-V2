@@ -19,6 +19,7 @@ const cleanLabel = (value: unknown, fallback: string): string => {
 };
 
 const isNonAircraftResourceId = (resourceId: string): boolean => (
+  /^SIM(\s+\d+)?$/i.test(resourceId) ||
   /^FTD(\s+\d+)?$/i.test(resourceId) ||
   /^CPT(\s+\d+)?$/i.test(resourceId) ||
   /^Ground(\s+\d+)?$/i.test(resourceId) ||
@@ -28,12 +29,34 @@ const isNonAircraftResourceId = (resourceId: string): boolean => (
   resourceId === 'TWR DI'
 );
 
+const getAircraftResourceMatch = (resourceId: string): { typeCode: string; suffix: string } | null => {
+  const cleanId = String(resourceId || '').trim();
+  if (!cleanId || isNonAircraftResourceId(cleanId)) return null;
+  if (/^Deployed(\s+\d+)?$/i.test(cleanId)) return null;
+
+  const numberedMatch = cleanId.match(/^([A-Z0-9][A-Z0-9/-]*(?:\s+[A-Z0-9][A-Z0-9/-]*)?)(\s+\d+)$/i);
+  if (numberedMatch) {
+    return {
+      typeCode: numberedMatch[1].trim(),
+      suffix: numberedMatch[2],
+    };
+  }
+
+  if (/^[A-Z0-9][A-Z0-9/-]*(?:\s+[A-Z0-9][A-Z0-9/-]*)?$/i.test(cleanId) && /[-/]/.test(cleanId)) {
+    return {
+      typeCode: cleanId,
+      suffix: '',
+    };
+  }
+
+  return null;
+};
+
 export const isAircraftResourceId = (resourceId?: string | null): boolean => {
   const cleanId = String(resourceId || '').trim();
   if (!cleanId || isNonAircraftResourceId(cleanId)) return false;
   if (/^Deployed(\s+\d+)?$/i.test(cleanId)) return true;
-  if (/^PC-21(\s+\d+)?$/i.test(cleanId)) return true;
-  return /\s+\d+$/.test(cleanId);
+  return Boolean(getAircraftResourceMatch(cleanId));
 };
 
 export const getResourceCategory = (resourceId?: string | null): string => {
@@ -43,6 +66,7 @@ export const getResourceCategory = (resourceId?: string | null): string => {
   if (/^STBY\b/i.test(cleanId) || /^BNF-STBY\b/i.test(cleanId)) return 'STBY';
   if (cleanId === 'Duty Sup') return 'Duty Sup';
   if (cleanId === 'TWR DI') return 'TWR DI';
+  if (/^SIM\b/i.test(cleanId)) return 'FTD';
   if (/^FTD\b/i.test(cleanId)) return 'FTD';
   if (/^CPT\b/i.test(cleanId)) return 'CPT';
   if (/^Ground\b/i.test(cleanId)) return 'Ground';
@@ -65,17 +89,18 @@ export const formatResourceLabel = (
 ): string => {
   if (!resourceId || typeof resourceId !== 'string') return resourceId;
 
-  if (resourceId === 'PC-21') return names.aircraft;
   if (resourceId === 'FTD') return names.ftd;
   if (resourceId === 'CPT') return names.cpt;
-
-  const aircraftMatch = resourceId.match(/^PC-21(\s+\d+)$/);
-  if (aircraftMatch) return `${names.aircraft}${aircraftMatch[1]}`;
 
   const deployedMatch = resourceId.match(/^Deployed(\s+\d+)$/);
   if (deployedMatch) {
     const deployedLabel = names.aircraft.length >= 5 ? 'Dep' : 'Deployed';
     return `${deployedLabel} ${names.aircraft}${deployedMatch[1]}`;
+  }
+
+  const aircraftMatch = getAircraftResourceMatch(resourceId);
+  if (aircraftMatch) {
+    return `${names.aircraft}${aircraftMatch.suffix}`;
   }
 
   const ftdMatch = resourceId.match(/^FTD(\s+\d+)$/);
