@@ -170,7 +170,6 @@ import {
 import { getStaffUnavailabilityStatus } from './utils/fixedCrewAvailability';
 import { isSyllabusCourseShell } from './utils/syllabusCourseShell';
 import { debouncedAuditLog } from './utils/auditDebounce';
-import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
@@ -27866,11 +27865,6 @@ const App: React.FC = () => {
     useEffect(() => {
         const init = async () => {
             await initDB();
-            // Seed test audit logs (only if none exist)
-            const existingLogs = localStorage.getItem('dfp_audit_logs');
-            if (!existingLogs) {
-                seedTestAuditLogs();
-            }
         };
         init();
     }, []);
