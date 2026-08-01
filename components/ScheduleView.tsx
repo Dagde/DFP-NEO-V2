@@ -2184,7 +2184,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                        ) : <UnitSettingsReadRow label="Mission/task tile labels" value="No mission or task profiles are configured for this operating model." muted />}
+                        ) : <UnitSettingsReadRow label="Mission / task tile labels" value="No mission or task profiles are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Flight Templates" description="Regular unit flight templates scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
@@ -2194,7 +2194,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Reusable flight profiles" value="No reusable flight profiles are configured for this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Flight Templates" value="No flight templates are configured for this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build defaults are configured under Training & Standards." action={settingsLink('sct-events', 'Take me there')}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />

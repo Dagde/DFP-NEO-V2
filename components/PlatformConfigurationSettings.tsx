@@ -7148,7 +7148,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No reusable flight profiles configured for this unit.
+                  No flight templates configured for this unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">

@@ -617,7 +617,7 @@ const TaskingProfileInput: React.FC<{
           onChange(event.target.value);
           setIsOpen(true);
         }}
-        placeholder="Mission/task profile"
+        placeholder="Mission / task profile"
         className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       />
       {showSuggestions && (
@@ -635,14 +635,14 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} mission/task profile
+                  {operationalModelLabel} mission / task profile
                 </span>
               </button>
             ))
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching mission/task profile' : 'No mission/task profiles configured'}
+                {configuredProfileCount > 0 ? 'No matching mission / task profile' : 'No mission / task profiles configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
@@ -769,7 +769,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Mission/Task Profile" hint={request.tasking || 'Select or type mission/task profile'}>
+            <TaskingFieldPanel label="Mission / Task Profile" hint={request.tasking || 'Select or type mission / task profile'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}
@@ -3658,7 +3658,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No saved reusable flight profiles for this unit context.
+          No saved flight templates for this unit context.
         </div>
       );
     }
