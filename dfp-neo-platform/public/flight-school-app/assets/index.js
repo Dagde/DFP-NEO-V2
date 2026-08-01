@@ -29506,7 +29506,6 @@ ${swapNote}` : swapNote
   const renderCrewFields = (crewMember, index) => {
     if (isFixedCrewCrewedEvent) return null;
     const isSctForm = isContinuationFormationFlight(flightNumber);
-    flightNumber.startsWith("SCT");
     const formationCallsign = isSctForm && formationType ? `${formationType}${index + 1}` : `Aircraft ${index + 1}`;
     const useStaffOnly = eventCategory === "lmp_currency" || eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di";
     const showTraineeFields = eventCategory === "lmp_event" || eventCategory === "lmp_currency";
@@ -123918,7 +123917,7 @@ Do you want to replace the existing entry?`,
         name: user.name,
         idNumber: user.pmkeysId || user.idNumber,
         rank: user.rank,
-        role: "INSTRUCTOR"
+        role: user.role || "Pilot"
       });
       handleNavigation("Instructors");
       setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
@@ -123931,7 +123930,7 @@ Do you want to replace the existing entry?`,
         name: user.name,
         idNumber: user.pmkeysId || user.idNumber,
         rank: user.rank,
-        role: "TRAINEE",
+        role: user.role || "Trainee",
         course: user.course
       });
       handleNavigation("CourseRoster");

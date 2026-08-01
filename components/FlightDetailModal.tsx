@@ -2762,7 +2762,6 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 const renderCrewFields = (crewMember: CrewMember, index: number) => {
     if (isFixedCrewCrewedEvent) return null;
     const isSctForm = isContinuationFormationFlight(flightNumber);
-    const isSctGeneric = flightNumber.startsWith('SCT');
     
     const formationCallsign = isSctForm && formationType
         ? `${formationType}${index + 1}` 

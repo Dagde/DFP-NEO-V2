@@ -21465,7 +21465,7 @@ const App: React.FC = () => {
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
-             role: 'INSTRUCTOR'
+             role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
@@ -21473,7 +21473,7 @@ const App: React.FC = () => {
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
-             role: 'TRAINEE'
+             role: user.role || 'Trainee'
           } as Trainee);
           handleNavigation('CourseRoster');
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
@@ -21513,7 +21513,7 @@ const App: React.FC = () => {
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
-             role: 'INSTRUCTOR'
+             role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
@@ -21521,7 +21521,7 @@ const App: React.FC = () => {
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
-             role: 'TRAINEE'
+             role: user.role || 'Trainee'
           } as Trainee);
           handleNavigation('CourseRoster');
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
@@ -27891,7 +27891,7 @@ const App: React.FC = () => {
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
-             role: 'INSTRUCTOR'
+             role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
@@ -27899,7 +27899,7 @@ const App: React.FC = () => {
           setSelectedPersonForProfile({
              name: user.name,
              idNumber: user.pmkeysId,
-             role: 'TRAINEE'
+             role: user.role || 'Trainee'
           } as Trainee);
           handleNavigation('CourseRoster');
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
@@ -44631,7 +44631,7 @@ appliedUpdates.forEach(update => {
              name: user.name,
              idNumber: user.pmkeysId || user.idNumber,
              rank: user.rank,
-             role: 'INSTRUCTOR'
+             role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
@@ -44647,7 +44647,7 @@ appliedUpdates.forEach(update => {
              name: user.name,
              idNumber: user.pmkeysId || user.idNumber,
              rank: user.rank,
-             role: 'TRAINEE',
+             role: user.role || 'Trainee',
              course: user.course
           } as Trainee);
           handleNavigation('CourseRoster');
