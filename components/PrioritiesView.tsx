@@ -608,7 +608,7 @@ const TaskingProfileInput: React.FC<{
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
-  const settingsPathText = 'Settings > Platform & Deployment > Directed Task Lists';
+  const settingsPathText = 'Settings → Platform & Deployment → Directed Task Lists';
   const settingsPathLink = onOpenDirectedTaskLists ? (
     <button
       type="button"

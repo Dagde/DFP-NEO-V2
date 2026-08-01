@@ -1368,49 +1368,49 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
 const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
   const lowerTitle = title.toLowerCase();
   if (area === 'Organisation') {
-    return 'Open Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
+    return 'Open Settings → Platform & Deployment → Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
   }
   if (area === 'Locations') {
     if (lowerTitle.includes('organisation')) {
-      return 'Open Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.';
+      return 'Open Settings → Platform & Deployment → Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.';
     }
-    return 'Open Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.';
+    return 'Open Settings → Platform & Deployment → Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.';
   }
   if (area === 'Units') {
-    return 'Open Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.';
+    return 'Open Settings → Platform & Deployment → Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.';
   }
   if (area === 'Modules') {
-    return 'Open Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
+    return 'Open Settings → Platform & Deployment → Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
   }
   if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open Aircraft Types & DFP Resource Rows, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
+      return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
-    return 'Open Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and resource counts so they match active platform records.';
+    return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and resource counts so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
-      return 'Open User Access Context, search for the user, then tick at least one configured permission profile that matches their duties.';
+      return 'Open Settings → People & Permissions → User Access Scopes, search for the user, then tick at least one configured permission profile that matches their duties.';
     }
     if (lowerTitle.includes('unknown permission profile')) {
-      return 'Open User Access Context and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.';
+      return 'Open Settings → People & Permissions → User Access Scopes and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.';
     }
-    return 'Open User Access Context, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.';
+    return 'Open Settings → People & Permissions → User Access Scopes, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.';
   }
   if (area === 'Permission Profiles') {
-    return 'Open Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.';
+    return 'Open Settings → People & Permissions → Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.';
   }
   if (area === 'Licensing') {
     if (lowerTitle.includes('expired')) {
-      return 'Open Licensing, enter a current valid-until date or install a renewed licence file/key, then save.';
+      return 'Open Settings → Platform & Deployment → Licensing & Deployment, enter a current valid-until date or install a renewed licence file/key, then save.';
     }
-    return 'Open Licensing and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.';
+    return 'Open Settings → Platform & Deployment → Licensing & Deployment and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.';
   }
   if (area === 'Deployment Readiness') {
-    return 'Open Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.';
+    return 'Open Settings → Platform & Deployment → Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.';
   }
   if (area === 'Operational Runbook') {
-    return 'Open Operational Runbook and complete support, backup, restore, update, audit and accreditation fields using the help icon examples beside each section.';
+    return 'Open Settings → Records & Data → Operational Runbook and complete support, backup, restore, update, audit and accreditation fields using the help icon examples beside each section.';
   }
   return 'Open the matching Settings section, correct the referenced record, save that section, and recheck Configuration Health.';
 };
@@ -1551,7 +1551,7 @@ const buildConfigurationHealth = (
           `${unitCode} will use shared resource capacity`,
           `${unitCode} is a Fixed Crew unit without its own DFP resource row set. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          'Open Aircraft Types & DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator or trainer capacity after separation.',
+          'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator or trainer capacity after separation.',
           { focusSubsectionId: 'platform-resource-pools' }
         );
       }
@@ -1601,7 +1601,7 @@ const buildConfigurationHealth = (
       'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Directed Flight Templates, alternate crew, and continuation/currency events for the affected unit context, then press Edit and Save so each unit receives its own configured records.',
+      'Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ContT / Currency Events for the affected unit context, then press Edit and Save so each unit receives its own configured records.',
       { section: 'platform-standard-missions', label: 'Directed Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
