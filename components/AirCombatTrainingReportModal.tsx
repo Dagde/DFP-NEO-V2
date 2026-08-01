@@ -4,6 +4,7 @@ import AuditButton from './AuditButton';
 import {
   DEFAULT_TRAINING_REPORT_TEMPLATE,
   normaliseTrainingReportTemplate,
+  resolveReportAssessorDisplayLabel,
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { appendTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
@@ -20,6 +21,7 @@ interface AirCombatTrainingReportModalProps {
   startInEditMode?: boolean;
   reportName?: string;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+  instructorLabel?: string;
   currentUserName?: string;
   locationCode?: string;
   unitCode?: string;
@@ -289,6 +291,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   startInEditMode = false,
   reportName = 'Training Report',
   trainingReportTemplate = null,
+  instructorLabel = 'Instructor',
   currentUserName = '',
   locationCode = '',
   unitCode = '',
@@ -303,8 +306,9 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
+  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFields.assessor, instructorLabel);
   const commentSectionLabels = useMemo<Record<CommentSectionKey, string>>(() => ({
-    assessor: commentFields.assessor || 'Assessor',
+    assessor: reportAssessorDisplayLabel,
     weather: commentFields.weather || 'Weather',
     profile: commentFields.profile || 'Profile',
     overall: commentFields.overall || 'Overall',
@@ -317,6 +321,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     commentFields.overall,
     commentFields.nest,
     commentFields.notes,
+    reportAssessorDisplayLabel,
   ]);
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0
@@ -1077,7 +1082,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
             <div className="mb-6 space-y-6">
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]">
               <div>
-                <label className="block text-sm font-medium text-gray-400">{commentFields.assessor}</label>
+                <label className="block text-sm font-medium text-gray-400">{reportAssessorDisplayLabel}</label>
                 <DraftTextInput
                   value={commentSections.assessor}
                   onCommit={(value) => updateCommentSection('assessor', value)}

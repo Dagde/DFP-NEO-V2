@@ -58277,6 +58277,7 @@ const AirCombatTrainingReportModal = ({
   startInEditMode = false,
   reportName = "Training Report",
   trainingReportTemplate = null,
+  instructorLabel: instructorLabel2 = "Instructor",
   currentUserName = "",
   locationCode = "",
   unitCode = "",
@@ -58291,8 +58292,9 @@ const AirCombatTrainingReportModal = ({
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
+  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFields.assessor, instructorLabel2);
   const commentSectionLabels = reactExports.useMemo(() => ({
-    assessor: commentFields.assessor || "Assessor",
+    assessor: reportAssessorDisplayLabel,
     weather: commentFields.weather || "Weather",
     profile: commentFields.profile || "Profile",
     overall: commentFields.overall || "Overall",
@@ -58304,7 +58306,8 @@ const AirCombatTrainingReportModal = ({
     commentFields.profile,
     commentFields.overall,
     commentFields.nest,
-    commentFields.notes
+    commentFields.notes,
+    reportAssessorDisplayLabel
   ]);
   const enabledCompletionResults = reportTemplate.completionResults.filter((option) => option.enabled !== false);
   const missionStatusOptions = enabledCompletionResults.length > 0 ? enabledCompletionResults : [{ code: "Complete", label: "Complete", enabled: true }];
@@ -59062,7 +59065,7 @@ const AirCombatTrainingReportModal = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 space-y-6", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFields.assessor }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: reportAssessorDisplayLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 DraftTextInput$1,
                 {
@@ -123182,6 +123185,7 @@ Do you want to replace the existing entry?`,
         startInEditMode: airCombatTrainingReportDraft.startInEditMode === true,
         reportName: getUnitTrainingReportTemplate(platformConfig2, airCombatTrainingReportDraft.staff.unit || activeUnitCode2).displayName,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig2, airCombatTrainingReportDraft.staff.unit || activeUnitCode2),
+        instructorLabel: instructorLabel2,
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode2,
