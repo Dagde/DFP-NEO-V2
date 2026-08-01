@@ -66881,6 +66881,8 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
   const activeLicences = config.licenses.filter(isActiveRecord);
   const activeUserAccess = config.userAccess.filter(isActiveRecord);
   const organisationSettings = config.organisations[0]?.settings || {};
+  const healthSctTerminology = normaliseSctTerminology(organisationSettings.sctTerminology || null);
+  const healthContinuationCurrencyEventsLabel = `${healthSctTerminology.shortLabel} / Currency Events`;
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const standardMissionProfiles = normaliseStandardMissionProfiles(organisationSettings.standardMissionProfiles || null);
   const activeOrganisationCodes = new Set(activeOrganisations.map((org) => toIdentifier(org.code)));
@@ -66998,11 +67000,11 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit records need per-unit copies",
       `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${continuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
+      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: "platform-standard-missions", label: "Directed Flight Templates", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit records are split-ready", `Directed flight templates, alternate crew setups and ${continuationCurrencyEventsLabel} have per-unit records where needed.`, "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit records are split-ready", `Directed flight templates, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -67609,7 +67611,7 @@ const PlatformConfigurationSettings = ({
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
-  const continuationCurrencyEventsLabel2 = `${sctTerminology.shortLabel} / Currency Events`;
+  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -72054,7 +72056,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: continuationCurrencyEventsLabel2,
+          title: continuationCurrencyEventsLabel,
           subtitle: "Continuation and currency event templates. Each event stores crew, CONFIG and currency against the selected aircraft.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -72095,7 +72097,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel2 }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                 "These events prefill continuation and currency requests with crew, aircraft CONFIG and currency for ",
                 displayCrewCompositionAircraftCode || "the selected aircraft",
@@ -72110,7 +72112,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: [
             "No ",
-            continuationCurrencyEventsLabel2,
+            continuationCurrencyEventsLabel,
             " configured."
           ] }) : displayCurrencyProfiles.map((profile) => {
             const crewOptions = Array.from(new Set([

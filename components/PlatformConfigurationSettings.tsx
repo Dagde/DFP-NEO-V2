@@ -1459,6 +1459,8 @@ const buildConfigurationHealth = (
   const activeLicences = config.licenses.filter(isActiveRecord);
   const activeUserAccess = config.userAccess.filter(isActiveRecord);
   const organisationSettings = config.organisations[0]?.settings || {};
+  const healthSctTerminology = normaliseSctTerminology(organisationSettings.sctTerminology || null);
+  const healthContinuationCurrencyEventsLabel = `${healthSctTerminology.shortLabel} / Currency Events`;
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const standardMissionProfiles = normaliseStandardMissionProfiles(organisationSettings.standardMissionProfiles || null);
 
@@ -1601,11 +1603,11 @@ const buildConfigurationHealth = (
       'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${continuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
+      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: 'platform-standard-missions', label: 'Directed Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight templates, alternate crew setups and ${continuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight templates, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
