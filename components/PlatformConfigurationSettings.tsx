@@ -443,7 +443,7 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
       compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Flight Template ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Directed Flight Template ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
       description: String(row?.description || ''),
       resourceType,
@@ -5469,7 +5469,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode,
-      missionName: `Flight Template ${missionIndex}`,
+      missionName: `Directed Flight Template ${missionIndex}`,
       shortTitle: `FLT${missionIndex}`.slice(0, 8),
       description: '',
       resourceType: 'Flight',
@@ -7159,7 +7159,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Flight Template</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Directed Flight Template</button>
             </div>
           ) : null}
         />
