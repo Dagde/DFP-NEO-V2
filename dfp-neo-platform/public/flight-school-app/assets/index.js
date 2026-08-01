@@ -7466,9 +7466,9 @@ const AddCourseFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Initial Student Numbers" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: primaryStudentGroupLabel, id: "raaf-start", value: raafStart, onChange: (e) => setRaafStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: secondaryStudentGroupLabel, id: "navy-start", value: navyStart, onChange: (e) => setNavyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: tertiaryStudentGroupLabel, id: "army-start", value: armyStart, onChange: (e) => setArmyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: primaryStudentGroupLabel, id: "student-group-1-start", value: raafStart, onChange: (e) => setRaafStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: secondaryStudentGroupLabel, id: "student-group-2-start", value: navyStart, onChange: (e) => setNavyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: tertiaryStudentGroupLabel, id: "student-group-3-start", value: armyStart, onChange: (e) => setArmyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Total" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700/50 rounded-md text-white h-[38px] flex items-center justify-center font-semibold", children: totalStart })
@@ -52925,7 +52925,7 @@ const BulkUpdateFlyout = ({
         } else {
           const newInstructor = {
             idNumber,
-            name: "Unnamed Instructor",
+            name: "Unnamed Staff Member",
             rank: "",
             role: "Pilot",
             callsignNumber: 0,
@@ -52939,7 +52939,7 @@ const BulkUpdateFlyout = ({
             ...parsedData
             // Override defaults with parsed values
           };
-          if (!newInstructor.name || newInstructor.name === "Unnamed Instructor") {
+          if (!newInstructor.name || newInstructor.name === "Unnamed Staff Member" || newInstructor.name === "Unnamed Instructor") {
             skippedCount++;
             continue;
           }

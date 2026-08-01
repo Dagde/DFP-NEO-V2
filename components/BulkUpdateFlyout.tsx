@@ -304,7 +304,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 } else {
                     const newInstructor: Instructor = {
                         idNumber,
-                        name: 'Unnamed Instructor',
+                        name: 'Unnamed Staff Member',
                         rank: '',
                         role: 'Pilot',
                         callsignNumber: 0,
@@ -318,7 +318,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                         ...parsedData, // Override defaults with parsed values
                     };
                     
-                    if (!newInstructor.name || newInstructor.name === 'Unnamed Instructor') {
+                    if (!newInstructor.name || newInstructor.name === 'Unnamed Staff Member' || newInstructor.name === 'Unnamed Instructor') {
                         skippedCount++;
                         continue; // Skip if a name couldn't be constructed
                     }

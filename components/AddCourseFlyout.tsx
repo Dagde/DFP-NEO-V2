@@ -275,13 +275,13 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Initial Student Numbers</legend>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                             <Dropdown label={primaryStudentGroupLabel} id="raaf-start" value={raafStart} onChange={e => setRaafStart(parseInt(e.target.value))}>
+                             <Dropdown label={primaryStudentGroupLabel} id="student-group-1-start" value={raafStart} onChange={e => setRaafStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label={secondaryStudentGroupLabel} id="navy-start" value={navyStart} onChange={e => setNavyStart(parseInt(e.target.value))}>
+                             <Dropdown label={secondaryStudentGroupLabel} id="student-group-2-start" value={navyStart} onChange={e => setNavyStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label={tertiaryStudentGroupLabel} id="army-start" value={armyStart} onChange={e => setArmyStart(parseInt(e.target.value))}>
+                             <Dropdown label={tertiaryStudentGroupLabel} id="student-group-3-start" value={armyStart} onChange={e => setArmyStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
                             <div>
