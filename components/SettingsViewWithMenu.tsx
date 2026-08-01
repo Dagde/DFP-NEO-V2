@@ -788,13 +788,15 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     } | null>(null);
     const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = useState(false);
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
+    const isContinuationCurrencySection = (section: SettingsMenuSection): boolean =>
+        section === 'sct-events' || section === 'currency-profiles';
     const getSectionLabel = (section: SettingsMenuSection): string => (
-        section === 'sct-events'
+        isContinuationCurrencySection(section)
             ? `${sctTerminology.shortLabel} / Currency Events`
             : sectionLabels[section]
     );
     const getSectionDescription = (section: SettingsMenuSection): string => (
-        section === 'sct-events'
+        isContinuationCurrencySection(section)
             ? `Configure ${sctTerminology.shortLabel} and currency event defaults`
             : sectionDescriptions[section]
     );

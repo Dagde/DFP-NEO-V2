@@ -59,7 +59,7 @@ const TIMELINE_END   = 21; // 21:00
 const SNAP_MINS      = 5;
 const SNAP           = SNAP_MINS / 60;
 
-// Strip course code suffix from fullName (e.g. "Brown, Charles – ADF301" → "Brown, Charles")
+// Strip course code suffix from fullName, for example "Surname, First - COURSE".
 // Handles both em-dash (–) and hyphen (-) separators
 const stripCourse = (fullName: string): string => {
   // Match " – COURSE" or " - COURSE" at the end (em dash or regular hyphen)

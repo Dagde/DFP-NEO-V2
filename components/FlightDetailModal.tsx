@@ -276,7 +276,7 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
   const [tieData, setTieData] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Strip course suffix from fullName (format: "Evans, Linda – ADF302" -> "Evans, Linda")
+  // Strip course suffix from fullName (format: "Surname, First - COURSE" -> "Surname, First")
   const traineeNameOnly = trainee.fullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
 
   React.useEffect(() => {
@@ -294,7 +294,7 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
             if (courseRes.ok) {
               const courseRows = await courseRes.json();
               if (Array.isArray(courseRows)) {
-                // Match by traineeFullName - stored as "Edwards, Luna – ADF302"
+                // Match by traineeFullName - stored as "Surname, First - COURSE"
                 found = courseRows.find((r: any) => {
                   const namePart = (r.traineeFullName || '').split(/\s*[\u2013\u2014-]\s*/)[0].trim();
                   return namePart.toLowerCase() === traineeNameOnly.toLowerCase();

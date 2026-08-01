@@ -76182,8 +76182,9 @@ const SettingsViewWithMenu = (props) => {
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
-  const getSectionLabel = (section) => section === "sct-events" ? `${sctTerminology.shortLabel} / Currency Events` : sectionLabels[section];
-  const getSectionDescription = (section) => section === "sct-events" ? `Configure ${sctTerminology.shortLabel} and currency event defaults` : sectionDescriptions[section];
+  const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
+  const getSectionLabel = (section) => isContinuationCurrencySection(section) ? `${sctTerminology.shortLabel} / Currency Events` : sectionLabels[section];
+  const getSectionDescription = (section) => isContinuationCurrencySection(section) ? `Configure ${sctTerminology.shortLabel} and currency event defaults` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);

@@ -1638,9 +1638,9 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
       {gradeByTraineeModal && (
         <GradeByTraineeModal
           trainees={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
-            // traineeFullName format: "Brown, John – ADF302"
-            // Split on em-dash to get name part "Brown, John", then take surname before comma
-            const namePart = t.traineeFullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim(); // "Brown, John"
+            // traineeFullName format: "Surname, First - COURSE"
+            // Split on dash to get the name part, then take surname before comma.
+            const namePart = t.traineeFullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
             const label = namePart.includes(',')
               ? namePart.split(',')[0].trim()  // "Brown" (surname)
               : namePart.split(/\s+/)[0].trim(); // first word if no comma
@@ -1739,7 +1739,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[]; trainingReportDispla
                   <div className="overflow-x-auto">
                     <ColChart
                       data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
-                        // traineeFullName format: "Brown, John – ADF302"
+                        // traineeFullName format: "Surname, First - COURSE"
                         const namePart2 = t.traineeFullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
                         const label = namePart2.includes(',')
                           ? namePart2.split(',')[0].trim()

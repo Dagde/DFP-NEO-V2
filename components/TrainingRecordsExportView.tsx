@@ -548,7 +548,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             const courseTrainees = allTrainees.filter(t => selectedCourseSet.has(normaliseCourseFilterValue(t.course)));
             const traineeNames = courseTrainees.map(t => t.name);
             
-            // Match trainee names with or without course suffix (e.g., "Edwards, Charlotte" or "Edwards, Charlotte – ADF301")
+            // Match trainee names with or without course suffix (for example, "Surname, First" or "Surname, First - COURSE")
             filtered = filtered.filter(e => {
                 const studentName = getEventPersonName(e);
                 if (!studentName) return false;

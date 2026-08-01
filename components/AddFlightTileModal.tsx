@@ -619,7 +619,7 @@ const twClassToHex = twClassToRgba;
 // ─── Cascading dropdown for Person selection (3 layers: Unit→Staff/Course→Names) ─
 interface PersonDropdownProps {
   value: string;
-  displayValue?: string;  // optional display label (e.g. "Davies, Mary (ADF301)") — if omitted, value is shown
+  displayValue?: string;  // optional display label, if omitted value is shown
   onChange: (name: string, callsigns: string[]) => void;
   allUnits: string[];
   getLayer2: (unit: string) => string[];
