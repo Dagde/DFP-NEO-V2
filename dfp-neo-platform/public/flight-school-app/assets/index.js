@@ -38476,7 +38476,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
         setIsOpen(false);
         onOpenDirectedTaskLists();
       },
-      className: "font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400",
+      className: "font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60",
       children: settingsPathText
     }
   ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: settingsPathText });
@@ -38582,7 +38582,7 @@ const TaskingRequestTable = ({
         event.stopPropagation();
         openDirectedTaskSettings();
       },
-      className: "font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400",
+      className: "font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60",
       children: "Settings > Platform & Deployment > Directed Task Lists"
     }
   );

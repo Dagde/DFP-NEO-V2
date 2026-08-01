@@ -618,7 +618,7 @@ const TaskingProfileInput: React.FC<{
         setIsOpen(false);
         onOpenDirectedTaskLists();
       }}
-      className="font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+      className="font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60"
     >
       {settingsPathText}
     </button>
@@ -767,7 +767,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
         event.stopPropagation();
         openDirectedTaskSettings();
       }}
-      className="font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+      className="font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60"
     >
       Settings &gt; Platform &amp; Deployment &gt; Directed Task Lists
     </button>
