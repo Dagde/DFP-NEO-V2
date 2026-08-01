@@ -73,7 +73,7 @@ const COURSE_SCORE_EVENT_TYPE_KEYS: CourseScoreEventTypeKey[] = [
 const createDefaultCourseAwards = (): CourseAward[] => [
     {
         id: 'dux',
-        name: 'Dux',
+        name: 'Course Award',
         course: '',
         lmpType: '',
         eventTypes: null,
@@ -81,13 +81,25 @@ const createDefaultCourseAwards = (): CourseAward[] => [
         includeRemedial: false,
         includeAllScoredEvents: true,
         minimumScoredEvents: 1,
-        criteria: [
-            { id: 'BGF21', event: 'BGF21', weight: 2, enabled: true },
-            { id: 'BIF3', event: 'BIF3', weight: 2, enabled: true },
-            { id: 'BNAV4', event: 'BNAV4', weight: 2, enabled: true },
-        ],
+        criteria: [],
     },
 ];
+
+const isStarterCourseAwardCriteria = (criteria: AwardCriterion[]): boolean => {
+    const starterEvents = new Set(['BGF21', 'BIF3', 'BNAV4']);
+    return criteria.length === starterEvents.size && criteria.every(criterion => (
+        starterEvents.has(criterion.event.trim().toUpperCase()) &&
+        criterion.enabled !== false &&
+        Number(criterion.weight) === 2
+    ));
+};
+
+const removeStarterCourseAwardCriteria = (award: CourseAward): CourseAward => {
+    if (award.id !== 'dux' || award.name !== 'Dux' || !isStarterCourseAwardCriteria(award.criteria)) {
+        return award;
+    }
+    return { ...award, name: 'Course Award', criteria: [] };
+};
 
 const normaliseCourseAward = (award: Partial<CourseAward>, index: number): CourseAward | null => {
     const id = String(award.id || `award-${index}`).trim();
@@ -137,6 +149,7 @@ const loadStoredCourseAwards = (): CourseAward[] => {
             ? parsed
                 .map((award, index) => normaliseCourseAward(award, index))
                 .filter((award): award is CourseAward => Boolean(award))
+                .map(removeStarterCourseAwardCriteria)
             : [];
         return awards.length > 0 ? awards : createDefaultCourseAwards();
     } catch {
@@ -256,7 +269,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     useEffect(() => {
         if (!activeAward) return;
-        if ((!activeAward.course || activeAward.course === 'all') && defaultCourseByProgress) {
+        if (!activeAward.course && defaultCourseByProgress) {
             setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress } : award));
             return;
         }
@@ -1141,6 +1154,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                         onChange={event => updateActiveAwardCourse(event.target.value)}
                                                         className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                     >
+                                                        <option value="all">All active courses</option>
                                                         {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
                                                     </select>
                                                 </label>

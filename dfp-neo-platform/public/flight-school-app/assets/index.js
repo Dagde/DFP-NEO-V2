@@ -79140,7 +79140,7 @@ const COURSE_SCORE_EVENT_TYPE_KEYS = [
 const createDefaultCourseAwards = () => [
   {
     id: "dux",
-    name: "Dux",
+    name: "Course Award",
     course: "",
     lmpType: "",
     eventTypes: null,
@@ -79148,13 +79148,19 @@ const createDefaultCourseAwards = () => [
     includeRemedial: false,
     includeAllScoredEvents: true,
     minimumScoredEvents: 1,
-    criteria: [
-      { id: "BGF21", event: "BGF21", weight: 2, enabled: true },
-      { id: "BIF3", event: "BIF3", weight: 2, enabled: true },
-      { id: "BNAV4", event: "BNAV4", weight: 2, enabled: true }
-    ]
+    criteria: []
   }
 ];
+const isStarterCourseAwardCriteria = (criteria) => {
+  const starterEvents = /* @__PURE__ */ new Set(["BGF21", "BIF3", "BNAV4"]);
+  return criteria.length === starterEvents.size && criteria.every((criterion) => starterEvents.has(criterion.event.trim().toUpperCase()) && criterion.enabled !== false && Number(criterion.weight) === 2);
+};
+const removeStarterCourseAwardCriteria = (award) => {
+  if (award.id !== "dux" || award.name !== "Dux" || !isStarterCourseAwardCriteria(award.criteria)) {
+    return award;
+  }
+  return { ...award, name: "Course Award", criteria: [] };
+};
 const normaliseCourseAward = (award, index) => {
   const id = String(award.id || `award-${index}`).trim();
   const name = String(award.name || "").trim();
@@ -79186,7 +79192,7 @@ const loadStoredCourseAwards = () => {
     const raw = window.localStorage.getItem(COURSE_AWARD_SETTINGS_STORAGE_KEY);
     if (!raw) return createDefaultCourseAwards();
     const parsed = JSON.parse(raw);
-    const awards = Array.isArray(parsed) ? parsed.map((award, index) => normaliseCourseAward(award, index)).filter((award) => Boolean(award)) : [];
+    const awards = Array.isArray(parsed) ? parsed.map((award, index) => normaliseCourseAward(award, index)).filter((award) => Boolean(award)).map(removeStarterCourseAwardCriteria) : [];
     return awards.length > 0 ? awards : createDefaultCourseAwards();
   } catch {
     return createDefaultCourseAwards();
@@ -79274,7 +79280,7 @@ const CourseProgressView = ({
   }, [activeAwardId]);
   reactExports.useEffect(() => {
     if (!activeAward) return;
-    if ((!activeAward.course || activeAward.course === "all") && defaultCourseByProgress) {
+    if (!activeAward.course && defaultCourseByProgress) {
       setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress } : award));
       return;
     }
@@ -79987,13 +79993,16 @@ const CourseProgressView = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
                         "Course",
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
                           "select",
                           {
                             value: activeAward.course,
                             onChange: (event) => updateActiveAwardCourse(event.target.value),
                             className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                            children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
+                            children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All active courses" }),
+                              activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
+                            ]
                           }
                         )
                       ] }),
