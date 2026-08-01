@@ -3727,7 +3727,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No directed flight templates for this unit context.
+          No directed flight setups for this unit context.
         </div>
       );
     }
@@ -3775,7 +3775,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {isOpen ? 'v' : '>'}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Directed Flight Template'}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Directed Flight Setup'}</span>
                     <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70">{unitLabel}</span>
                   </span>
                 </button>
@@ -3839,14 +3839,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   )}
 
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {renderStandardMissionTile('Directed Flight Template', isEditing ? (
+                    {renderStandardMissionTile('Directed Flight Setup', isEditing ? (
                       <div className="space-y-2">
                         {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Directed flight template name')}
                         {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
                       </div>
                     ) : (
                       <div>
-                        <span className="block">{missionName || 'Unnamed Directed Flight Template'}</span>
+                        <span className="block">{missionName || 'Unnamed Directed Flight Setup'}</span>
                         <span className="mt-1 block text-xs text-cyan-200/70">{shortTitle || 'No short title'}</span>
                       </div>
                     ))}

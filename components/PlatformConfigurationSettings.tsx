@@ -443,7 +443,7 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
       compositeUnitCode: String(row?.compositeUnitCode || '').trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || '').trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Directed Flight Template ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Directed Flight Setup ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || '').slice(0, 8),
       description: String(row?.description || ''),
       resourceType,
@@ -1359,7 +1359,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
       return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
     }
     if (lowerTitle.includes('flight template')) {
-      return { section: 'platform-standard-missions', label: 'Directed Flight Templates' };
+      return { section: 'platform-standard-missions', label: 'Directed Flight Setups' };
     }
   }
   return null;
@@ -1603,11 +1603,11 @@ const buildConfigurationHealth = (
       'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped directed flight template, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
-      { section: 'platform-standard-missions', label: 'Directed Flight Templates', focusSubsectionId: 'platform-standard-missions' }
+      `Open Settings → Platform & Deployment → Directed Flight Setups, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
+      { section: 'platform-standard-missions', label: 'Directed Flight Setups', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight templates, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -5469,7 +5469,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : '',
       compositeProfileId: combinedContext ? baseId : '',
       aircraftTypeCode,
-      missionName: `Directed Flight Template ${missionIndex}`,
+      missionName: `Directed Flight Setup ${missionIndex}`,
       shortTitle: `FLT${missionIndex}`.slice(0, 8),
       description: '',
       resourceType: 'Flight',
@@ -6885,7 +6885,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the short directed task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Templates.
+            Set the short directed task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Setups.
             Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -7154,31 +7154,31 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
-          title="Directed Flight Templates"
+          title="Directed Flight Setups"
           subtitle="Reusable directed-flight setups with default aircraft, crew, timing, callsign and formation settings."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Directed Flight Template</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Directed Flight Setup</button>
             </div>
           ) : null}
         />
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Directed Flight Templates are available when the selected unit model supports recurring directed-flight setups.
+              Directed Flight Setups are available when the selected unit model supports recurring directed-flight setups.
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New directed flight templates default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name.
+                  New directed flight setups default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No directed flight templates configured for this unit.
+                  No directed flight setups configured for this unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
@@ -7195,7 +7195,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'TASK'}</span>
-                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Directed Flight Template'}</h4>
+                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Directed Flight Setup'}</h4>
                             <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
                           </div>
                           <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
@@ -7218,7 +7218,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-[1fr_150px]">
-                              <DraftField label="Directed Flight Template Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <DraftField label="Directed Flight Setup Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
                               <DraftField label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onCommit={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
@@ -7239,7 +7239,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={activeStandardMissionUnitLabel}
                                 disabled
                                 onChange={() => undefined}
-                                info="Directed Flight Templates are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                                info="Directed Flight Setups are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
                               <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's DFP resource rows. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />

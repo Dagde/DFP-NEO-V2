@@ -284,7 +284,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'validation': 'Cancellation Codes',
     'organisation': 'Resource Sharing',
     'crew-composition': 'Crew Composition',
-    'standard-missions': 'Directed Flight Templates',
+    'standard-missions': 'Directed Flight Setups',
     'currency-profiles': 'Continuation & Currency Events',
     'platform-configuration-health': 'Configuration Health',
     'platform-organisation-locations': 'Organisation, Bases & Areas',
