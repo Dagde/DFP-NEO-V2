@@ -1336,7 +1336,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
   if (area === 'Modules') {
     return { section: 'platform-unit-modules', label: 'Unit Features & Modules' };
   }
-  if (area === 'Resource Pools') {
+  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools') {
     return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
   }
   if (area === 'User Access') {
@@ -1368,25 +1368,25 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
 const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
   const lowerTitle = title.toLowerCase();
   if (area === 'Organisation') {
-    return 'Open Organisation and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
+    return 'Open Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.';
   }
   if (area === 'Locations') {
     if (lowerTitle.includes('organisation')) {
-      return 'Open Locations, then assign the location to an active organisation or reactivate the referenced organisation.';
+      return 'Open Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.';
     }
-    return 'Open Locations, then create or reactivate the location and at least one unit at that location.';
+    return 'Open Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.';
   }
   if (area === 'Units') {
-    return 'Open Units and assign the unit to an active location, or reactivate the correct location before saving.';
+    return 'Open Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.';
   }
   if (area === 'Modules') {
-    return 'Open the unit/module setup area and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
+    return 'Open Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
   }
-  if (area === 'Resource Pools') {
+  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open the Resource Pools section, enter non-zero counts for the DFP resource rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
+      return 'Open Aircraft & Resource Pools, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
-    return 'Open Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.';
+    return 'Open Aircraft & Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
@@ -1532,7 +1532,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource rows and scheduling resources need a configured pool for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'Aircraft & Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource rows and scheduling resources need a configured pool for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1569,25 +1569,25 @@ const buildConfigurationHealth = (
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
 
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add('CRITICAL', 'Resource Pools', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft & Resource Pools', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add('CRITICAL', 'Resource Pools', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft & Resource Pools', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
-      add('WARNING', 'Resource Pools', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('WARNING', 'Aircraft & Resource Pools', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add('CRITICAL', 'Resource Pools', `${poolName} has no usable resources`, 'This pool controls DFP resource rows, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft & Resource Pools', `${poolName} has no usable resources`, 'This pool controls DFP resource rows, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
 
   if (activeResourcePools.length === 0) {
-    add('WARNING', 'Resource Pools', 'No active DFP resource pool', 'At least one active resource pool is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
-  } else if (!items.some((item) => item.area === 'Resource Pools' && item.severity === 'CRITICAL')) {
-    add('OK', 'Resource Pools', 'DFP resource rows are configured', `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
+    add('WARNING', 'Aircraft & Resource Pools', 'No active DFP resource pool', 'At least one active resource pool is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
+  } else if (!items.some((item) => item.area === 'Aircraft & Resource Pools' && item.severity === 'CRITICAL')) {
+    add('OK', 'Aircraft & Resource Pools', 'DFP resource rows are configured', `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
   }
 
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);

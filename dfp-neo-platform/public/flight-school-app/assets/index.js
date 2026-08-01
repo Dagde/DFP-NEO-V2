@@ -21811,7 +21811,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
       })
     ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center py-8 text-gray-500 italic", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No phrase list available for this element." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-2", children: "Configure in Settings → Scoring Matrix." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-2", children: "Configure in Settings → Training & Standards → Scoring Matrix." })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 bg-gray-900/50 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-semibold", children: "Cancel" }),
@@ -58015,7 +58015,7 @@ const CurrencyStatusPage = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Days Remaining" }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Active / Inactive" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700", children: allVisibleDefs.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: isEditing ? 6 : 5, className: "px-4 py-8 text-center text-gray-500 italic text-sm", children: "No currency items configured. Go to Settings → Currency Setup to add items." }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700", children: allVisibleDefs.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: isEditing ? 6 : 5, className: "px-4 py-8 text-center text-gray-500 italic text-sm", children: "No currency items configured. Go to Settings → Training & Standards → Currency Requirements to add items." }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           activeDefs.map((def) => renderRow(def, false)),
           activeDefs.length > 0 && inactiveDefs.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: isEditing ? 6 : 5, className: "px-4 py-2 bg-gray-700/30", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 h-px bg-gray-600" }),
@@ -66663,7 +66663,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
   if (area === "Modules") {
     return { section: "platform-unit-modules", label: "Unit Features & Modules" };
   }
-  if (area === "Resource Pools") {
+  if (area === "Resource Pools" || area === "Aircraft & Resource Pools") {
     return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
   }
   if (area === "User Access") {
@@ -66694,25 +66694,25 @@ const getConfigurationHealthSettingsLink = (area, title) => {
 const getDefaultConfigurationHealthRemediation = (area, title) => {
   const lowerTitle = title.toLowerCase();
   if (area === "Organisation") {
-    return "Open Organisation and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.";
+    return "Open Organisation, Bases & Areas and create or reactivate the operating organisation. Example: code ORG, name Operating Organisation, status ACTIVE.";
   }
   if (area === "Locations") {
     if (lowerTitle.includes("organisation")) {
-      return "Open Locations, then assign the location to an active organisation or reactivate the referenced organisation.";
+      return "Open Organisation, Bases & Areas, then assign the location to an active organisation or reactivate the referenced organisation.";
     }
-    return "Open Locations, then create or reactivate the location and at least one unit at that location.";
+    return "Open Organisation, Bases & Areas, then create or reactivate the location and at least one unit at that location.";
   }
   if (area === "Units") {
-    return "Open Units and assign the unit to an active location, or reactivate the correct location before saving.";
+    return "Open Units & Ownership and assign the unit to an active location, or reactivate the correct location before saving.";
   }
   if (area === "Modules") {
-    return "Open the unit/module setup area and enable the required app areas for that unit, or deactivate unused modules if they are not required.";
+    return "Open Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.";
   }
-  if (area === "Resource Pools") {
+  if (area === "Resource Pools" || area === "Aircraft & Resource Pools") {
     if (lowerTitle.includes("no usable resources")) {
-      return "Open the Resource Pools section, enter non-zero counts for the DFP resource rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.";
+      return "Open Aircraft & Resource Pools, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.";
     }
-    return "Open Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.";
+    return "Open Aircraft & Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.";
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
@@ -66830,7 +66830,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const matchingPools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode || !toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode);
     if (matchingPools.length === 0) {
-      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource rows and scheduling resources need a configured pool for this unit or location.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
+      add("WARNING", "Aircraft & Resource Pools", `${unitCode} has no active resource pool`, "DFP resource rows and scheduling resources need a configured pool for this unit or location.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
     }
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
@@ -66858,23 +66858,23 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     const unitCode = toIdentifier(pool.unitCode);
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add("CRITICAL", "Resource Pools", `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add("CRITICAL", "Aircraft & Resource Pools", `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add("CRITICAL", "Resource Pools", `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add("CRITICAL", "Aircraft & Resource Pools", `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
-      add("WARNING", "Resource Pools", `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add("WARNING", "Aircraft & Resource Pools", `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add("CRITICAL", "Resource Pools", `${poolName} has no usable resources`, "This pool controls DFP resource rows, but all resource counts are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add("CRITICAL", "Aircraft & Resource Pools", `${poolName} has no usable resources`, "This pool controls DFP resource rows, but all resource counts are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
   if (activeResourcePools.length === 0) {
-    add("WARNING", "Resource Pools", "No active DFP resource pool", "At least one active resource pool is needed before DFP resource rows can come from platform configuration.", "runtime-pool-none", void 0, { focusSubsectionId: "platform-resource-pools" });
-  } else if (!items.some((item) => item.area === "Resource Pools" && item.severity === "CRITICAL")) {
-    add("OK", "Resource Pools", "DFP resource rows are configured", `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? "" : "s"} can feed DFP resource rows.`, "runtime-pool-active");
+    add("WARNING", "Aircraft & Resource Pools", "No active DFP resource pool", "At least one active resource pool is needed before DFP resource rows can come from platform configuration.", "runtime-pool-none", void 0, { focusSubsectionId: "platform-resource-pools" });
+  } else if (!items.some((item) => item.area === "Aircraft & Resource Pools" && item.severity === "CRITICAL")) {
+    add("OK", "Aircraft & Resource Pools", "DFP resource rows are configured", `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? "" : "s"} can feed DFP resource rows.`, "runtime-pool-active");
   }
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
   const missingCurrencyClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.currencyProfiles);

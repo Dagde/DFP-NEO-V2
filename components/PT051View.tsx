@@ -457,7 +457,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
                     ) : (
                         <div className="text-center py-8 text-gray-500 italic">
                             <p>No phrase list available for this element.</p>
-                            <p className="text-xs mt-2">Configure in Settings → Scoring Matrix.</p>
+                            <p className="text-xs mt-2">Configure in Settings → Training & Standards → Scoring Matrix.</p>
                         </div>
                     )}
                 </div>

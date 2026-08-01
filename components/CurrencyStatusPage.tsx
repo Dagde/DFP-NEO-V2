@@ -515,7 +515,7 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
                   {allVisibleDefs.length === 0 ? (
                     <tr>
                       <td colSpan={isEditing ? 6 : 5} className="px-4 py-8 text-center text-gray-500 italic text-sm">
-                        No currency items configured. Go to Settings → Currency Setup to add items.
+                        No currency items configured. Go to Settings → Training & Standards → Currency Requirements to add items.
                       </td>
                     </tr>
                   ) : (
