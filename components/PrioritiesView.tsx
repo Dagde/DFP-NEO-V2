@@ -3772,7 +3772,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {renderStandardMissionTile('Flight Template', isEditing ? (
                       <div className="space-y-2">
-                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Profile name')}
+                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Template name')}
                         {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
                       </div>
                     ) : (
@@ -4144,7 +4144,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
                                         {priorityAllocationModel === 'air_combat'
-                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted."
+                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed-task and currency requests are attempted."
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
                                                 : `Set how ${operationalModelLabel.replace(/\s+Model$/i, '')} training capacity is shared across active courses for this locality.`}

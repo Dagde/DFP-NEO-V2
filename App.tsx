@@ -2479,7 +2479,7 @@ const DfpSidePanelTimeline: React.FC<{
             return {
                 id,
                 events,
-                tasking: first.taskingName || first.flightNumber || 'Mission',
+                tasking: first.taskingName || first.flightNumber || 'Directed Task',
                 date: first.date || date,
                 takeoff: first.startTime,
                 scheduled: true,
@@ -2513,7 +2513,7 @@ const DfpSidePanelTimeline: React.FC<{
             seen.add(identity);
             rows.push({
                 selectionId: `highest::${identity}`,
-                tasking: row.tasking || 'Mission',
+                tasking: row.tasking || 'Directed Task',
                 date: row.date || date,
                 takeoff: row.takeoff,
                 alreadyInHighest: true,
@@ -2527,7 +2527,7 @@ const DfpSidePanelTimeline: React.FC<{
                 seen.add(identity);
                 rows.push({
                     selectionId: `tasking::${request.id}`,
-                    tasking: request.tasking || 'Mission',
+                    tasking: request.tasking || 'Directed Task',
                     date: request.date || date,
                     takeoff: request.takeoff,
                     alreadyInHighest: isAssistTaskRequestInHighestPriority(request.id),
@@ -2956,7 +2956,7 @@ const DfpSidePanelTimeline: React.FC<{
                         className={wizardSelectionTileClass(selectedWizardTaskingIds.includes(request.selectionId))}
                         onClick={() => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds)}
                     >
-                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Mission'} at {formatCompactTime(request.takeoff)}
+                        {request.alreadyInHighest ? 'Confirm ' : 'Schedule '}{request.tasking || 'Directed Task'} at {formatCompactTime(request.takeoff)}
                     </button>
                 )).concat(
                     <button
@@ -3020,7 +3020,7 @@ const DfpSidePanelTimeline: React.FC<{
                     'Should normal Fixed Crew training be included?',
                     enabledStreams.length
                         ? <p>Current routine training allocation has <strong>{enabledStreams.length}</strong> active course/package streams and totals <strong>100%</strong>.</p>
-                        : <p>Routine Fixed Crew course/package training is currently off, so mission and currency requests will drive the build.</p>,
+                        : <p>Routine Fixed Crew course/package training is currently off, so directed-task and currency requests will drive the build.</p>,
                     <>
                         <button type="button" className={wizardChoiceClass} onClick={useRoutineTraining}>Yes, use normal training</button>
                         <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, directed-task requests only</button>
@@ -18693,14 +18693,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     prioritizedFlightList,
                     currentStart,
                     endTimeBoundary,
-                    `${normalLabel} Before Mission ${segment}`,
-                    `${formationLabel} Before Mission ${segment}`,
+                    `${normalLabel} Before Directed Task ${segment}`,
+                    `${formationLabel} Before Directed Task ${segment}`,
                     taskingTime
                 );
             }
             const dueTaskingEvents = pendingTaskingEvents().filter(event => getTaskingRequestedStart(event) <= taskingTime + 0.001);
             if (dueTaskingEvents.length > 0) {
-                recordProgress({ message: 'Scheduling Mission Priority Events...', percentage: 45 });
+                recordProgress({ message: 'Scheduling directed-task priority events...', percentage: 45 });
                 scheduleTaskingPriorityEvents(dueTaskingEvents);
             }
             currentStart = Math.max(currentStart, taskingTime);
@@ -33673,7 +33673,7 @@ const App: React.FC = () => {
                            changesList.push(`LMP Event: ${originalEvent.syllabusItem || 'None'} → ${event.syllabusItem || 'None'}`);
                        }
                        if (event.flightNumber !== originalEvent.flightNumber) {
-                           changesList.push(`Flight Number: ${originalEvent.flightNumber || 'None'} → ${event.flightNumber || 'None'}`);
+                           changesList.push(`Event Number: ${originalEvent.flightNumber || 'None'} → ${event.flightNumber || 'None'}`);
                        }
 
                        // Check for area changes

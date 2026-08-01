@@ -11,7 +11,7 @@ export interface FixedCrewTileColourKeyItem {
 export const DEFAULT_FIXED_CREW_TILE_COLOUR_MODE: FixedCrewTileColourMode = 'event_type';
 
 const EVENT_TYPE_COLOURS: Record<string, FixedCrewTileColourKeyItem> = {
-  task: { key: 'task', label: 'Mission', color: 'bg-cyan-500/70' },
+  task: { key: 'task', label: 'Directed Task', color: 'bg-cyan-500/70' },
   currency: { key: 'currency', label: 'Currency', color: 'bg-violet-500/70' },
   course: { key: 'course', label: 'Course', color: 'bg-sky-500/70' },
   package: { key: 'package', label: 'Package', color: 'bg-green-500/70' },

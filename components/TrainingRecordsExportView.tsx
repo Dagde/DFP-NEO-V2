@@ -731,7 +731,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         // Add Events
         if (recordType === 'all' || recordType === 'events') {
             csvContent += 'EVENTS\n';
-            csvContent += `Date,Type,${exportAssessorLabel},Student,Flight Number,Duration,Start Time,Resource\n`;
+            csvContent += `Date,Type,${exportAssessorLabel},Student,Event Number,Duration,Start Time,Resource\n`;
             filteredData.events.forEach(e => {
                 csvContent += `${e.date},${e.type},${e.instructor || ''},${e.student || e.pilot || ''},${e.flightNumber || ''},${e.duration || ''},${e.startTime || ''},${e.resourceId || ''}\n`;
             });
@@ -776,7 +776,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 'Type': e.type || '',
                 [exportAssessorLabel]: e.instructor || '',
                 'Student': e.student || e.pilot || '',
-                'Flight Number': e.flightNumber || '',
+                'Event Number': e.flightNumber || '',
                 'Duration (hrs)': e.duration || 0,
                 'Start Time': e.startTime || '',
                 'Resource': e.resourceId || ''
@@ -1198,7 +1198,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     <div><strong>Course:</strong> ${trainee?.course || 'N/A'}</div>
                     <div><strong>${escapeHtml(exportAssessorLabel)}:</strong> ${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</div>
                     <div><strong>Date:</strong> ${formatDate(event.date) || 'N/A'}</div>
-                    <div><strong>Flight:</strong> ${event.flightNumber || 'N/A'}</div>
+                    <div><strong>Event:</strong> ${event.flightNumber || 'N/A'}</div>
                     <div><strong>Duration:</strong> ${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</div>
                 </div>
                 

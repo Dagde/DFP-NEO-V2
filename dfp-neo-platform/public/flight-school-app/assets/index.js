@@ -1607,7 +1607,7 @@ const writeTileStatusSettingsToLocalStorage = (settings) => {
 };
 const DEFAULT_FIXED_CREW_TILE_COLOUR_MODE = "event_type";
 const EVENT_TYPE_COLOURS = {
-  task: { key: "task", label: "Mission", color: "bg-cyan-500/70" },
+  task: { key: "task", label: "Directed Task", color: "bg-cyan-500/70" },
   currency: { key: "currency", label: "Currency", color: "bg-violet-500/70" },
   course: { key: "course", label: "Course", color: "bg-sky-500/70" },
   package: { key: "package", label: "Package", color: "bg-green-500/70" },
@@ -11478,7 +11478,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Schedule Tile Labels", description: "Short display names for mission or task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Schedule Tile Labels", description: "Short display names for directed-task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
             Object.keys(taskAbbreviations || {}).length,
             " configured"
@@ -11491,7 +11491,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Task" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Directed task" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Tile label" })
             ] }),
             taskTileLabelProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center", children: [
@@ -40968,7 +40968,7 @@ const PrioritiesView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
             renderStandardMissionTile("Flight Template", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Profile name"),
+              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Template name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Flight Template" }),
@@ -41267,7 +41267,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : `${operationalModelLabel.replace(/\s+Model$/i, "")} Course Priority` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed-task and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -81405,7 +81405,7 @@ const TrainingRecordsExportView = ({
     let csvContent = "";
     if (recordType === "all" || recordType === "events") {
       csvContent += "EVENTS\n";
-      csvContent += `Date,Type,${exportAssessorLabel},Student,Flight Number,Duration,Start Time,Resource
+      csvContent += `Date,Type,${exportAssessorLabel},Student,Event Number,Duration,Start Time,Resource
 `;
       filteredData.events.forEach((e) => {
         csvContent += `${e.date},${e.type},${e.instructor || ""},${e.student || e.pilot || ""},${e.flightNumber || ""},${e.duration || ""},${e.startTime || ""},${e.resourceId || ""}
@@ -81444,7 +81444,7 @@ const TrainingRecordsExportView = ({
         "Type": e.type || "",
         [exportAssessorLabel]: e.instructor || "",
         "Student": e.student || e.pilot || "",
-        "Flight Number": e.flightNumber || "",
+        "Event Number": e.flightNumber || "",
         "Duration (hrs)": e.duration || 0,
         "Start Time": e.startTime || "",
         "Resource": e.resourceId || ""
@@ -87206,7 +87206,7 @@ const DfpSidePanelTimeline = ({
       return {
         id,
         events,
-        tasking: first.taskingName || first.flightNumber || "Mission",
+        tasking: first.taskingName || first.flightNumber || "Directed Task",
         date: first.date || date,
         takeoff: first.startTime,
         scheduled: true
@@ -87230,7 +87230,7 @@ const DfpSidePanelTimeline = ({
       seen.add(identity);
       rows.push({
         selectionId: `highest::${identity}`,
-        tasking: row.tasking || "Mission",
+        tasking: row.tasking || "Directed Task",
         date: row.date || date,
         takeoff: row.takeoff,
         alreadyInHighest: true
@@ -87242,7 +87242,7 @@ const DfpSidePanelTimeline = ({
       seen.add(identity);
       rows.push({
         selectionId: `tasking::${request.id}`,
-        tasking: request.tasking || "Mission",
+        tasking: request.tasking || "Directed Task",
         date: request.date || date,
         takeoff: request.takeoff,
         alreadyInHighest: isAssistTaskRequestInHighestPriority(request.id)
@@ -87643,7 +87643,7 @@ const DfpSidePanelTimeline = ({
             onClick: () => toggleWizardSelection(request.selectionId, setSelectedWizardTaskingIds),
             children: [
               request.alreadyInHighest ? "Confirm " : "Schedule ",
-              request.tasking || "Mission",
+              request.tasking || "Directed Task",
               " at ",
               formatCompactTime(request.takeoff)
             ]
@@ -87722,7 +87722,7 @@ const DfpSidePanelTimeline = ({
             " active course/package streams and totals ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
             "."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so mission and currency requests will drive the build." }),
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed-task and currency requests will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed-task requests only" }),
@@ -100729,14 +100729,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           prioritizedFlightList,
           currentStart,
           endTimeBoundary,
-          `${normalLabel} Before Mission ${segment}`,
-          `${formationLabel} Before Mission ${segment}`,
+          `${normalLabel} Before Directed Task ${segment}`,
+          `${formationLabel} Before Directed Task ${segment}`,
           taskingTime
         );
       }
       const dueTaskingEvents = pendingTaskingEvents().filter((event) => getTaskingRequestedStart(event) <= taskingTime + 1e-3);
       if (dueTaskingEvents.length > 0) {
-        recordProgress({ message: "Scheduling Mission Priority Events...", percentage: 45 });
+        recordProgress({ message: "Scheduling directed-task priority events...", percentage: 45 });
         scheduleTaskingPriorityEvents(dueTaskingEvents);
       }
       currentStart = Math.max(currentStart, taskingTime);
@@ -112815,7 +112815,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             changesList.push(`LMP Event: ${originalEvent.syllabusItem || "None"} → ${event.syllabusItem || "None"}`);
           }
           if (event.flightNumber !== originalEvent.flightNumber) {
-            changesList.push(`Flight Number: ${originalEvent.flightNumber || "None"} → ${event.flightNumber || "None"}`);
+            changesList.push(`Event Number: ${originalEvent.flightNumber || "None"} → ${event.flightNumber || "None"}`);
           }
           if (event.area !== originalEvent.area) {
             changesList.push(`Area: ${originalEvent.area || "None"} → ${event.area || "None"}`);
