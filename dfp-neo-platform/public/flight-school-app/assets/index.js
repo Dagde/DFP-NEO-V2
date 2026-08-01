@@ -81184,7 +81184,7 @@ const TrainingRecordsExportView = ({
     [trainingReportTemplate]
   );
   const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || "Training Report";
-  const exportAssessmentTitle = `${exportReportName} Training Assessment`;
+  const exportAssessmentTitle = exportReportName;
   const exportAssessorLabel = resolveReportAssessorDisplayLabel(
     activeTrainingReportTemplate.modules.comments.fields.assessor,
     instructorLabel
