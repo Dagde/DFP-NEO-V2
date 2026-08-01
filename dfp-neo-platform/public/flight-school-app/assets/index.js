@@ -11530,12 +11530,12 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
             ] }, profile))
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed task tile labels", value: "No directed task names are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Directed Flight Setups", description: "Reusable Directed Flight Setups scoped to this unit.", action: settingsLink("standard-missions", "Open Directed Flight Setups", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Directed Task Setups", description: "Reusable directed-task setups scoped to this unit.", action: settingsLink("standard-missions", "Open Directed Task Setups", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Directed Flight Setup Name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Directed Task Setup Name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
-        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed Flight Setups", value: "No Directed Flight Setups are configured for this unit.", muted: true }) }),
+        ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed Task Setups", value: "No directed-task setups are configured for this unit.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: configuredContinuationCurrencyEventsLabel, description: "Request and build event defaults are configured under Training & Standards.", action: settingsLink("sct-events", `Open ${configuredContinuationCurrencyEventsLabel}`), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: `${configuredContinuationShortLabel} and currency event rows are edited in one place.` })
@@ -41017,7 +41017,7 @@ const PrioritiesView = ({
   );
   const renderSavedSpecialEvents = () => {
     if (displayedStandardMissionProfiles.length === 0) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No Directed Flight Setups for this unit context." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No directed-task setups for this unit context." });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
@@ -41053,7 +41053,7 @@ const PrioritiesView = ({
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/30 bg-cyan-500/10 text-xs font-bold text-cyan-200", children: isOpen ? "v" : ">" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Directed Flight Setup" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-semibold text-slate-100", children: missionName || "Unnamed Directed Task Setup" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70", children: unitLabel })
                 ] })
               ]
@@ -41093,7 +41093,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these Directed Flight Setup changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these directed-task setup changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -41116,11 +41116,11 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
-            renderStandardMissionTile("Directed Flight Setup", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Directed Flight Setup Name"),
+            renderStandardMissionTile("Directed Task Setup", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Directed Task Setup Name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Directed Flight Setup" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Directed Task Setup" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-200/70", children: shortTitle || "No short title" })
             ] })),
             renderStandardMissionTile("Unit / Aircraft", /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -66155,7 +66155,7 @@ const normaliseStandardMissionProfiles = (source) => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Directed Flight Setup ${index + 1}`),
+      missionName: String(row?.missionName || row?.name || `Directed Task Setup ${index + 1}`),
       shortTitle: String(row?.shortTitle || row?.code || "").slice(0, 8),
       description: String(row?.description || ""),
       resourceType,
@@ -66850,8 +66850,8 @@ const getConfigurationHealthSettingsLink = (area, title) => {
     if (lowerTitle.includes("resource")) {
       return { section: "platform-resource-pools", label: "Aircraft Types & DFP Resource Rows" };
     }
-    if (lowerTitle.includes("directed flight setup") || lowerTitle.includes("flight setup") || lowerTitle.includes("flight template")) {
-      return { section: "standard-missions", label: "Directed Flight Setups", focusSubsectionId: "platform-standard-missions" };
+    if (lowerTitle.includes("directed task setup") || lowerTitle.includes("directed flight setup") || lowerTitle.includes("flight setup") || lowerTitle.includes("flight template")) {
+      return { section: "standard-missions", label: "Directed Task Setups", focusSubsectionId: "platform-standard-missions" };
     }
   }
   return null;
@@ -67052,13 +67052,13 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit records need per-unit copies",
-      `${missingCompositeClones} unit-scoped Directed Flight Setup, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped directed-task setup, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      `Open Settings → Platform & Deployment → Directed Flight Setups, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
-      { section: "standard-missions", label: "Directed Flight Setups", focusSubsectionId: "platform-standard-missions" }
+      `Open Settings → Platform & Deployment → Directed Task Setups, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
+      { section: "standard-missions", label: "Directed Task Setups", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit records are split-ready", `Directed Flight Setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit records are split-ready", `Directed task setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -70182,7 +70182,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       compositeUnitCode: combinedContext ? activeStandardMissionUnitCode : "",
       compositeProfileId: combinedContext ? baseId : "",
       aircraftTypeCode,
-      missionName: `Directed Flight Setup ${missionIndex}`,
+      missionName: `Directed Task Setup ${missionIndex}`,
       shortTitle: `FLT${missionIndex}`.slice(0, 8),
       description: "",
       resourceType: "Flight",
@@ -71337,7 +71337,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         SectionHeader,
         {
           title: "Directed Task Lists",
-          subtitle: "Short task names used when assigning directed tasks. Reusable Directed Flight Setups are configured separately.",
+          subtitle: "Short task names used when assigning directed tasks. Reusable directed-task setups are configured separately.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71357,7 +71357,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed task names available for each operational model. This section is for names only. Full reusable Directed Flight Setups are configured in Settings → Platform & Deployment → Directed Flight Setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed task names available for each operational model. This section is for names only. Full reusable directed-task setups are configured in Settings → Platform & Deployment → Directed Task Setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-directed-task-list-${option.value}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
@@ -71658,23 +71658,23 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Directed Flight Setups",
-          subtitle: "Reusable Directed Flight Setups with default aircraft, crew, timing, callsign and formation settings.",
+          title: "Directed Task Setups",
+          subtitle: "Reusable directed-task setups with default aircraft, crew, timing, callsign and formation settings.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Directed Flight Setup" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Directed Task Setup" })
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Directed Flight Setups are available when the selected unit model supports recurring directed tasks with full default aircraft, crew, timing, callsign and formation settings." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Directed task setups are available when the selected unit model supports recurring directed tasks with full default aircraft, crew, timing, callsign and formation settings." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
             activeStandardMissionUnitLabel || "No unit selected"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New Directed Flight Setups default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New directed-task setups default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No Directed Flight Setups configured for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No directed-task setups configured for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -71686,7 +71686,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "TASK" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Directed Flight Setup" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Directed Task Setup" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
@@ -71700,11 +71700,11 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Directed Flight Details" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Directed Task Details" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Directed Flight Setup Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Directed Task Setup Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onCommit: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftTextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
@@ -71722,7 +71722,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Directed Flight Setups are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Directed task setups are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's DFP resource rows. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -75803,7 +75803,7 @@ const sectionLabels = {
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
-  "standard-missions": "Directed Flight Setups",
+  "standard-missions": "Directed Task Setups",
   "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
@@ -75948,7 +75948,7 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles, crew seats and alternate crew setups",
-  "standard-missions": "Reusable Directed Flight Setups with aircraft, crew, timing and callsign defaults",
+  "standard-missions": "Reusable directed-task setups with aircraft, crew, timing and callsign defaults",
   "currency-profiles": "Configure continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
@@ -104160,7 +104160,7 @@ const App = () => {
       compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
       compositeProfileId: String(row?.compositeProfileId || "").trim(),
       aircraftTypeCode: String(row?.aircraftTypeCode || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Directed Flight Setup ${index + 1}`).trim(),
+      missionName: String(row?.missionName || row?.name || `Directed Task Setup ${index + 1}`).trim(),
       shortTitle: String(row?.shortTitle || "").trim().slice(0, 8),
       description: String(row?.description || "").trim(),
       resourceType: ["Flight", "FTD", "CPT", "Ground"].includes(String(row?.resourceType || row?.type || "Flight")) ? String(row?.resourceType || row?.type || "Flight") : "Flight",
