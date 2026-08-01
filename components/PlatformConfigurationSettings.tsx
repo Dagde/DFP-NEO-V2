@@ -1355,7 +1355,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
     if (lowerTitle.includes('resource')) {
       return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
     }
-    if (lowerTitle.includes('profiles')) {
+    if (lowerTitle.includes('profiles') || lowerTitle.includes('records')) {
       return { section: 'platform-standard-missions', label: 'Flight Templates' };
     }
   }
@@ -1595,14 +1595,14 @@ const buildConfigurationHealth = (
     add(
       'WARNING',
       'Unit Separation',
-      'Combined-unit profiles need per-unit copies',
+      'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
       'Open Flight Templates, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.',
       { section: 'platform-standard-missions', label: 'Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Flight templates, alternate crew profiles and continuation/currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', 'Flight templates, alternate crew setups and continuation/currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -6848,8 +6848,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Mission / Task Profiles"
-          subtitle="Mission or task names shown in Mission Requests for each operational model. Users can still type a task manually if the assigned task is not listed."
+          title="Tasking Lists"
+          subtitle="Tasking names shown in Mission Requests for each operational model. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6871,7 +6871,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the mission or task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
+            Set the tasking names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -6883,20 +6883,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model mission or task names.'
+                          ? 'Use this for Fighter / Strike model tasking names.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
                     <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
-                      {profiles.length} profile{profiles.length === 1 ? '' : 's'}
+                      {profiles.length} name{profiles.length === 1 ? '' : 's'}
                     </span>
                   </div>
                   <TextAreaField
-                    label="Mission / Task Names"
+                    label="Tasking Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One mission or task name per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One tasking name per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );
@@ -7656,7 +7656,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
-          subtitle="Continuation and currency event defaults. Event profiles store crew, CONFIG and currency against the selected aircraft."
+          subtitle="Continuation and currency event defaults. Each event stores crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
             <button
               type="button"
@@ -7701,17 +7701,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
-                <p className={resourceSectionPanelHintClass}>Event profiles prefill continuation and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                <p className={resourceSectionPanelHintClass}>These events prefill continuation and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
                 <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
-                  <span className="text-[9px] leading-tight">Add<br />Profile</span>
+                  <span className="text-[9px] leading-tight">Add<br />Event</span>
                 </button>
               </div>
             </div>
             <div className="space-y-3">
               {displayCurrencyProfiles.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No continuation/currency event profiles configured.</div>
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No continuation/currency events configured.</div>
               ) : displayCurrencyProfiles.map((profile) => {
                 const crewOptions = Array.from(new Set([
                   ...currencyProfileCrewOptions,
@@ -7747,7 +7747,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   : [profile.currency, ...activeCurrencyDefinitionNames].filter(Boolean);
                 return (
                 <div key={profile.id} className="grid gap-3 rounded-lg border border-gray-700 bg-gray-900/80 p-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.55fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.55fr)_auto]">
-                  <OffsetField label="Profile Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
+                  <OffsetField label="Event Name" value={profile.name} disabled={!canEditCrewComposition} onChange={(value) => updateCurrencyProfile(profile.id, { name: value })} />
                   <OffsetField
                     label="Code"
                     value={profile.code}

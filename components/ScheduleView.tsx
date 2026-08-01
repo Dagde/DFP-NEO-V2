@@ -2119,7 +2119,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Crew" value="No aircraft crew composition is linked to this unit yet." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Alternate Crew Profiles" description="Alternate crew profiles available to this unit and operational model." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{alternateCrewProfiles.length} profiles</span>{settingsLink('crew-composition', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-alternate-crew-composition' })}</div>}>
+                    <UnitSettingsGroup title="Alternate Crew Setups" description="Alternate crew setups available to this unit and operational model." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{alternateCrewProfiles.length} setup{alternateCrewProfiles.length === 1 ? '' : 's'}</span>{settingsLink('crew-composition', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-alternate-crew-composition' })}</div>}>
                         {alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => (
                             <div key={profile.id} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateAlternateCrewProfile(profile, { code: value })} disabled={!canEdit} />
@@ -2127,7 +2127,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateAlternateCrewProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsTextAreaRow label="Role requirements" value={formatRoleRequirementsText(profile.roleRequirements)} onChange={(value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) })} disabled={!canEdit} placeholder="Pilot = 2" />
                             </div>
-                        )) : <UnitSettingsReadRow label="Alternate crews" value="No alternate crew profiles match this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Alternate crews" value="No alternate crew setups match this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Crew Labels & Qualifications" description="The local words users see for crew roles, plus model-specific qualifications such as PIC." action={settingsLink('platform-rank-terminology', 'Take me there', { focusSubsectionId: 'platform-staff-qualifications' })}>
                         {modelCrewPositions.length > 0 ? (
@@ -2184,7 +2184,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                        ) : <UnitSettingsReadRow label="Mission / task tile labels" value="No mission or task profiles are configured for this operating model." muted />}
+                        ) : <UnitSettingsReadRow label="Tasking tile labels" value="No tasking names are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Flight Templates" description="Regular unit flight templates scoped to this unit." action={settingsLink('standard-missions', 'Take me there', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
@@ -6775,7 +6775,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'currencies') {
             return promptShell(
-                <p>Create the continuation/currency event profiles this unit will use. The full event setup can still be refined after setup, but these profiles give the unit useful defaults immediately.</p>,
+                <p>Create the continuation/currency events this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately.</p>,
                 renderCurrencyEditor(),
             );
         }
