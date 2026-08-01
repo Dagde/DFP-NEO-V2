@@ -39990,7 +39990,7 @@ const PrioritiesView = ({
       ignored: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
-    logAudit("Priorities", "Add", "Added directed event request row", `Directed event request ${nextRequest.id}`);
+    logAudit("Priorities", "Add", "Added mission request row", `Mission request ${nextRequest.id}`);
   };
   const isTaskingPriorityEventForRequest = (event, requestId) => event.taskingRequestId === requestId || String(event.id || "").startsWith(`tasking-${requestId}-`);
   const taskingPriorityEventMatchesActiveScope = (event) => {
@@ -40112,13 +40112,13 @@ const PrioritiesView = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests((prev) => prev.map((item) => item.id === id ? nextRequest : item));
-    logAudit("Priorities", "Edit", "Set directed event scheduler priority", `${request.tasking || "Untitled directed event"}: ${schedulerPriority}`);
+    logAudit("Priorities", "Edit", "Set mission request scheduler priority", `${request.tasking || "Untitled mission request"}: ${schedulerPriority}`);
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
-    logAudit("Priorities", "Delete", "Removed directed event request", removed?.tasking || id);
+    logAudit("Priorities", "Delete", "Removed mission request", removed?.tasking || id);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -41256,7 +41256,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : `${operationalModelLabel.replace(/\s+Model$/i, "")} Course Priority` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -89084,7 +89084,7 @@ const DfpSidePanelTimeline = ({
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
-      notes: `NEO Assist directed event request: ${tasking}`,
+      notes: `NEO Assist mission request: ${tasking}`,
       priority: "High",
       aircraftConfigId: request.aircraftConfigId,
       acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -89720,7 +89720,7 @@ const DfpSidePanelTimeline = ({
             " active course/package streams and totals ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
             "."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed event and currency events will drive the build." }),
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so mission and currency requests will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, mission requests only" }),

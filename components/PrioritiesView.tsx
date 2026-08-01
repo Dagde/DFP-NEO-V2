@@ -2526,7 +2526,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ignored: false,
     };
     setTaskingRequests(prev => [...prev, nextRequest]);
-    logAudit('Priorities', 'Add', 'Added directed event request row', `Directed event request ${nextRequest.id}`);
+    logAudit('Priorities', 'Add', 'Added mission request row', `Mission request ${nextRequest.id}`);
   };
 
   const isTaskingPriorityEventForRequest = (event: ScheduleEvent, requestId: string) => (
@@ -2686,21 +2686,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests(prev => prev.map(item => item.id === id ? nextRequest : item));
-    logAudit('Priorities', 'Edit', 'Set directed event scheduler priority', `${request.tasking || 'Untitled directed event'}: ${schedulerPriority}`);
+    logAudit('Priorities', 'Edit', 'Set mission request scheduler priority', `${request.tasking || 'Untitled mission request'}: ${schedulerPriority}`);
   };
 
   const removeTaskingRequest = (id: string) => {
     const removed = taskingRequests.find(request => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests(prev => prev.filter(request => request.id !== id));
-    logAudit('Priorities', 'Delete', 'Removed directed event request', removed?.tasking || id);
+    logAudit('Priorities', 'Delete', 'Removed mission request', removed?.tasking || id);
   };
 
   const saveTaskingRequest = (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
     updateTaskingRequest(id, { saved: true, submitted: false, ignored: false });
-    logAudit('Priorities', 'Save', 'Saved directed event request', `${request.tasking || 'Untitled directed event'} on ${request.date || 'any build date'}`);
+    logAudit('Priorities', 'Save', 'Saved mission request', `${request.tasking || 'Untitled mission request'} on ${request.date || 'any build date'}`);
   };
 
   const submitTaskingRequest = async (id: string) => {
@@ -2713,7 +2713,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildTaskingPriorityEvents(request);
     onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
-    logAudit('Priorities', 'Submit', 'Submitted directed event request', `${request.tasking || 'Untitled directed event'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
+    logAudit('Priorities', 'Submit', 'Submitted mission request', `${request.tasking || 'Untitled mission request'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
   };
 
   const ignoreTaskingRequest = (id: string) => {
@@ -2721,7 +2721,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (!request) return;
     removeTaskingPriorityEvents(id);
     updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
-    logAudit('Priorities', 'Ignore', 'Ignored directed event request', `${request.tasking || 'Untitled directed event'} on ${request.date || 'any build date'}`);
+    logAudit('Priorities', 'Ignore', 'Ignored mission request', `${request.tasking || 'Untitled mission request'} on ${request.date || 'any build date'}`);
   };
 
   useEffect(() => {
@@ -4144,7 +4144,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
                                         {priorityAllocationModel === 'air_combat'
-                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed event and currency requests are attempted."
+                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after mission and currency requests are attempted."
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
                                                 : `Set how ${operationalModelLabel.replace(/\s+Model$/i, '')} training capacity is shared across active courses for this locality.`}

@@ -2295,7 +2295,7 @@ const DfpSidePanelTimeline: React.FC<{
             taskingAircraftIndex: index + 1,
             taskingAircraftCount: aircraftCount,
             dateCreated: new Date().toISOString(),
-            notes: `NEO Assist directed event request: ${tasking}`,
+            notes: `NEO Assist mission request: ${tasking}`,
             priority: 'High',
             aircraftConfigId: request.aircraftConfigId,
             acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -3020,7 +3020,7 @@ const DfpSidePanelTimeline: React.FC<{
                     'Should normal Fixed Crew training be included?',
                     enabledStreams.length
                         ? <p>Current routine training allocation has <strong>{enabledStreams.length}</strong> active course/package streams and totals <strong>100%</strong>.</p>
-                        : <p>Routine Fixed Crew course/package training is currently off, so directed event and currency events will drive the build.</p>,
+                        : <p>Routine Fixed Crew course/package training is currently off, so mission and currency requests will drive the build.</p>,
                     <>
                         <button type="button" className={wizardChoiceClass} onClick={useRoutineTraining}>Yes, use normal training</button>
                         <button type="button" className={wizardChoiceClass} onClick={disableRoutineTraining}>No, mission requests only</button>
