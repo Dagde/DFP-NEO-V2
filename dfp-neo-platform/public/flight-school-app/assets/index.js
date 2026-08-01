@@ -63031,7 +63031,7 @@ const SettingsView = ({
                     }
                   ) : null
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", title: overrideName || "Built-in default template", children: overrideName ? `Custom: ${overrideName}` : "Built-in default" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-gray-500", title: overrideName || "Configured baseline template", children: overrideName ? `Custom: ${overrideName}` : "Configured baseline" })
               ] }, template.key);
             })
           ] })
