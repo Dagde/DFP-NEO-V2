@@ -737,9 +737,9 @@ export interface OracleTraineeAnalysis {
    export interface FormationCallsign {
        name: string;           // Full name (e.g., "Avon")
        code: string;           // Short code (e.g., "AVON")
-       unit: string;           // Unit name (e.g., "1FTS")
-       location: string;       // Location name (e.g., "East Sale")
-       locationCode: string;   // Location code (e.g., "ESL")
+       unit: string;           // Unit name (e.g., "UNIT-01")
+       location: string;       // Location name (e.g., "Home Base")
+       locationCode: string;   // Location code (e.g., "BASE")
    }
 
 // AC History Types

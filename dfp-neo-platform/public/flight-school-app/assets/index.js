@@ -11112,6 +11112,11 @@ const UnitSettingsTextAreaRow = ({ label, value, onChange, disabled = false, pla
 const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
   const [activeCategory, setActiveCategory] = reactExports.useState("identity");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
+  const configuredContinuationShortLabel = reactExports.useMemo(
+    () => getSctTerminology(platformConfig, unitCode).shortLabel || "ContT",
+    [platformConfig, unitCode]
+  );
+  const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
   const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
   const units = platformConfig?.units || [];
   const unit = units.find((candidate) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode) || units.find((candidate) => String(candidate?.status || "ACTIVE").toUpperCase() !== "INACTIVE") || units[0];
@@ -11531,9 +11536,9 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed Flight Templates", value: "No directed flight templates are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build event defaults are configured under Training & Standards.", action: settingsLink("sct-events", "Open Continuation & Currency Events"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: configuredContinuationCurrencyEventsLabel, description: "Request and build event defaults are configured under Training & Standards.", action: settingsLink("sct-events", `Open ${configuredContinuationCurrencyEventsLabel}`), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: "Continuation and currency event rows are edited in one place." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: `${configuredContinuationShortLabel} and currency event rows are edited in one place.` })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Training Reports Builder", description: "Unit report naming, pass/fail wording, grading and module labels.", action: settingsLink("training-report-template", "Open Training Reports", { unitCode: unit.code, focusSubsectionId: "platform-unit-training-report-template" }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Report short name", value: trainingReportTerminology.name, onChange: (value) => updateUnitSettings2({ trainingReportTerminology: { name: value.slice(0, 10) } }), disabled: true }),
@@ -11679,6 +11684,11 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
 const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode: isSetupTestMode$1 = false, onSaveSetupTestPersonnel }) => {
   const [mode, setMode] = reactExports.useState("detect");
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
+  const configuredContinuationShortLabel = reactExports.useMemo(
+    () => getSctTerminology(platformConfig, unitCode).shortLabel || "ContT",
+    [platformConfig, unitCode]
+  );
+  const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
   const [wizardStep, setWizardStep] = reactExports.useState(() => {
     if (typeof window === "undefined") return 0;
     const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -13004,9 +13014,9 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     },
     {
       id: "staff-currency-events",
-      title: "Set continuation and currency events",
-      label: "Continuation/currency events",
-      body: "Add common continuation and currency event defaults now, or leave them for later if the unit is not ready.",
+      title: `Set ${configuredContinuationShortLabel} and currency events`,
+      label: `${configuredContinuationShortLabel}/currency events`,
+      body: `Add common ${configuredContinuationShortLabel} and currency event defaults now, or leave them for later if the unit is not ready.`,
       checkIds: ["training"]
     },
     {
@@ -13859,7 +13869,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       setCurrencyDraft(formatWizardCurrencyRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "A Continuation & Currency Events record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: [
+        "A ",
+        configuredContinuationCurrencyEventsLabel,
+        " record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event."
+      ] }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
         wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
         wizardField("Code", row.code || "", (value) => updateRow(index, "code", value.toUpperCase()), void 0, "PIC"),
@@ -15603,7 +15617,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     if (visibleStep.id === "currencies") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create the Continuation & Currency Events records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Create the ",
+          configuredContinuationCurrencyEventsLabel,
+          " records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately."
+        ] }),
         renderCurrencyEditor()
       );
     }
@@ -15627,7 +15645,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     if (visibleStep.id === "staff-currency-events") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common continuation and currency event defaults for this unit. These become reusable starting points for staff checks and currency events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+          "Set up common ",
+          configuredContinuationShortLabel,
+          " and currency event defaults for this unit. These become reusable starting points for staff checks and currency events."
+        ] }),
         renderStandardCurrencyEventsEditor()
       );
     }

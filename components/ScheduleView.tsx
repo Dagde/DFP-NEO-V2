@@ -21,6 +21,7 @@ import {
     qualificationMatches,
 } from '../utils/staffQualifications';
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
+import { getSctTerminology } from '../utils/sctTerminology';
 import {
     UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
     getUnitCallsignPolicy,
@@ -1573,6 +1574,11 @@ const OrganisationMyUnitSettings: React.FC<{
 }> = ({ platformConfig, unitCode, formationCallsigns = [], buildRuleSettings, onUpdatePlatformConfig, onNavigateToSettingsSection }) => {
     const [activeCategory, setActiveCategory] = useState('identity');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
+    const configuredContinuationShortLabel = useMemo(
+        () => getSctTerminology(platformConfig, unitCode).shortLabel || 'ContT',
+        [platformConfig, unitCode],
+    );
+    const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
     const activeUnitCode = normaliseUnitSettingsIdentifier(unitCode);
     const units = platformConfig?.units || [];
     const unit = units.find((candidate: any) => normaliseUnitSettingsIdentifier(candidate?.code) === activeUnitCode)
@@ -2199,9 +2205,9 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Directed Flight Templates" value="No directed flight templates are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build event defaults are configured under Training & Standards." action={settingsLink('sct-events', 'Open Continuation & Currency Events')}>
+                    <UnitSettingsGroup title={configuredContinuationCurrencyEventsLabel} description="Request and build event defaults are configured under Training & Standards." action={settingsLink('sct-events', `Open ${configuredContinuationCurrencyEventsLabel}`)}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />
-                        <UnitSettingsReadRow label="Events" value="Continuation and currency event rows are edited in one place." />
+                        <UnitSettingsReadRow label="Events" value={`${configuredContinuationShortLabel} and currency event rows are edited in one place.`} />
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Training Reports Builder" description="Unit report naming, pass/fail wording, grading and module labels." action={settingsLink('training-report-template', 'Open Training Reports', { unitCode: unit.code, focusSubsectionId: 'platform-unit-training-report-template' })}>
                         <UnitSettingsField label="Report short name" value={trainingReportTerminology.name} onChange={(value) => updateUnitSettings({ trainingReportTerminology: { name: value.slice(0, 10) } })} disabled={!canEdit} />
@@ -2394,6 +2400,11 @@ const InitialSetupWizard: React.FC<{
 }> = ({ platformConfig, unitCode, locationCode, onUpdatePlatformConfig, isSetupTestMode = false, onSaveSetupTestPersonnel }) => {
     const [mode, setMode] = useState<InitialSetupWizardMode>('detect');
     const unitTypeOptions = useMemo(() => normaliseUnitTypeOptions(platformConfig), [platformConfig]);
+    const configuredContinuationShortLabel = useMemo(
+        () => getSctTerminology(platformConfig, unitCode).shortLabel || 'ContT',
+        [platformConfig, unitCode],
+    );
+    const configuredContinuationCurrencyEventsLabel = `${configuredContinuationShortLabel} / Currency Events`;
     const [wizardStep, setWizardStep] = useState(() => {
         if (typeof window === 'undefined') return 0;
         const stored = Number(window.localStorage.getItem(initialSetupWizardStorageKey));
@@ -3885,9 +3896,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'staff-currency-events',
-            title: 'Set continuation and currency events',
-            label: 'Continuation/currency events',
-            body: 'Add common continuation and currency event defaults now, or leave them for later if the unit is not ready.',
+            title: `Set ${configuredContinuationShortLabel} and currency events`,
+            label: `${configuredContinuationShortLabel}/currency events`,
+            body: `Add common ${configuredContinuationShortLabel} and currency event defaults now, or leave them for later if the unit is not ready.`,
             checkIds: ['training'],
         },
         {
@@ -4879,7 +4890,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    A Continuation & Currency Events record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event.
+                    A {configuredContinuationCurrencyEventsLabel} record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`currency-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
@@ -6791,7 +6802,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'currencies') {
             return promptShell(
-                <p>Create the Continuation & Currency Events records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately.</p>,
+                <p>Create the {configuredContinuationCurrencyEventsLabel} records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately.</p>,
                 renderCurrencyEditor(),
             );
         }
@@ -6815,7 +6826,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff-currency-events') {
             return promptShell(
-                <p>Set up common continuation and currency event defaults for this unit. These become reusable starting points for staff checks and currency events.</p>,
+                <p>Set up common {configuredContinuationShortLabel} and currency event defaults for this unit. These become reusable starting points for staff checks and currency events.</p>,
                 renderStandardCurrencyEventsEditor(),
             );
         }
