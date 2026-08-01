@@ -5888,7 +5888,7 @@ const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
 export interface InstructorPriorityGroups {
   primary: boolean;
   secondary: boolean;
-  sameFlight: boolean; // same base unit AND same flight letter (e.g. unit="CFS", flight="A")
+  sameFlight: boolean; // same base unit and same flight/section identifier
 }
 
 export interface InstructorPriorityConfig {
@@ -7232,7 +7232,7 @@ function generateDfpInternal(
     // Step 2: If staff sharing OFF → only same-unit instructors eligible.
     // Step 3: If staff sharing ON → if trainee's unit is in the sharing group AND instructor's unit is in the sharing group → eligible.
     //         If trainee's unit is NOT in the sharing group → only same-unit instructors eligible.
-    // Normalise a unit string by stripping any flight-suffix (e.g. "CFS/D" → "CFS", "1FTS/A" → "1FTS")
+    // Normalise a unit string by stripping any flight-suffix.
     const normalizeUnit = (unit: string): string => {
         if (!unit) return '';
         const slashIdx = unit.indexOf('/');
@@ -7253,7 +7253,7 @@ function generateDfpInternal(
         return activeStaffSharingGroups.some(groupUnits => groupUnits.includes(unitA) && groupUnits.includes(unitB));
     };
 
-    // Full unit string including flight suffix (e.g. "CFS/A") for exact same-flight matching
+    // Full unit string including flight suffix for exact same-flight matching.
     const fullUnit = (unit: string): string => (unit || '').trim();
 
     const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
@@ -13346,13 +13346,13 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
             if (priorityEnabled) {
                 // ── Priority ordering: Primary → Secondary → Same-flight → Other same-unit → Other ──
-                // "Same-flight" means same base unit AND same flight letter (e.g. unit="CFS", flight="A" for both)
+                // "Same-flight" means same base unit and same flight/section identifier.
                 // All buckets sorted by workload ascending so least-loaded instructor is tried first.
                 const primaryNames   = Array.isArray(traineeForCheck.primaryInstructor) ? traineeForCheck.primaryInstructor : traineeForCheck.primaryInstructor ? [traineeForCheck.primaryInstructor] : [];
                 const secondaryNames = Array.isArray(traineeForCheck.secondaryInstructor) ? traineeForCheck.secondaryInstructor : traineeForCheck.secondaryInstructor ? [traineeForCheck.secondaryInstructor] : [];
-                const traineeFull    = fullUnit(traineeForCheck.unit || '');   // e.g. "CFS/A" or "CFS"
-                const traineeBase    = normalizeUnit(traineeForCheck.unit || ''); // e.g. "CFS"
-                const traineeFlight  = (traineeForCheck.flight || '').trim();   // e.g. "A", "B", "C", "D"
+                const traineeFull    = fullUnit(traineeForCheck.unit || '');
+                const traineeBase    = normalizeUnit(traineeForCheck.unit || '');
+                const traineeFlight  = (traineeForCheck.flight || '').trim();
 
                 const isPrimary    = (i: Instructor) => primaryNames.includes(i.name);
                 const isSecondary  = (i: Instructor) => secondaryNames.includes(i.name);
@@ -22796,7 +22796,7 @@ const App: React.FC = () => {
 
     // Filtered instructors/trainees based on legacy dataSourceSettings.
     // Defaults are commercial-safe DB-only; legacy mock flags are migrated off on startup.
-    // Location matching is alias-aware so YMES/ESL/East Sale and YPEA/PEA/Pearce remain equivalent.
+    // Location matching is alias-aware so configured ICAO/IATA/runtime names remain equivalent.
     const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
         const activeInstructors = allInstructorsData.filter(isRecordActive);
@@ -32976,8 +32976,8 @@ const App: React.FC = () => {
                     }
                     break;
                 default:
-                    // Default fallback if event type is unknown
-                    resourcePrefix = 'Ground '; // Safer default than PC-21
+                    // Default fallback if event type is unknown.
+                    resourcePrefix = 'Ground ';
             }
         }
 
