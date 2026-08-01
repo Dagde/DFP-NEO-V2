@@ -26,6 +26,7 @@ import {
   DEFAULT_TRAINING_REPORT_TEMPLATE,
   getUnitTrainingReportPhraseBank,
   getUnitTrainingReportTemplate,
+  resolveReportAssessorDisplayLabel,
   type TrainingReportTerminology,
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
@@ -518,6 +519,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
       || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode)
       || DEFAULT_TRAINING_REPORT_TEMPLATE;
     const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
+    const activeInstructorDisplayLabel = normalisePersonnelDisplaySettings(personnelDisplaySettings).instructorLabel || 'Instructor';
+    const activeReportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(
+      activeTrainingReportTemplate.modules.comments.fields.assessor,
+      activeInstructorDisplayLabel,
+    );
     const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
 
     useEffect(() => {
@@ -2333,6 +2339,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             isLoading={pt051PerformanceLoading}
                             trainingReportTerminology={trainingReportTerminology}
                             trainingReportTemplate={activeTrainingReportTemplate}
+                            instructorLabel={activeReportAssessorDisplayLabel}
                           />
                         </div>
                       );
@@ -2360,7 +2367,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             trainee={trainee}
                             event={inlinePt051Event}
                             initialAssessment={currentAssessment}
-                            instructorLabel={activeTrainingReportTemplate.modules.comments.fields.assessor || 'Instructor'}
+                            instructorLabel={activeReportAssessorDisplayLabel}
                             trainingReportTerminology={trainingReportTerminology}
                             trainingReportTemplate={activeTrainingReportTemplate}
                             trainingReportUnitCode={activeTrainingReportUnitCode}
@@ -2403,7 +2410,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             aircraftConfigurations={aircraftConfigurations}
                             aircraftCrewComposition={aircraftCrewComposition}
                             trainingReportDisplayName={activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName}
-                            instructorLabel={activeTrainingReportTemplate.modules.comments.fields.assessor || 'Instructor'}
+                            instructorLabel={activeReportAssessorDisplayLabel}
                           />
                         </div>
                       );

@@ -98,6 +98,19 @@ export const DEFAULT_TRAINING_REPORT_TERMINOLOGY: TrainingReportTerminology = {
   name: 'Report',
 };
 
+export const resolveReportAssessorDisplayLabel = (
+  assessorFieldLabel?: string | null,
+  instructorDisplayLabel?: string | null,
+): string => {
+  const configuredInstructor = cleanLabel(instructorDisplayLabel, 'Instructor', TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH) || 'Instructor';
+  const configuredAssessor = cleanLabel(assessorFieldLabel, '', TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
+  if (!configuredAssessor) return configuredInstructor;
+  if (configuredAssessor.toUpperCase() === 'QFI' && configuredInstructor.toUpperCase() !== 'QFI') {
+    return configuredInstructor;
+  }
+  return configuredAssessor;
+};
+
 const DEFAULT_GRADE_LABELS: Record<number, string> = {
   0: 'Unsatisfactory',
   1: 'Marginal',

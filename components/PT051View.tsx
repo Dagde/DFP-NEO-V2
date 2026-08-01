@@ -11,6 +11,7 @@ import {
     getTrainingReportCompletionResultOptions,
     getUnitTrainingReportTemplate,
     normaliseTrainingReportTemplate,
+    resolveReportAssessorDisplayLabel,
     type TrainingReportTerminology,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
@@ -482,8 +483,9 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     const overviewFields = reportTemplate.modules.overview.fields;
     const overallFields = reportTemplate.modules.overallAssessment.fields;
     const commentFieldsConfig = reportTemplate.modules.comments.fields;
+    const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFieldsConfig.assessor, instructorLabel);
     const commentSectionLabels = useMemo<Record<CommentSectionKey, string>>(() => ({
-        QFI: commentFieldsConfig.assessor || instructorLabel || 'Instructor',
+        QFI: reportAssessorDisplayLabel,
         Weather: commentFieldsConfig.weather || 'Weather',
         Profile: commentFieldsConfig.profile || 'Profile',
         Overall: commentFieldsConfig.overall || 'Overall',
@@ -496,7 +498,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
         commentFieldsConfig.overall,
         commentFieldsConfig.nest,
         commentFieldsConfig.notes,
-        instructorLabel,
+        reportAssessorDisplayLabel,
     ]);
     const missionStatusOptions = useMemo(() => (
         getTrainingReportCompletionResultOptions(reportTemplate)
@@ -1253,7 +1255,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             ]);
 
             addSectionTitle(printReportTemplate.modules.comments.title || 'Comments');
-            addWrappedText(printCommentFieldsConfig.assessor || instructorLabel, commentFields.QFI || 'N/A');
+            addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel), commentFields.QFI || 'N/A');
             addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || 'N/A');
             addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || 'N/A');
             addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || 'N/A');
@@ -1883,7 +1885,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                 <div className="space-y-6 mb-6">
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]">
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-400">{commentFieldsConfig.assessor || instructorLabel}</label>
+                            <label className="block text-sm font-medium text-gray-400">{reportAssessorDisplayLabel}</label>
                             <div className="mt-1">
                                 {/* Dropdown for unit instructors only */}
                                 <select

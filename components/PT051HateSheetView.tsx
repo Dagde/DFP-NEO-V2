@@ -7,6 +7,7 @@ import {
   getTrainingReportCompletionResultOptions,
   normaliseTrainingReportTemplate,
   normaliseTrainingReportTerminology,
+  resolveReportAssessorDisplayLabel,
   type TrainingReportTemplate,
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
@@ -51,7 +52,7 @@ const PT051HateSheetView: React.FC<PT051HateSheetViewProps> = ({
     () => new Map(getTrainingReportCompletionResultOptions(reportTemplate).map(option => [option.code, option.label])),
     [reportTemplate],
   );
-  const reportAssessorLabel = reportTemplate.modules.comments.fields.assessor || 'Instructor';
+  const reportAssessorLabel = resolveReportAssessorDisplayLabel(reportTemplate.modules.comments.fields.assessor, 'Instructor');
 
   return (
     <div className="hate-sheet-view" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>

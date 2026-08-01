@@ -7,6 +7,7 @@ import { getTraineeStatusLabel } from '../utils/traineeStatus';
 import {
     DEFAULT_TRAINING_REPORT_TEMPLATE,
     normaliseTrainingReportTemplate,
+    resolveReportAssessorDisplayLabel,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { showDarkAlert } from './DarkMessageModal';
@@ -208,7 +209,10 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     );
     const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || 'Training Report';
     const exportAssessmentTitle = `${exportReportName} Training Assessment`;
-    const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel || 'Instructor';
+    const exportAssessorLabel = resolveReportAssessorDisplayLabel(
+        activeTrainingReportTemplate.modules.comments.fields.assessor,
+        instructorLabel,
+    );
     const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
     const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
     const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce<Record<string, string>>((acc, result) => {

@@ -9,6 +9,7 @@ import {
     getTrainingReportCompletionResultOptions,
     normaliseTrainingReportTemplate,
     normaliseTrainingReportTerminology,
+    resolveReportAssessorDisplayLabel,
     type TrainingReportTemplate,
     type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
@@ -45,9 +46,10 @@ interface HateSheetViewProps {
     isLoading?: boolean;
     trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
     trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+    instructorLabel?: string;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel = 'Instructor' }) => {
     const { isFrozen } = useSystemFreeze();
     const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
     const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
@@ -56,7 +58,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
         [trainingReportTemplate, trainingReportTerminology]
     );
-    const reportAssessorLabel = reportTemplate.modules.comments.fields.assessor || 'Instructor';
+    const reportAssessorLabel = resolveReportAssessorDisplayLabel(reportTemplate.modules.comments.fields.assessor, instructorLabel);
     const missionStatusLabelMap = React.useMemo(() => {
         const options = getTrainingReportCompletionResultOptions(reportTemplate);
         return new Map(options.map(option => [option.code, option.label]));

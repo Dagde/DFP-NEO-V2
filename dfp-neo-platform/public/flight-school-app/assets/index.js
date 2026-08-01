@@ -4456,6 +4456,15 @@ const TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH = 40;
 const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
   name: "Report"
 };
+const resolveReportAssessorDisplayLabel = (assessorFieldLabel, instructorDisplayLabel) => {
+  const configuredInstructor = cleanLabel$1(instructorDisplayLabel, "Instructor", TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH) || "Instructor";
+  const configuredAssessor = cleanLabel$1(assessorFieldLabel, "", TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH);
+  if (!configuredAssessor) return configuredInstructor;
+  if (configuredAssessor.toUpperCase() === "QFI" && configuredInstructor.toUpperCase() !== "QFI") {
+    return configuredInstructor;
+  }
+  return configuredAssessor;
+};
 const DEFAULT_GRADE_LABELS = {
   0: "Unsatisfactory",
   1: "Marginal",
@@ -20100,7 +20109,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$1 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel: instructorLabel2 = "Instructor" }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
@@ -20109,7 +20118,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
     [trainingReportTemplate, trainingReportTerminology]
   );
-  const reportAssessorLabel = reportTemplate.modules.comments.fields.assessor || "Instructor";
+  const reportAssessorLabel = resolveReportAssessorDisplayLabel(reportTemplate.modules.comments.fields.assessor, instructorLabel2);
   const missionStatusLabelMap = React.useMemo(() => {
     const options = getTrainingReportCompletionResultOptions(reportTemplate);
     return new Map(options.map((option) => [option.code, option.label]));
@@ -21823,8 +21832,9 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFieldsConfig = reportTemplate.modules.comments.fields;
+  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFieldsConfig.assessor, instructorLabel2);
   const commentSectionLabels = reactExports.useMemo(() => ({
-    QFI: commentFieldsConfig.assessor || instructorLabel2 || "Instructor",
+    QFI: reportAssessorDisplayLabel,
     Weather: commentFieldsConfig.weather || "Weather",
     Profile: commentFieldsConfig.profile || "Profile",
     Overall: commentFieldsConfig.overall || "Overall",
@@ -21837,7 +21847,7 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
     commentFieldsConfig.overall,
     commentFieldsConfig.nest,
     commentFieldsConfig.notes,
-    instructorLabel2
+    reportAssessorDisplayLabel
   ]);
   const missionStatusOptions = reactExports.useMemo(() => getTrainingReportCompletionResultOptions(reportTemplate), [reportTemplate]);
   const missionStatusLabelMap = reactExports.useMemo(() => new Map(missionStatusOptions.map((option) => [option.code, option.label])), [missionStatusOptions]);
@@ -22458,7 +22468,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
       ]);
       addSectionTitle(printReportTemplate.modules.comments.title || "Comments");
-      addWrappedText(printCommentFieldsConfig.assessor || instructorLabel2, commentFields.QFI || "N/A");
+      addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel2), commentFields.QFI || "N/A");
       addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || "N/A");
       addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || "N/A");
       addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
@@ -23080,7 +23090,7 @@ This action cannot be undone.`;
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 mb-6", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: commentFieldsConfig.assessor || instructorLabel2 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: reportAssessorDisplayLabel }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
@@ -23513,6 +23523,11 @@ const TraineeProfileFlyout = ({
   const activeTrainingReportUnitCode = trainee.unit || "";
   const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig2, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
   const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
+  const activeInstructorDisplayLabel = normalisePersonnelDisplaySettings(personnelDisplaySettings2).instructorLabel || "Instructor";
+  const activeReportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(
+    activeTrainingReportTemplate.modules.comments.fields.assessor,
+    activeInstructorDisplayLabel
+  );
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig2, activeTrainingReportUnitCode, phraseBank);
   reactExports.useEffect(() => {
     if (activeTab !== "review") return;
@@ -25056,7 +25071,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     canEditPt051,
                     isLoading: pt051PerformanceLoading,
                     trainingReportTerminology,
-                    trainingReportTemplate: activeTrainingReportTemplate
+                    trainingReportTemplate: activeTrainingReportTemplate,
+                    instructorLabel: activeReportAssessorDisplayLabel
                   }
                 ) });
               })(),
@@ -25071,7 +25087,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     trainee,
                     event: inlinePt051Event,
                     initialAssessment: currentAssessment,
-                    instructorLabel: activeTrainingReportTemplate.modules.comments.fields.assessor || "Instructor",
+                    instructorLabel: activeReportAssessorDisplayLabel,
                     trainingReportTerminology,
                     trainingReportTemplate: activeTrainingReportTemplate,
                     trainingReportUnitCode: activeTrainingReportUnitCode,
@@ -25112,7 +25128,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     aircraftConfigurations,
                     aircraftCrewComposition,
                     trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
-                    instructorLabel: activeTrainingReportTemplate.modules.comments.fields.assessor || "Instructor"
+                    instructorLabel: activeReportAssessorDisplayLabel
                   }
                 ) });
               })(),
@@ -81031,7 +81047,10 @@ const TrainingRecordsExportView = ({
   );
   const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || "Training Report";
   const exportAssessmentTitle = `${exportReportName} Training Assessment`;
-  const exportAssessorLabel = activeTrainingReportTemplate.modules.comments.fields.assessor || instructorLabel2 || "Instructor";
+  const exportAssessorLabel = resolveReportAssessorDisplayLabel(
+    activeTrainingReportTemplate.modules.comments.fields.assessor,
+    instructorLabel2
+  );
   const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
   const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
   const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce((acc, result) => {
