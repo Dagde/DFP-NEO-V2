@@ -732,7 +732,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   <div className="space-y-3 pb-24">
     {taskingRequests.length === 0 && (
       <div className="rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500">
-        No mission requests configured.
+        No directed-task requests configured.
       </div>
     )}
     {taskingRequests.map(request => {
@@ -743,7 +743,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map(entry => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || 'New mission request';
+      const taskingHeaderTitle = request.tasking.trim() || 'New directed-task request';
       const taskingHeaderDate = request.date || 'Date TBA';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
       return (
@@ -2526,7 +2526,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       ignored: false,
     };
     setTaskingRequests(prev => [...prev, nextRequest]);
-    logAudit('Priorities', 'Add', 'Added mission request row', `Mission request ${nextRequest.id}`);
+    logAudit('Priorities', 'Add', 'Added directed-task request row', `Directed-task request ${nextRequest.id}`);
   };
 
   const isTaskingPriorityEventForRequest = (event: ScheduleEvent, requestId: string) => (
@@ -2686,21 +2686,21 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests(prev => prev.map(item => item.id === id ? nextRequest : item));
-    logAudit('Priorities', 'Edit', 'Set mission request scheduler priority', `${request.tasking || 'Untitled mission request'}: ${schedulerPriority}`);
+    logAudit('Priorities', 'Edit', 'Set directed-task request scheduler priority', `${request.tasking || 'Untitled directed-task request'}: ${schedulerPriority}`);
   };
 
   const removeTaskingRequest = (id: string) => {
     const removed = taskingRequests.find(request => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests(prev => prev.filter(request => request.id !== id));
-    logAudit('Priorities', 'Delete', 'Removed mission request', removed?.tasking || id);
+    logAudit('Priorities', 'Delete', 'Removed directed-task request', removed?.tasking || id);
   };
 
   const saveTaskingRequest = (id: string) => {
     const request = taskingRequests.find(item => item.id === id);
     if (!request) return;
     updateTaskingRequest(id, { saved: true, submitted: false, ignored: false });
-    logAudit('Priorities', 'Save', 'Saved mission request', `${request.tasking || 'Untitled mission request'} on ${request.date || 'any build date'}`);
+    logAudit('Priorities', 'Save', 'Saved directed-task request', `${request.tasking || 'Untitled directed-task request'} on ${request.date || 'any build date'}`);
   };
 
   const submitTaskingRequest = async (id: string) => {
@@ -2713,7 +2713,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildTaskingPriorityEvents(request);
     onAddPriorityEvents(priorityEvents);
     updateTaskingRequest(id, { saved: true, submitted: true, ignored: false });
-    logAudit('Priorities', 'Submit', 'Submitted mission request', `${request.tasking || 'Untitled mission request'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
+    logAudit('Priorities', 'Submit', 'Submitted directed-task request', `${request.tasking || 'Untitled directed-task request'} on ${request.date || 'any build date'} (${priorityEvents.length} priority event${priorityEvents.length === 1 ? '' : 's'})`);
   };
 
   const ignoreTaskingRequest = (id: string) => {
@@ -2721,7 +2721,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (!request) return;
     removeTaskingPriorityEvents(id);
     updateTaskingRequest(id, { saved: true, submitted: false, ignored: true });
-    logAudit('Priorities', 'Ignore', 'Ignored mission request', `${request.tasking || 'Untitled mission request'} on ${request.date || 'any build date'}`);
+    logAudit('Priorities', 'Ignore', 'Ignored directed-task request', `${request.tasking || 'Untitled directed-task request'} on ${request.date || 'any build date'}`);
   };
 
   useEffect(() => {

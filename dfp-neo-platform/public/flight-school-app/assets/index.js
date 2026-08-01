@@ -38494,7 +38494,7 @@ const TaskingRequestTable = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
-    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No mission requests configured." }),
+    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed-task requests configured." }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -38503,7 +38503,7 @@ const TaskingRequestTable = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || "New mission request";
+      const taskingHeaderTitle = request.tasking.trim() || "New directed-task request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
@@ -40001,7 +40001,7 @@ const PrioritiesView = ({
       ignored: false
     };
     setTaskingRequests((prev) => [...prev, nextRequest]);
-    logAudit("Priorities", "Add", "Added mission request row", `Mission request ${nextRequest.id}`);
+    logAudit("Priorities", "Add", "Added directed-task request row", `Directed-task request ${nextRequest.id}`);
   };
   const isTaskingPriorityEventForRequest = (event, requestId) => event.taskingRequestId === requestId || String(event.id || "").startsWith(`tasking-${requestId}-`);
   const taskingPriorityEventMatchesActiveScope = (event) => {
@@ -40123,13 +40123,13 @@ const PrioritiesView = ({
     const priorityEvents = buildTaskingPriorityEvents(nextRequest);
     onAddPriorityEvents(priorityEvents);
     setTaskingRequests((prev) => prev.map((item) => item.id === id ? nextRequest : item));
-    logAudit("Priorities", "Edit", "Set mission request scheduler priority", `${request.tasking || "Untitled mission request"}: ${schedulerPriority}`);
+    logAudit("Priorities", "Edit", "Set directed-task request scheduler priority", `${request.tasking || "Untitled directed-task request"}: ${schedulerPriority}`);
   };
   const removeTaskingRequest = (id) => {
     const removed = taskingRequests.find((request) => request.id === id);
     removeTaskingPriorityEvents(id);
     setTaskingRequests((prev) => prev.filter((request) => request.id !== id));
-    logAudit("Priorities", "Delete", "Removed mission request", removed?.tasking || id);
+    logAudit("Priorities", "Delete", "Removed directed-task request", removed?.tasking || id);
   };
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
@@ -87086,7 +87086,7 @@ const DfpSidePanelTimeline = ({
       taskingAircraftIndex: index + 1,
       taskingAircraftCount: aircraftCount,
       dateCreated: (/* @__PURE__ */ new Date()).toISOString(),
-      notes: `NEO Assist mission request: ${tasking}`,
+      notes: `NEO Assist directed-task request: ${tasking}`,
       priority: "High",
       aircraftConfigId: request.aircraftConfigId,
       acceptableAircraftConfigs: [request.aircraftConfigId],
@@ -87725,7 +87725,7 @@ const DfpSidePanelTimeline = ({
           ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so mission and currency requests will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, mission requests only" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed-task requests only" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -87798,7 +87798,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
             onUpdateAirCombatSchedulingWeights({ courses: 0, trainingPackages: 0 });
             advanceWizard();
-          }, children: "No, mission requests only" }),
+          }, children: "No, directed-task requests only" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between text-sm font-bold text-slate-800", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -88487,7 +88487,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-              ["01", "Mandatory mission requests", `${scheduledTaskCount} scheduled`],
+              ["01", "Mandatory directed-task requests", `${scheduledTaskCount} scheduled`],
               ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
               ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
               ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
@@ -88501,7 +88501,7 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after mission requests." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed-task requests." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
                 airCombatSchedulingWeights.courses,
@@ -88579,7 +88579,7 @@ const DfpSidePanelTimeline = ({
       const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, ignored: false, source: "remote" }))];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No mission requests entered." }),
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed-task requests entered." }),
           rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
@@ -91230,7 +91230,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     taskProvenance: {
       watchedLabels: Array.from(/* @__PURE__ */ new Set([
         "Task",
-        "Tasking"
+        "Directed Task"
       ])),
       preBuild: config.taskProvenancePreBuild || null,
       buildInput: {
@@ -97723,7 +97723,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (isAirCombatBuild && (searchStart < flyingStartTime - 1e-3 || searchStart + priorityEvent.duration > activeWindowEnd + 1e-3)) {
         recordAirCombatSkip({
           list: "task",
-          staff: "Tasking",
+          staff: "Directed Task",
           event: priorityEvent.flightNumber,
           reason: "EXACT_TIME_OUTSIDE_FLYING_WINDOW",
           startTime: searchStart
@@ -97776,7 +97776,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             if (isAirCombatBuild) {
               recordAirCombatSkip({
                 list: "task",
-                staff: "Tasking",
+                staff: "Directed Task",
                 event: priorityEvent.flightNumber,
                 reason: "HOURLY_DISPATCH_LIMIT",
                 startTime: roundedTime,
@@ -97790,7 +97790,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (isAirCombatBuild && resourceOptionsAtTime.length === 0) {
           recordAirCombatSkip({
             list: "task",
-            staff: "Tasking",
+            staff: "Directed Task",
             event: priorityEvent.flightNumber,
             reason: "NO_COMPATIBLE_AIRCRAFT_CONFIG",
             startTime: roundedTime
@@ -97897,9 +97897,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           });
         }
         scheduledCount++;
-        buildDebugLog(`[Mission Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
+        buildDebugLog(`[Directed Task Priority] Scheduled ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""} at ${placedEvent.startTime.toFixed(2)} on ${placedEvent.resourceId}`);
       } else {
-        buildDebugLog(`[Mission Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
+        buildDebugLog(`[Directed Task Priority] Unable to schedule ${priorityEvent.flightNumber} ${priorityEvent.taskingAircraftIndex || ""}/${priorityEvent.taskingAircraftCount || ""}: no compatible aircraft slot from ${_fmtT(searchStart)} to ${_fmtT(searchEnd)}`);
       }
       if (isAirCombatBuild) {
         pushAirCombatDiag("taskingAttempts", {
@@ -97947,7 +97947,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       } catch {
       }
     });
-    buildDebugLog(`DEBUG Tasking priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
+    buildDebugLog(`DEBUG Directed task priority scheduling complete: ${scheduledCount}/${orderedTaskingEvents.length} scheduled`);
     markBuildTiming("air-combat-tasking:complete", {
       scheduledCount,
       orderedTaskingEvents: orderedTaskingEvents.length,
@@ -100868,7 +100868,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleAirCombatTrainingPriorityEvents("night");
     }
     if (airCombatDayTaskingEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory mission requests...", percentage: 45 });
+      recordProgress({ message: "Scheduling Air Combat mandatory directed-task requests...", percentage: 45 });
       scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
     }
     if (airCombatDayCurrencyEvents.length > 0) {
@@ -102241,7 +102241,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const conclusions = [];
     if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
     if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.");
-    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat mission requests matched the build date.");
+    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed-task requests matched the build date.");
     const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
     if (crewRoleShortfalls.length > 0) {
       conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || "selected unit"}: ${crewRoleShortfalls.map((shortfall) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(", ")}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
@@ -121927,14 +121927,14 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          logRoutineAppDebug(`[PostFlight] Mission request cleared after ${data.result}:`, completedTaskingRequestId);
+                          logRoutineAppDebug(`[PostFlight] Directed-task request cleared after ${data.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
                         (prev) => prev.filter((event) => event.taskingRequestId !== completedTaskingRequestId)
                       );
                     } catch (taskingCleanupErr) {
-                      console.warn("[PostFlight] Failed to clear completed mission request after post-flight result:", taskingCleanupErr);
+                      console.warn("[PostFlight] Failed to clear completed directed-task request after post-flight result:", taskingCleanupErr);
                     }
                   }
                 }
