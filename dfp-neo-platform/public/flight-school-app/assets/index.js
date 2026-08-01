@@ -123925,14 +123925,14 @@ Do you want to replace the existing entry?`,
                         if (nextTaskingRequests.length !== taskingRequests.length) {
                           localStorage.setItem(TASKING_REQUEST_STORAGE_KEY, JSON.stringify(nextTaskingRequests));
                           window.dispatchEvent(new CustomEvent(TASKING_REQUESTS_UPDATED_EVENT));
-                          logRoutineAppDebug(`[PostFlight] Directed event request cleared after ${data.result}:`, completedTaskingRequestId);
+                          logRoutineAppDebug(`[PostFlight] Mission request cleared after ${data.result}:`, completedTaskingRequestId);
                         }
                       }
                       setHighestPriorityEvents(
                         (prev) => prev.filter((event) => event.taskingRequestId !== completedTaskingRequestId)
                       );
                     } catch (taskingCleanupErr) {
-                      console.warn("[PostFlight] Failed to clear completed directed event request after post-flight result:", taskingCleanupErr);
+                      console.warn("[PostFlight] Failed to clear completed mission request after post-flight result:", taskingCleanupErr);
                     }
                   }
                 }

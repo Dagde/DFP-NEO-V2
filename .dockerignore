@@ -1,0 +1,16 @@
+.git
+node_modules
+dist
+.DS_Store
+
+# Local/legacy workspaces must not be copied into deployment images.
+DFP-NEO-V2
+DFP-NEO-Hybrid-V3
+DFP-NEO-Website
+snapshots
+
+# Browser/test runtime artefacts can be very large and are never needed at runtime.
+.browser_data
+playwright-report
+test-results
+coverage
