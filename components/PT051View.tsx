@@ -747,12 +747,30 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             ) {
                 return true;
             }
-            const name = eventName.toUpperCase();
-            if (name.includes('FTD') || name.startsWith('BGF') || name.startsWith('BIF') || name.startsWith('BNF') || name.startsWith('BNAV') || name.startsWith('SCT')) {
-                 if (!name.includes('MB') && !name.includes('TUT') && !name.includes('CPT')) {
-                     return true;
-                 }
+            const matchingScheduleEvent = events.find(scheduleEvent => {
+                const candidates = [
+                    scheduleEvent.flightNumber,
+                    (scheduleEvent as any).syllabusItem,
+                    (scheduleEvent as any).code,
+                    (scheduleEvent as any).eventCode,
+                ].map(value => String(value || '').trim().toUpperCase()).filter(Boolean);
+                return candidates.includes(String(eventName || '').trim().toUpperCase());
+            });
+            if (matchingScheduleEvent) {
+                const typeText = String(
+                    (matchingScheduleEvent as any).type ||
+                    (matchingScheduleEvent as any).eventType ||
+                    (matchingScheduleEvent as any).resourceType ||
+                    (matchingScheduleEvent as any).category ||
+                    ''
+                ).toUpperCase();
+                if (typeText.includes('FLIGHT') || typeText.includes('FTD') || typeText.includes('SIM')) return true;
+                if (isContinuationScheduleEvent(matchingScheduleEvent)) return true;
             }
+            const name = String(eventName || '').trim().toUpperCase();
+            const looksLikeFlyingEventCode = /^[A-Z][A-Z0-9-]*\d[A-Z0-9-]*$/.test(name);
+            const looksLikeGroundEventCode = /\b(MB|TUT|CPT|GROUND|ACADEMIC)\b/.test(name) || /(?:^|[A-Z])(?:MB|TUT|CPT)\d/i.test(name);
+            if ((name.includes('FTD') || name.includes('SIM') || looksLikeFlyingEventCode) && !looksLikeGroundEventCode) return true;
             return false;
         };
         lmpScores.forEach(s => {

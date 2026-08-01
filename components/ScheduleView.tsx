@@ -698,8 +698,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Unit Code', 'Unit Name', 'Location', 'Unit Type', 'Operating Model'],
         optionalHeaders: ['Parent Organisation', 'Trainees', 'Notes'],
         exampleRows: [
-            ['UNIT-A', 'Unit A', 'HOME', 'Operational', 'Pooled Crew Model', 'Example Organisation / Division A / Group A', 'No', ''],
-            ['UNIT-B', 'Unit B', 'TRAIN', 'Training', 'Flight School Model', 'Example Organisation / Division B / Group B', 'Yes', ''],
+            ['OPS-01', 'Operations Unit', 'HOME', 'Operational', 'Pooled Crew Model', 'Example Organisation / Operations Division / Operations Group', 'No', ''],
+            ['TRG-01', 'Training Unit', 'TRAIN', 'Training', 'Flight School Model', 'Example Organisation / Training Division / Training Group', 'Yes', ''],
         ],
         settingsSection: 'platform-units',
     },
@@ -710,7 +710,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Pool Name', 'Aircraft Type', 'Unit', 'Location', 'Aircraft', 'Sim', 'Trainer', 'Standby', 'Ground'],
         optionalHeaders: ['Notes'],
         exampleRows: [
-            ['Primary DFP Row Set', 'Primary Resource', 'UNIT-A', 'HOME', '4', '0', '0', '1', '0', ''],
+            ['Primary DFP Row Set', 'Primary Resource', 'OPS-01', 'HOME', '4', '0', '0', '1', '0', ''],
         ],
         settingsSection: 'platform-resource-pools',
     },
@@ -721,7 +721,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit', 'Role'],
         optionalHeaders: ['Rank', 'Personnel ID', 'Qualifications', 'Email'],
         exampleRows: [
-            ['Smith, Alex', 'UNIT-A', 'Operator', 'Role Level', '1234567', 'Supervisor; Assessor', 'alex.smith@example.com'],
+            ['Smith, Alex', 'OPS-01', 'Operator', 'Role Level', '1234567', 'Supervisor; Assessor', 'alex.smith@example.com'],
         ],
         settingsSection: 'staff-database',
     },
@@ -732,7 +732,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit'],
         optionalHeaders: ['Rank', 'Personnel ID', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
         exampleRows: [
-            ['Jones, Taylor', 'UNIT-B', 'Learner Level', '7654321', '1', 'Course A', '2026-01-15', 'Primary LMP'],
+            ['Jones, Taylor', 'TRG-01', 'Learner Level', '7654321', '1', 'Initial Course', '2026-01-15', 'Primary LMP'],
         ],
         settingsSection: 'trainee-database',
     },
@@ -6431,7 +6431,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>List each unit you want to configure in this setup run. Use one line per unit. Format: <strong>Unit code | Unit name</strong>.</p>,
                 <div>
-                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, 'UNIT-A | Unit A\nUNIT-B | Unit B', true)}
+                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, 'OPS-01 | Operations Unit\nTRG-01 | Training Unit', true)}
                     <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Parent organisation for each unit</p>
                         <p className="mt-1 text-xs leading-5 text-slate-600">

@@ -10499,8 +10499,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Unit Code", "Unit Name", "Location", "Unit Type", "Operating Model"],
     optionalHeaders: ["Parent Organisation", "Trainees", "Notes"],
     exampleRows: [
-      ["UNIT-A", "Unit A", "HOME", "Operational", "Pooled Crew Model", "Example Organisation / Division A / Group A", "No", ""],
-      ["UNIT-B", "Unit B", "TRAIN", "Training", "Flight School Model", "Example Organisation / Division B / Group B", "Yes", ""]
+      ["OPS-01", "Operations Unit", "HOME", "Operational", "Pooled Crew Model", "Example Organisation / Operations Division / Operations Group", "No", ""],
+      ["TRG-01", "Training Unit", "TRAIN", "Training", "Flight School Model", "Example Organisation / Training Division / Training Group", "Yes", ""]
     ],
     settingsSection: "platform-units"
   },
@@ -10511,7 +10511,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Pool Name", "Aircraft Type", "Unit", "Location", "Aircraft", "Sim", "Trainer", "Standby", "Ground"],
     optionalHeaders: ["Notes"],
     exampleRows: [
-      ["Primary DFP Row Set", "Primary Resource", "UNIT-A", "HOME", "4", "0", "0", "1", "0", ""]
+      ["Primary DFP Row Set", "Primary Resource", "OPS-01", "HOME", "4", "0", "0", "1", "0", ""]
     ],
     settingsSection: "platform-resource-pools"
   },
@@ -10522,7 +10522,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit", "Role"],
     optionalHeaders: ["Rank", "Personnel ID", "Qualifications", "Email"],
     exampleRows: [
-      ["Smith, Alex", "UNIT-A", "Operator", "Role Level", "1234567", "Supervisor; Assessor", "alex.smith@example.com"]
+      ["Smith, Alex", "OPS-01", "Operator", "Role Level", "1234567", "Supervisor; Assessor", "alex.smith@example.com"]
     ],
     settingsSection: "staff-database"
   },
@@ -10533,7 +10533,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit"],
     optionalHeaders: ["Rank", "Personnel ID", "Course Number", "Course", "Start Date", "Master LMP"],
     exampleRows: [
-      ["Jones, Taylor", "UNIT-B", "Learner Level", "7654321", "1", "Course A", "2026-01-15", "Primary LMP"]
+      ["Jones, Taylor", "TRG-01", "Learner Level", "7654321", "1", "Initial Course", "2026-01-15", "Primary LMP"]
     ],
     settingsSection: "trainee-database"
   },
@@ -15253,7 +15253,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "UNIT-A | Unit A\nUNIT-B | Unit B", true),
+          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "OPS-01 | Operations Unit\nTRG-01 | Training Unit", true),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for each unit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose the immediate parent each unit sits under in the organisation tree." }),
@@ -22059,12 +22059,26 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
       if (String(eventName || "").trim().toUpperCase() === String(event.flightNumber || "").trim().toUpperCase() && isContinuationScheduleEvent(event)) {
         return true;
       }
-      const name = eventName.toUpperCase();
-      if (name.includes("FTD") || name.startsWith("BGF") || name.startsWith("BIF") || name.startsWith("BNF") || name.startsWith("BNAV") || name.startsWith("SCT")) {
-        if (!name.includes("MB") && !name.includes("TUT") && !name.includes("CPT")) {
-          return true;
-        }
+      const matchingScheduleEvent = events.find((scheduleEvent) => {
+        const candidates = [
+          scheduleEvent.flightNumber,
+          scheduleEvent.syllabusItem,
+          scheduleEvent.code,
+          scheduleEvent.eventCode
+        ].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean);
+        return candidates.includes(String(eventName || "").trim().toUpperCase());
+      });
+      if (matchingScheduleEvent) {
+        const typeText = String(
+          matchingScheduleEvent.type || matchingScheduleEvent.eventType || matchingScheduleEvent.resourceType || matchingScheduleEvent.category || ""
+        ).toUpperCase();
+        if (typeText.includes("FLIGHT") || typeText.includes("FTD") || typeText.includes("SIM")) return true;
+        if (isContinuationScheduleEvent(matchingScheduleEvent)) return true;
       }
+      const name = String(eventName || "").trim().toUpperCase();
+      const looksLikeFlyingEventCode = /^[A-Z][A-Z0-9-]*\d[A-Z0-9-]*$/.test(name);
+      const looksLikeGroundEventCode = /\b(MB|TUT|CPT|GROUND|ACADEMIC)\b/.test(name) || /(?:^|[A-Z])(?:MB|TUT|CPT)\d/i.test(name);
+      if ((name.includes("FTD") || name.includes("SIM") || looksLikeFlyingEventCode) && !looksLikeGroundEventCode) return true;
       return false;
     };
     lmpScores.forEach((s) => {
