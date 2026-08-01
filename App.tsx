@@ -7840,6 +7840,7 @@ function generateDfpInternal(
                     instructorAllocationTrace: neoBuildDiag.mandatoryRemedialFlights.instructorAllocationTrace.slice(-500),
                     placementTrace: neoBuildDiag.mandatoryRemedialFlights.placementTrace.slice(-500),
                 },
+                scheduleAttemptTiming: neoBuildDiag.scheduleAttemptTiming || null,
                 remedialDataMovement: {
                     ...neoBuildDiag.remedialDataMovement,
                     sourceTrace: neoBuildDiag.remedialDataMovement.sourceTrace.slice(-500),
@@ -7914,6 +7915,117 @@ function generateDfpInternal(
         }
     };
     saveNeoBuildDiag('build-start');
+
+    type NeoBuildAttemptTimingBucket = {
+        attempts: number;
+        placed: number;
+        rejected: number;
+        totalMs: number;
+        maxMs: number;
+        byReason?: Record<string, NeoBuildAttemptTimingBucket>;
+        byType?: Record<string, NeoBuildAttemptTimingBucket>;
+    };
+    const createNeoBuildAttemptTimingBucket = (): NeoBuildAttemptTimingBucket => ({
+        attempts: 0,
+        placed: 0,
+        rejected: 0,
+        totalMs: 0,
+        maxMs: 0,
+    });
+    const neoBuildAttemptTiming = {
+        overall: createNeoBuildAttemptTimingBucket(),
+        byList: {} as Record<string, NeoBuildAttemptTimingBucket>,
+        byType: {} as Record<string, NeoBuildAttemptTimingBucket>,
+        byReason: {} as Record<string, NeoBuildAttemptTimingBucket>,
+        slowest: [] as any[],
+    };
+    const addNeoBuildAttemptTimingToBucket = (
+        bucket: NeoBuildAttemptTimingBucket,
+        durationMs: number,
+        outcome: 'placed' | 'rejected'
+    ) => {
+        bucket.attempts++;
+        bucket.totalMs += durationMs;
+        bucket.maxMs = Math.max(bucket.maxMs, durationMs);
+        if (outcome === 'placed') bucket.placed++;
+        if (outcome === 'rejected') bucket.rejected++;
+    };
+    const getNeoBuildAttemptTimingBucket = (
+        source: Record<string, NeoBuildAttemptTimingBucket>,
+        key: string
+    ): NeoBuildAttemptTimingBucket => {
+        if (!source[key]) source[key] = createNeoBuildAttemptTimingBucket();
+        return source[key];
+    };
+    const recordNeoBuildAttemptTiming = (entry: {
+        listName: string;
+        type: 'flight' | 'ftd' | 'ground' | 'cpt';
+        outcome: 'placed' | 'rejected';
+        reason?: string;
+        durationMs: number;
+        trainee?: string;
+        event?: string;
+        startTime?: number;
+    }) => {
+        const durationMs = Math.max(0, Number(entry.durationMs) || 0);
+        const listName = entry.listName || 'direct scheduler';
+        const reason = entry.reason || (entry.outcome === 'placed' ? 'PLACED' : 'UNKNOWN_REJECTION');
+        addNeoBuildAttemptTimingToBucket(neoBuildAttemptTiming.overall, durationMs, entry.outcome);
+        addNeoBuildAttemptTimingToBucket(getNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.byList, listName), durationMs, entry.outcome);
+        addNeoBuildAttemptTimingToBucket(getNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.byType, entry.type), durationMs, entry.outcome);
+        addNeoBuildAttemptTimingToBucket(getNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.byReason, reason), durationMs, entry.outcome);
+
+        const listBucket = getNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.byList, listName);
+        listBucket.byReason = listBucket.byReason || {};
+        addNeoBuildAttemptTimingToBucket(getNeoBuildAttemptTimingBucket(listBucket.byReason, reason), durationMs, entry.outcome);
+        listBucket.byType = listBucket.byType || {};
+        addNeoBuildAttemptTimingToBucket(getNeoBuildAttemptTimingBucket(listBucket.byType, entry.type), durationMs, entry.outcome);
+
+        if (durationMs >= 10 || neoBuildAttemptTiming.slowest.length < 30) {
+            neoBuildAttemptTiming.slowest.push({
+                listName,
+                type: entry.type,
+                outcome: entry.outcome,
+                reason,
+                durationMs: Math.round(durationMs),
+                trainee: entry.trainee || null,
+                event: entry.event || null,
+                startTime: entry.startTime ?? null,
+                displayTime: typeof entry.startTime === 'number' ? _fmtT(entry.startTime) : null,
+            });
+            neoBuildAttemptTiming.slowest.sort((a, b) => b.durationMs - a.durationMs);
+            neoBuildAttemptTiming.slowest = neoBuildAttemptTiming.slowest.slice(0, 30);
+        }
+    };
+    const serialiseNeoBuildAttemptTimingBucket = (bucket: NeoBuildAttemptTimingBucket): Record<string, any> => ({
+        attempts: bucket.attempts,
+        placed: bucket.placed,
+        rejected: bucket.rejected,
+        totalMs: Math.round(bucket.totalMs),
+        avgMs: bucket.attempts > 0 ? Number((bucket.totalMs / bucket.attempts).toFixed(2)) : 0,
+        maxMs: Math.round(bucket.maxMs),
+    });
+    const serialiseNeoBuildAttemptTimingMap = (
+        source: Record<string, NeoBuildAttemptTimingBucket>,
+        limit: number = 20
+    ): Record<string, any> => Object.fromEntries(
+        Object.entries(source)
+            .sort((a, b) => b[1].totalMs - a[1].totalMs)
+            .slice(0, limit)
+            .map(([key, bucket]) => {
+                const serialised = serialiseNeoBuildAttemptTimingBucket(bucket);
+                if (bucket.byReason) serialised.byReason = serialiseNeoBuildAttemptTimingMap(bucket.byReason, 12);
+                if (bucket.byType) serialised.byType = serialiseNeoBuildAttemptTimingMap(bucket.byType, 8);
+                return [key, serialised];
+            })
+    );
+    const getCompactNeoBuildAttemptTiming = () => ({
+        overall: serialiseNeoBuildAttemptTimingBucket(neoBuildAttemptTiming.overall),
+        byList: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byList, 30),
+        byType: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byType, 10),
+        byReason: serialiseNeoBuildAttemptTimingMap(neoBuildAttemptTiming.byReason, 30),
+        slowest: neoBuildAttemptTiming.slowest,
+    });
 
     const normaliseTaskTraceText = (value?: any): string => String(value || '').trim().toLowerCase();
     const taskTraceLabels = neoBuildDiag.taskProvenance.watchedLabels as string[];
@@ -12519,6 +12631,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             for (let time = earliestEventStart; time <= cappedLatestEventStart; time += timeIncrement) {
                                 listDiag.attempts++;
                                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse, {
+                                    diagnosticListName: listName,
                                     diagnosticTrace: (traceEntry) => {
                                         if (traceEntry?.outcome !== 'rejected') return;
                                         const reason = traceEntry.reason || 'UNKNOWN_REJECTION';
@@ -12741,6 +12854,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         priority?: 'High' | 'Medium' | 'Low';
         excludeInstructorNames?: string[];
         randomizeInstructorCandidates?: boolean;
+        diagnosticListName?: string;
         diagnosticTrace?: (entry: Record<string, any>) => void;
         traineeFlightFtdLimitOverride?: number;
         traineeTotalLimitOverride?: number;
@@ -12759,6 +12873,22 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         requirePreferredNightAircraft: boolean = false,
         options: ScheduleEventOptions = {}
     ): ScheduleEventResult => {
+        const scheduleAttemptStartedAt = performance.now();
+        let scheduleAttemptTimingRecorded = false;
+        const recordScheduleAttemptTiming = (outcome: 'placed' | 'rejected', reason?: string) => {
+            if (scheduleAttemptTimingRecorded) return;
+            scheduleAttemptTimingRecorded = true;
+            recordNeoBuildAttemptTiming({
+                listName: options.diagnosticListName || 'direct scheduler',
+                type,
+                outcome,
+                reason,
+                durationMs: performance.now() - scheduleAttemptStartedAt,
+                trainee: trainee.fullName,
+                event: syllabusItem.code || syllabusItem.id,
+                startTime,
+            });
+        };
         const scheduledDuration = getScheduledEventDuration(syllabusItem, type, trainee);
         const scheduledDurationSource = getScheduledEventDurationSource(syllabusItem, type, trainee);
         const scheduleSourceLmpItem = (type === 'flight' || type === 'ftd')
@@ -12852,6 +12982,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     details,
                 });
             }
+            recordScheduleAttemptTiming('rejected', reason);
             return null;
         };
 
@@ -14224,6 +14355,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             primaryPreferOnly,
             requirePreferredNightAircraft,
         });
+        recordScheduleAttemptTiming('placed', 'PLACED');
         return result;
     };
 
@@ -21197,6 +21329,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         'If lookups show individualFlightOrSimHours is correct but placements/finalEvents show duration 1.0, the duration is being overwritten after resolution.',
         'If finalEvents has no forwardedKeys/preFlightNoteLength for the target event, the pre-flight triangle cannot render because the tile event has no forwarded notes attached.',
     ];
+    neoBuildDiag.scheduleAttemptTiming = getCompactNeoBuildAttemptTiming();
+    markBuildTiming('schedule-attempt-timing:summary', {
+        attempts: neoBuildDiag.scheduleAttemptTiming.overall.attempts,
+        totalMs: neoBuildDiag.scheduleAttemptTiming.overall.totalMs,
+        avgMs: neoBuildDiag.scheduleAttemptTiming.overall.avgMs,
+        maxMs: neoBuildDiag.scheduleAttemptTiming.overall.maxMs,
+        slowest: neoBuildDiag.scheduleAttemptTiming.slowest.slice(0, 5),
+    });
 
     neoBuildDiag.final = {
         totalEvents: sortedEvents.length,
