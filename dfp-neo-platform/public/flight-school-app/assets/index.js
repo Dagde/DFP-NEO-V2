@@ -27439,7 +27439,7 @@ const MassBriefConfirmationFlyout = ({
             trainee.name
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-green-400 text-sm", children: [
-            "Mission status saved in ",
+            "Status saved in ",
             reportName
           ] })
         ] })

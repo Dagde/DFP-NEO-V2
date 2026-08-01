@@ -161,7 +161,7 @@ const MassBriefConfirmationFlyout: React.FC<MassBriefConfirmationFlyoutProps> = 
                 </div>
                 <div className="flex-1">
                   <p className="text-white font-medium">{trainee.rank} {trainee.name}</p>
-                  <p className="text-green-400 text-sm">Mission status saved in {reportName}</p>
+                  <p className="text-green-400 text-sm">Status saved in {reportName}</p>
                 </div>
               </div>
             ))}
