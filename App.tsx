@@ -7530,7 +7530,7 @@ function generateDfpInternal(
         _isNext: undefined,
         _traineeName: e.student || e.pilot || ''
     }));
-    const buildContinuationShortLabel = getSctTerminology(platformConfig, buildActiveUnitCode || activeUnitCode).shortLabel;
+    const buildContinuationShortLabel = getSctTerminology(config.platformConfig, buildActiveUnitCode).shortLabel;
 
     const neoBuildDiag: any = {
         timestamp: new Date().toISOString(),
