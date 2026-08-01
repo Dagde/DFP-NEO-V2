@@ -26,6 +26,7 @@ interface PeopleTabProps {
   syllabusDetails?: SyllabusItemDetail[];
   courseColors: { [key: string]: string };
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorLabel?: string;
   operationalModel?: string;
   operationalContext?: {
     locationCode?: string;
@@ -45,12 +46,16 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   syllabusDetails = [],
   courseColors,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel = 'Instructor',
   operationalModel,
   operationalContext,
 }) => {
   // State for availability filtering
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const configuredInstructorLabel = String(instructorLabel || 'Instructor').trim() || 'Instructor';
+  const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
+  const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
 
   const formatMilitaryTime = (timeString: string | undefined): string => {
     if (!timeString) return '';
@@ -778,38 +783,38 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
 
       {/* Instructor-qualified personnel */}
       <fieldset className={fieldsetShell}>
-        <legend className={legendClass}>Instructor-Qualified Personnel</legend>
+        <legend className={legendClass}>{instructorQualifiedLabel} Personnel</legend>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <InteractiveStatCard
-            title="Instructor-Qualified with 4 Events"
+            title={`${instructorQualifiedLabel} with 4 Events`}
             value={stats.instructorsWithFourEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithFourEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructor-Qualified with 3 Events"
+            title={`${instructorQualifiedLabel} with 3 Events`}
             value={stats.instructorsWithThreeEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithThreeEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructor-Qualified with 2 Events"
+            title={`${instructorQualifiedLabel} with 2 Events`}
             value={stats.instructorsWithTwoEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithTwoEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructor-Qualified with 1 Event"
+            title={`${instructorQualifiedLabel} with 1 Event`}
             value={stats.instructorsWithOneEvent}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithOneEventList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Instructor-Qualified with 0 Events"
+            title={`${instructorQualifiedLabel} with 0 Events`}
             value={stats.instructorsWithZeroEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithZeroEventsList}
@@ -832,28 +837,28 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
           <InteractiveStatCard
             title="Trainees with their Primary"
             value={stats.traineesWithPrimaryList.length}
-            description="Paired with primary instructor-qualified personnel"
+            description={`Paired with primary ${instructorQualifiedPersonnelLabel}`}
             personnelList={stats.traineesWithPrimaryList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
             title="Trainees with their Secondary"
             value={stats.traineesWithSecondaryList.length}
-            description="Paired with secondary instructor-qualified personnel"
+            description={`Paired with secondary ${instructorQualifiedPersonnelLabel}`}
             personnelList={stats.traineesWithSecondaryList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Trainees with Flight Instructor-Qualified"
+            title={`Trainees with Flight ${instructorQualifiedLabel}`}
             value={stats.traineesWithInstructorFromFlightList.length}
-            description="Paired with instructor-qualified personnel from same flight"
+            description={`Paired with ${instructorQualifiedPersonnelLabel} from same flight`}
             personnelList={stats.traineesWithInstructorFromFlightList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Trainees with Other Instructor-Qualified"
+            title={`Trainees with Other ${instructorQualifiedLabel}`}
             value={stats.traineesWithOtherInstructorsList.length}
-            description="Paired with other instructor-qualified personnel"
+            description={`Paired with other ${instructorQualifiedPersonnelLabel}`}
             personnelList={stats.traineesWithOtherInstructorsList}
             onPersonClick={onNavigateAndSelectPerson}
           />

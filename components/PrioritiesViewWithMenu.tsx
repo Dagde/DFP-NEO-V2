@@ -145,7 +145,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         {
             id: 'people-rules' as const,
             step: '02',
-            label: 'Instructor-Qualified Rules',
+            label: `${props.instructorLabel || 'Instructor'} Rules`,
             shortLabel: 'People',
             description: 'Control how instructor preference or restriction should influence placement.',
             hidden: isFixedCrewModel,

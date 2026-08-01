@@ -8642,7 +8642,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = "Instructor" }) => {
+const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor" }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -9063,7 +9063,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
               instructor && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { fontSize: 10, color: "#cbd5e1", marginBottom: 5 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#64748b", marginRight: 4 }, children: "▶" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { color: "#94a3b8", marginRight: 4 }, children: [
-                  instructorLabel,
+                  instructorLabel2,
                   ":"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#e2e8f0", fontWeight: 600 }, children: instructor })
@@ -17716,7 +17716,7 @@ const STABLE_ROLE_COLOUR_OVERRIDES = {
   trainee: "text-lime-300"
 };
 const normaliseRoleKey = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
-const getStaffRoleDisplay = (role, terminology, instructorLabel = "Instructor", simIpDisplayLabel = "Contractor Staff") => {
+const getStaffRoleDisplay = (role, terminology, instructorLabel2 = "Instructor", simIpDisplayLabel = "Contractor Staff") => {
   const entry = findCrewPositionEntry(role, terminology);
   const rawRole = String(role || "").trim();
   const label = getCrewPositionDisplayLabel(role, terminology, "Unassigned");
@@ -17724,7 +17724,7 @@ const getStaffRoleDisplay = (role, terminology, instructorLabel = "Instructor", 
   if (stableKey === "qfi" || stableKey === "instructor") {
     return {
       key: "instructor",
-      label: instructorLabel,
+      label: instructorLabel2,
       textClassName: "text-blue-200"
     };
   }
@@ -17787,7 +17787,7 @@ const PersonnelColumn = ({
   useUnitColors = false,
   useRoleColors = false,
   crewPositionTerminology,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   simIpDisplayLabel = "Contractor Staff"
 }) => {
   const groupedPersonnel = React.useMemo(() => {
@@ -17804,7 +17804,7 @@ const PersonnelColumn = ({
   }, [personnel, showUnits]);
   if (!showUnits) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ name, rank, unit, role }, index) => {
-      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
+      const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
       const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : "text-gray-300";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "li",
@@ -17845,7 +17845,7 @@ const PersonnelColumn = ({
       people.map(({ name, rank, unit: personUnit, role }) => {
         const rowIndex = visualRowIndex;
         visualRowIndex += 1;
-        const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
+        const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
         const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "li",
@@ -17966,7 +17966,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel = "Instructor", simIpDisplayLabel = "Contractor Staff" }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings, operationalModel, crewPositionTerminology, instructorLabel: instructorLabel2 = "Instructor", simIpDisplayLabel = "Contractor Staff" }) => {
   if (!date) console.error("❌ CRITICAL: date is undefined");
   if (!events) console.error("❌ CRITICAL: events is undefined");
   if (!instructors) console.error("❌ CRITICAL: instructors is undefined");
@@ -18355,7 +18355,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
               useUnitColors: true,
               useRoleColors: normaliseOperationalModel(operationalModel) === "air_combat",
               crewPositionTerminology,
-              instructorLabel,
+              instructorLabel: instructorLabel2,
               simIpDisplayLabel
             }
           )
@@ -20154,7 +20154,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$1 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel = "Instructor" }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, instructorLabel: instructorLabel2 = "Instructor" }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
@@ -20163,7 +20163,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLm
     () => normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology),
     [trainingReportTemplate, trainingReportTerminology]
   );
-  const reportAssessorLabel = resolveReportAssessorDisplayLabel(reportTemplate.modules.comments.fields.assessor, instructorLabel);
+  const reportAssessorLabel = resolveReportAssessorDisplayLabel(reportTemplate.modules.comments.fields.assessor, instructorLabel2);
   const missionStatusLabelMap = React.useMemo(() => {
     const options = getTrainingReportCompletionResultOptions(reportTemplate);
     return new Map(options.map((option) => [option.code, option.label]));
@@ -20957,7 +20957,7 @@ const formatLmpSortieLabel = (item, resourceDisplayNames) => {
 const formatLmpDurationLabel = (item) => `${formatHours$1(item.duration)}h`;
 const DEFAULT_ASSESSED_ELEMENTS$2 = ["Airmanship", "Preparation", "Technique"];
 const getAssessedElements = (item) => Array.isArray(item.assessedElements) ? item.assessedElements : DEFAULT_ASSESSED_ELEMENTS$2;
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], instructorLabel = "Instructor", isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], instructorLabel: instructorLabel2 = "Instructor", isRemedial = false, isAddedItem = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
@@ -21027,7 +21027,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Date", value: score.date }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: instructorLabel, value: score.instructor })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: instructorLabel2, value: score.instructor })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap", children: score.notes }) }) })
   ] }),
@@ -21065,7 +21065,7 @@ const AcademicLmpTab = ({
   onAccessDenied,
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
-  instructorLabel = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
   const academicSyllabus = reactExports.useMemo(() => {
@@ -21277,7 +21277,7 @@ const AcademicLmpTab = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-green-300", children: "Attendance Record" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4 mt-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Date", value: lessonScore.date }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: instructorLabel, value: lessonScore.instructor || "—" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: instructorLabel2, value: lessonScore.instructor || "—" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: trainingReportStatusFieldLabel2, value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 font-bold", children: "Complete ✓" }) })
           ] }),
           lessonScore.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: lessonScore.notes }) }) })
@@ -21347,7 +21347,7 @@ const TraineeLmpView = ({
   onInsertCustomEvent,
   onUpdateLmpItem,
   trainingReportDisplayName = "Training Report",
-  instructorLabel = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -21490,7 +21490,7 @@ const TraineeLmpView = ({
           onAccessDenied,
           trainingReportDisplayName,
           trainingReportStatusFieldLabel,
-          instructorLabel
+          instructorLabel: instructorLabel2
         }
       ) : (
         /* ── NEO Build LMP Tab (existing) ── */
@@ -21533,7 +21533,7 @@ const TraineeLmpView = ({
               score: scores.find((s) => s.event === selectedItem.code),
               resourceDisplayNames,
               aircraftConfigurations,
-              instructorLabel,
+              instructorLabel: instructorLabel2,
               isRemedial: isRemedialLmpItem(selectedItem),
               isAddedItem: isAddedLmpItem(selectedItem, masterLmpKeys),
               onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
@@ -21869,7 +21869,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
+const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel: instructorLabel2 = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -21882,7 +21882,7 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFieldsConfig = reportTemplate.modules.comments.fields;
-  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFieldsConfig.assessor, instructorLabel);
+  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFieldsConfig.assessor, instructorLabel2);
   const commentSectionLabels = reactExports.useMemo(() => ({
     QFI: reportAssessorDisplayLabel,
     Weather: commentFieldsConfig.weather || "Weather",
@@ -22532,7 +22532,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
         [printOverallFields.groundSchoolAssessment, groundSchoolAssessment.isAssessment ? `${groundSchoolAssessment.result ?? 0}%` : "Not assessed"]
       ]);
       addSectionTitle(printReportTemplate.modules.comments.title || "Comments");
-      addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel), commentFields.QFI || "N/A");
+      addWrappedText(resolveReportAssessorDisplayLabel(printCommentFieldsConfig.assessor, instructorLabel2), commentFields.QFI || "N/A");
       addWrappedText(printCommentFieldsConfig.weather, commentFields.Weather || "N/A");
       addWrappedText(printCommentFieldsConfig.profile, commentFields.Profile || "N/A");
       addWrappedText(printCommentFieldsConfig.overall, commentFields.Overall || "N/A");
@@ -27117,7 +27117,7 @@ const CourseRosterView = ({
     )
   ] });
 };
-const ScoreDetailView = ({ trainee, scoreData, onBack, instructorLabel = "Instructor" }) => {
+const ScoreDetailView = ({ trainee, scoreData, onBack, instructorLabel: instructorLabel2 = "Instructor" }) => {
   const getScoreColor2 = (score, type) => {
     const colors = {
       "2-5": { text: "text-green-300", bg: "bg-green-500/20" },
@@ -27156,7 +27156,7 @@ const ScoreDetailView = ({ trainee, scoreData, onBack, instructorLabel = "Instru
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-semibold text-white", children: scoreData.date })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase", children: instructorLabel }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase", children: instructorLabel2 }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg font-semibold text-white truncate", children: scoreData.instructor })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center", children: [
@@ -33832,7 +33832,7 @@ const ConflictModal = ({
   onResolve,
   onCancel,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
@@ -33840,7 +33840,7 @@ const ConflictModal = ({
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
   };
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
-  const personTypeDisplay = conflict.conflictedPerson === "instructor" ? instructorLabel : "Trainee";
+  const personTypeDisplay = conflict.conflictedPerson === "instructor" ? instructorLabel2 : "Trainee";
   const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
   const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -34146,7 +34146,7 @@ const AcademicsTab = ({
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
   instructors = [],
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   onSave,
   onClose
 }) => {
@@ -34706,7 +34706,7 @@ Do you still want to include them in this academic session?`,
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }, children: [
           instructors.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: instructorLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: instructorLabel2 }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { style: { ...S.select, width: 160 }, value: instructor, onChange: (e) => setInstructor(e.target.value), children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Unallocated —" }),
               instructors.map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i, children: i }, i))
@@ -35002,7 +35002,7 @@ const AddGroundEventFlyout = ({
   operationalModel,
   groundResources = [],
   cptResources = [],
-  instructorLabel = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const crewLabel = reactExports.useMemo(() => {
@@ -35227,9 +35227,9 @@ const AddGroundEventFlyout = ({
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-instructor", className: "block text-sm font-medium text-gray-400", children: instructorLabel }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-instructor", className: "block text-sm font-medium text-gray-400", children: instructorLabel2 }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { id: "ground-instructor", value: instructor, onChange: (e) => setInstructor(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: `Select ${instructorLabel.toLowerCase()}` }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: `Select ${instructorLabel2.toLowerCase()}` }),
                         instructors.map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i, children: i }, i))
                       ] })
                     ] })
@@ -35322,7 +35322,7 @@ const AddGroundEventFlyout = ({
                     persistedAcademicLmp,
                     onUpdatePersistedAcademicLmp,
                     instructors,
-                    instructorLabel,
+                    instructorLabel: instructorLabel2,
                     onSave: (data) => {
                       if (onSaveAcademic) {
                         onSaveAcademic(data);
@@ -38955,7 +38955,7 @@ const PrioritiesView = ({
   onSaveStandardMissionProfile,
   unitCallsignSettings,
   staffQualificationCatalogue: staffQualificationCatalogue2,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   continuationShortLabel = "ContT",
   onNavigateToSettingsSection
 }) => {
@@ -40731,7 +40731,7 @@ const PrioritiesView = ({
                 },
                 className: controlClass,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select pilot" : `Select ${instructorLabel.toLowerCase()}` }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: isFlightSchoolCurrencyRequest ? "Select pilot" : `Select ${instructorLabel2.toLowerCase()}` }),
                   instructorNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
                 ]
               }
@@ -41878,14 +41878,14 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Second Input" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "mt-1 text-xl font-semibold text-white", children: [
-          instructorLabel,
+          instructorLabel2,
           " Allocation Rules"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
           "Set whether the build should prefer or require the trainee's assigned ",
-          instructorLabel.toLowerCase(),
+          instructorLabel2.toLowerCase(),
           " chain before using a wider ",
-          instructorLabel.toLowerCase(),
+          instructorLabel2.toLowerCase(),
           " pool for flight and ",
           ftdLabel,
           " events."
@@ -41899,7 +41899,7 @@ const PrioritiesView = ({
               {
                 onClick: () => {
                   const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
-                  logAudit("Priorities", "Edit", `${instructorLabel} Priority Mode toggled`, `${instructorPriority.enabled} → ${next.enabled}`);
+                  logAudit("Priorities", "Edit", `${instructorLabel2} Priority Mode toggled`, `${instructorPriority.enabled} → ${next.enabled}`);
                   onUpdateInstructorPriority(next);
                 },
                 className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? "bg-sky-500" : "bg-gray-600"}`,
@@ -41912,15 +41912,15 @@ const PrioritiesView = ({
             "When on, flight and ",
             ftdLabel,
             " events follow the ",
-            instructorLabel.toLowerCase(),
+            instructorLabel2.toLowerCase(),
             " groups selected below. Primary ",
-            instructorLabel,
+            instructorLabel2,
             " tries to roster the trainee with their primary ",
-            instructorLabel.toLowerCase(),
+            instructorLabel2.toLowerCase(),
             " first; fallback to the secondary ",
-            instructorLabel.toLowerCase(),
+            instructorLabel2.toLowerCase(),
             " or an alternate ",
-            instructorLabel.toLowerCase(),
+            instructorLabel2.toLowerCase(),
             " from the same flight only occurs when those options are also selected."
           ] })
         ] }),
@@ -41932,7 +41932,7 @@ const PrioritiesView = ({
               {
                 onClick: () => {
                   const next = { ...instructorPriority, mode: m };
-                  logAudit("Priorities", "Edit", `${instructorLabel} Priority mode changed`, `${instructorPriority.mode} → ${m}`);
+                  logAudit("Priorities", "Edit", `${instructorLabel2} Priority mode changed`, `${instructorPriority.mode} → ${m}`);
                   onUpdateInstructorPriority(next);
                 },
                 className: `px-4 py-1.5 rounded-md text-sm font-medium transition-all ${instructorPriority.mode === m ? m === "hard" ? "bg-red-600 text-white shadow" : "bg-sky-600 text-white shadow" : "text-gray-400 hover:text-white"}`,
@@ -41943,13 +41943,13 @@ const PrioritiesView = ({
             instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Soft:" }),
               " The scheduler attempts the selected ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               " chain first. If the primary ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               " is unavailable, it can fall back to selected secondary or same-flight ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               " options; if none are available, it may use any otherwise eligible ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               " so the event can still be placed."
             ] }),
             instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
@@ -41957,13 +41957,13 @@ const PrioritiesView = ({
               " Flight and ",
               ftdLabel,
               " events are only placed when one of the selected ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               " groups is available. If Primary ",
-              instructorLabel,
+              instructorLabel2,
               " is selected, the primary ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               " must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no ",
-              instructorLabel.toLowerCase(),
+              instructorLabel2.toLowerCase(),
               ". ",
               cptLabel,
               " and Ground are unaffected."
@@ -41975,9 +41975,9 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(select one or more)" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [
-              { key: "primary", label: `Primary ${instructorLabel}`, desc: `Try the trainee's primary ${instructorLabel.toLowerCase()} first where possible.` },
-              { key: "secondary", label: `Secondary ${instructorLabel}`, desc: `Allow the trainee's secondary ${instructorLabel.toLowerCase()} as a fallback when the primary is unavailable.` },
-              { key: "sameFlight", label: `Same Flight ${instructorLabel}`, desc: `Allow another qualified ${instructorLabel.toLowerCase()} from the trainee's allocated flight as a fallback.` }
+              { key: "primary", label: `Primary ${instructorLabel2}`, desc: `Try the trainee's primary ${instructorLabel2.toLowerCase()} first where possible.` },
+              { key: "secondary", label: `Secondary ${instructorLabel2}`, desc: `Allow the trainee's secondary ${instructorLabel2.toLowerCase()} as a fallback when the primary is unavailable.` },
+              { key: "sameFlight", label: `Same Flight ${instructorLabel2}`, desc: `Allow another qualified ${instructorLabel2.toLowerCase()} from the trainee's allocated flight as a fallback.` }
             ].map(({ key, label, desc }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -42013,21 +42013,21 @@ const PrioritiesView = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mb-2", children: [
                 "Select which ",
-                instructorLabel.toLowerCase(),
+                instructorLabel2.toLowerCase(),
                 " groups are authorised for flight and ",
                 ftdLabel,
                 " placement. With Primary ",
-                instructorLabel,
+                instructorLabel2,
                 " selected, the build requires the trainee's primary ",
-                instructorLabel.toLowerCase(),
+                instructorLabel2.toLowerCase(),
                 " unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no ",
-                instructorLabel.toLowerCase(),
+                instructorLabel2.toLowerCase(),
                 " assigned."
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3", children: [
-                { key: "primary", label: `Primary ${instructorLabel}`, desc: `Require the trainee's primary ${instructorLabel.toLowerCase()} unless an authorised fallback group is also selected and available.` },
-                { key: "secondary", label: `Secondary ${instructorLabel}`, desc: `Permit the trainee's secondary ${instructorLabel.toLowerCase()} as an authorised fallback.` },
-                { key: "sameFlight", label: `Same Flight ${instructorLabel}`, desc: `Permit another qualified ${instructorLabel.toLowerCase()} from the trainee's allocated flight as an authorised fallback.` }
+                { key: "primary", label: `Primary ${instructorLabel2}`, desc: `Require the trainee's primary ${instructorLabel2.toLowerCase()} unless an authorised fallback group is also selected and available.` },
+                { key: "secondary", label: `Secondary ${instructorLabel2}`, desc: `Permit the trainee's secondary ${instructorLabel2.toLowerCase()} as an authorised fallback.` },
+                { key: "sameFlight", label: `Same Flight ${instructorLabel2}`, desc: `Permit another qualified ${instructorLabel2.toLowerCase()} from the trainee's allocated flight as an authorised fallback.` }
               ].map(({ key, label, desc }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
@@ -42618,7 +42618,7 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "people-rules",
       step: "02",
-      label: "Instructor-Qualified Rules",
+      label: `${props.instructorLabel || "Instructor"} Rules`,
       shortLabel: "People",
       description: "Control how instructor preference or restriction should influence placement.",
       hidden: isFixedCrewModel
@@ -43281,11 +43281,15 @@ const PeopleTab = ({
   syllabusDetails = [],
   courseColors,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel: instructorLabel2 = "Instructor",
   operationalModel,
   operationalContext
 }) => {
   const [availabilityFilter, setAvailabilityFilter] = reactExports.useState("all");
   const [searchTerm, setSearchTerm] = reactExports.useState("");
+  const configuredInstructorLabel = String(instructorLabel2 || "Instructor").trim() || "Instructor";
+  const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
+  const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
   const formatMilitaryTime2 = (timeString) => {
     if (!timeString) return "";
     return timeString.replace(":", "");
@@ -43819,12 +43823,15 @@ const PeopleTab = ({
       ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-4 text-center text-slate-400", children: "No trainees are currently waiting for a night flying event." }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: fieldsetShell, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Instructor-Qualified Personnel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("legend", { className: legendClass, children: [
+        instructorQualifiedLabel,
+        " Personnel"
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-5 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructor-Qualified with 4 Events",
+            title: `${instructorQualifiedLabel} with 4 Events`,
             value: stats.instructorsWithFourEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithFourEventsList,
@@ -43834,7 +43841,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructor-Qualified with 3 Events",
+            title: `${instructorQualifiedLabel} with 3 Events`,
             value: stats.instructorsWithThreeEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithThreeEventsList,
@@ -43844,7 +43851,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructor-Qualified with 2 Events",
+            title: `${instructorQualifiedLabel} with 2 Events`,
             value: stats.instructorsWithTwoEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithTwoEventsList,
@@ -43854,7 +43861,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructor-Qualified with 1 Event",
+            title: `${instructorQualifiedLabel} with 1 Event`,
             value: stats.instructorsWithOneEvent,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithOneEventList,
@@ -43864,7 +43871,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Instructor-Qualified with 0 Events",
+            title: `${instructorQualifiedLabel} with 0 Events`,
             value: stats.instructorsWithZeroEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithZeroEventsList,
@@ -43891,7 +43898,7 @@ const PeopleTab = ({
           {
             title: "Trainees with their Primary",
             value: stats.traineesWithPrimaryList.length,
-            description: "Paired with primary instructor-qualified personnel",
+            description: `Paired with primary ${instructorQualifiedPersonnelLabel}`,
             personnelList: stats.traineesWithPrimaryList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43901,7 +43908,7 @@ const PeopleTab = ({
           {
             title: "Trainees with their Secondary",
             value: stats.traineesWithSecondaryList.length,
-            description: "Paired with secondary instructor-qualified personnel",
+            description: `Paired with secondary ${instructorQualifiedPersonnelLabel}`,
             personnelList: stats.traineesWithSecondaryList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43909,9 +43916,9 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Trainees with Flight Instructor-Qualified",
+            title: `Trainees with Flight ${instructorQualifiedLabel}`,
             value: stats.traineesWithInstructorFromFlightList.length,
-            description: "Paired with instructor-qualified personnel from same flight",
+            description: `Paired with ${instructorQualifiedPersonnelLabel} from same flight`,
             personnelList: stats.traineesWithInstructorFromFlightList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43919,9 +43926,9 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Trainees with Other Instructor-Qualified",
+            title: `Trainees with Other ${instructorQualifiedLabel}`,
             value: stats.traineesWithOtherInstructorsList.length,
-            description: "Paired with other instructor-qualified personnel",
+            description: `Paired with other ${instructorQualifiedPersonnelLabel}`,
             personnelList: stats.traineesWithOtherInstructorsList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -44649,8 +44656,12 @@ const StatCard$2 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntime
 ] });
 const LimitingFactorsSection = ({
   courseAnalysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
+  const configuredInstructorLabel = String(instructorLabel2 || "Instructor").trim() || "Instructor";
+  const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
+  const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
   const totalLimitingFactors = {
     insufficientInstructors: 0,
     noAircraftSlots: 0,
@@ -44677,10 +44688,15 @@ const LimitingFactorsSection = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2 text-sm", children: [
         totalLimitingFactors.insufficientInstructors > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Insufficient Instructor-Qualified Personnel:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
+            "Insufficient ",
+            instructorQualifiedLabel,
+            " Personnel:"
+          ] }),
           " ",
           totalLimitingFactors.insufficientInstructors,
-          " events could not be scheduled due to lack of available instructor-qualified personnel"
+          " events could not be scheduled due to lack of available ",
+          instructorQualifiedPersonnelLabel
         ] }),
         totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
@@ -44728,10 +44744,15 @@ const LimitingFactorsSection = ({
           " events could not be scheduled because trainees reached their daily event limit"
         ] }),
         totalLimitingFactors.instructorLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Instructor-Qualified Daily Limit:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
+            instructorQualifiedLabel,
+            " Daily Limit:"
+          ] }),
           " ",
           totalLimitingFactors.instructorLimit,
-          " events could not be scheduled because instructor-qualified personnel reached their daily event limit"
+          " events could not be scheduled because ",
+          instructorQualifiedPersonnelLabel,
+          " reached their daily event limit"
         ] }),
         totalLimitingFactors.noTimeSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No Suitable Time Slots:" }),
@@ -44808,7 +44829,8 @@ const InsightsSection = ({ insights }) => {
 const BuildAnalyticsTab = ({
   events,
   analysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const sectionClass2 = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
@@ -44891,7 +44913,7 @@ const BuildAnalyticsTab = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames, instructorLabel: instructorLabel2 }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(TimeDistributionChart, { timeDistribution: analysis.timeDistribution }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InsightsSection, { insights: analysis.insights })
   ] });
@@ -50446,6 +50468,7 @@ const BuildIntelligenceView = (props) => {
           syllabusDetails: props.syllabusDetails,
           courseColors: props.courseColors,
           resourceDisplayNames,
+          instructorLabel: props.instructorLabel,
           operationalModel: props.operationalModel,
           operationalContext: props.operationalContext,
           cancellationCodes: props.cancellationCodes
@@ -50486,7 +50509,8 @@ const BuildIntelligenceView = (props) => {
         {
           events: props.events,
           analysis: props.analysis,
-          resourceDisplayNames
+          resourceDisplayNames,
+          instructorLabel: props.instructorLabel
         }
       ),
       activeTab === "ac-history" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50937,7 +50961,7 @@ const InstructorProfileFlyout = ({
   currentUserId,
   currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   operationalModel = "flight_school",
   crewPositionTerminology,
@@ -50994,7 +51018,7 @@ const InstructorProfileFlyout = ({
       byValue.set(key, option);
     });
     return Array.from(byValue.values());
-  }, [crewPositionTerminology, instructorLabel, operationalModel, role, simIpDisplayLabel]);
+  }, [crewPositionTerminology, instructorLabel2, operationalModel, role, simIpDisplayLabel]);
   const normalisedQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue2),
     [staffQualificationCatalogue2]
@@ -51481,7 +51505,7 @@ const InstructorProfileFlyout = ({
       if (instructor.isDeputyFlightCommander !== isDeputyFlightCommander) changes.push(`Deputy FC: ${instructor.isDeputyFlightCommander} → ${isDeputyFlightCommander}`);
       if (instructor.isContractor !== savedIsContractor) changes.push(`Contractor: ${instructor.isContractor} → ${savedIsContractor}`);
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
-      if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${savedIsQFI}`);
+      if (instructor.isQFI !== savedIsQFI) changes.push(`${instructorLabel2}: ${instructor.isQFI} → ${savedIsQFI}`);
       if (instructor.isOFI !== isOFI) changes.push(`${ofiQualificationLabel}: ${instructor.isOFI} → ${isOFI}`);
       const changesStr = changes.length > 0 ? changes.join(", ") : "No field changes";
       logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
@@ -51560,7 +51584,7 @@ const InstructorProfileFlyout = ({
   const profileRoleDisplay = getStaffRoleDisplay(
     instructor.role,
     crewPositionTerminology,
-    instructorLabel,
+    instructorLabel2,
     simIpDisplayLabel
   );
   const TraineeIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) });
@@ -51940,7 +51964,7 @@ const InstructorProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Training" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Report" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: trainingReportStatusFieldLabel2 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: instructorLabel }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: instructorLabel2 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Unit" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Delete" })
                 ] }) }),
@@ -53341,8 +53365,8 @@ const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel, staffQ
   return hasInstructorQualification(instructor, staffQualificationCatalogue2) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
 };
 const getInstructorCrewGroup = (instructor) => String(instructor.crew || instructor.preferences?.crew || "").trim();
-const getStaffRoleFilterOption = (role, terminology, instructorLabel, simIpDisplayLabel) => {
-  const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel, simIpDisplayLabel);
+const getStaffRoleFilterOption = (role, terminology, instructorLabel2, simIpDisplayLabel) => {
+  const roleDisplay = getStaffRoleDisplay(role, terminology, instructorLabel2, simIpDisplayLabel);
   return { value: `role:${roleDisplay.key}`, label: roleDisplay.label };
 };
 const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
@@ -53405,7 +53429,7 @@ const InstructorListView = ({
   currentUserRole,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
@@ -53477,7 +53501,7 @@ const InstructorListView = ({
     [staffQualificationCatalogue2]
   );
   const getPooledCrewFlightRoleOrder = (instructor) => {
-    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
+    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
     const roleText = `${instructor.role || ""} ${roleDisplay.label || ""}`.trim().toLowerCase();
     if (/\bpilot\b/.test(roleText)) return 0;
     if (/\bload\s*master\b|\bloadmaster\b/.test(roleText)) return 1;
@@ -53498,12 +53522,12 @@ const InstructorListView = ({
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
     qfis.forEach((instructor) => {
-      const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
+      const option = getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
       optionMap.set(option.value, option.label);
     });
     const roleOptions = Array.from(optionMap.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, void 0, { sensitivity: "base" }));
     return [{ value: "ALL", label: "All" }, ...roleOptions];
-  }, [qfis, crewPositionTerminology, instructorLabel, simIpDisplayLabel]);
+  }, [qfis, crewPositionTerminology, instructorLabel2, simIpDisplayLabel]);
   reactExports.useEffect(() => {
     if (selectedStaffRoleFilter !== "ALL" && !staffRoleFilterOptions.some((option) => option.value === selectedStaffRoleFilter)) {
       setSelectedStaffRoleFilter("ALL");
@@ -53514,9 +53538,9 @@ const InstructorListView = ({
       return qfis;
     }
     return qfis.filter(
-      (instructor) => getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel).value === selectedStaffRoleFilter
+      (instructor) => getStaffRoleFilterOption(instructor.role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel).value === selectedStaffRoleFilter
     );
-  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel, simIpDisplayLabel]);
+  }, [qfis, selectedStaffRoleFilter, crewPositionTerminology, instructorLabel2, simIpDisplayLabel]);
   const qfisByUnit = reactExports.useMemo(() => {
     const groups = {};
     filteredQfis.forEach((instructor) => {
@@ -53547,7 +53571,7 @@ const InstructorListView = ({
       Object.values(groups).forEach((group) => group.sort(comparePooledCrewFlightStaff));
     }
     return groups;
-  }, [isAirCombatModel, isPooledCrewModel, filteredQfis, personnelDisplaySettings, crewPositionTerminology, instructorLabel]);
+  }, [isAirCombatModel, isPooledCrewModel, filteredQfis, personnelDisplaySettings, crewPositionTerminology, instructorLabel2]);
   const sortedFlightGroups = reactExports.useMemo(
     () => Object.keys(qfisByFlight).sort((a, b) => {
       const simpleFlightPattern = /^[A-Z]$/;
@@ -53731,7 +53755,7 @@ const InstructorListView = ({
     setSelectedInstructor(null);
   };
   const renderInstructorList = (instructors, muted = false) => /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: instructors.map((instructor, index) => {
-    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
+    const roleDisplay = getStaffRoleDisplay(instructor.role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
     const roleTextClass = muted ? "text-gray-500" : useRoleColours ? roleDisplay.textClassName : "text-gray-300";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "li",
@@ -53938,7 +53962,7 @@ const InstructorListView = ({
         currentUserName,
         resourceDisplayNames,
         personnelDisplaySettings,
-        instructorLabel,
+        instructorLabel: instructorLabel2,
         operationalModel,
         crewPositionTerminology,
         staffQualificationCatalogue: staffQualificationCatalogue2,
@@ -58418,7 +58442,7 @@ const AirCombatTrainingReportModal = ({
   startInEditMode = false,
   reportName = "Training Report",
   trainingReportTemplate = null,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   currentUserName = "",
   locationCode = "",
   unitCode = "",
@@ -58433,7 +58457,7 @@ const AirCombatTrainingReportModal = ({
   const overviewFields = reportTemplate.modules.overview.fields;
   const overallFields = reportTemplate.modules.overallAssessment.fields;
   const commentFields = reportTemplate.modules.comments.fields;
-  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFields.assessor, instructorLabel);
+  const reportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(commentFields.assessor, instructorLabel2);
   const commentSectionLabels = reactExports.useMemo(() => ({
     assessor: reportAssessorDisplayLabel,
     weather: commentFields.weather || "Weather",
@@ -59616,7 +59640,7 @@ const AuthorisationFlyout = ({
   traineesData = [],
   masterCurrencies = [],
   currencyRequirements = [],
-  instructorLabel = "Instructor"
+  instructorLabel: instructorLabel2 = "Instructor"
 }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = reactExports.useState(event.authNotes ?? "");
@@ -59797,16 +59821,16 @@ const AuthorisationFlyout = ({
       const inst = instructorsData.find((i) => i.name === studentRecord.name);
       return inst ? `${inst.rank} ${inst.name}` : studentRecord.name;
     };
-    const instructorLabel2 = getInstructorLabel();
+    const instructorLabel22 = getInstructorLabel();
     const studentLabel = getStudentLabel();
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Currencies" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end gap-4 mb-1 pr-1", children: ["Expired", "Due", "Current", "Inactive"].map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-10 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-400 leading-tight", children: label }) }, label)) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "divide-y divide-gray-700/50", children: [
-        instructorLabel2 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        instructorLabel22 && /* @__PURE__ */ jsxRuntimeExports.jsx(
           PersonCurrencyRow,
           {
-            label: instructorLabel2,
+            label: instructorLabel22,
             counts: instructorCounts
           }
         ),
@@ -59861,7 +59885,7 @@ const AuthorisationFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                  instructorLabel,
+                  instructorLabel2,
                   ":"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: event.instructor })
@@ -59943,7 +59967,7 @@ const AuthorisationFlyout = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-4 gap-y-1 mt-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Syllabus", value: event.flightNumber }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Start Time", value: `${Math.floor(event.startTime)}:${String(Math.round(event.startTime % 1 * 60)).padStart(2, "0")}` }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: instructorLabel, value: event.instructor }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: instructorLabel2, value: event.instructor }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Student", value: getStudentName(event.student) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Aircraft", value: getAircraftType(event.resourceId) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoRow, { label: "Route", value: `${event.origin}-${event.destination}` })
@@ -78203,7 +78227,7 @@ const RemedialInputRow = React.memo(({
   state,
   setState,
   instructors,
-  instructorLabel,
+  instructorLabel: instructorLabel2,
   openInstructorMenu,
   setOpenInstructorMenu,
   setValidationMessage
@@ -78231,7 +78255,7 @@ const RemedialInputRow = React.memo(({
     )) })
   ] }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-grow", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: instructorLabel }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: instructorLabel2 }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
       {
@@ -78248,7 +78272,7 @@ const RemedialInputRow = React.memo(({
         },
         className: "mt-1 flex h-[38px] w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 text-left text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || `Select ${instructorLabel.toLowerCase()}...` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "truncate" : "truncate text-gray-400", children: state.instructor || `Select ${instructorLabel2.toLowerCase()}...` }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-gray-400", children: "▾" })
         ]
       }
@@ -78289,7 +78313,7 @@ const AddRemedialPackageFlyout = ({
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   trainingReportName = "Training Report",
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   onClose,
   onSave
 }) => {
@@ -78525,7 +78549,7 @@ const AddRemedialPackageFlyout = ({
                 state: tutState,
                 setState: setTutState,
                 instructors,
-                instructorLabel,
+                instructorLabel: instructorLabel2,
                 openInstructorMenu,
                 setOpenInstructorMenu,
                 setValidationMessage
@@ -78539,7 +78563,7 @@ const AddRemedialPackageFlyout = ({
                 state: ftdState,
                 setState: setFtdState,
                 instructors,
-                instructorLabel,
+                instructorLabel: instructorLabel2,
                 openInstructorMenu,
                 setOpenInstructorMenu,
                 setValidationMessage
@@ -78553,7 +78577,7 @@ const AddRemedialPackageFlyout = ({
                 state: flightState,
                 setState: setFlightState,
                 instructors,
-                instructorLabel,
+                instructorLabel: instructorLabel2,
                 openInstructorMenu,
                 setOpenInstructorMenu,
                 setValidationMessage
@@ -81214,7 +81238,7 @@ const TrainingRecordsExportView = ({
   pt051Assessments,
   onSavePT051Assessment,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   trainingReportTemplate = null,
   phraseBank,
   hasTraineesEnabled = true
@@ -81227,7 +81251,7 @@ const TrainingRecordsExportView = ({
   const exportAssessmentTitle = exportReportName;
   const exportAssessorLabel = resolveReportAssessorDisplayLabel(
     activeTrainingReportTemplate.modules.comments.fields.assessor,
-    instructorLabel
+    instructorLabel2
   );
   const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
   const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
@@ -81735,7 +81759,7 @@ const TrainingRecordsExportView = ({
         labels: makeLabels(
           exportCommentFieldLabels.assessor,
           exportAssessorLabel,
-          instructorLabel,
+          instructorLabel2,
           "Report Instructor",
           "Assessor",
           // Legacy exports may still contain this old section heading.
@@ -82874,7 +82898,7 @@ const TrainingRecordsView = ({
   platformConfig = null,
   serviceDefinitions = [],
   resourceDisplayNames,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   trainingReportTemplate = null,
   phraseBank,
   hasTraineesEnabled = true
@@ -82946,7 +82970,7 @@ const TrainingRecordsView = ({
           pt051Assessments,
           onSavePT051Assessment,
           resourceDisplayNames,
-          instructorLabel,
+          instructorLabel: instructorLabel2,
           trainingReportTemplate,
           phraseBank,
           hasTraineesEnabled
@@ -83740,7 +83764,7 @@ const NextDayInstructorScheduleView = ({
   aircraftNumberSettings,
   operationalModel,
   crewPositionTerminology,
-  instructorLabel = "Instructor",
+  instructorLabel: instructorLabel2 = "Instructor",
   simIpDisplayLabel = "Contractor Staff"
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
@@ -84141,7 +84165,7 @@ const NextDayInstructorScheduleView = ({
             useUnitColors: true,
             useRoleColors: normaliseOperationalModel(operationalModel) === "air_combat",
             crewPositionTerminology,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             simIpDisplayLabel
           }
         ) }),
@@ -102596,7 +102620,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
     const conclusions = [];
     if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
-    if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push("No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.");
+    if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push(`No non-admin pilot or ${(instructorLabel || "Instructor").toLowerCase()}-qualified staff were available in the active Air Combat staff pool.`);
     if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed-task requests matched the build date.");
     const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
     if (crewRoleShortfalls.length > 0) {
@@ -107067,7 +107091,7 @@ const App = () => {
     () => getInsertEventTypes(platformConfig),
     [platformConfig]
   );
-  const instructorLabel = personnelDisplaySettings.instructorLabel;
+  const instructorLabel2 = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => Boolean(instructor) && getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor");
@@ -111468,7 +111492,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const followsItem = originalTraineeLMP[insertionIndex];
     const nextMasterItem = originalTraineeLMP.slice(insertionIndex + 1).find((item) => !isLmpOverlayItem(item));
     const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
-    const peopleRequired = request.peopleRequired.length > 0 ? request.peopleRequired : request.eventType.syllabusType === "Academics" ? [] : [instructorLabel || "Instructor", "Trainee"];
+    const peopleRequired = request.peopleRequired.length > 0 ? request.peopleRequired : request.eventType.syllabusType === "Academics" ? [] : [instructorLabel2 || "Instructor", "Trainee"];
     const newItem = {
       id: `custom-${Date.now()}-${eventCode2}`,
       code: eventCode2,
@@ -113164,7 +113188,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         if (originalEvent) {
           const changesList = [];
           if (event.instructor !== originalEvent.instructor) {
-            changesList.push(`${instructorLabel}: ${originalEvent.instructor || "None"} → ${event.instructor || "None"}`);
+            changesList.push(`${instructorLabel2}: ${originalEvent.instructor || "None"} → ${event.instructor || "None"}`);
           }
           if (event.pilot !== originalEvent.pilot) {
             changesList.push(`Pilot: ${originalEvent.pilot || "None"} → ${event.pilot || "None"}`);
@@ -119977,7 +120001,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               aircraftNumberSettings,
               operationalModel: activeOperationalModel,
               crewPositionTerminology: activeCrewPositionTerminology,
-              instructorLabel,
+              instructorLabel: instructorLabel2,
               simIpDisplayLabel
             }
           );
@@ -120016,7 +120040,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             aircraftNumberSettings,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             simIpDisplayLabel
           }
         );
@@ -120352,7 +120376,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               trainee: selectedTraineeForHateSheet,
               scoreData: selectedScoreForDetail,
               onBack: () => openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet"),
-              instructorLabel
+              instructorLabel: instructorLabel2
             }
           );
         }
@@ -120487,7 +120511,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             standardMissionProfiles: activeStandardMissionProfiles,
             onSaveStandardMissionProfile: handleSaveStandardMissionProfileFromPlanner,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             continuationShortLabel: getSctTerminology(platformConfig, activeUnitCode).shortLabel,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
@@ -120803,7 +120827,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             platformConfig,
             serviceDefinitions,
             resourceDisplayNames,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             trainingReportTemplate,
             phraseBank: activeTrainingReportPhraseBank,
             hasTraineesEnabled: activeUnitHasTrainees
@@ -120851,6 +120875,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             buildDate: buildDfpDate,
             analysis: buildIntelligenceAnalysis,
             resourceDisplayNames,
+            instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
             operationalContext: activeOperationalContext,
             trainingReportDisplayName: configuredTrainingReportDisplayName
@@ -121157,7 +121182,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames,
             personnelDisplaySettings,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
@@ -121276,7 +121301,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             currentUserRole: sessionUser?.role || authUser?.role || "",
             resourceDisplayNames,
             personnelDisplaySettings,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             operationalModel: activeOperationalModel,
             crewPositionTerminology: activeCrewPositionTerminology,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
@@ -121491,7 +121516,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onUpdateEmergencyFreezeAuthority: (settings) => setEmergencyFreezeAuthority(normaliseEmergencyFreezeAuthoritySettings(settings, activeStaffQualificationCatalogue)),
             qualificationOptions: emergencyQualificationOptions,
             currentUserQualificationIds: currentEmergencyQualificationIds,
-            instructorLabel,
+            instructorLabel: instructorLabel2,
             canUsePlatformPermission,
             activeUnitCode: activeTrainingReportUnitCode,
             activeUnitCodes: activeContextUnitCodes,
@@ -121576,7 +121601,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               trainee: selectedTraineeForHateSheet,
               event: eventForPt051,
               initialAssessment: existingAssessment,
-              instructorLabel,
+              instructorLabel: instructorLabel2,
               trainingReportTerminology: getUnitTrainingReportTerminology(platformConfig, selectedTraineeForHateSheet.unit || activeUnitCode),
               trainingReportTemplate: selectedTrainingReportTemplate,
               trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
@@ -123059,7 +123084,7 @@ Do you want to replace the existing entry?`,
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
       conflict && /* @__PURE__ */ jsxRuntimeExports.jsx(ConflictModal, { conflict, onResolve: () => {
-      }, onCancel: () => setConflict(null), resourceDisplayNames, instructorLabel }),
+      }, onCancel: () => setConflict(null), resourceDisplayNames, instructorLabel: instructorLabel2 }),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
         NeoRemedyFlyout,
         {
@@ -123202,7 +123227,7 @@ Do you want to replace the existing entry?`,
           operationalModel: activeOperationalModel,
           groundResources: addGroundTileGroundResources,
           cptResources: addGroundTileCptResources,
-          instructorLabel
+          instructorLabel: instructorLabel2
         }
       ),
       showAuthFlyout && eventForAuth && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -123220,7 +123245,7 @@ Do you want to replace the existing entry?`,
           traineesData,
           masterCurrencies,
           currencyRequirements,
-          instructorLabel
+          instructorLabel: instructorLabel2
         }
       ),
       showAddRemedialPackage && selectedTraineeForRemedial && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -123234,7 +123259,7 @@ Do you want to replace the existing entry?`,
           ),
           traineeLmp: traineeLMPs.get(selectedTraineeForRemedial.fullName) || [],
           trainingReportName: configuredTrainingReportDisplayName,
-          instructorLabel,
+          instructorLabel: instructorLabel2,
           onClose: () => setShowAddRemedialPackage(false),
           onSave: handleSaveRemedialPackage
         }
@@ -123521,7 +123546,7 @@ Do you want to replace the existing entry?`,
         startInEditMode: airCombatTrainingReportDraft.startInEditMode === true,
         reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
-        instructorLabel,
+        instructorLabel: instructorLabel2,
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,

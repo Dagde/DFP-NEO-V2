@@ -65,12 +65,14 @@ interface BuildAnalyticsTabProps {
   events: ScheduleEvent[];
   analysis: BuildAnalysis | null;
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorLabel?: string;
 }
 
 const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({
   events,
   analysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel = 'Instructor'
 }) => {
   const sectionClass = 'rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
   const legendClass = 'px-2 text-lg font-semibold text-white';
@@ -168,7 +170,7 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({
       </fieldset>
 
       {/* Scheduling Bottlenecks */}
-      <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} />
+      <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} instructorLabel={instructorLabel} />
 
       {/* Time Distribution */}
       <TimeDistributionChart timeDistribution={analysis.timeDistribution} />

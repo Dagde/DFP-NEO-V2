@@ -61,6 +61,7 @@ interface BuildAnalysisViewProps {
     buildDate: string;
     analysis: BuildAnalysis | null;
     resourceDisplayNames?: ResourceDisplayNames;
+    instructorLabel?: string;
 }
 
 // Course Distribution Table Component
@@ -255,7 +256,11 @@ const TimeDistributionChart: React.FC<{ timeDistribution: TimeDistribution }> = 
 const LimitingFactorsSection: React.FC<{
     courseAnalysis: CourseAnalysis[];
     resourceDisplayNames: ResourceDisplayNames;
-}> = ({ courseAnalysis, resourceDisplayNames }) => {
+    instructorLabel?: string;
+}> = ({ courseAnalysis, resourceDisplayNames, instructorLabel = 'Instructor' }) => {
+    const configuredInstructorLabel = String(instructorLabel || 'Instructor').trim() || 'Instructor';
+    const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
+    const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
     // Aggregate limiting factors across all courses
     const totalLimitingFactors = {
         insufficientInstructors: 0,
@@ -290,7 +295,7 @@ const LimitingFactorsSection: React.FC<{
                     <ul className="space-y-2 text-sm">
                         {totalLimitingFactors.insufficientInstructors > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">Insufficient Instructor-Qualified Personnel:</strong> {totalLimitingFactors.insufficientInstructors} events could not be scheduled due to lack of available instructor-qualified personnel
+                                <strong className="text-white">Insufficient {instructorQualifiedLabel} Personnel:</strong> {totalLimitingFactors.insufficientInstructors} events could not be scheduled due to lack of available {instructorQualifiedPersonnelLabel}
                             </li>
                         )}
                         {totalLimitingFactors.noAircraftSlots > 0 && (
@@ -315,7 +320,7 @@ const LimitingFactorsSection: React.FC<{
                         )}
                         {totalLimitingFactors.instructorLimit > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">Instructor-Qualified Daily Limit:</strong> {totalLimitingFactors.instructorLimit} events could not be scheduled because instructor-qualified personnel reached their daily event limit
+                                <strong className="text-white">{instructorQualifiedLabel} Daily Limit:</strong> {totalLimitingFactors.instructorLimit} events could not be scheduled because {instructorQualifiedPersonnelLabel} reached their daily event limit
                             </li>
                         )}
                         {totalLimitingFactors.noTimeSlots > 0 && (
@@ -383,6 +388,7 @@ const BuildAnalysisView: React.FC<BuildAnalysisViewProps> = ({
     buildDate,
     analysis,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    instructorLabel = 'Instructor',
 }) => {
     const formattedDate = React.useMemo(() => {
         if (!buildDate) return '';
@@ -455,7 +461,7 @@ const BuildAnalysisView: React.FC<BuildAnalysisViewProps> = ({
                 <CourseDistributionTable courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} />
                 
                 {/* Limiting Factors */}
-                <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} />
+                <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} instructorLabel={instructorLabel} />
                 
                 {/* Pie Charts - Flight Events and Total Events per Course */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

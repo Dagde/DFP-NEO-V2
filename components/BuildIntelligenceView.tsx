@@ -92,6 +92,7 @@ interface BuildIntelligenceViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorLabel?: string;
   operationalModel?: string;
   operationalContext?: {
     locationCode?: string;
@@ -200,6 +201,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 syllabusDetails={props.syllabusDetails}
                 courseColors={props.courseColors}
                 resourceDisplayNames={resourceDisplayNames}
+                instructorLabel={props.instructorLabel}
                 operationalModel={props.operationalModel}
                 operationalContext={props.operationalContext}
                 cancellationCodes={props.cancellationCodes}
@@ -241,6 +243,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 events={props.events}
                 analysis={props.analysis}
                 resourceDisplayNames={resourceDisplayNames}
+                instructorLabel={props.instructorLabel}
               />
             )}
 

@@ -20904,7 +20904,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
         const conclusions: string[] = [];
         if (buildOperationalModel !== 'air_combat') conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || 'blank'}.`);
-        if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push('No non-admin pilot or instructor-qualified staff were available in the active Air Combat staff pool.');
+        if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push(`No non-admin pilot or ${(instructorLabel || 'Instructor').toLowerCase()}-qualified staff were available in the active Air Combat staff pool.`);
         if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push('No mandatory Air Combat directed-task requests matched the build date.');
         const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
         if (crewRoleShortfalls.length > 0) {
@@ -43119,6 +43119,7 @@ appliedUpdates.forEach(update => {
                             buildDate={buildDfpDate}
                             analysis={buildIntelligenceAnalysis}
                             resourceDisplayNames={resourceDisplayNames}
+                            instructorLabel={instructorLabel}
                             operationalModel={activeOperationalModel}
                             operationalContext={activeOperationalContext}
                             trainingReportDisplayName={configuredTrainingReportDisplayName}

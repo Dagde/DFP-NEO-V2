@@ -30,12 +30,17 @@ interface CourseAnalysis {
 interface LimitingFactorsSectionProps {
   courseAnalysis: CourseAnalysis[];
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorLabel?: string;
 }
 
 const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
   courseAnalysis,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel = 'Instructor'
 }) => {
+  const configuredInstructorLabel = String(instructorLabel || 'Instructor').trim() || 'Instructor';
+  const instructorQualifiedLabel = `${configuredInstructorLabel}-qualified`;
+  const instructorQualifiedPersonnelLabel = `${instructorQualifiedLabel.toLowerCase()} personnel`;
   // Aggregate limiting factors across all courses
   const totalLimitingFactors = {
     insufficientInstructors: 0,
@@ -72,7 +77,7 @@ const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
           <ul className="space-y-2 text-sm">
             {totalLimitingFactors.insufficientInstructors > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">Insufficient Instructor-Qualified Personnel:</strong> {totalLimitingFactors.insufficientInstructors} events could not be scheduled due to lack of available instructor-qualified personnel
+                <strong className="text-white">Insufficient {instructorQualifiedLabel} Personnel:</strong> {totalLimitingFactors.insufficientInstructors} events could not be scheduled due to lack of available {instructorQualifiedPersonnelLabel}
               </li>
             )}
             {totalLimitingFactors.noAircraftSlots > 0 && (
@@ -97,7 +102,7 @@ const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
             )}
             {totalLimitingFactors.instructorLimit > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">Instructor-Qualified Daily Limit:</strong> {totalLimitingFactors.instructorLimit} events could not be scheduled because instructor-qualified personnel reached their daily event limit
+                <strong className="text-white">{instructorQualifiedLabel} Daily Limit:</strong> {totalLimitingFactors.instructorLimit} events could not be scheduled because {instructorQualifiedPersonnelLabel} reached their daily event limit
               </li>
             )}
             {totalLimitingFactors.noTimeSlots > 0 && (
