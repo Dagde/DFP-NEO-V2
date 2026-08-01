@@ -66685,7 +66685,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
     if (lowerTitle.includes("resource")) {
       return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
     }
-    if (lowerTitle.includes("profiles") || lowerTitle.includes("records")) {
+    if (lowerTitle.includes("flight template")) {
       return { section: "platform-standard-missions", label: "Flight Templates" };
     }
   }
