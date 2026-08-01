@@ -130,9 +130,9 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
     
     const [startDate, setStartDate] = useState('');
     const [gradDate, setGradDate] = useState('');
-    const [raafStart, setRaafStart] = useState(0);
-    const [navyStart, setNavyStart] = useState(0);
-    const [armyStart, setArmyStart] = useState(0);
+    const [primaryStudentGroupStart, setPrimaryStudentGroupStart] = useState(0);
+    const [secondaryStudentGroupStart, setSecondaryStudentGroupStart] = useState(0);
+    const [tertiaryStudentGroupStart, setTertiaryStudentGroupStart] = useState(0);
     const [location, setLocation] = useState(defaultLocation);
     const [unit, setUnit] = useState(defaultUnit);
     const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = useMemo(
@@ -145,7 +145,10 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
         return ALL_COLORS.find(c => !usedColors.has(c)) || 'bg-gray-400/80';
     }, [existingCourses]);
 
-    const totalStart = useMemo(() => raafStart + navyStart + armyStart, [raafStart, navyStart, armyStart]);
+    const totalStart = useMemo(
+        () => primaryStudentGroupStart + secondaryStudentGroupStart + tertiaryStudentGroupStart,
+        [primaryStudentGroupStart, secondaryStudentGroupStart, tertiaryStudentGroupStart],
+    );
 
     const studentNumberOptions = useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
 
@@ -174,9 +177,9 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
             color: availableColor,
             startDate,
             gradDate,
-            raafStart,
-            navyStart,
-            armyStart,
+            raafStart: primaryStudentGroupStart,
+            navyStart: secondaryStudentGroupStart,
+            armyStart: tertiaryStudentGroupStart,
             location: location || defaultLocation,
             unit: unit || defaultUnit,
         });
@@ -275,13 +278,13 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Initial Student Numbers</legend>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
-                             <Dropdown label={primaryStudentGroupLabel} id="student-group-1-start" value={raafStart} onChange={e => setRaafStart(parseInt(e.target.value))}>
+                             <Dropdown label={primaryStudentGroupLabel} id="student-group-1-start" value={primaryStudentGroupStart} onChange={e => setPrimaryStudentGroupStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label={secondaryStudentGroupLabel} id="student-group-2-start" value={navyStart} onChange={e => setNavyStart(parseInt(e.target.value))}>
+                             <Dropdown label={secondaryStudentGroupLabel} id="student-group-2-start" value={secondaryStudentGroupStart} onChange={e => setSecondaryStudentGroupStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
-                             <Dropdown label={tertiaryStudentGroupLabel} id="student-group-3-start" value={armyStart} onChange={e => setArmyStart(parseInt(e.target.value))}>
+                             <Dropdown label={tertiaryStudentGroupLabel} id="student-group-3-start" value={tertiaryStudentGroupStart} onChange={e => setTertiaryStudentGroupStart(parseInt(e.target.value))}>
                                 {studentNumberOptions.map(n => <option key={n} value={n}>{n}</option>)}
                             </Dropdown>
                             <div>

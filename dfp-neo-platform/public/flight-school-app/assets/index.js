@@ -7320,9 +7320,9 @@ const AddCourseFlyout = ({
   const [courseName, setCourseName] = reactExports.useState("");
   const [startDate, setStartDate] = reactExports.useState("");
   const [gradDate, setGradDate] = reactExports.useState("");
-  const [raafStart, setRaafStart] = reactExports.useState(0);
-  const [navyStart, setNavyStart] = reactExports.useState(0);
-  const [armyStart, setArmyStart] = reactExports.useState(0);
+  const [primaryStudentGroupStart, setPrimaryStudentGroupStart] = reactExports.useState(0);
+  const [secondaryStudentGroupStart, setSecondaryStudentGroupStart] = reactExports.useState(0);
+  const [tertiaryStudentGroupStart, setTertiaryStudentGroupStart] = reactExports.useState(0);
   const [location, setLocation] = reactExports.useState(defaultLocation);
   const [unit, setUnit] = reactExports.useState(defaultUnit);
   const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
@@ -7333,7 +7333,10 @@ const AddCourseFlyout = ({
     const usedColors = new Set(Object.values(existingCourses));
     return ALL_COLORS.find((c) => !usedColors.has(c)) || "bg-gray-400/80";
   }, [existingCourses]);
-  const totalStart = reactExports.useMemo(() => raafStart + navyStart + armyStart, [raafStart, navyStart, armyStart]);
+  const totalStart = reactExports.useMemo(
+    () => primaryStudentGroupStart + secondaryStudentGroupStart + tertiaryStudentGroupStart,
+    [primaryStudentGroupStart, secondaryStudentGroupStart, tertiaryStudentGroupStart]
+  );
   const studentNumberOptions = reactExports.useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
   const handleSave = async () => {
     const finalCourseName = courseName.trim();
@@ -7358,9 +7361,9 @@ const AddCourseFlyout = ({
       color: availableColor,
       startDate,
       gradDate,
-      raafStart,
-      navyStart,
-      armyStart,
+      raafStart: primaryStudentGroupStart,
+      navyStart: secondaryStudentGroupStart,
+      armyStart: tertiaryStudentGroupStart,
       location: location || defaultLocation,
       unit: unit || defaultUnit
     });
@@ -7466,9 +7469,9 @@ const AddCourseFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Initial Student Numbers" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: primaryStudentGroupLabel, id: "student-group-1-start", value: raafStart, onChange: (e) => setRaafStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: secondaryStudentGroupLabel, id: "student-group-2-start", value: navyStart, onChange: (e) => setNavyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: tertiaryStudentGroupLabel, id: "student-group-3-start", value: armyStart, onChange: (e) => setArmyStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: primaryStudentGroupLabel, id: "student-group-1-start", value: primaryStudentGroupStart, onChange: (e) => setPrimaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: secondaryStudentGroupLabel, id: "student-group-2-start", value: secondaryStudentGroupStart, onChange: (e) => setSecondaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$2, { label: tertiaryStudentGroupLabel, id: "student-group-3-start", value: tertiaryStudentGroupStart, onChange: (e) => setTertiaryStudentGroupStart(parseInt(e.target.value)), children: studentNumberOptions.map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Total" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700/50 rounded-md text-white h-[38px] flex items-center justify-center font-semibold", children: totalStart })
