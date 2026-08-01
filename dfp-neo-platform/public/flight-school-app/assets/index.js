@@ -67002,7 +67002,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       { section: "platform-standard-missions", label: "Directed Flight Templates", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit records are split-ready", "Directed flight templates, alternate crew setups and continuation/currency events have per-unit records where needed.", "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit records are split-ready", `Directed flight templates, alternate crew setups and ${continuationCurrencyEventsLabel} have per-unit records where needed.`, "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -72108,7 +72108,11 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               "Event"
             ] }) }) })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No continuation/currency events configured." }) : displayCurrencyProfiles.map((profile) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayCurrencyProfiles.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: [
+            "No ",
+            continuationCurrencyEventsLabel2,
+            " configured."
+          ] }) : displayCurrencyProfiles.map((profile) => {
             const crewOptions = Array.from(new Set([
               ...currencyProfileCrewOptions
             ].map((option) => String(option || "").trim()).filter(Boolean)));

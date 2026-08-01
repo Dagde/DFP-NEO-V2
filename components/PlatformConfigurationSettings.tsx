@@ -1605,7 +1605,7 @@ const buildConfigurationHealth = (
       { section: 'platform-standard-missions', label: 'Directed Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', 'Directed flight templates, alternate crew setups and continuation/currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight templates, alternate crew setups and ${continuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -7724,7 +7724,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             <div className="space-y-3">
               {displayCurrencyProfiles.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No continuation/currency events configured.</div>
+                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400">No {continuationCurrencyEventsLabel} configured.</div>
               ) : displayCurrencyProfiles.map((profile) => {
                 const crewOptions = Array.from(new Set([
                   ...currencyProfileCrewOptions,
