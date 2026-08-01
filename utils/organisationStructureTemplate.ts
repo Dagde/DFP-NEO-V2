@@ -12,8 +12,8 @@ export const downloadOrganisationStructureTemplateFile = (
 ) => {
   const headers = ['Level', 'Level Type', 'Name', 'Parent', 'Notes'];
   const rows = [
-    ['0', 'Organisation', 'Your Organisation', '', 'Top level organisation'],
-    ['1', 'Division', 'Division A', 'Your Organisation', 'First organisation layer below the top level'],
+    ['0', 'Organisation', 'Example Organisation', '', 'Top level organisation'],
+    ['1', 'Division', 'Division A', 'Example Organisation', 'First organisation layer below the top level'],
     ['2', 'Group', 'Group A', 'Division A', 'Second organisation layer'],
     ['3', 'Department', 'Department A', 'Group A', 'Add as many levels as needed before units'],
     ['4', 'Team', 'Team A', 'Department A', 'Optional deeper level'],

@@ -671,8 +671,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Level', 'Name'],
         optionalHeaders: ['Parent', 'Notes'],
         exampleRows: [
-            ['0', 'Your Organisation', '', 'Top level organisation'],
-            ['1', 'Division A', 'Your Organisation', 'Branch, command, region, or division'],
+            ['0', 'Example Organisation', '', 'Top level organisation'],
+            ['1', 'Division A', 'Example Organisation', 'Branch, command, region, or division'],
             ['2', 'Group A', 'Division A', 'Operating group, department, wing, or team'],
         ],
         settingsSection: 'platform-organisation-locations',
@@ -698,8 +698,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Unit Code', 'Unit Name', 'Location', 'Unit Type', 'Operating Model'],
         optionalHeaders: ['Parent Organisation', 'Trainees', 'Notes'],
         exampleRows: [
-            ['UNIT-A', 'Unit A', 'HOME', 'Operational', 'Pooled Crew Model', 'Your Organisation / Division A / Group A', 'No', ''],
-            ['UNIT-B', 'Unit B', 'TRAIN', 'Training', 'Flight School Model', 'Your Organisation / Division B / Group B', 'Yes', ''],
+            ['UNIT-A', 'Unit A', 'HOME', 'Operational', 'Pooled Crew Model', 'Example Organisation / Division A / Group A', 'No', ''],
+            ['UNIT-B', 'Unit B', 'TRAIN', 'Training', 'Flight School Model', 'Example Organisation / Division B / Group B', 'Yes', ''],
         ],
         settingsSection: 'platform-units',
     },
@@ -732,7 +732,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit'],
         optionalHeaders: ['Rank', 'Personnel ID', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
         exampleRows: [
-            ['Jones, Taylor', 'UNIT-B', 'Learner Level', '7654321', '1', 'Course A', '2026-01-15', 'Training Stream A'],
+            ['Jones, Taylor', 'UNIT-B', 'Learner Level', '7654321', '1', 'Course A', '2026-01-15', 'Primary LMP'],
         ],
         settingsSection: 'trainee-database',
     },
@@ -743,7 +743,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Master LMP', 'Event Code', 'Event Title', 'Type', 'Duration Minutes'],
         optionalHeaders: ['Aircraft Type', 'Crew Required', 'Pre Flight Minutes', 'Post Flight Minutes'],
         exampleRows: [
-            ['Training Stream A', 'EVENT-001', 'Training event 1', 'Flight', '90', 'Primary Resource', 'Lead 1, Support 1', '90', '60'],
+            ['Primary LMP', 'EVENT-001', 'Training event 1', 'Flight', '90', 'Primary Resource', 'Lead 1, Support 1', '90', '60'],
         ],
         settingsSection: 'platform-master-lmp-access',
     },
