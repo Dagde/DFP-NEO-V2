@@ -10392,10 +10392,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
       select: { id: true, name: true, rank: true, role: true, unit: true, isQFI: true }
     });
 
-    const instructorQualifiedStaff = instructors.filter((i) => {
-      const roleCode = String(i.role || '').trim().toUpperCase();
-      return i.isQFI || roleCode === 'QFI' || roleCode === 'INSTRUCTOR';
-    });
+    const instructorQualifiedStaff = instructors.filter((i) => i.isQFI);
 
     if (trainees.length === 0) {
       return res.status(400).json({ error: 'No active trainees found in database' });

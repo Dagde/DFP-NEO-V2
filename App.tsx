@@ -7102,7 +7102,6 @@ function generateDfpInternal(
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
         !isContractorStaffRole(instructor) && (
             getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes('qfi')
-            || ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
             || instructor.isQFI === true
         )
     );
@@ -26149,7 +26148,6 @@ const App: React.FC = () => {
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
         !isContractorStaffRole(instructor) && (
             getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes('qfi')
-            || ['QFI', 'INSTRUCTOR'].includes(String(instructor.role || '').trim().toUpperCase())
             || instructor.isQFI === true
         )
     );

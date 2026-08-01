@@ -53199,7 +53199,7 @@ const getStaffArchiveIdentifier = (instructor) => {
   const dbId = String(instructor.id || "").trim();
   return dbId || instructor.idNumber || null;
 };
-const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
+const hasInstructorQualification = (instructor, staffQualificationCatalogue) => instructor.isQFI === true || getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes("qfi");
 const isContractorStaffRole = (instructor, staffQualificationCatalogue) => getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes("contractor") || ["SIM IP", "CONTRACTOR STAFF"].includes(String(instructor.role || "").trim().toUpperCase().replace(/[\s-]+/g, " "));
 const isOfiSupportRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "OFI" || instructor.isOFI === true;
 const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) => {
@@ -53216,7 +53216,7 @@ const isSupportStaffRole = (instructor, staffQualificationCatalogue) => {
 const isActiveStaffListRole = (instructor, terminology, isFixedCrewModel, staffQualificationCatalogue) => {
   if (instructor.isAdminStaff || isSupportStaffRole(instructor, staffQualificationCatalogue)) return false;
   if (isFixedCrewModel) return true;
-  return isQfiRole(instructor) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
+  return hasInstructorQualification(instructor, staffQualificationCatalogue) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
 };
 const getInstructorCrewGroup = (instructor) => String(instructor.crew || instructor.preferences?.crew || "").trim();
 const getStaffRoleFilterOption = (role, terminology, instructorLabel2, simIpDisplayLabel) => {
@@ -90884,7 +90884,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (key === "ground" || key === "academic") return Boolean(buildContractorStaffEventEligibility.ground);
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes("qfi") || ["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes("qfi") || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
     if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);
@@ -106783,7 +106783,7 @@ const App = () => {
     if (key === "ground" || key === "academic") return contractorStaffEventEligibility.ground;
     return false;
   };
-  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("qfi") || ["QFI", "INSTRUCTOR"].includes(String(instructor.role || "").trim().toUpperCase()) || instructor.isQFI === true);
+  const isQfiBuildInstructor = (instructor) => !isContractorStaffRole2(instructor) && (getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("qfi") || instructor.isQFI === true);
   const isInstructorEligibleForBuildEventType = (instructor, eventType) => {
     if (isContractorStaffRole2(instructor)) return canContractorStaffWorkEventType(eventType);
     if (eventType === "flight" || eventType === "ftd") return isQfiBuildInstructor(instructor);

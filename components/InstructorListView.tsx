@@ -41,10 +41,12 @@ const getStaffArchiveIdentifier = (instructor: Instructor): string | number | nu
     const dbId = String((instructor as any).id || '').trim();
     return dbId || instructor.idNumber || null;
 };
-const isQfiRole = (instructor: Instructor): boolean =>
-    String(instructor.role || '').trim().toUpperCase() === 'QFI' ||
+const hasInstructorQualification = (
+    instructor: Instructor,
+    staffQualificationCatalogue?: StaffQualificationCatalogue,
+): boolean =>
     instructor.isQFI === true ||
-    String(instructor.role || '').trim().toUpperCase() === 'INSTRUCTOR';
+    getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes('qfi');
 const isContractorStaffRole = (
     instructor: Instructor,
     staffQualificationCatalogue?: StaffQualificationCatalogue,
@@ -82,7 +84,7 @@ const isActiveStaffListRole = (
 ): boolean => {
     if (instructor.isAdminStaff || isSupportStaffRole(instructor, staffQualificationCatalogue)) return false;
     if (isFixedCrewModel) return true;
-    return isQfiRole(instructor) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
+    return hasInstructorQualification(instructor, staffQualificationCatalogue) || isPilotRole(instructor) || isConfiguredCrewPositionRole(instructor, terminology);
 };
 const getInstructorCrewGroup = (instructor: Instructor): string => (
     String(instructor.crew || instructor.preferences?.crew || '').trim()
