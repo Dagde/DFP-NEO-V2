@@ -4756,7 +4756,7 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
   return JSON.parse(JSON.stringify(source));
 };
-const DEFAULT_SCT_TERMINOLOGY = {
+const DEFAULT_SCT_TERMINOLOGY$1 = {
   shortLabel: "ContT",
   longLabel: "Continuation Training"
 };
@@ -4765,10 +4765,10 @@ const SCT_LONG_LABEL_MAX_LENGTH = 40;
 const hasOwn = (input, key) => Object.prototype.hasOwnProperty.call(input, key);
 const cleanTerminologyLabel = (value, maxLength) => String(value ?? "").trim().slice(0, maxLength);
 const normaliseSctTerminology = (input) => {
-  if (!input || typeof input !== "object") return DEFAULT_SCT_TERMINOLOGY;
+  if (!input || typeof input !== "object") return DEFAULT_SCT_TERMINOLOGY$1;
   return {
-    shortLabel: hasOwn(input, "shortLabel") ? cleanTerminologyLabel(input.shortLabel, SCT_SHORT_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY.shortLabel,
-    longLabel: hasOwn(input, "longLabel") ? cleanTerminologyLabel(input.longLabel, SCT_LONG_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY.longLabel
+    shortLabel: hasOwn(input, "shortLabel") ? cleanTerminologyLabel(input.shortLabel, SCT_SHORT_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY$1.shortLabel,
+    longLabel: hasOwn(input, "longLabel") ? cleanTerminologyLabel(input.longLabel, SCT_LONG_LABEL_MAX_LENGTH) : DEFAULT_SCT_TERMINOLOGY$1.longLabel
   };
 };
 const normaliseUnitCode$4 = (value) => String(value || "").trim().toUpperCase();
@@ -28046,7 +28046,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY, isReadOnly = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, trainingReportDisplayName = "Training Report", onOpenTrainingReport, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, onEditFixedCrewTile, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, aircraftConfigurationDefinitions = [], aircraftCrewComposition, crewPositionTerminology, operationalModel, activeUnitCode = "", staffQualificationCatalogue: staffQualificationCatalogue2, unitCallsignSettings, personnelDisplaySettings, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, isReadOnly = false }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [isEditing, setIsEditing] = reactExports.useState(isReadOnly ? false : isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
@@ -31890,7 +31890,7 @@ const AddFlightTileModal = ({
     personDropdownColumnState.clear();
   }, []);
   const resolvedSctTerminology = reactExports.useMemo(
-    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY),
+    () => normaliseSctTerminology(sctTerminology || DEFAULT_SCT_TERMINOLOGY$1),
     [sctTerminology]
   );
   const sctShortLabel = resolvedSctTerminology.shortLabel;
@@ -35902,7 +35902,7 @@ const MyDashboard = ({
   selectedStaffName,
   onSelectStaffName,
   onUnreadMessageCountChange,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   currentLocationCode
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
@@ -50966,7 +50966,7 @@ const InstructorProfileFlyout = ({
   operationalModel = "flight_school",
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   trainingReportDisplayName = "Training Report",
   trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status"
 }) => {
@@ -62289,7 +62289,7 @@ const SettingsView = ({
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  sctTerminology = DEFAULT_SCT_TERMINOLOGY,
+  sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
   trainingReportDisplayName = "Training Report",
   emergencyFreezeAuthority,
@@ -62700,7 +62700,7 @@ const SettingsView = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-4 flex min-h-0 flex-1 flex-col", children: isEditingSctEvents ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build defaults." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Manage the configured event choices and their request/build settings." }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1", children: tempSctEvents.map((evt) => {
             const eventKey = evt.id || evt.name;
             const selectedConfigs = Array.isArray(evt.acceptableAircraftConfigs) && evt.acceptableAircraftConfigs.length > 0 ? evt.acceptableAircraftConfigs : [evt.config || "ANY"];
@@ -62878,7 +62878,7 @@ const SettingsView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
             "Configured ",
             sctShortLabel,
-            " and currency event defaults."
+            " and currency event settings."
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "min-h-0 flex-1 space-y-2 overflow-y-auto", children: configuredSctEvents.map((evt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "w-[40%] min-w-[260px] rounded bg-gray-700/50 p-3 text-white", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
@@ -67665,7 +67665,8 @@ const PlatformConfigurationSettings = ({
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
-  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel} / Currency Events`;
+  const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || "ContT").trim() || "ContT";
+  const continuationCurrencyEventsLabel = `${continuationCurrencyShortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -72111,7 +72112,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         SectionHeader,
         {
           title: continuationCurrencyEventsLabel,
-          subtitle: "Continuation and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft.",
+          subtitle: `${continuationCurrencyShortLabel} and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft.`,
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -72153,7 +72154,9 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-                "These events prefill continuation and currency requests with crew, aircraft CONFIG and currency for ",
+                "These events prefill ",
+                continuationCurrencyShortLabel,
+                " and currency requests with crew, aircraft CONFIG and currency for ",
                 displayCrewCompositionAircraftCode || "the selected aircraft",
                 "."
               ] })
@@ -75789,7 +75792,7 @@ const sectionLabels = {
   "scoring-matrix": "Scoring Matrix",
   "training-report-template": "Training Reports",
   "currencies": "Currency Requirements",
-  "sct-events": "Continuation & Currency Events",
+  "sct-events": "ContT / Currency Events",
   "people-profile": "NEO Build Course Exclusions",
   "scheduling-rules": "Scheduling Rules",
   "event-limits": "Daily Event Limits",
@@ -75804,7 +75807,7 @@ const sectionLabels = {
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
   "standard-missions": "Directed Task Setups",
-  "currency-profiles": "Continuation & Currency Events",
+  "currency-profiles": "ContT / Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
@@ -75934,7 +75937,7 @@ const sectionDescriptions = {
   "scoring-matrix": "Configure report elements, grades and performance text",
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
-  "sct-events": "Configure continuation and currency event settings",
+  "sct-events": "Configure ContT and currency event settings",
   "people-profile": "Select courses that NEO Build should leave out of schedule generation",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
@@ -75949,7 +75952,7 @@ const sectionDescriptions = {
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles, crew seats and alternate crew setups",
   "standard-missions": "Full reusable directed tasks with aircraft, crew, timing and callsign settings",
-  "currency-profiles": "Configure continuation and currency event settings",
+  "currency-profiles": "Configure ContT and currency event settings",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
@@ -76209,10 +76212,11 @@ const SettingsViewWithMenu = (props) => {
   const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
-  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
+  const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
+  const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "ContT").trim() || "ContT"} / Currency Events`;
   const isContinuationCurrencySection = (section) => section === "sct-events" || section === "currency-profiles";
-  const getSectionLabel = (section) => isContinuationCurrencySection(section) ? `${sctTerminology.shortLabel} / Currency Events` : sectionLabels[section];
-  const getSectionDescription = (section) => isContinuationCurrencySection(section) ? `Configure ${sctTerminology.shortLabel} and currency event settings` : sectionDescriptions[section];
+  const getSectionLabel = (section) => isContinuationCurrencySection(section) ? continuationCurrencyLabel : sectionLabels[section];
+  const getSectionDescription = (section) => isContinuationCurrencySection(section) ? `Configure ${continuationCurrencyLabel} settings` : sectionDescriptions[section];
   const changeActiveSection = (section) => {
     if (section !== "currencies") {
       setEmbeddedCurrencyBuilderOpen(false);
@@ -79151,12 +79155,12 @@ const createDefaultCourseAwards = () => [
     criteria: []
   }
 ];
-const isStarterCourseAwardCriteria = (criteria) => {
-  const starterEvents = /* @__PURE__ */ new Set(["BGF21", "BIF3", "BNAV4"]);
-  return criteria.length === starterEvents.size && criteria.every((criterion) => starterEvents.has(criterion.event.trim().toUpperCase()) && criterion.enabled !== false && Number(criterion.weight) === 2);
+const isLegacyCourseAwardCriteria = (criteria) => {
+  const legacyEvents = /* @__PURE__ */ new Set(["BGF21", "BIF3", "BNAV4"]);
+  return criteria.length === legacyEvents.size && criteria.every((criterion) => legacyEvents.has(criterion.event.trim().toUpperCase()) && criterion.enabled !== false && Number(criterion.weight) === 2);
 };
-const removeStarterCourseAwardCriteria = (award) => {
-  if (award.id !== "dux" || award.name !== "Dux" || !isStarterCourseAwardCriteria(award.criteria)) {
+const removeLegacyCourseAwardCriteria = (award) => {
+  if (award.id !== "dux" || award.name !== "Dux" || !isLegacyCourseAwardCriteria(award.criteria)) {
     return award;
   }
   return { ...award, name: "Course Award", criteria: [] };
@@ -79192,7 +79196,7 @@ const loadStoredCourseAwards = () => {
     const raw = window.localStorage.getItem(COURSE_AWARD_SETTINGS_STORAGE_KEY);
     if (!raw) return createDefaultCourseAwards();
     const parsed = JSON.parse(raw);
-    const awards = Array.isArray(parsed) ? parsed.map((award, index) => normaliseCourseAward(award, index)).filter((award) => Boolean(award)).map(removeStarterCourseAwardCriteria) : [];
+    const awards = Array.isArray(parsed) ? parsed.map((award, index) => normaliseCourseAward(award, index)).filter((award) => Boolean(award)).map(removeLegacyCourseAwardCriteria) : [];
     return awards.length > 0 ? awards : createDefaultCourseAwards();
   } catch {
     return createDefaultCourseAwards();
@@ -83472,7 +83476,7 @@ const DraftSchedulerNotesTextArea = ({
     }
   );
 };
-const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
+const SctRequestFlyout = ({ instructor, onClose, onSave, currencyNames, sctEvents: sctEventsProp, sctTerminology = DEFAULT_SCT_TERMINOLOGY$1, nightContinuationDefaultTime = "18:30", aircraftConfigurationDefinitions = [], activeUnitCode = "", activeUnitCodes = [], aircraftTypeCode = "" }) => {
   const resolvedSctTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = resolvedSctTerminology.shortLabel;
   const continuationLongLabel = resolvedSctTerminology.longLabel;
@@ -91591,7 +91595,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       duplicateCrewMemberships: [],
       queueSourceAudit: null,
       sctCrewTrace: {
-        purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Continuation / Currency Requests.`,
+        purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in ${buildContinuationShortLabel} / Currency Requests.`,
         requestInputs: [],
         priorityInputs: [],
         activeDfpInputs: [],
@@ -102571,7 +102575,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const matchingQueue = (sctTrace.queueInputs || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.id === event.id);
       const matchingPlacements = (sctTrace.placementsForSctEvents || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.eventId === event.id);
       const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry) => event.sctRequestId && entry.sctRequestId === event.sctRequestId || entry.eventId === event.id);
-      let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Continuation / Currency Requests.`;
+      let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside ${buildContinuationShortLabel} / Currency Requests.`;
       if (request && !selectedCrew) {
         likelyReason = `The ${buildContinuationShortLabel} request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.`;
       } else if (request && matchingQueue.length === 0) {

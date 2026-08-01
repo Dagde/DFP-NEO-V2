@@ -85,17 +85,17 @@ const createDefaultCourseAwards = (): CourseAward[] => [
     },
 ];
 
-const isStarterCourseAwardCriteria = (criteria: AwardCriterion[]): boolean => {
-    const starterEvents = new Set(['BGF21', 'BIF3', 'BNAV4']);
-    return criteria.length === starterEvents.size && criteria.every(criterion => (
-        starterEvents.has(criterion.event.trim().toUpperCase()) &&
+const isLegacyCourseAwardCriteria = (criteria: AwardCriterion[]): boolean => {
+    const legacyEvents = new Set(['BGF21', 'BIF3', 'BNAV4']);
+    return criteria.length === legacyEvents.size && criteria.every(criterion => (
+        legacyEvents.has(criterion.event.trim().toUpperCase()) &&
         criterion.enabled !== false &&
         Number(criterion.weight) === 2
     ));
 };
 
-const removeStarterCourseAwardCriteria = (award: CourseAward): CourseAward => {
-    if (award.id !== 'dux' || award.name !== 'Dux' || !isStarterCourseAwardCriteria(award.criteria)) {
+const removeLegacyCourseAwardCriteria = (award: CourseAward): CourseAward => {
+    if (award.id !== 'dux' || award.name !== 'Dux' || !isLegacyCourseAwardCriteria(award.criteria)) {
         return award;
     }
     return { ...award, name: 'Course Award', criteria: [] };
@@ -149,7 +149,7 @@ const loadStoredCourseAwards = (): CourseAward[] => {
             ? parsed
                 .map((award, index) => normaliseCourseAward(award, index))
                 .filter((award): award is CourseAward => Boolean(award))
-                .map(removeStarterCourseAwardCriteria)
+                .map(removeLegacyCourseAwardCriteria)
             : [];
         return awards.length > 0 ? awards : createDefaultCourseAwards();
     } catch {

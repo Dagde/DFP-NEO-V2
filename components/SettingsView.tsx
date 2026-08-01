@@ -1122,7 +1122,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            <div className="p-4 space-y-4 flex min-h-0 flex-1 flex-col">
                                {isEditingSctEvents ? (
                                    <>
-                                       <p className="text-sm text-gray-400">Manage the configured event choices and their request/build defaults.</p>
+                                       <p className="text-sm text-gray-400">Manage the configured event choices and their request/build settings.</p>
                                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                                            {tempSctEvents.map(evt => {
                                                const eventKey = evt.id || evt.name;
@@ -1274,7 +1274,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                    </>
                                ) : (
                                    <>
-                                       <p className="text-sm text-gray-400">Configured {sctShortLabel} and currency event defaults.</p>
+                                       <p className="text-sm text-gray-400">Configured {sctShortLabel} and currency event settings.</p>
                                        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
                                            {configuredSctEvents.map(evt => (
                                                <li key={evt.id || evt.name} className="w-[40%] min-w-[260px] rounded bg-gray-700/50 p-3 text-white">

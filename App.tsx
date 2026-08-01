@@ -7776,7 +7776,7 @@ function generateDfpInternal(
             duplicateCrewMemberships: [] as any[],
             queueSourceAudit: null,
             sctCrewTrace: {
-                purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in Continuation / Currency Requests.`,
+                purpose: `Explains why a Fixed Crew ${buildContinuationShortLabel}/currency tile shows one crew instead of the crew selected in ${buildContinuationShortLabel} / Currency Requests.`,
                 requestInputs: [] as any[],
                 priorityInputs: [] as any[],
                 activeDfpInputs: [] as any[],
@@ -20828,7 +20828,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const matchingAttempts = (sctTrace.attemptsForSctEvents || []).filter((entry: any) => (
                 (event.sctRequestId && entry.sctRequestId === event.sctRequestId) || entry.eventId === event.id
             ));
-            let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside Continuation / Currency Requests.`;
+            let likelyReason = `No request found for this final ${buildContinuationShortLabel} event; it may be a stale/preserved tile or an event created outside ${buildContinuationShortLabel} / Currency Requests.`;
             if (request && !selectedCrew) {
                 likelyReason = `The ${buildContinuationShortLabel} request reached NEO Build without a selected crewDisplayLabel/crewGroupKey.`;
             } else if (request && matchingQueue.length === 0) {

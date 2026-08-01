@@ -2315,7 +2315,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null,
   );
-  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel} / Currency Events`;
+  const continuationCurrencyShortLabel = String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT';
+  const continuationCurrencyEventsLabel = `${continuationCurrencyShortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
@@ -7669,7 +7670,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
-          subtitle="Continuation and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft."
+          subtitle={`${continuationCurrencyShortLabel} and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft.`}
           action={canEdit ? (
             <button
               type="button"
@@ -7714,7 +7715,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <div className={resourceSectionPanelHeaderClass}>
               <div>
                 <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">{continuationCurrencyEventsLabel}</h4>
-                <p className={resourceSectionPanelHintClass}>These events prefill continuation and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
+                <p className={resourceSectionPanelHintClass}>These events prefill {continuationCurrencyShortLabel} and currency requests with crew, aircraft CONFIG and currency for {displayCrewCompositionAircraftCode || 'the selected aircraft'}.</p>
               </div>
               <div className="flex flex-wrap justify-end gap-[1px]">
                 <button type="button" onClick={addCurrencyProfile} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
