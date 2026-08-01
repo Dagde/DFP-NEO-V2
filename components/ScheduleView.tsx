@@ -14,7 +14,7 @@ import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import { getCrewPositionLabelMap, normaliseCrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { normalisePersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import { normalisePersonnelDisplaySettings, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import { normaliseStaffQualificationCatalogue } from '../utils/staffQualifications';
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
 import {
@@ -115,6 +115,7 @@ interface ScheduleViewProps {
   platformConfig?: any;
   onUpdatePlatformConfig?: (updater: (current: any) => any) => void;
   onNavigateToSettingsSection?: (request: { sectionId: string; unitCode?: string; locationCode?: string; resourcePoolCode?: string; aircraftTypeCode?: string; focusSubsectionId?: string }) => void;
+  personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
   isSetupTestMode?: boolean;
   onSaveSetupTestPersonnel?: (payload: { instructors: any[]; trainees: any[] }) => void;
   isNeoAssistPanelOpen?: boolean;
@@ -7193,6 +7194,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     platformConfig,
     onUpdatePlatformConfig,
     onNavigateToSettingsSection,
+    personnelDisplaySettings: personnelDisplaySettingsInput,
     isSetupTestMode = false,
     onSaveSetupTestPersonnel,
     isNeoAssistPanelOpen = false,
@@ -7204,6 +7206,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     buildRuleSettings,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
+    const schedulePersonnelDisplaySettings = useMemo(
+        () => normalisePersonnelDisplaySettings(personnelDisplaySettingsInput || null),
+        [personnelDisplaySettingsInput]
+    );
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showResourceUnderlayPanel, setShowResourceUnderlayPanel] = useState(false);
@@ -8517,7 +8523,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         isDiagnosticHighlighted={diagnosticHighlightedEventIds.has(event.id)}
                         alertStatus={alertStatus}
                         aircraftNumberSettings={aircraftNumberSettings}
-                        instructorLabel={personnelDisplaySettings.instructorLabel || 'Instructor'}
+                        instructorLabel={schedulePersonnelDisplaySettings.instructorLabel || 'Instructor'}
                     />
                 );
             });
@@ -8979,7 +8985,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 seatConfigs={new Map()}
                                 currentTime={currentTime}
                                 aircraftNumberSettings={aircraftNumberSettings}
-                                instructorLabel={personnelDisplaySettings.instructorLabel || 'Instructor'}
+                                instructorLabel={schedulePersonnelDisplaySettings.instructorLabel || 'Instructor'}
                             />
                             <div
                                 className="absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50"

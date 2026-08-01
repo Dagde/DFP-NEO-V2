@@ -41868,6 +41868,7 @@ appliedUpdates.forEach(update => {
                            platformConfig={platformConfig}
                            onUpdatePlatformConfig={handleUpdatePlatformConfigFromSchedule}
                            onNavigateToSettingsSection={handleNavigateToSettingsSection}
+                           personnelDisplaySettings={personnelDisplaySettings}
                            isSetupTestMode={Boolean(setupTestProfile)}
                            onSaveSetupTestPersonnel={handleSaveSetupTestPersonnel}
                            isNeoAssistPanelOpen={showDfpSidePanel}
