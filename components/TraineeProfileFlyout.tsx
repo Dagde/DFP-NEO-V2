@@ -1065,18 +1065,18 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         });
         const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
             unitCode: unit || trainee.unit,
-            operationalModel: 'flight_school',
+            operationalModel,
         }, 'Assign');
         return allowed.sort();
-    }, [platformConfig, syllabusDetails, trainee.unit, unit]);
+    }, [operationalModel, platformConfig, syllabusDetails, trainee.unit, unit]);
 
     const academicLmpCourses = useMemo(() => {
         const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
             unitCode: unit || trainee.unit,
-            operationalModel: 'flight_school',
+            operationalModel,
         }, 'Assign');
         return allowed.sort();
-    }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
+    }, [allAcademicLmpCourses, operationalModel, platformConfig, trainee.unit, unit]);
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);

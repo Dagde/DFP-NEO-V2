@@ -43074,6 +43074,7 @@ appliedUpdates.forEach(update => {
                     units={units}
                     activeLocationCode={school}
                     activeUnitCode={activeUnitCode}
+                    operationalModel={activeOperationalModel}
                     platformConfig={platformConfig}
                     serviceDefinitions={serviceDefinitions}
                     resourceDisplayNames={resourceDisplayNames}

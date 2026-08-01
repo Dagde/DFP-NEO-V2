@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SyllabusItemDetail } from '../types';
 import {
     filterMasterLmpCodesForAccess,
+    type OperationalModelCode,
     type PlatformConfig,
 } from '../utils/platformConfigService';
 import { showDarkAlert } from './DarkMessageModal';
@@ -34,6 +35,7 @@ interface EditCourseFlyoutProps {
     units: string[];
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
+    operationalModel?: OperationalModelCode | string;
     onClose: () => void;
     onSave: (data: {
         startDate: string;
@@ -57,6 +59,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     units = [],
     syllabusDetails = [],
     platformConfig = null,
+    operationalModel = 'flight_school',
     onClose,
     onSave,
 }) => {
@@ -91,10 +94,10 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
         });
         const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
             unitCode: unit,
-            operationalModel: 'flight_school',
+            operationalModel,
         }, 'Assign');
         return uniqueSortedValues([academicLmpType, ...allowed]);
-    }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+    }, [academicLmpType, operationalModel, platformConfig, syllabusDetails, unit]);
 
     const assignableMasterLmps = useMemo(() => {
         const courseCodes = new Set<string>();
@@ -108,10 +111,10 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
         });
         const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
             unitCode: unit,
-            operationalModel: 'flight_school',
+            operationalModel,
         }, 'Assign');
         return uniqueSortedValues([lmpType, initialLmpType, ...allowed]);
-    }, [activeMasterLmpCatalogue, initialLmpType, lmpType, platformConfig, syllabusDetails, unit]);
+    }, [activeMasterLmpCatalogue, initialLmpType, lmpType, operationalModel, platformConfig, syllabusDetails, unit]);
 
     // Sync if props change
     useEffect(() => {

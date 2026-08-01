@@ -4,7 +4,7 @@ import { Course, SyllabusItemDetail } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
-import type { PlatformConfig } from '../utils/platformConfigService';
+import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 
 interface CoursesManagementViewProps {
     courses: Course[];
@@ -20,6 +20,7 @@ interface CoursesManagementViewProps {
     units?: string[];
     activeLocationCode?: string;
     activeUnitCode?: string;
+    operationalModel?: OperationalModelCode | string;
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
@@ -50,6 +51,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     units = [],
     activeLocationCode = '',
     activeUnitCode = '',
+    operationalModel = 'flight_school',
     syllabusDetails = [],
     platformConfig = null,
     serviceDefinitions = [],
@@ -320,6 +322,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     units={units}
                     syllabusDetails={syllabusDetails}
                     platformConfig={platformConfig}
+                    operationalModel={operationalModel}
                     onClose={() => {
                         setShowEditFlyout(false);
                         setCourseToEdit(null);

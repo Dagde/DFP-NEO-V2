@@ -24054,17 +24054,17 @@ const TraineeProfileFlyout = ({
     });
     const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
       unitCode: unit || trainee.unit,
-      operationalModel: "flight_school"
+      operationalModel
     }, "Assign");
     return allowed.sort();
-  }, [platformConfig, syllabusDetails, trainee.unit, unit]);
+  }, [operationalModel, platformConfig, syllabusDetails, trainee.unit, unit]);
   const academicLmpCourses = reactExports.useMemo(() => {
     const allowed = filterMasterLmpCodesForAccess(platformConfig, allAcademicLmpCourses, {
       unitCode: unit || trainee.unit,
-      operationalModel: "flight_school"
+      operationalModel
     }, "Assign");
     return allowed.sort();
-  }, [allAcademicLmpCourses, platformConfig, trainee.unit, unit]);
+  }, [allAcademicLmpCourses, operationalModel, platformConfig, trainee.unit, unit]);
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
@@ -80526,6 +80526,7 @@ const EditCourseFlyout = ({
   units = [],
   syllabusDetails = [],
   platformConfig = null,
+  operationalModel = "flight_school",
   onClose,
   onSave
 }) => {
@@ -80551,10 +80552,10 @@ const EditCourseFlyout = ({
     });
     const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
       unitCode: unit,
-      operationalModel: "flight_school"
+      operationalModel
     }, "Assign");
     return uniqueSortedValues([academicLmpType, ...allowed]);
-  }, [academicLmpType, platformConfig, syllabusDetails, unit]);
+  }, [academicLmpType, operationalModel, platformConfig, syllabusDetails, unit]);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     activeMasterLmpCatalogue.forEach((entry) => {
@@ -80567,10 +80568,10 @@ const EditCourseFlyout = ({
     });
     const allowed = filterMasterLmpCodesForAccess(platformConfig, Array.from(courseCodes), {
       unitCode: unit,
-      operationalModel: "flight_school"
+      operationalModel
     }, "Assign");
     return uniqueSortedValues([lmpType, initialLmpType, ...allowed]);
-  }, [activeMasterLmpCatalogue, initialLmpType, lmpType, platformConfig, syllabusDetails, unit]);
+  }, [activeMasterLmpCatalogue, initialLmpType, lmpType, operationalModel, platformConfig, syllabusDetails, unit]);
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
@@ -80801,6 +80802,7 @@ const CoursesManagementView = ({
   units = [],
   activeLocationCode = "",
   activeUnitCode = "",
+  operationalModel = "flight_school",
   syllabusDetails = [],
   platformConfig = null,
   serviceDefinitions = []
@@ -81056,6 +81058,7 @@ const CoursesManagementView = ({
         units,
         syllabusDetails,
         platformConfig,
+        operationalModel,
         onClose: () => {
           setShowEditFlyout(false);
           setCourseToEdit(null);
@@ -82895,6 +82898,7 @@ const TrainingRecordsView = ({
   units = [],
   activeLocationCode = "",
   activeUnitCode = "",
+  operationalModel = "flight_school",
   platformConfig = null,
   serviceDefinitions = [],
   resourceDisplayNames,
@@ -82949,6 +82953,7 @@ const TrainingRecordsView = ({
           units,
           activeLocationCode,
           activeUnitCode,
+          operationalModel,
           syllabusDetails,
           platformConfig,
           serviceDefinitions
@@ -120824,6 +120829,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             units,
             activeLocationCode: school,
             activeUnitCode,
+            operationalModel: activeOperationalModel,
             platformConfig,
             serviceDefinitions,
             resourceDisplayNames,

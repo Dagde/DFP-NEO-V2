@@ -5,7 +5,7 @@ import TrainingRecordsExportView from './TrainingRecordsExportView';
 import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment, PhraseBank } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
-import type { PlatformConfig } from '../utils/platformConfigService';
+import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 import type { TrainingReportTemplate } from '../utils/trainingReportTerminology';
 
 interface TrainingRecordsViewProps {
@@ -32,6 +32,7 @@ interface TrainingRecordsViewProps {
     units?: string[];
     activeLocationCode?: string;
     activeUnitCode?: string;
+    operationalModel?: OperationalModelCode | string;
     platformConfig?: PlatformConfig | null;
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
     resourceDisplayNames?: ResourceDisplayNames;
@@ -67,6 +68,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     units = [],
     activeLocationCode = '',
     activeUnitCode = '',
+    operationalModel = 'flight_school',
     platformConfig = null,
     serviceDefinitions = [],
     resourceDisplayNames,
@@ -131,6 +133,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         units={units}
                         activeLocationCode={activeLocationCode}
                         activeUnitCode={activeUnitCode}
+                        operationalModel={operationalModel}
                         syllabusDetails={syllabusDetails}
                         platformConfig={platformConfig}
                         serviceDefinitions={serviceDefinitions}
