@@ -318,7 +318,7 @@ const TafWeatherWidget: React.FC<TafWeatherWidgetProps> = ({ onClose, defaultLoc
                 <div className="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4">
                     <p className="text-sm font-semibold text-amber-300">External weather disabled</p>
                     <p className="mt-1 text-xs text-amber-200/80">
-                        TAF requests to AVWX are blocked by Settings - Data Sources.
+                        TAF requests to AVWX are blocked by Settings → Records & Data → Data Sources.
                     </p>
                 </div>
             ) : isEditing ? (

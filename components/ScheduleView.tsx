@@ -3689,7 +3689,7 @@ const InitialSetupWizard: React.FC<{
             label: 'Build rules',
             mandatory: false,
             complete: true,
-            summary: 'Default build rules can be used now and refined later.',
+            summary: 'Configured build rules can be refined later.',
             settingsSection: 'business-rules',
         },
     ];

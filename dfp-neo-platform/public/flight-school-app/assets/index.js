@@ -12808,7 +12808,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       label: "Build rules",
       mandatory: false,
       complete: true,
-      summary: "Default build rules can be used now and refined later.",
+      summary: "Configured build rules can be refined later.",
       settingsSection: "business-rules"
     }
   ];
@@ -35612,7 +35612,7 @@ const TafWeatherWidget = ({ onClose, defaultLocationCodes = [] }) => {
     ] }),
     !externalDataAllowed && !isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-700/50 bg-amber-900/20 p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External weather disabled" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings - Data Sources." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-amber-200/80", children: "TAF requests to AVWX are blocked by Settings → Records & Data → Data Sources." })
     ] }) : isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Enter ICAO codes." }),
       editLocations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
@@ -36781,10 +36781,10 @@ const FlightTrackingWidget = ({ school, locationName, locationProfile }) => {
         }
       ) : !trackingAllowed ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "External flight tracking disabled" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Public ADS-B map embeds are blocked by Settings - Data Sources." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Public ADS-B map embeds are blocked by Settings → Records & Data → Data Sources." })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col items-center justify-center p-6 text-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-300", children: "Location coordinates required" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Add latitude and longitude in Settings - Platform & Deployment - Locations." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-amber-200/75", children: "Add latitude and longitude in Settings → Platform & Deployment → Organisation, Bases & Areas." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -93567,7 +93567,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     if (!picQualification) {
       diag.summary = { placementCount: 0, rejectionReasons: diag.rejectionReasons };
-      diag.conclusion = ["Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings - Personnel Qualifications."];
+      diag.conclusion = ["Fixed Crew NEO Build cannot run because no PIC qualification is configured in Settings → Platform & Deployment → Rank, Terminology & Labels → Personnel Qualifications."];
       saveNeoBuildDiag("final");
       return generatedEvents;
     }
