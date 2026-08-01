@@ -1011,7 +1011,7 @@ const formatWizardBuildRulesDraft = (draft: {
     minGapBetweenEventsMinutes: string;
 }) => (
     [
-        `Business rules: ${draft.businessRules || 'Use default'}`,
+        `Business rules: ${draft.businessRules || 'Use configured rule set'}`,
         `Maximum crew duty: ${draft.maxCrewDutyHours || '12'} hours`,
         `Preferred duty period: ${draft.preferredDutyHours || '10'} hours`,
         `Aircraft turnaround: ${draft.aircraftTurnaroundMinutes || '60'} minutes`,
@@ -2189,13 +2189,13 @@ const OrganisationMyUnitSettings: React.FC<{
                                 {taskTileLabelProfiles.map((profile) => (
                                     <div key={profile} className="grid gap-2 border-t border-white/10 px-4 py-3 first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)] md:items-center">
                                         <div className="min-w-0 text-sm font-semibold text-slate-100">{profile}</div>
-                                        <div className={`text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? 'text-slate-100' : 'text-slate-500'}`}>{taskAbbreviations[profile] || 'Uses default tile label'}</div>
+                                        <div className={`text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? 'text-slate-100' : 'text-slate-500'}`}>{taskAbbreviations[profile] || 'Uses full directed task name'}</div>
                                     </div>
                                 ))}
                             </div>
                         ) : <UnitSettingsReadRow label="Directed task tile labels" value="No directed task names are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Directed Task Setups" description="Full reusable directed tasks with aircraft, crew, timing and callsign defaults for this unit." action={settingsLink('standard-missions', 'Open Directed Task Setups', { focusSubsectionId: 'platform-standard-mission-records' })}>
+                    <UnitSettingsGroup title="Directed Task Setups" description="Full reusable directed tasks with aircraft, crew, timing and callsign settings for this unit." action={settingsLink('standard-missions', 'Open Directed Task Setups', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
@@ -2205,7 +2205,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Directed Task Setups" value="No full directed task setups are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title={configuredContinuationCurrencyEventsLabel} description="Request and build event defaults are configured under Training & Standards." action={settingsLink('sct-events', `Open ${configuredContinuationCurrencyEventsLabel}`)}>
+                    <UnitSettingsGroup title={configuredContinuationCurrencyEventsLabel} description="Request and build event settings are configured under Training & Standards." action={settingsLink('sct-events', `Open ${configuredContinuationCurrencyEventsLabel}`)}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />
                         <UnitSettingsReadRow label="Events" value={`${configuredContinuationShortLabel} and currency event rows are edited in one place.`} />
                     </UnitSettingsGroup>
@@ -3849,7 +3849,7 @@ const InitialSetupWizard: React.FC<{
             id: 'training-records',
             title: 'Set up training records',
             label: 'Records',
-            body: 'Choose the training record defaults for this unit. Detailed report design can still be refined later.',
+            body: 'Choose the training record names and grading labels for this unit. Detailed report design can still be refined later.',
             checkIds: ['training'],
         },
         {
@@ -3898,7 +3898,7 @@ const InitialSetupWizard: React.FC<{
             id: 'staff-currency-events',
             title: `Set ${configuredContinuationShortLabel} and currency events`,
             label: `${configuredContinuationShortLabel}/currency events`,
-            body: `Add common ${configuredContinuationShortLabel} and currency event defaults now, or leave them for later if the unit is not ready.`,
+            body: `Add common ${configuredContinuationShortLabel} and currency event settings now, or leave them for later if the unit is not ready.`,
             checkIds: ['training'],
         },
         {
@@ -6635,7 +6635,7 @@ const InitialSetupWizard: React.FC<{
                     <div className="rounded-lg border border-slate-300 bg-white p-3">
                         <p className={wizardLabelClass}>Business rules</p>
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {wizardField('Rule set', buildRulesDraft.businessRules, (value) => setBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use default')}
+                            {wizardField('Rule set', buildRulesDraft.businessRules, (value) => setBuildRulesDraft((draft) => ({ ...draft, businessRules: value })), undefined, 'Use configured rule set')}
                             {wizardField('Max dispatch per hour', buildRulesDraft.maxDispatchPerHour, (value) => setBuildRulesDraft((draft) => ({ ...draft, maxDispatchPerHour: value })), undefined, '2')}
                         </div>
                     </div>
@@ -6778,7 +6778,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'training-records') {
             return promptShell(
-                <p>Set the training report defaults for this unit. These choices control what the report is called and how pass/fail grading appears to users.</p>,
+                <p>Set the training report names and grading labels for this unit. These choices control what the report is called and how pass/fail grading appears to users.</p>,
                 renderTrainingRecordsEditor(),
             );
         }
@@ -6802,7 +6802,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'currencies') {
             return promptShell(
-                <p>Create the {configuredContinuationCurrencyEventsLabel} records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately.</p>,
+                <p>Create the {configuredContinuationCurrencyEventsLabel} records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful request and build settings immediately.</p>,
                 renderCurrencyEditor(),
             );
         }
@@ -6826,7 +6826,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff-currency-events') {
             return promptShell(
-                <p>Set up common {configuredContinuationShortLabel} and currency event defaults for this unit. These become reusable starting points for staff checks and currency events.</p>,
+                <p>Set up common {configuredContinuationShortLabel} and currency event settings for this unit. These become reusable starting points for staff checks and currency events.</p>,
                 renderStandardCurrencyEventsEditor(),
             );
         }

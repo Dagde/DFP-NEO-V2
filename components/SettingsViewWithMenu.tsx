@@ -470,7 +470,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'scoring-matrix': 'Configure report elements, grades and performance text',
   'training-report-template': 'Configure report labels, grades and repeat rules',
   'currencies': 'Manage currency expiry requirements',
-  'sct-events': 'Configure continuation and currency event defaults',
+  'sct-events': 'Configure continuation and currency event settings',
   'people-profile': 'Select courses that NEO Build should leave out of schedule generation',
   'scheduling-rules': 'Event limits, duty rules, turnarounds and dispatch limits',
   'event-limits': 'Set daily event limits and duty supervisor session limits',
@@ -484,8 +484,8 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles, crew seats and alternate crew setups',
-  'standard-missions': 'Full reusable directed tasks with aircraft, crew, timing and callsign defaults',
-  'currency-profiles': 'Configure continuation and currency event defaults',
+  'standard-missions': 'Full reusable directed tasks with aircraft, crew, timing and callsign settings',
+  'currency-profiles': 'Configure continuation and currency event settings',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
   'platform-units': 'Unit type, base ownership and operating status',
@@ -799,7 +799,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     );
     const getSectionDescription = (section: SettingsMenuSection): string => (
         isContinuationCurrencySection(section)
-            ? `Configure ${sctTerminology.shortLabel} and currency event defaults`
+            ? `Configure ${sctTerminology.shortLabel} and currency event settings`
             : sectionDescriptions[section]
     );
 

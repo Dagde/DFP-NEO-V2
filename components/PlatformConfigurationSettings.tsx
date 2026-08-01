@@ -6885,7 +6885,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the short directed task names available for each operational model. This section is for names only. If the task needs default aircraft, crew, timing or callsign details, use Settings → Platform & Deployment → Directed Task Setups.
+            Set the short directed task names available for each operational model. This section is for names only. If the task needs aircraft, crew, timing or callsign details, use Settings → Platform & Deployment → Directed Task Setups.
             Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -7153,7 +7153,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
           title="Directed Task Setups"
-          subtitle="Full reusable directed tasks with default aircraft, crew, timing, callsign and formation settings."
+          subtitle="Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
@@ -7164,14 +7164,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Directed Task Setups are available when the selected unit model supports recurring directed tasks with full default aircraft, crew, timing, callsign and formation settings.
+              Directed Task Setups are available when the selected unit model supports recurring directed tasks with full aircraft, crew, timing, callsign and formation settings.
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New Directed Task Setups default to the unit home location and unit default callsign. Use these when a recurring task needs aircraft, crew, timing or callsign defaults, not just a name in the Directed Task box.
+                  New Directed Task Setups start with the unit home location and unit callsign. Use these when a recurring task needs aircraft, crew, timing or callsign details, not just a name in the Directed Task box.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
@@ -7669,7 +7669,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
-          subtitle="Continuation and currency event defaults. Each event stores crew, CONFIG and currency against the selected aircraft."
+          subtitle="Continuation and currency event settings. Each event stores crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
             <button
               type="button"
