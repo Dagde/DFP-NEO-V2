@@ -11498,7 +11498,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Tasking tile labels", value: "No tasking names are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed task tile labels", value: "No directed-task names are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Flight Templates", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
@@ -38424,7 +38424,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Tasking name",
+        placeholder: "Directed task",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -38441,13 +38441,13 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " tasking name"
+            " directed task"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching tasking name" : "No tasking names configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching directed task" : "No directed-task names configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved directed-task names yet. Add them in Settings > Platform & Deployment > Directed Task Lists, or type manually.` })
     ] }) })
   ] });
@@ -38529,7 +38529,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Tasking Name", hint: request.tasking || "Select or type tasking name", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Directed Task", hint: request.tasking || "Select or type directed task", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -71165,7 +71165,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model tasking names." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model directed-task names." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
@@ -71176,11 +71176,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               TextAreaField,
               {
-                label: "Tasking Names",
+                label: "Directed Task Names",
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One tasking name per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One directed-task name per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
@@ -88662,15 +88662,15 @@ const DfpSidePanelTimeline = ({
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Tasking Name",
+            "Directed Task",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select tasking name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select directed task" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual tasking name",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type tasking name manually" })
+            "Manual directed task",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type directed task manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",

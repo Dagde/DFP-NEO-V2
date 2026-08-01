@@ -6890,7 +6890,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model tasking names.'
+                          ? 'Use this for Fighter / Strike model directed-task names.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
@@ -6899,11 +6899,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </span>
                   </div>
                   <TextAreaField
-                    label="Tasking Names"
+                    label="Directed Task Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One tasking name per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One directed-task name per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );

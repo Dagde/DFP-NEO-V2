@@ -617,7 +617,7 @@ const TaskingProfileInput: React.FC<{
           onChange(event.target.value);
           setIsOpen(true);
         }}
-        placeholder="Tasking name"
+        placeholder="Directed task"
         className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       />
       {showSuggestions && (
@@ -635,14 +635,14 @@ const TaskingProfileInput: React.FC<{
               >
                 <span className="block text-xs font-bold text-cyan-100">{profile}</span>
                 <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
-                  {operationalModelLabel} tasking name
+                  {operationalModelLabel} directed task
                 </span>
               </button>
             ))
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching tasking name' : 'No tasking names configured'}
+                {configuredProfileCount > 0 ? 'No matching directed task' : 'No directed-task names configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
@@ -769,7 +769,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
             <div className="min-h-0 overflow-hidden">
               <div className="p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]">
-            <TaskingFieldPanel label="Tasking Name" hint={request.tasking || 'Select or type tasking name'}>
+            <TaskingFieldPanel label="Directed Task" hint={request.tasking || 'Select or type directed task'}>
               <TaskingProfileInput
                 value={request.tasking}
                 taskProfiles={taskProfiles}
