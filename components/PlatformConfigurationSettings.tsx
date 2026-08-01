@@ -6854,7 +6854,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Directed Task Lists"
-          subtitle="Short task names used when assigning directed tasks. Full aircraft, crew, timing and callsign setups are managed in Mission / Flight Templates when the selected model supports them."
+          subtitle="Short task names used when assigning directed tasks. This section does not create full flight templates."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
