@@ -2573,19 +2573,25 @@ const InitialSetupWizard: React.FC<{
     const activeLocations = (platformConfig?.locations || []).filter((location: any) => (
         String(location?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
     ));
-    const wizardLocationProfiles = Array.from(new Map([
-        ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile),
+    const configuredWizardLocationProfiles = Array.from(new Map([
         ...activeLocations.map(normaliseWizardLocationProfile),
     ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
         normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
         profile,
     ])).values());
-    const wizardLocationIcaoOptions = wizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
-    const wizardLocationIataOptions = wizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
-    const wizardLocationNameOptions = wizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
+    const fallbackWizardLocationProfiles = Array.from(new Map([
+        ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile),
+    ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
+        normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
+        profile,
+    ])).values());
+    const wizardLocationLookupProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles];
+    const wizardLocationIcaoOptions = configuredWizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
+    const wizardLocationIataOptions = configuredWizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
+    const wizardLocationNameOptions = configuredWizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
     const findWizardLocationProfile = (value: string) => {
         const key = normaliseUnitSettingsIdentifier(value);
-        return wizardLocationProfiles.find((profile) => (
+        return wizardLocationLookupProfiles.find((profile) => (
             normaliseUnitSettingsIdentifier(profile.icao) === key
             || normaliseUnitSettingsIdentifier(profile.iata) === key
             || normaliseUnitSettingsIdentifier(profile.name) === key
@@ -3876,9 +3882,9 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'staff-currency-events',
-            title: 'Set standard staff currency events',
-            label: 'Staff events',
-            body: 'Add common staff currency events now, or leave them for later if the unit is not ready.',
+            title: 'Set continuation and currency events',
+            label: 'Continuation/currency events',
+            body: 'Add common continuation and currency event templates now, or leave them for later if the unit is not ready.',
             checkIds: ['training'],
         },
         {
@@ -4938,7 +4944,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    Standard staff currency events are reusable event templates. They save time later by pre-filling duration, resource type, crew, currency and aircraft configuration for common staff currency checks.
+                    Continuation and currency events are reusable templates for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`standard-currency-event-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">

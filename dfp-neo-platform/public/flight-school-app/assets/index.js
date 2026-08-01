@@ -11825,19 +11825,25 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   ].some((value) => normaliseUnitSettingsIdentifier(value) === currentUnitLocationKey)) || (platformConfig2?.locations || [])[0];
   const organisationStructureLevels = Array.isArray(activeOrganisation?.settings?.organisationStructure?.levels) ? activeOrganisation.settings.organisationStructure.levels : [];
   const activeLocations = (platformConfig2?.locations || []).filter((location) => String(location?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
-  const wizardLocationProfiles = Array.from(new Map([
-    ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile),
+  const configuredWizardLocationProfiles = Array.from(new Map([
     ...activeLocations.map(normaliseWizardLocationProfile)
   ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
     normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
     profile
   ])).values());
-  const wizardLocationIcaoOptions = wizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
-  const wizardLocationIataOptions = wizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
-  const wizardLocationNameOptions = wizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
+  const fallbackWizardLocationProfiles = Array.from(new Map([
+    ...Object.values(DEFAULT_AIRFIELD_SOLAR_PROFILES || {}).map(normaliseWizardLocationProfile)
+  ].filter((profile) => profile.icao || profile.iata || profile.name).map((profile) => [
+    normaliseUnitSettingsIdentifier(profile.icao || profile.iata || profile.name),
+    profile
+  ])).values());
+  const wizardLocationLookupProfiles = [...configuredWizardLocationProfiles, ...fallbackWizardLocationProfiles];
+  const wizardLocationIcaoOptions = configuredWizardLocationProfiles.map((profile) => profile.icao).filter(Boolean);
+  const wizardLocationIataOptions = configuredWizardLocationProfiles.map((profile) => profile.iata).filter(Boolean);
+  const wizardLocationNameOptions = configuredWizardLocationProfiles.map((profile) => profile.name).filter(Boolean);
   const findWizardLocationProfile = (value) => {
     const key = normaliseUnitSettingsIdentifier(value);
-    return wizardLocationProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.icao) === key || normaliseUnitSettingsIdentifier(profile.iata) === key || normaliseUnitSettingsIdentifier(profile.name) === key);
+    return wizardLocationLookupProfiles.find((profile) => normaliseUnitSettingsIdentifier(profile.icao) === key || normaliseUnitSettingsIdentifier(profile.iata) === key || normaliseUnitSettingsIdentifier(profile.name) === key);
   };
   const activeWizardLocationProfile = findWizardLocationProfile(activeWizardLocationCode);
   const activeWizardLocationRow = {
@@ -12973,9 +12979,9 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     },
     {
       id: "staff-currency-events",
-      title: "Set standard staff currency events",
-      label: "Staff events",
-      body: "Add common staff currency events now, or leave them for later if the unit is not ready.",
+      title: "Set continuation and currency events",
+      label: "Continuation/currency events",
+      body: "Add common continuation and currency event templates now, or leave them for later if the unit is not ready.",
       checkIds: ["training"]
     },
     {
@@ -13872,7 +13878,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Standard staff currency events are reusable event templates. They save time later by pre-filling duration, resource type, crew, currency and aircraft configuration for common staff currency checks." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Continuation and currency events are reusable templates for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),
@@ -66805,7 +66811,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const matchingPools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode || !toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode);
     if (matchingPools.length === 0) {
-      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource counts may use fallback row counts until a matching pool is configured.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
+      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource rows and scheduling resources need a configured pool for this unit or location.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-resource-pools" });
     }
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
@@ -66862,7 +66868,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit records need per-unit copies",
       `${missingCompositeClones} unit-scoped flight template, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Flight Templates, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.",
+      "Open Flight Templates, alternate crew, and continuation/currency events for the affected unit context, then press Edit and Save so each unit receives its own configured records.",
       { section: "platform-standard-missions", label: "Flight Templates", focusSubsectionId: "platform-standard-missions" }
     );
   } else {

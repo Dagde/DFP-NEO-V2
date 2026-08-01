@@ -1532,7 +1532,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource counts may use fallback row counts until a matching pool is configured.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource rows and scheduling resources need a configured pool for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1601,7 +1601,7 @@ const buildConfigurationHealth = (
       'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Flight Templates, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.',
+      'Open Flight Templates, alternate crew, and continuation/currency events for the affected unit context, then press Edit and Save so each unit receives its own configured records.',
       { section: 'platform-standard-missions', label: 'Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
