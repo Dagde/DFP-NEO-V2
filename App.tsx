@@ -22051,16 +22051,8 @@ const App: React.FC = () => {
         const configuredSelectableLocations = configuredLocationsWithUnits.length > 0
             ? configuredLocationsWithUnits
             : getLocationCodesForCurrentRuntime(platformConfig, []);
-        if (!setupTestProfile) return configuredSelectableLocations;
-        return Array.from(new Set([
-            ...configuredSelectableLocations,
-            'ESL',
-            'YMES',
-            'PEA',
-            'YPEA',
-            'YAMB',
-        ].map((code) => String(code || '').trim()).filter(Boolean)));
-    }, [getLocationSelectorAliases, platformConfig, setupTestProfile]);
+        return configuredSelectableLocations;
+    }, [getLocationSelectorAliases, platformConfig]);
 
     const getUnitOptionsForLocation = useCallback((locationCode: string) => {
         const normalisedLocationCode = String(locationCode || '').trim().toUpperCase();
@@ -23223,8 +23215,7 @@ const App: React.FC = () => {
             const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
             return sessionNameKeys.includes(staffName) || (staffId && sessionIdKeys.includes(staffId));
         });
-        const defaultDashboardStaff = allInstructorsData.find(staff => normaliseDashboardNotificationName(staff.name) === 'burns, alexander');
-        return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name || currentUserName;
+        return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || currentUserName;
     }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
     useEffect(() => {
         if (!dashboardNotificationUserName || !isAuthenticated) {
@@ -42961,8 +42952,7 @@ appliedUpdates.forEach(update => {
                     const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
                     return sessionDashboardNameKeys.includes(staffName) || (staffId && sessionDashboardIdKeys.includes(staffId));
                 });
-                const defaultDashboardStaff = allInstructorsData.find(staff => normaliseDashboardName(staff.name) === 'burns, alexander');
-                const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name;
+                const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || currentUserName;
                 const dashboardStaff = allInstructorsData.find(staff => (
                     normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName)
                 ));

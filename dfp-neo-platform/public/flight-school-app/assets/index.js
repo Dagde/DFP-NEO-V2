@@ -35270,7 +35270,7 @@ const AddGroundEventFlyout = ({
                     events: events || [],
                     date: date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
                     courseColors: courseColors || activeCourses,
-                    school: school || "ESL",
+                    school: school || "",
                     locationAbbreviations,
                     defaultLocality: currentLocationName || "",
                     courseAcademicProgress,
@@ -103377,16 +103377,8 @@ const App = () => {
       return activeLocations.some((location) => getLocationSelectorAliases(location).includes(normalisedUnitLocation));
     });
     const configuredSelectableLocations = configuredLocationsWithUnits.length > 0 ? configuredLocationsWithUnits : getLocationCodesForCurrentRuntime(platformConfig, []);
-    if (!setupTestProfile) return configuredSelectableLocations;
-    return Array.from(new Set([
-      ...configuredSelectableLocations,
-      "ESL",
-      "YMES",
-      "PEA",
-      "YPEA",
-      "YAMB"
-    ].map((code) => String(code || "").trim()).filter(Boolean)));
-  }, [getLocationSelectorAliases, platformConfig, setupTestProfile]);
+    return configuredSelectableLocations;
+  }, [getLocationSelectorAliases, platformConfig]);
   const getUnitOptionsForLocation = reactExports.useCallback((locationCode) => {
     const normalisedLocationCode = String(locationCode || "").trim().toUpperCase();
     const activeLocation = (platformConfig?.locations || []).filter((location) => location.status !== "INACTIVE").find((location) => getLocationSelectorAliases(location).includes(normalisedLocationCode));
@@ -104309,8 +104301,7 @@ const App = () => {
       const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
       return sessionNameKeys.includes(staffName) || staffId && sessionIdKeys.includes(staffId);
     });
-    const defaultDashboardStaff = allInstructorsData.find((staff) => normaliseDashboardNotificationName(staff.name) === "burns, alexander");
-    return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name || currentUserName;
+    return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || currentUserName;
   }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
   reactExports.useEffect(() => {
     if (!dashboardNotificationUserName || !isAuthenticated) {
@@ -120581,8 +120572,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
           return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
         });
-        const defaultDashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === "burns, alexander");
-        const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || defaultDashboardStaff?.name;
+        const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || currentUserName;
         const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(

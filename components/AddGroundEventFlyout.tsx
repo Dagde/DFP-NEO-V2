@@ -26,7 +26,7 @@ interface AddGroundEventFlyoutProps {
   events?: ScheduleEvent[];
   date?: string;
   courseColors?: { [key: string]: string };
-  school?: 'ESL' | 'PEA';
+  school?: string;
   currentLocationName?: string;
   locationAbbreviations?: Record<string, string>; // long name -> short code
   courseAcademicProgress?: Map<string, Set<string>>;
@@ -446,7 +446,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 events={events || []}
                                 date={date || new Date().toISOString().split('T')[0]}
                                 courseColors={courseColors || activeCourses}
-                                school={school || 'ESL'}
+                                school={school || ''}
                                 locationAbbreviations={locationAbbreviations}
                                 defaultLocality={currentLocationName || ''}
                                 courseAcademicProgress={courseAcademicProgress}
