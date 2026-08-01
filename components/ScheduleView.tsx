@@ -2748,10 +2748,10 @@ const InitialSetupWizard: React.FC<{
     const organisationDraftDirtyRef = useRef(shouldUseStoredOrganisationDraft);
     const buildHydratedOrganisationDraft = () => ({
         code: String(activeOrganisation?.code || 'ORG'),
-        name: String(activeOrganisation?.name || activeOrganisation?.code || 'Your Organisation'),
+        name: String(activeOrganisation?.name || activeOrganisation?.code || 'Organisation'),
         organisationLevelCount: getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3),
         level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || 'Organisation'),
-        level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'Your Organisation']),
+        level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'Organisation']),
         level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
         level1Options: toLines(levelDraftSource(1)?.options || []),
         level1Parents: parentLinesForLevel(1, ''),
@@ -2851,7 +2851,7 @@ const InitialSetupWizard: React.FC<{
     ).length));
     const [unitDraft, setUnitDraft] = useState({
         code: String(currentUnit?.code || unitCode || 'UNIT-A'),
-        name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit A'),
+        name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
         unitType: String(currentUnit?.unitType || ''),
         operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
@@ -3224,7 +3224,7 @@ const InitialSetupWizard: React.FC<{
     useEffect(() => {
         setUnitDraft({
             code: String(currentUnit?.code || unitCode || 'UNIT-A'),
-            name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit A'),
+            name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
             locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             unitType: String(currentUnit?.unitType || ''),
             operationalModel: String(getUnitOperationalModel(currentUnit || {}) || 'pooled-crew'),
@@ -3295,7 +3295,7 @@ const InitialSetupWizard: React.FC<{
         const fallbackOrganisation = {
             id: createWizardRecordId('organisation'),
             code: organisationDraft.code || 'ORG',
-            name: organisationDraft.name || organisationDraft.code || 'Your Organisation',
+            name: organisationDraft.name || organisationDraft.code || 'Organisation',
             status: 'ACTIVE',
             settings: {},
         };
@@ -4723,7 +4723,7 @@ const InitialSetupWizard: React.FC<{
                             {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'Learner Level')}
                             {wizardField('Personnel ID', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '7654321')}
                             {wizardField('Course number', row.courseNumber || '', (value) => updateTraineeRow(index, 'courseNumber', value), undefined, '1')}
-                            {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Training Stream A', `trainee-master-lmp-${index}`)}
+                            {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Primary LMP', `trainee-master-lmp-${index}`)}
                             {wizardField('Start date', row.startDate || '', (value) => updateTraineeRow(index, 'startDate', value), undefined, '2026-01-15')}
                         </div>
                     </div>
@@ -6343,7 +6343,7 @@ const InitialSetupWizard: React.FC<{
                         code: draft.code || value,
                         level0Name: value || draft.level0Name,
                         level0Options: value || draft.level0Options,
-                    }), 'field-edit:organisation-name'), undefined, 'Your Organisation')}
+                    }), 'field-edit:organisation-name'), undefined, 'Organisation')}
                     {wizardField('Short code', organisationDraft.code, (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, code: value }), 'field-edit:organisation-code'), undefined, 'ORG')}
                     {wizardField(
                         'Organisation levels before units',
@@ -6539,7 +6539,7 @@ const InitialSetupWizard: React.FC<{
                 <p>Now we will set up the first unit using the app. What is the unit code and name?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-A')}
-                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit A')}
+                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
                 </div>,
             );
         }
@@ -6548,7 +6548,7 @@ const InitialSetupWizard: React.FC<{
                 <p>Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-A')}
-                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit A')}
+                    {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
                     {wizardDataListField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'LOC1')}
                     {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}
                     {wizardField(
@@ -6752,9 +6752,9 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Training Stream A', 'master-lmp-code')}
-                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Training Stream A')}
-                    {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial training stream')}
+                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Primary LMP', 'master-lmp-code')}
+                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Primary LMP')}
+                    {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial programme or qualification stream')}
                 </div>,
             );
         }

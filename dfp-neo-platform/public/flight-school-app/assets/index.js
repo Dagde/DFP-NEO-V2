@@ -11976,10 +11976,10 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   const organisationDraftDirtyRef = reactExports.useRef(shouldUseStoredOrganisationDraft);
   const buildHydratedOrganisationDraft = () => ({
     code: String(activeOrganisation?.code || "ORG"),
-    name: String(activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"),
+    name: String(activeOrganisation?.name || activeOrganisation?.code || "Organisation"),
     organisationLevelCount: getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3),
     level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
-    level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Your Organisation"]),
+    level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Organisation"]),
     level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
     level1Options: toLines(levelDraftSource(1)?.options || []),
     level1Parents: parentLinesForLevel(1, ""),
@@ -12069,7 +12069,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
     code: String(currentUnit?.code || unitCode || "UNIT-A"),
-    name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit A"),
+    name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit"),
     locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
     unitType: String(currentUnit?.unitType || ""),
     operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
@@ -12388,7 +12388,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   reactExports.useEffect(() => {
     setUnitDraft({
       code: String(currentUnit?.code || unitCode || "UNIT-A"),
-      name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit A"),
+      name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit"),
       locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
       unitType: String(currentUnit?.unitType || ""),
       operationalModel: String(getUnitOperationalModel(currentUnit || {}) || "pooled-crew"),
@@ -12453,7 +12453,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     const fallbackOrganisation = {
       id: createWizardRecordId("organisation"),
       code: organisationDraft.code || "ORG",
-      name: organisationDraft.name || organisationDraft.code || "Your Organisation",
+      name: organisationDraft.name || organisationDraft.code || "Organisation",
       status: "ACTIVE",
       settings: {}
     };
@@ -13721,7 +13721,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "Learner Level"),
           wizardField("Personnel ID", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "7654321"),
           wizardField("Course number", row.courseNumber || "", (value) => updateTraineeRow(index, "courseNumber", value), void 0, "1"),
-          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "Training Stream A", `trainee-master-lmp-${index}`),
+          wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "Primary LMP", `trainee-master-lmp-${index}`),
           wizardField("Start date", row.startDate || "", (value) => updateTraineeRow(index, "startDate", value), void 0, "2026-01-15")
         ] })
       ] }, `trainee-row-${index}`)) : null,
@@ -15150,7 +15150,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
             code: draft.code || value,
             level0Name: value || draft.level0Name,
             level0Options: value || draft.level0Options
-          }), "field-edit:organisation-name"), void 0, "Your Organisation"),
+          }), "field-edit:organisation-name"), void 0, "Organisation"),
           wizardField("Short code", organisationDraft.code, (value) => updateOrganisationDraft((draft) => ({ ...draft, code: value }), "field-edit:organisation-code"), void 0, "ORG"),
           wizardField(
             "Organisation levels before units",
@@ -15343,7 +15343,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Now we will set up the first unit using the app. What is the unit code and name?" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-A"),
-          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit A")
+          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit")
         ] })
       );
     }
@@ -15352,7 +15352,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-A"),
-          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit A"),
+          wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit"),
           wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "LOC1"),
           wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions),
           wizardField(
@@ -15556,9 +15556,9 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Training Stream A", "master-lmp-code"),
-          wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "Training Stream A"),
-          wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial training stream")
+          wizardDataListField("Master LMP code", trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp) => String(lmp.code || lmp.name || "")).filter(Boolean), "Primary LMP", "master-lmp-code"),
+          wizardField("Master LMP name", trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), void 0, "Primary LMP"),
+          wizardTextArea("Description", trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), "Initial programme or qualification stream")
         ] })
       );
     }
