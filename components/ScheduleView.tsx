@@ -5762,7 +5762,7 @@ const InitialSetupWizard: React.FC<{
                 resourcePools: [{
                     id: createSetupTestRecordId('resource-pool', `${primaryAircraftCode}-${resourceDraft.poolLocationCode || primaryLocationCode}-${resourceDraft.poolUnitCode || cleanUnits[0]?.code || ''}`),
                     code: 'RESOURCE-POOL-1',
-                    name: resourceDraft.poolName || `${primaryAircraftCode} Resource Pool`,
+                    name: resourceDraft.poolName || `${primaryAircraftCode} DFP Resource Row Set`,
                     organisationCode: organisation.code,
                     locationCode: resourceDraft.poolLocationCode || primaryLocationCode,
                     unitCode: resourceDraft.poolUnitCode || cleanUnits[0]?.code || '',
@@ -6579,7 +6579,7 @@ const InitialSetupWizard: React.FC<{
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'AIRCRAFT')}
                     {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Primary Resource')}
-                    {wizardField('Resource pool name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'Primary Resource Pool')}
+                    {wizardField('DFP resource row set name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'Primary DFP Resource Row Set')}
                 </div>,
             );
         }

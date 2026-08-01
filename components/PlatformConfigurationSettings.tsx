@@ -1563,7 +1563,7 @@ const buildConfigurationHealth = (
   }
 
   activeResourcePools.forEach((pool) => {
-    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || 'Resource pool';
+    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || 'DFP resource row set';
     const locationCode = toIdentifier(pool.locationCode);
     const unitCode = toIdentifier(pool.unitCode);
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
@@ -1912,7 +1912,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourcePoolDeleteOptions = useMemo(() => (
     config.resourcePools.map((pool, index) => {
       const key = String(pool.id || pool.code || `resource-pool-${index}`);
-      const name = String(pool.name || '').trim() || 'Unnamed Resource Pool';
+      const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Row Set';
       return { key, name };
     })
   ), [config.resourcePools]);
@@ -4506,7 +4506,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           {
             id: newPoolId,
             code: `POOL-${prev.resourcePools.length + 1}`,
-            name: 'New Resource Pool',
+            name: 'New DFP Resource Row Set',
             organisationCode: prev.organisations[0]?.code || 'DEFAULT',
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
@@ -6047,7 +6047,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ));
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || '').trim() || 'Unnamed Resource Pool';
+    const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Row Set';
     return { key, name };
   });
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled

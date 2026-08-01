@@ -1721,10 +1721,10 @@ const PLATFORM_FIELD_LABELS = {
     locationCode: 'Location',
     unitCode: 'Unit',
     aircraftTypeCode: 'Aircraft type',
-    code: 'Resource pool code',
-    name: 'Resource pool name',
-    poolType: 'Resource pool type',
-    status: 'Resource pool status',
+    code: 'DFP resource row set code',
+    name: 'DFP resource row set name',
+    poolType: 'DFP resource row set type',
+    status: 'DFP resource row set status',
     'settings.aircraftLabel': 'Aircraft display name',
     'settings.aircraftNumberUsePrefix': 'Aircraft number prefix enabled',
     'settings.aircraftNumberPrefixes': 'Aircraft number prefixes',
@@ -8877,7 +8877,7 @@ async function seedCommercialConfigIfEmpty(db) {
       INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
       VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, $2, $3, $4, 'Shared', 'ACTIVE', $5::jsonb, $6::timestamp, $6::timestamp)
       ON CONFLICT ("code") DO NOTHING
-    `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} Resource Pool`, JSON.stringify({
+    `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} DFP Resource Row Set`, JSON.stringify({
       applyToV2Runtime: true,
       aircraftLabel: seedAircraftName,
       aircraftNumberUsePrefix: seedAircraftPrefixes.length > 0,

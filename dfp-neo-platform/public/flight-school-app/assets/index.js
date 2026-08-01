@@ -14583,7 +14583,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         resourcePools: [{
           id: createSetupTestRecordId("resource-pool", `${primaryAircraftCode}-${resourceDraft.poolLocationCode || primaryLocationCode}-${resourceDraft.poolUnitCode || cleanUnits[0]?.code || ""}`),
           code: "RESOURCE-POOL-1",
-          name: resourceDraft.poolName || `${primaryAircraftCode} Resource Pool`,
+          name: resourceDraft.poolName || `${primaryAircraftCode} DFP Resource Row Set`,
           organisationCode: organisation.code,
           locationCode: resourceDraft.poolLocationCode || primaryLocationCode,
           unitCode: resourceDraft.poolUnitCode || cleanUnits[0]?.code || "",
@@ -15386,7 +15386,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "AIRCRAFT"),
           wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Primary Resource"),
-          wizardField("Resource pool name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Primary Resource Pool")
+          wizardField("DFP resource row set name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "Primary DFP Resource Row Set")
         ] })
       );
     }
@@ -66853,7 +66853,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     add("OK", "Units", "Active units are linked to locations", "No active unit is pointing at a missing or inactive location.", "units-linked");
   }
   activeResourcePools.forEach((pool) => {
-    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || "Resource pool";
+    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || "DFP resource row set";
     const locationCode = toIdentifier(pool.locationCode);
     const unitCode = toIdentifier(pool.unitCode);
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
@@ -67141,7 +67141,7 @@ const PlatformConfigurationSettings = ({
   }), [config.aircraftTypes, config.resourcePools]);
   const resourcePoolDeleteOptions = reactExports.useMemo(() => config.resourcePools.map((pool, index) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || "").trim() || "Unnamed Resource Pool";
+    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Row Set";
     return { key, name };
   }), [config.resourcePools]);
   const selectedResourcePoolDeleteOption = resourcePoolDeleteOptions.find((option) => option.key === selectedResourcePoolDeleteKey);
@@ -69228,7 +69228,7 @@ This permanently removes the organisation record from platform configuration and
           {
             id: newPoolId,
             code: `POOL-${prev.resourcePools.length + 1}`,
-            name: "New Resource Pool",
+            name: "New DFP Resource Row Set",
             organisationCode: prev.organisations[0]?.code || "DEFAULT",
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
@@ -70457,7 +70457,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
   const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => String(access.userId || "").trim() === selectedAccessUserId);
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || "").trim() || "Unnamed Resource Pool";
+    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Row Set";
     return { key, name };
   });
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled ? visibleResourcePoolDeleteOptions : resourcePoolDeleteOptions;
