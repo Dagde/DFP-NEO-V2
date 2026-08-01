@@ -5,7 +5,7 @@ import InstructorScheduleView from './InstructorScheduleView';
 import CrewScheduleView from './CrewScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
-import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { findCrewPositionEntry, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
@@ -104,6 +104,10 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule
     ? props.instructorsData.filter(instructor => sharedUnitTabs.includes(normaliseUnitCode(instructor.unit)))
     : scopedInstructorsData;
+  const isFlyingCrewRole = (person: any): boolean => (
+    String(person?.role || '').trim().toLowerCase() === 'pilot' ||
+    Boolean(findCrewPositionEntry(person?.role, props.crewPositionTerminology))
+  );
   const locationFilteredInstructorsForSchedule = [...scheduleInstructorsData]
     .sort((a, b) => {
       if (shouldGroupCombinedUnitStaffSchedule) {
@@ -114,8 +118,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
       }
 
       // First sort by Role - flying staff before contractor staff
-      const roleA = a.isQFI || String(a.role || '').trim().toLowerCase() === 'pilot' ? 0 : 1;
-      const roleB = b.isQFI || String(b.role || '').trim().toLowerCase() === 'pilot' ? 0 : 1;
+      const roleA = isFlyingCrewRole(a) ? 0 : 1;
+      const roleB = isFlyingCrewRole(b) ? 0 : 1;
       if (roleA !== roleB) {
         return roleA - roleB;
       }

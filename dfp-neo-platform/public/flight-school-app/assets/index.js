@@ -54205,6 +54205,7 @@ const StaffView = (props) => {
   const scopedArchivedInstructorsData = shouldShowUnitTabs ? props.archivedInstructorsData.filter((instructor) => normaliseUnitCode2(instructor.unit) === activeUnitTab) : props.archivedInstructorsData;
   const shouldGroupCombinedUnitStaffSchedule = isFixedCrewModel && sharedUnitTabs.length > 1;
   const scheduleInstructorsData = shouldGroupCombinedUnitStaffSchedule ? props.instructorsData.filter((instructor) => sharedUnitTabs.includes(normaliseUnitCode2(instructor.unit))) : scopedInstructorsData;
+  const isFlyingCrewRole = (person) => String(person?.role || "").trim().toLowerCase() === "pilot" || Boolean(findCrewPositionEntry(person?.role, props.crewPositionTerminology));
   const locationFilteredInstructorsForSchedule = [...scheduleInstructorsData].sort((a, b) => {
     if (shouldGroupCombinedUnitStaffSchedule) {
       const unitA = normaliseUnitCode2(a.unit) || "ZZZ";
@@ -54212,8 +54213,8 @@ const StaffView = (props) => {
       if (unitA !== unitB) return unitA.localeCompare(unitB);
       return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
     }
-    const roleA = a.isQFI || String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
-    const roleB = b.isQFI || String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
+    const roleA = isFlyingCrewRole(a) ? 0 : 1;
+    const roleB = isFlyingCrewRole(b) ? 0 : 1;
     if (roleA !== roleB) {
       return roleA - roleB;
     }
