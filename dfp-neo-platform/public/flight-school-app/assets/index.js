@@ -15208,7 +15208,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Name: value }), "field-edit:level3-name"),
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Options: value }), "field-edit:level3-options"),
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level3Parents: value }), "field-edit:level3-parents"),
-          "Department A\nDepartment B",
+          "Organisation Level 3\nOrganisation Level 3B",
           level3ParentOptions
         )
       );

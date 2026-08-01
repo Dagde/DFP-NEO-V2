@@ -6396,7 +6396,7 @@ const InitialSetupWizard: React.FC<{
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Name: value }), 'field-edit:level3-name'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Options: value }), 'field-edit:level3-options'),
                     (value) => updateOrganisationDraft((draft: typeof organisationDraft) => ({ ...draft, level3Parents: value }), 'field-edit:level3-parents'),
-                    'Department A\nDepartment B',
+                    'Organisation Level 3\nOrganisation Level 3B',
                     level3ParentOptions,
                 ),
             );
