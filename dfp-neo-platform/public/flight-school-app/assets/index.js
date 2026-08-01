@@ -11444,8 +11444,8 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
           ] }),
           settingsLink("crew-composition", "Take me there", { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: "platform-alternate-crew-composition" })
         ] }), children: alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile code", value: profile.code || "", onChange: (value) => updateAlternateCrewProfile(profile, { code: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.name || "", onChange: (value) => updateAlternateCrewProfile(profile, { name: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Setup code", value: profile.code || "", onChange: (value) => updateAlternateCrewProfile(profile, { code: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Setup name", value: profile.name || "", onChange: (value) => updateAlternateCrewProfile(profile, { name: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateAlternateCrewProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsTextAreaRow, { label: "Role requirements", value: formatRoleRequirementsText(profile.roleRequirements), onChange: (value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) }), disabled: true, placeholder: "Pilot = 2" })
         ] }, profile.id)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Alternate crews", value: "No alternate crew setups match this unit.", muted: true }) }),
@@ -11495,7 +11495,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Flight Templates", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Template name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Flight Templates", value: "No flight templates are configured for this unit.", muted: true }) }),
@@ -13821,9 +13821,9 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       setCurrencyDraft(formatWizardCurrencyRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "A currency profile is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests a currency event." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "A continuation/currency event is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
-        wizardField("Profile name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
+        wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
         wizardField("Code", row.code || "", (value) => updateRow(index, "code", value.toUpperCase()), void 0, "PIC"),
         wizardField("Crew", row.crew || "", (value) => updateRow(index, "crew", value), void 0, "Standard crew"),
         wizardField("CONFIG", row.config || "ANY", (value) => updateRow(index, "config", value), void 0, "ANY"),
@@ -75810,7 +75810,7 @@ const sectionGroups = [
   {
     label: "Crew Composition",
     shortLabel: "Crew",
-    description: "Aircraft-specific crew roles, standard crew makeup and alternate crew profiles.",
+    description: "Aircraft-specific crew roles, standard crew makeup and alternate crew setups.",
     accent: "cyan",
     defaultSection: "crew-composition",
     sections: [

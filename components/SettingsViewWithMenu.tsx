@@ -594,7 +594,7 @@ const sectionGroups: {
   {
     label: 'Crew Composition',
     shortLabel: 'Crew',
-    description: 'Aircraft-specific crew roles, standard crew makeup and alternate crew profiles.',
+    description: 'Aircraft-specific crew roles, standard crew makeup and alternate crew setups.',
     accent: 'cyan',
     defaultSection: 'crew-composition',
     sections: [

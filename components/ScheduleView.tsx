@@ -2122,8 +2122,8 @@ const OrganisationMyUnitSettings: React.FC<{
                     <UnitSettingsGroup title="Alternate Crew Setups" description="Alternate crew setups available to this unit and operational model." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{alternateCrewProfiles.length} setup{alternateCrewProfiles.length === 1 ? '' : 's'}</span>{settingsLink('crew-composition', 'Take me there', { aircraftTypeCode: primaryAircraftTypeCode, focusSubsectionId: 'platform-alternate-crew-composition' })}</div>}>
                         {alternateCrewProfiles.length > 0 ? alternateCrewProfiles.map((profile) => (
                             <div key={profile.id} className="border-t border-white/10 first:border-t-0">
-                                <UnitSettingsField label="Profile code" value={profile.code || ''} onChange={(value) => updateAlternateCrewProfile(profile, { code: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Profile name" value={profile.name || ''} onChange={(value) => updateAlternateCrewProfile(profile, { name: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Setup code" value={profile.code || ''} onChange={(value) => updateAlternateCrewProfile(profile, { code: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Setup name" value={profile.name || ''} onChange={(value) => updateAlternateCrewProfile(profile, { name: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateAlternateCrewProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsTextAreaRow label="Role requirements" value={formatRoleRequirementsText(profile.roleRequirements)} onChange={(value) => updateAlternateCrewProfile(profile, { roleRequirements: parseRoleRequirementsText(value) })} disabled={!canEdit} placeholder="Pilot = 2" />
                             </div>
@@ -2190,7 +2190,7 @@ const OrganisationMyUnitSettings: React.FC<{
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Profile name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Template name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>
@@ -4870,11 +4870,11 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    A currency profile is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests a currency event.
+                    A continuation/currency event is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`currency-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
-                        {wizardField('Profile name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
+                        {wizardField('Event name', row.name || '', (value) => updateRow(index, 'name', value), undefined, 'PIC Currency')}
                         {wizardField('Code', row.code || '', (value) => updateRow(index, 'code', value.toUpperCase()), undefined, 'PIC')}
                         {wizardField('Crew', row.crew || '', (value) => updateRow(index, 'crew', value), undefined, 'Standard crew')}
                         {wizardField('CONFIG', row.config || 'ANY', (value) => updateRow(index, 'config', value), undefined, 'ANY')}
