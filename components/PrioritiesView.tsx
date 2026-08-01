@@ -756,7 +756,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           >
             <span className="min-w-0">
               <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
-              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Mission Request</span>
+              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Task Request</span>
             </span>
             <span className="flex shrink-0 items-center gap-2 text-right">
               <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
@@ -2606,7 +2606,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const abbreviation = Object.entries(taskProfileAbbreviations || {}).find(([profile]) => (
       profile.trim().toLowerCase() === tasking.toLowerCase()
     ))?.[1]?.trim();
-    const taskingDisplayLabel = abbreviation || tasking || 'Task';
+    const taskingDisplayLabel = abbreviation || tasking || 'Directed Task';
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -2618,7 +2618,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const flightType = isSingleSeatAircraft || request.flightType === 'Solo' ? 'Solo' : 'Dual';
     const schedulerPriority: TaskingSchedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
     const notes = [
-      `Directed event request: ${tasking}`,
+      `Directed task request: ${tasking || 'Directed Task'}`,
       `Date: ${request.date || 'Any build date'}`,
       `Takeoff: ${formatTimeLabel(startTime)}`,
       `Duration: ${request.duration.toFixed(1)}`,
@@ -2636,7 +2636,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       instructor: '',
       student: '',
       pilot: '',
-      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : 'Mission Request',
+      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : 'Directed Task',
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
@@ -3596,8 +3596,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         profile.trim().toLowerCase() === taskingName.toLowerCase()
       ))?.[1]?.trim();
       if (abbreviation) return abbreviation;
-      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || 'Task').trim();
-      return displayLabel.replace(/^(Task|Mission)\s*-\s*/i, '') || 'Task';
+      const displayLabel = String(taskingName || event.taskingDisplayLabel || event.flightNumber || 'Directed Task').trim();
+      return displayLabel.replace(/^(Task|Mission|Directed Task)\s*-\s*/i, '') || 'Directed Task';
     }
     return String(event.flightNumber || event.eventCode || 'N/A').trim() || 'N/A';
   };
@@ -3706,7 +3706,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {isOpen ? 'v' : '>'}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Flight Profile'}</span>
+                    <span className="block truncate text-sm font-semibold text-slate-100">{missionName || 'Unnamed Flight Template'}</span>
                     <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-200/70">{unitLabel}</span>
                   </span>
                 </button>
@@ -3749,7 +3749,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="border-t border-slate-800 px-4 pb-4 pt-3">
                   {pendingStandardMissionSaveId === profile.id && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3">
-                      <p className="text-sm font-semibold text-amber-100">Save these reusable flight profile changes permanently, or today only?</p>
+                      <p className="text-sm font-semibold text-amber-100">Save these reusable flight template changes permanently, or today only?</p>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -3770,14 +3770,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   )}
 
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {renderStandardMissionTile('Flight Profile', isEditing ? (
+                    {renderStandardMissionTile('Flight Template', isEditing ? (
                       <div className="space-y-2">
                         {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Profile name')}
                         {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
                       </div>
                     ) : (
                       <div>
-                        <span className="block">{missionName || 'Unnamed Flight Profile'}</span>
+                        <span className="block">{missionName || 'Unnamed Flight Template'}</span>
                         <span className="mt-1 block text-xs text-cyan-200/70">{shortTitle || 'No short title'}</span>
                       </div>
                     ))}
