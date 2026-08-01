@@ -70,6 +70,8 @@ Screenshot*.png
 !dfp-neo-platform/public/**/*.png
 
 # Temp and debug files
+tmp/
+snapshot-report.md
 temp_*.txt
 debug*.html
 test*.html
