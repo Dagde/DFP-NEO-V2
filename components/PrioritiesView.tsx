@@ -3727,7 +3727,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No directed flight setups for this unit context.
+          No Directed Flight Setups for this unit context.
         </div>
       );
     }
@@ -3818,7 +3818,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="border-t border-slate-800 px-4 pb-4 pt-3">
                   {pendingStandardMissionSaveId === profile.id && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3">
-                      <p className="text-sm font-semibold text-amber-100">Save these directed flight setup changes permanently, or today only?</p>
+                      <p className="text-sm font-semibold text-amber-100">Save these Directed Flight Setup changes permanently, or today only?</p>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -3841,7 +3841,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     {renderStandardMissionTile('Directed Flight Setup', isEditing ? (
                       <div className="space-y-2">
-                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Directed flight setup name')}
+                        {renderStandardMissionInput(missionName, value => updateStandardMissionDraft(profile.id, { missionName: value }), 'Directed Flight Setup Name')}
                         {renderStandardMissionInput(shortTitle, value => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), 'Short title')}
                       </div>
                     ) : (

@@ -2195,15 +2195,15 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ) : <UnitSettingsReadRow label="Directed task tile labels" value="No directed task names are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Directed Flight Setups" description="Reusable directed-flight setups scoped to this unit." action={settingsLink('standard-missions', 'Open Directed Flight Setups', { focusSubsectionId: 'platform-standard-mission-records' })}>
+                    <UnitSettingsGroup title="Directed Flight Setups" description="Reusable Directed Flight Setups scoped to this unit." action={settingsLink('standard-missions', 'Open Directed Flight Setups', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Directed flight setup name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Directed Flight Setup Name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Directed Flight Setups" value="No directed flight setups are configured for this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Directed Flight Setups" value="No Directed Flight Setups are configured for this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title={configuredContinuationCurrencyEventsLabel} description="Request and build event defaults are configured under Training & Standards." action={settingsLink('sct-events', `Open ${configuredContinuationCurrencyEventsLabel}`)}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />

@@ -1358,7 +1358,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
     if (lowerTitle.includes('resource')) {
       return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
     }
-    if (lowerTitle.includes('flight setup') || lowerTitle.includes('flight template')) {
+    if (lowerTitle.includes('directed flight setup') || lowerTitle.includes('flight setup') || lowerTitle.includes('flight template')) {
       return { section: 'standard-missions', label: 'Directed Flight Setups', focusSubsectionId: 'platform-standard-missions' };
     }
   }
@@ -1601,13 +1601,13 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit records need per-unit copies',
-      `${missingCompositeClones} unit-scoped directed flight setup, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped Directed Flight Setup, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
       `Open Settings → Platform & Deployment → Directed Flight Setups, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: 'standard-missions', label: 'Directed Flight Setups', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed Flight Setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -6863,7 +6863,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Directed Task Lists"
-          subtitle="Short task names used when assigning directed tasks. Reusable directed-flight setups are configured separately."
+          subtitle="Short task names used when assigning directed tasks. Reusable Directed Flight Setups are configured separately."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6885,7 +6885,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the short directed task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Setups.
+            Set the short directed task names available for each operational model. This section is for names only. Full reusable Directed Flight Setups are configured in Settings → Platform & Deployment → Directed Flight Setups.
             Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -7155,7 +7155,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
           title="Directed Flight Setups"
-          subtitle="Reusable directed-flight setups with default aircraft, crew, timing, callsign and formation settings."
+          subtitle="Reusable Directed Flight Setups with default aircraft, crew, timing, callsign and formation settings."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
@@ -7166,19 +7166,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Directed Flight Setups are available when the selected unit model supports recurring directed-flight setups.
+              Directed Flight Setups are available when the selected unit model supports recurring directed tasks with full default aircraft, crew, timing, callsign and formation settings.
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New directed flight setups default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name.
+                  New Directed Flight Setups default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No directed flight setups configured for this unit.
+                  No Directed Flight Setups configured for this unit.
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
