@@ -38469,7 +38469,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || "").trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = "Settings → Platform & Deployment → Directed Task Lists";
-  const settingsLinkClass = "font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60";
+  const settingsLinkClass = "inline-flex rounded border border-cyan-500/20 bg-cyan-500/5 px-1.5 py-0.5 font-semibold text-slate-300 underline decoration-cyan-500/25 underline-offset-2 transition hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60";
   const settingsPathLink = onOpenDirectedTaskLists ? /* @__PURE__ */ jsxRuntimeExports.jsx(
     "button",
     {
@@ -38507,7 +38507,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[10px] leading-snug text-slate-400", children: [
-        "Manage saved names in ",
+        "Saved directed task names are managed here: ",
         settingsPathLink,
         "."
       ] })
@@ -38533,14 +38533,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching directed task" : "No directed task names configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        "Keep typing to enter this task manually, or update the list in ",
+        "Keep typing to enter this task manually, or open ",
         settingsPathLink,
-        "."
+        " to add it to the saved list."
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         operationalModelLabel,
-        " has no saved directed task names yet. Add them in ",
+        " has no saved directed task names yet. Open ",
         settingsPathLink,
-        ", or type a task name manually."
+        " to add saved names, or type this one manually."
       ] }) })
     ] }) })
   ] });

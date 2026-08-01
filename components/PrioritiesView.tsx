@@ -610,7 +610,7 @@ const TaskingProfileInput: React.FC<{
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = 'Settings → Platform & Deployment → Directed Task Lists';
-  const settingsLinkClass = 'font-semibold text-slate-300 underline decoration-cyan-500/35 underline-offset-2 transition hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60';
+  const settingsLinkClass = 'inline-flex rounded border border-cyan-500/20 bg-cyan-500/5 px-1.5 py-0.5 font-semibold text-slate-300 underline decoration-cyan-500/25 underline-offset-2 transition hover:border-cyan-400/30 hover:bg-cyan-500/10 hover:text-cyan-100 focus:outline-none focus:ring-1 focus:ring-cyan-500/60';
   const settingsPathLink = onOpenDirectedTaskLists ? (
     <button
       type="button"
@@ -650,7 +650,7 @@ const TaskingProfileInput: React.FC<{
           className="h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
         />
         <div className="mt-1 text-[10px] leading-snug text-slate-400">
-          Manage saved names in {settingsPathLink}.
+          Saved directed task names are managed here: {settingsPathLink}.
         </div>
       </div>
       {showSuggestions && (
@@ -679,8 +679,8 @@ const TaskingProfileInput: React.FC<{
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? <>Keep typing to enter this task manually, or update the list in {settingsPathLink}.</>
-                  : <>{operationalModelLabel} has no saved directed task names yet. Add them in {settingsPathLink}, or type a task name manually.</>}
+                  ? <>Keep typing to enter this task manually, or open {settingsPathLink} to add it to the saved list.</>
+                  : <>{operationalModelLabel} has no saved directed task names yet. Open {settingsPathLink} to add saved names, or type this one manually.</>}
               </span>
             </div>
           )}
