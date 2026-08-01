@@ -20522,7 +20522,18 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-5 md:grid-cols-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Tile Label" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: code, maxLength: 8, onChange: (event) => setCode(event.target.value.slice(0, 8)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+            value: code,
+            maxLength: 8,
+            onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setCode(value.slice(0, 8)), 8),
+            onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, (value) => setCode(value.slice(0, 8)), 8),
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (event) => setCode(event.target.value.slice(0, 8))
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
           code.length,
           "/8"
@@ -20530,7 +20541,17 @@ const LmpEventEditModal = ({ item, aircraftConfigurations, description = "Update
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Description" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: eventDescription, onChange: (event) => setEventDescription(event.target.value) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white",
+            value: eventDescription,
+            onBeforeInput: (event) => handleEditableTextBeforeInput(event, setEventDescription),
+            onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setEventDescription),
+            onKeyDown: stopEditableKeyPropagation,
+            onChange: (event) => setEventDescription(event.target.value)
+          }
+        )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Type" }),
@@ -28063,6 +28084,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       return candidateValues.some((candidateValue) => candidateValue === normalisedValue || candidateValue.replace(/[^A-Z0-9]/g, "") === compactValue);
     });
   };
+  const isConfiguredContinuationEvent = (value) => Boolean(getConfiguredContinuationEvent(value));
   const isConfiguredContinuationFormation = (value) => {
     const configuredEvent = getConfiguredContinuationEvent(value);
     if (!configuredEvent) return false;
@@ -28085,7 +28107,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   };
   const normalisedEventType = String(eventType || "").trim().toLowerCase();
   const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === "flight" || normalisedEventType === "ftd");
-  const isContinuationTile = eventCategory === "sct" || event.isSct === true || isContinuationFlightCode(flightNumber);
+  const isContinuationTile = eventCategory === "sct" || event.isSct === true || isContinuationFlightCode(flightNumber) || isConfiguredContinuationEvent(flightNumber);
   const airCombatSoloCrewRequirement = reactExports.useMemo(() => ({
     mode: "custom",
     roles: [{ role: "Pilot", crewPositionId: "pilot", count: 1, eligibleRoles: ["Pilot"] }]
@@ -28934,7 +28956,11 @@ ${swapNote}` : swapNote
   }, [eventType, isUnavailabilityDetailsEvent, resourceDisplayNames.ftd]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
-    setEventCategory(inferEventCategory(event));
+    const inferredCategory = inferEventCategory(event);
+    const flightNumberKey = String(event.flightNumber || "").trim().toUpperCase();
+    const compactFlightNumberKey = flightNumberKey.replace(/[^A-Z0-9]/g, "");
+    const matchesConfiguredContinuationEvent = configuredContinuationEvents.some((candidate) => [candidate.name, candidate.code, candidate.currency].map((candidateValue) => String(candidateValue || "").trim().toUpperCase()).filter(Boolean).some((candidateValue) => candidateValue === flightNumberKey || candidateValue.replace(/[^A-Z0-9]/g, "") === compactFlightNumberKey));
+    setEventCategory(inferredCategory === "sct" || matchesConfiguredContinuationEvent ? "sct" : inferredCategory);
     if (isEditingDefault && !event.flightNumber) {
       setDuration("");
     } else {
@@ -28969,7 +28995,7 @@ ${swapNote}` : swapNote
     setDeploymentStartTime(event.deploymentStartTime || "");
     setDeploymentEndDate(event.deploymentEndDate || event.date);
     setDeploymentEndTime(event.deploymentEndTime || "");
-  }, [event, isEditingDefault, highlightedField, school, isReadOnly, defaultUnitCallsign, formationTypes]);
+  }, [event, isEditingDefault, highlightedField, school, isReadOnly, defaultUnitCallsign, formationTypes, configuredContinuationEvents]);
   reactExports.useEffect(() => {
     if (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 || !defaultUnitCallsign) return;
     const base = unitCallsignBase || defaultUnitCallsign;
@@ -29522,7 +29548,7 @@ ${swapNote}` : swapNote
       ] }),
       crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         useStaffOnly ? renderStaffInstructorDropdown(
-          // For SCT, use pilot field; for others, use instructor field
+          // For continuation events, use pilot field; for others, use instructor field.
           eventCategory === "sct" ? crewMember.pilot : crewMember.instructor,
           (value) => handleCrewChange(index, eventCategory === "sct" ? "pilot" : "instructor", value),
           eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di" ? "Pilot" : "Instructor",
@@ -73678,7 +73704,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               DraftField,
               {
-                label: "Instructor Display Term",
+                label: "Instructor Duty Display Term",
                 value: personnelDisplaySettings2.instructorLabel,
                 disabled: !canEditRankTerminology,
                 onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),

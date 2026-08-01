@@ -292,12 +292,27 @@ export const LmpEventEditModal: React.FC<{
                 <div className="grid gap-4 p-5 md:grid-cols-2">
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tile Label</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={code} maxLength={8} onChange={(event) => setCode(event.target.value.slice(0, 8))} />
+                        <input
+                            className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+                            value={code}
+                            maxLength={8}
+                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setCode(value.slice(0, 8)), 8)}
+                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, (value) => setCode(value.slice(0, 8)), 8)}
+                            onKeyDown={stopEditableKeyPropagation}
+                            onChange={(event) => setCode(event.target.value.slice(0, 8))}
+                        />
                         <span className="block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">{code.length}/8</span>
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Description</span>
-                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={eventDescription} onChange={(event) => setEventDescription(event.target.value)} />
+                        <input
+                            className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white"
+                            value={eventDescription}
+                            onBeforeInput={(event) => handleEditableTextBeforeInput(event, setEventDescription)}
+                            onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setEventDescription)}
+                            onKeyDown={stopEditableKeyPropagation}
+                            onChange={(event) => setEventDescription(event.target.value)}
+                        />
                     </label>
                     <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Type</span>

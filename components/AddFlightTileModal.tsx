@@ -2271,7 +2271,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   const tileColor = useMemo(() => {
-    // SCT events are always grey
+    // Continuation events are always grey.
     if (eventCategory === 'sct') return 'bg-gray-500';
     // Staff CAT / TWR DI - no trainee involved, use grey
     if (eventCategory === 'staff_cat' || eventCategory === 'twr_di') return 'bg-gray-500';

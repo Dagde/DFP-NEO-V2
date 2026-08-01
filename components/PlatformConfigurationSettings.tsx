@@ -9500,7 +9500,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             />
             <div>
               <DraftField
-                label="Instructor Display Term"
+                label="Instructor Duty Display Term"
                 value={personnelDisplaySettings.instructorLabel}
                 disabled={!canEditRankTerminology}
                 onCommit={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}

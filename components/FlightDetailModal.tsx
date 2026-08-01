@@ -811,6 +811,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             ));
         });
     };
+    const isConfiguredContinuationEvent = (value?: string | null): boolean => Boolean(getConfiguredContinuationEvent(value));
     const isConfiguredContinuationFormation = (value?: string | null): boolean => {
         const configuredEvent = getConfiguredContinuationEvent(value);
         if (!configuredEvent) return false;
@@ -840,7 +841,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
     const normalisedEventType = String(eventType || '').trim().toLowerCase();
     const isFixedCrewCrewedEvent = isFixedCrewModel && (normalisedEventType === 'flight' || normalisedEventType === 'ftd');
-    const isContinuationTile = eventCategory === 'sct' || (event as any).isSct === true || isContinuationFlightCode(flightNumber);
+    const isContinuationTile = eventCategory === 'sct' || (event as any).isSct === true || isContinuationFlightCode(flightNumber) || isConfiguredContinuationEvent(flightNumber);
     const airCombatSoloCrewRequirement = useMemo<CrewRequirement>(() => ({
         mode: 'custom',
         roles: [{ role: 'Pilot', crewPositionId: 'pilot', count: 1, eligibleRoles: ['Pilot'] }],
@@ -1804,7 +1805,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     // Effect to set default values based on event category
     useEffect(() => {
         if (eventCategory === 'sct') {
-            // SCT defaults to Solo
+            // Continuation events default to Solo.
             setCrew(prev => prev.map(c => ({ ...c, flightType: 'Solo' })));
             // Set default duration to 1.2
             if (!duration) setDuration(1.2);
@@ -1826,8 +1827,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
     }, [eventCategory]);
 
-    // Effect to pull Type (Dual/Solo) from syllabus when flight number changes
-    // IMPORTANT: SCT is explicitly excluded because continuation events default to Solo and should not be overridden by syllabus
+    // Effect to pull Type (Dual/Solo) from syllabus when flight number changes.
+    // Continuation events are excluded because they default to Solo and should not be overridden by syllabus.
     useEffect(() => {
         if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && eventCategory !== 'sct') {
             const syllabusItem = getSyllabusItemForOption(flightNumber);
@@ -2020,7 +2021,19 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 
     useEffect(() => {
         setFlightNumber(event.flightNumber);
-        setEventCategory(inferEventCategory(event));
+        const inferredCategory = inferEventCategory(event);
+        const flightNumberKey = String(event.flightNumber || '').trim().toUpperCase();
+        const compactFlightNumberKey = flightNumberKey.replace(/[^A-Z0-9]/g, '');
+        const matchesConfiguredContinuationEvent = configuredContinuationEvents.some(candidate => (
+            [candidate.name, candidate.code, candidate.currency]
+                .map(candidateValue => String(candidateValue || '').trim().toUpperCase())
+                .filter(Boolean)
+                .some(candidateValue => (
+                    candidateValue === flightNumberKey
+                    || candidateValue.replace(/[^A-Z0-9]/g, '') === compactFlightNumberKey
+                ))
+        ));
+        setEventCategory(inferredCategory === 'sct' || matchesConfiguredContinuationEvent ? 'sct' : inferredCategory);
         
         // Initialize duration as empty if creating a new event (and no pre-filled flight number), otherwise use event's duration
         if (isEditingDefault && !event.flightNumber) {
@@ -2061,7 +2074,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setDeploymentEndDate(event.deploymentEndDate || event.date); 
         setDeploymentEndTime(event.deploymentEndTime || '');
 
-    }, [event, isEditingDefault, highlightedField, school, isReadOnly, defaultUnitCallsign, formationTypes]);
+    }, [event, isEditingDefault, highlightedField, school, isReadOnly, defaultUnitCallsign, formationTypes, configuredContinuationEvents]);
 
     useEffect(() => {
         if (selectedPicHasIndividualCallsign || unitCallsignEntries.length === 0 || !defaultUnitCallsign) return;
@@ -2201,7 +2214,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     
 
 
-    // Oracle Logic for SCT and Trainee next event
+    // Oracle logic for continuation events and trainee next event.
     useEffect(() => {
         const selectedTrainee = crew[0]?.student;
         const selectedInstructor = crew[0]?.instructor;
@@ -2794,7 +2807,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     {/* Instructor/Pilot Field - Staff only for certain categories */}
                     {useStaffOnly ? (
                         renderStaffInstructorDropdown(
-                            // For SCT, use pilot field; for others, use instructor field
+                            // For continuation events, use pilot field; for others, use instructor field.
                             eventCategory === 'sct' ? crewMember.pilot : crewMember.instructor,
                             (value) => handleCrewChange(index, eventCategory === 'sct' ? 'pilot' : 'instructor', value),
                             (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') ? 'Pilot' : 'Instructor',
@@ -2893,7 +2906,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         </>
                     )}
                     
-                    {/* Crew Field - Only for SCT and Staff CAT when Dual */}
+                    {/* Crew Field - Only for continuation, Staff CAT and TWR DI events when Dual */}
                     {showCrewField && (
                         renderStaffInstructorDropdown(
                             crewMember.student,
