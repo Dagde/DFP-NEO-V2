@@ -748,9 +748,11 @@ const TraineeReallocationSection: React.FC = () => {
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     type ActiveSection = SettingsMenuSection | 'home';
     const contentScrollRef = useRef<HTMLDivElement | null>(null);
-    const normaliseLegacySettingsSection = (section: string) => (
-        section === 'platform-configuration' ? 'platform-configuration-health' : section
-    );
+    const normaliseLegacySettingsSection = (section: string) => {
+        if (section === 'platform-configuration') return 'platform-configuration-health';
+        if (section === 'platform-standard-missions') return 'standard-missions';
+        return section;
+    };
     const [activeSection, setActiveSection] = useState<ActiveSection>(() => {
         try {
             const restoreSection = sessionStorage.getItem('dfp_restore_settings_section_after_reload');

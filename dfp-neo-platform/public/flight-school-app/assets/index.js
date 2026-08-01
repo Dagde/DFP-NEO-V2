@@ -41093,7 +41093,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these directed flight template changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these directed flight setup changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -41117,7 +41117,7 @@ const PrioritiesView = ({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
             renderStandardMissionTile("Directed Flight Setup", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Directed flight template name"),
+              renderStandardMissionInput(missionName, (value) => updateStandardMissionDraft(profile.id, { missionName: value }), "Directed flight setup name"),
               renderStandardMissionInput(shortTitle, (value) => updateStandardMissionDraft(profile.id, { shortTitle: value.slice(0, 8) }), "Short title")
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: missionName || "Unnamed Directed Flight Setup" }),
@@ -66826,8 +66826,8 @@ const getConfigurationHealthSettingsLink = (area, title) => {
     if (lowerTitle.includes("resource")) {
       return { section: "platform-resource-pools", label: "Aircraft Types & DFP Resource Rows" };
     }
-    if (lowerTitle.includes("flight template")) {
-      return { section: "platform-standard-missions", label: "Directed Flight Setups" };
+    if (lowerTitle.includes("flight setup") || lowerTitle.includes("flight template")) {
+      return { section: "standard-missions", label: "Directed Flight Setups", focusSubsectionId: "platform-standard-missions" };
     }
   }
   return null;
@@ -67028,10 +67028,10 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit records need per-unit copies",
-      `${missingCompositeClones} unit-scoped directed flight template, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped directed flight setup, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
       `Open Settings → Platform & Deployment → Directed Flight Setups, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
-      { section: "platform-standard-missions", label: "Directed Flight Setups", focusSubsectionId: "platform-standard-missions" }
+      { section: "standard-missions", label: "Directed Flight Setups", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
     add("OK", "Unit Separation", "Combined-unit records are split-ready", `Directed flight setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, "unit-separation-profiles-ok");
@@ -76149,7 +76149,11 @@ const TraineeReallocationSection = () => {
 };
 const SettingsViewWithMenu = (props) => {
   const contentScrollRef = reactExports.useRef(null);
-  const normaliseLegacySettingsSection = (section) => section === "platform-configuration" ? "platform-configuration-health" : section;
+  const normaliseLegacySettingsSection = (section) => {
+    if (section === "platform-configuration") return "platform-configuration-health";
+    if (section === "platform-standard-missions") return "standard-missions";
+    return section;
+  };
   const [activeSection, setActiveSection] = reactExports.useState(() => {
     try {
       const restoreSection = sessionStorage.getItem("dfp_restore_settings_section_after_reload");

@@ -1358,8 +1358,8 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
     if (lowerTitle.includes('resource')) {
       return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
     }
-    if (lowerTitle.includes('flight template')) {
-      return { section: 'platform-standard-missions', label: 'Directed Flight Setups' };
+    if (lowerTitle.includes('flight setup') || lowerTitle.includes('flight template')) {
+      return { section: 'standard-missions', label: 'Directed Flight Setups', focusSubsectionId: 'platform-standard-missions' };
     }
   }
   return null;
@@ -1601,10 +1601,10 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit records need per-unit copies',
-      `${missingCompositeClones} unit-scoped directed flight template, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped directed flight setup, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
       `Open Settings → Platform & Deployment → Directed Flight Setups, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
-      { section: 'platform-standard-missions', label: 'Directed Flight Setups', focusSubsectionId: 'platform-standard-missions' }
+      { section: 'standard-missions', label: 'Directed Flight Setups', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
     add('OK', 'Unit Separation', 'Combined-unit records are split-ready', `Directed flight setups, alternate crew setups and ${healthContinuationCurrencyEventsLabel} have per-unit records where needed.`, 'unit-separation-profiles-ok');
