@@ -281,6 +281,14 @@ interface PrioritiesViewProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   instructorLabel?: string;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
+  onNavigateToSettingsSection?: (request: {
+    sectionId: string;
+    unitCode?: string;
+    locationCode?: string;
+    resourcePoolCode?: string;
+    aircraftTypeCode?: string;
+    focusSubsectionId?: string;
+  }) => void;
 }
 
 const ConfigCapacityInfoHint: React.FC<{ definition: AircraftConfigurationDefinition }> = ({ definition }) => {
@@ -593,13 +601,30 @@ const TaskingProfileInput: React.FC<{
   value: string;
   taskProfiles: string[];
   operationalModelLabel: string;
+  onOpenDirectedTaskLists?: () => void;
   onChange: (value: string) => void;
-}> = ({ value, taskProfiles, operationalModelLabel, onChange }) => {
+}> = ({ value, taskProfiles, operationalModelLabel, onOpenDirectedTaskLists, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = 'Settings > Platform & Deployment > Directed Task Lists';
+  const settingsPathLink = onOpenDirectedTaskLists ? (
+    <button
+      type="button"
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsOpen(false);
+        onOpenDirectedTaskLists();
+      }}
+      className="font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+    >
+      {settingsPathText}
+    </button>
+  ) : (
+    <span>{settingsPathText}</span>
+  );
 
   const selectProfile = (profile: string) => {
     onChange(profile);
@@ -647,8 +672,8 @@ const TaskingProfileInput: React.FC<{
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? `Keep typing to enter this task manually, or update the list in ${settingsPathText}.`
-                  : `${operationalModelLabel} has no saved directed-task names yet. Add them in ${settingsPathText}, or type a task name manually.`}
+                  ? <>Keep typing to enter this task manually, or update the list in {settingsPathLink}.</>
+                  : <>{operationalModelLabel} has no saved directed-task names yet. Add them in {settingsPathLink}, or type a task name manually.</>}
               </span>
             </div>
           )}
@@ -675,6 +700,14 @@ interface TaskingRequestTableProps {
   onUpdateTaskingRequest: (id: string, updates: Partial<TaskingRequest>) => void;
   onRemoveTaskingRequest: (id: string) => void;
   onSetTaskingSchedulerPriority: (id: string, priority: TaskingSchedulerPriority) => void;
+  onNavigateToSettingsSection?: (request: {
+    sectionId: string;
+    unitCode?: string;
+    locationCode?: string;
+    resourcePoolCode?: string;
+    aircraftTypeCode?: string;
+    focusSubsectionId?: string;
+  }) => void;
 }
 
 const taskingPanelClass = 'flex min-h-[8rem] min-w-0 flex-col justify-between rounded-lg border border-slate-700/80 bg-slate-950/55 p-3 shadow-inner shadow-black/20';
@@ -684,7 +717,7 @@ const taskingControlClass = 'h-10 w-full rounded-md border border-slate-600 bg-s
 
 const TaskingFieldPanel: React.FC<{
   label: string;
-  hint?: string;
+  hint?: React.ReactNode;
   className?: string;
   contentClassName?: string;
   children: React.ReactNode;
@@ -715,8 +748,30 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
   onSetTaskingSchedulerPriority,
+  onNavigateToSettingsSection,
 }) => {
   const [expandedTaskingIds, setExpandedTaskingIds] = useState<Set<string>>(new Set());
+  const directedTaskSettingsFocusId = `platform-directed-task-list-${operationalModel || 'flight_school'}`;
+  const openDirectedTaskSettings = () => {
+    onNavigateToSettingsSection?.({
+      sectionId: 'platform-task-profiles',
+      focusSubsectionId: directedTaskSettingsFocusId,
+    });
+  };
+  const renderDirectedTaskSettingsLink = () => (
+    <button
+      type="button"
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openDirectedTaskSettings();
+      }}
+      className="font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+    >
+      Settings &gt; Platform &amp; Deployment &gt; Directed Task Lists
+    </button>
+  );
   const toggleTaskingExpanded = (id: string) => {
     setExpandedTaskingIds(prev => {
       const next = new Set(prev);
@@ -748,8 +803,8 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const taskingHeaderDate = request.date || 'Date TBA';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
       const directedTaskHint = taskProfiles.some(profile => String(profile || '').trim())
-        ? 'Names come from Settings > Platform & Deployment > Directed Task Lists; you can also type a task.'
-        : 'Add names in Settings > Platform & Deployment > Directed Task Lists, or type a task.';
+        ? <>Names come from {renderDirectedTaskSettingsLink()}; you can also type a task.</>
+        : <>Add names in {renderDirectedTaskSettingsLink()}, or type a task.</>;
       return (
         <div key={request.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
           <button
@@ -778,6 +833,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
                 value={request.tasking}
                 taskProfiles={taskProfiles}
                 operationalModelLabel={operationalModelLabel}
+                onOpenDirectedTaskLists={openDirectedTaskSettings}
                 onChange={(tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })}
               />
             </TaskingFieldPanel>
@@ -1056,6 +1112,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   unitCallsignSettings,
   staffQualificationCatalogue,
   instructorLabel = 'Instructor',
+  onNavigateToSettingsSection,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -4780,6 +4837,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               onUpdateTaskingRequest={updateTaskingRequest}
               onRemoveTaskingRequest={removeTaskingRequest}
               onSetTaskingSchedulerPriority={setTaskingSchedulerPriority}
+              onNavigateToSettingsSection={onNavigateToSettingsSection}
             />
         </div>
 

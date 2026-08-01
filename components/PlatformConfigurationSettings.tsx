@@ -2233,7 +2233,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
-        document.getElementById(cleanSubsectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const target = document.getElementById(cleanSubsectionId);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (cleanSubsectionId.startsWith('platform-directed-task-list-')) {
+          window.setTimeout(() => {
+            const editable = target?.querySelector<HTMLInputElement | HTMLTextAreaElement>('textarea:not(:disabled), input:not(:disabled)');
+            editable?.focus();
+          }, 260);
+        }
       }, 180);
     });
     return () => window.cancelAnimationFrame(frame);
@@ -6882,7 +6889,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             {visibleOperationalModelOptions.map((option) => {
               const profiles = taskProfiles[option.value] || [];
               return (
-                <div key={option.value} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
+                <div id={`platform-directed-task-list-${option.value}`} key={option.value} className="rounded-lg border border-gray-700 bg-gray-900 p-3">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>

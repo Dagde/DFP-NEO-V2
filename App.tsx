@@ -42758,6 +42758,7 @@ appliedUpdates.forEach(update => {
                     onSaveStandardMissionProfile={handleSaveStandardMissionProfileFromPlanner}
                     staffQualificationCatalogue={activeStaffQualificationCatalogue}
                     instructorLabel={instructorLabel}
+                    onNavigateToSettingsSection={handleNavigateToSettingsSection}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     unitCallsignSettings={activeUnitCallsignSettings}
                     onAddPriorityEvents={(eventsToAdd) => {

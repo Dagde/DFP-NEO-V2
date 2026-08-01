@@ -38460,12 +38460,26 @@ const getTaskProfileSuggestions = (value, taskProfiles) => {
     return { profile, score };
   }).filter((item) => item.score > 0).sort((left, right) => right.score - left.score || left.profile.localeCompare(right.profile)).slice(0, 12).map((item) => item.profile);
 };
-const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onChange }) => {
+const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpenDirectedTaskLists, onChange }) => {
   const [isOpen, setIsOpen] = reactExports.useState(false);
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || "").trim()).length;
   const showSuggestions = isOpen;
   const settingsPathText = "Settings > Platform & Deployment > Directed Task Lists";
+  const settingsPathLink = onOpenDirectedTaskLists ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "button",
+    {
+      type: "button",
+      onMouseDown: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsOpen(false);
+        onOpenDirectedTaskLists();
+      },
+      className: "font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400",
+      children: settingsPathText
+    }
+  ) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: settingsPathText });
   const selectProfile = (profile) => {
     onChange(profile);
     setIsOpen(false);
@@ -38507,7 +38521,16 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching directed task" : "No directed-task names configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? `Keep typing to enter this task manually, or update the list in ${settingsPathText}.` : `${operationalModelLabel} has no saved directed-task names yet. Add them in ${settingsPathText}, or type a task name manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        "Keep typing to enter this task manually, or update the list in ",
+        settingsPathLink,
+        "."
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        operationalModelLabel,
+        " has no saved directed-task names yet. Add them in ",
+        settingsPathLink,
+        ", or type a task name manually."
+      ] }) })
     ] }) })
   ] });
 };
@@ -38538,9 +38561,31 @@ const TaskingRequestTable = ({
   callsignNumberOptions,
   onUpdateTaskingRequest,
   onRemoveTaskingRequest,
-  onSetTaskingSchedulerPriority
+  onSetTaskingSchedulerPriority,
+  onNavigateToSettingsSection
 }) => {
   const [expandedTaskingIds, setExpandedTaskingIds] = reactExports.useState(/* @__PURE__ */ new Set());
+  const directedTaskSettingsFocusId = `platform-directed-task-list-${operationalModel || "flight_school"}`;
+  const openDirectedTaskSettings = () => {
+    onNavigateToSettingsSection?.({
+      sectionId: "platform-task-profiles",
+      focusSubsectionId: directedTaskSettingsFocusId
+    });
+  };
+  const renderDirectedTaskSettingsLink = () => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "button",
+    {
+      type: "button",
+      onMouseDown: (event) => event.stopPropagation(),
+      onClick: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openDirectedTaskSettings();
+      },
+      className: "font-semibold text-cyan-200 underline decoration-cyan-400/60 underline-offset-2 transition hover:text-cyan-50 focus:outline-none focus:ring-1 focus:ring-cyan-400",
+      children: "Settings > Platform & Deployment > Directed Task Lists"
+    }
+  );
   const toggleTaskingExpanded = (id) => {
     setExpandedTaskingIds((prev) => {
       const next = new Set(prev);
@@ -38565,7 +38610,15 @@ const TaskingRequestTable = ({
       const taskingHeaderTitle = request.tasking.trim() || "New directed-task request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
-      const directedTaskHint = taskProfiles.some((profile) => String(profile || "").trim()) ? "Names come from Settings > Platform & Deployment > Directed Task Lists; you can also type a task." : "Add names in Settings > Platform & Deployment > Directed Task Lists, or type a task.";
+      const directedTaskHint = taskProfiles.some((profile) => String(profile || "").trim()) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        "Names come from ",
+        renderDirectedTaskSettingsLink(),
+        "; you can also type a task."
+      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        "Add names in ",
+        renderDirectedTaskSettingsLink(),
+        ", or type a task."
+      ] });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
@@ -38595,6 +38648,7 @@ const TaskingRequestTable = ({
                 value: request.tasking,
                 taskProfiles,
                 operationalModelLabel,
+                onOpenDirectedTaskLists: openDirectedTaskSettings,
                 onChange: (tasking) => onUpdateTaskingRequest(request.id, { tasking, submitted: false, saved: false })
               }
             ) }),
@@ -38868,7 +38922,8 @@ const PrioritiesView = ({
   onSaveStandardMissionProfile,
   unitCallsignSettings,
   staffQualificationCatalogue: staffQualificationCatalogue2,
-  instructorLabel = "Instructor"
+  instructorLabel = "Instructor",
+  onNavigateToSettingsSection
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
@@ -42004,7 +42059,8 @@ const PrioritiesView = ({
             callsignNumberOptions,
             onUpdateTaskingRequest: updateTaskingRequest,
             onRemoveTaskingRequest: removeTaskingRequest,
-            onSetTaskingSchedulerPriority: setTaskingSchedulerPriority
+            onSetTaskingSchedulerPriority: setTaskingSchedulerPriority,
+            onNavigateToSettingsSection
           }
         )
       ] }),
@@ -67473,7 +67529,14 @@ const PlatformConfigurationSettings = ({
     }
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
-        document.getElementById(cleanSubsectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const target = document.getElementById(cleanSubsectionId);
+        target?.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (cleanSubsectionId.startsWith("platform-directed-task-list-")) {
+          window.setTimeout(() => {
+            const editable = target?.querySelector("textarea:not(:disabled), input:not(:disabled)");
+            editable?.focus();
+          }, 260);
+        }
       }, 180);
     });
     return () => window.cancelAnimationFrame(frame);
@@ -71233,7 +71296,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed-task names available for each operational model. These are not full flight setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-directed-task-list-${option.value}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
@@ -120370,6 +120433,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSaveStandardMissionProfile: handleSaveStandardMissionProfileFromPlanner,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             instructorLabel,
+            onNavigateToSettingsSection: handleNavigateToSettingsSection,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,
             onAddPriorityEvents: (eventsToAdd) => {

@@ -102,6 +102,14 @@ interface PrioritiesViewWithMenuProps {
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   instructorLabel?: string;
+  onNavigateToSettingsSection?: (request: {
+    sectionId: string;
+    unitCode?: string;
+    locationCode?: string;
+    resourcePoolCode?: string;
+    aircraftTypeCode?: string;
+    focusSubsectionId?: string;
+  }) => void;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events' | 'deployments';
