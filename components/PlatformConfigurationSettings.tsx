@@ -1601,7 +1601,7 @@ const buildConfigurationHealth = (
       'Combined-unit records need per-unit copies',
       `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ContT / Currency Events for the affected unit context, then press Edit and Save so each unit receives its own configured records.',
+      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${continuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: 'platform-standard-missions', label: 'Directed Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {

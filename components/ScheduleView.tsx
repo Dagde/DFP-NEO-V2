@@ -2165,7 +2165,7 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'training') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Schedule Tile Labels" description="Short display names for directed-task tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Open Directed Task Lists', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
+                    <UnitSettingsGroup title="Schedule Tile Labels" description="Short display names for directed task schedule tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Open Directed Task Lists', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
                         <div className="border-t border-white/10 px-4 py-3">
                             <p className="text-sm leading-6 text-slate-300">
                                 Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data.
@@ -2187,7 +2187,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 ))}
                             </div>
-                        ) : <UnitSettingsReadRow label="Directed task tile labels" value="No directed-task names are configured for this operating model." muted />}
+                        ) : <UnitSettingsReadRow label="Directed task tile labels" value="No directed task names are configured for this operating model." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Directed Flight Templates" description="Reusable directed-flight setups scoped to this unit." action={settingsLink('standard-missions', 'Open Directed Flight Templates', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
@@ -2199,7 +2199,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Directed Flight Templates" value="No directed flight templates are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build event templates are configured under Training & Standards." action={settingsLink('sct-events', 'Open Continuation Events')}>
+                    <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build event defaults are configured under Training & Standards." action={settingsLink('sct-events', 'Open Continuation & Currency Events')}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />
                         <UnitSettingsReadRow label="Events" value="Continuation and currency event rows are edited in one place." />
                     </UnitSettingsGroup>

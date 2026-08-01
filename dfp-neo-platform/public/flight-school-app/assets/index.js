@@ -11503,7 +11503,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
     }
     if (activeCategory === "training") {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Schedule Tile Labels", description: "Short display names for directed-task tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Schedule Tile Labels", description: "Short display names for directed task schedule tiles on this unit's schedule.", action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
             Object.keys(taskAbbreviations || {}).length,
             " configured"
@@ -11523,7 +11523,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed task tile labels", value: "No directed-task names are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed task tile labels", value: "No directed task names are configured for this operating model.", muted: true })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Directed Flight Templates", description: "Reusable directed-flight setups scoped to this unit.", action: settingsLink("standard-missions", "Open Directed Flight Templates", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
@@ -11531,7 +11531,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Directed Flight Templates", value: "No directed flight templates are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build event templates are configured under Training & Standards.", action: settingsLink("sct-events", "Open Continuation Events"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build event defaults are configured under Training & Standards.", action: settingsLink("sct-events", "Open Continuation & Currency Events"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: "Continuation and currency event rows are edited in one place." })
         ] }),
@@ -66998,7 +66998,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "Combined-unit records need per-unit copies",
       `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ContT / Currency Events for the affected unit context, then press Edit and Save so each unit receives its own configured records.",
+      `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${continuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: "platform-standard-missions", label: "Directed Flight Templates", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
@@ -67609,7 +67609,7 @@ const PlatformConfigurationSettings = ({
   const sctTerminology = normaliseSctTerminology(
     primaryOrganisationSettings.sctTerminology || null
   );
-  const continuationCurrencyEventsLabel = `${sctTerminology.shortLabel} / Currency Events`;
+  const continuationCurrencyEventsLabel2 = `${sctTerminology.shortLabel} / Currency Events`;
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
@@ -72054,7 +72054,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: continuationCurrencyEventsLabel,
+          title: continuationCurrencyEventsLabel2,
           subtitle: "Continuation and currency event templates. Each event stores crew, CONFIG and currency against the selected aircraft.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
@@ -72095,7 +72095,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel2 }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
                 "These events prefill continuation and currency requests with crew, aircraft CONFIG and currency for ",
                 displayCrewCompositionAircraftCode || "the selected aircraft",
