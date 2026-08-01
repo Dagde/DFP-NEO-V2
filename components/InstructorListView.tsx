@@ -24,7 +24,11 @@ import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
-import { getPersonAssignedQualificationIds, type StaffQualificationCatalogue } from '../utils/staffQualifications';
+import {
+    getPersonAssignedQualificationIds,
+    personHasInstructorQualification,
+    type StaffQualificationCatalogue,
+} from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
@@ -45,8 +49,7 @@ const hasInstructorQualification = (
     instructor: Instructor,
     staffQualificationCatalogue?: StaffQualificationCatalogue,
 ): boolean =>
-    instructor.isQFI === true ||
-    getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes('qfi');
+    personHasInstructorQualification(instructor, staffQualificationCatalogue);
 const isContractorStaffRole = (
     instructor: Instructor,
     staffQualificationCatalogue?: StaffQualificationCatalogue,

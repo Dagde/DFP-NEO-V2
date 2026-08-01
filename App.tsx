@@ -88,6 +88,7 @@ import {
     normaliseAssignedQualificationIds,
     normaliseQualificationToken,
     normaliseStaffQualificationCatalogue,
+    personHasInstructorQualification,
     type StaffQualificationCatalogue,
 } from './utils/staffQualifications';
 import {
@@ -7104,8 +7105,7 @@ function generateDfpInternal(
     };
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
         !isContractorStaffRole(instructor) && (
-            getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes('qfi')
-            || instructor.isQFI === true
+            personHasInstructorQualification(instructor, buildStaffQualificationCatalogue)
         )
     );
     const isInstructorEligibleForBuildEventType = (instructor: Instructor, eventType: string): boolean => {
@@ -26334,8 +26334,7 @@ const App: React.FC = () => {
     };
     const isQfiBuildInstructor = (instructor: Instructor): boolean => (
         !isContractorStaffRole(instructor) && (
-            getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes('qfi')
-            || instructor.isQFI === true
+            personHasInstructorQualification(instructor, activeStaffQualificationCatalogue)
         )
     );
     const isInstructorEligibleForBuildEventType = (instructor: Instructor, eventType: string): boolean => {

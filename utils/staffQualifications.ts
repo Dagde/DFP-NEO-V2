@@ -287,6 +287,20 @@ export const getPersonAssignedQualificationIds = (
   return assigned;
 };
 
+export const personHasInstructorQualification = (
+  person: any,
+  catalogue?: StaffQualificationCatalogue,
+): boolean => {
+  if (!person) return false;
+  if (person?.isQFI === true) return true;
+  const instructorQualifications = getInstructorQualificationDefinitions(catalogue);
+  if (instructorQualifications.length === 0) return false;
+  const assigned = getPersonAssignedQualificationIds(person, catalogue, false);
+  return assigned.some(assignedId => (
+    instructorQualifications.some(qualification => qualificationMatches(assignedId, qualification))
+  ));
+};
+
 export const getQualificationsForOperationalModel = (
   catalogue: StaffQualificationCatalogue | undefined,
   operationalModel?: unknown,
