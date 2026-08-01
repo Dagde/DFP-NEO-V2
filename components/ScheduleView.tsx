@@ -705,12 +705,12 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
     },
     {
         id: 'resources',
-        label: 'Aircraft and resource pools',
+        label: 'Aircraft types and DFP resource rows',
         fileName: 'DFP_NEO_Resource_Pools_Template.csv',
         requiredHeaders: ['Pool Name', 'Aircraft Type', 'Unit', 'Location', 'Aircraft', 'Sim', 'Trainer', 'Standby', 'Ground'],
         optionalHeaders: ['Notes'],
         exampleRows: [
-            ['Primary Resource Pool', 'Primary Resource', 'UNIT-A', 'HOME', '4', '0', '0', '1', '0', ''],
+            ['Primary DFP Row Set', 'Primary Resource', 'UNIT-A', 'HOME', '4', '0', '0', '1', '0', ''],
         ],
         settingsSection: 'platform-resource-pools',
     },
@@ -2025,9 +2025,9 @@ const OrganisationMyUnitSettings: React.FC<{
             return (
                 <div className="space-y-4">
                     <UnitSettingsGroup
-                        title="Aircraft & Resource Pools"
-                        description="Live counts for pools assigned to this unit or its home location."
-                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} pools</span>{settingsLink('platform-resource-pools', 'Take me there', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
+                        title="Aircraft Types & DFP Resource Rows"
+                        description="Live resource row counts assigned to this unit or its home location."
+                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} row sets</span>{settingsLink('platform-resource-pools', 'Take me there', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
                     >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
                             return (
@@ -2037,13 +2037,13 @@ const OrganisationMyUnitSettings: React.FC<{
                                     <UnitSettingsSelect label="Pool type" value={pool.poolType || 'Dedicated'} options={['Dedicated', 'Shared', 'Combined']} onChange={(value) => updateResourcePool(pool, { poolType: value })} disabled={!canEdit} />
                                     <UnitSettingsSelect label="Location" value={pool.locationCode || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateResourcePool(pool, { locationCode: value })} disabled={!canEdit} />
                                     <div className="border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300">
-                                        DFP Resource Rows are managed from the main Aircraft & Resource Pools page so row changes can be applied from the next day forward without altering today or previous days.
+                                        DFP Resource Rows are managed from the main Aircraft Types & DFP Resource Rows page so row changes can be applied from the next day forward without altering today or previous days.
                                     </div>
                                 </div>
                             );
-                        }) : <UnitSettingsReadRow label="Pools" value="No resource pools are assigned to this unit or location." muted />}
+                        }) : <UnitSettingsReadRow label="DFP resource row sets" value="No DFP resource row sets are assigned to this unit or location." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's resource pools." action={settingsLink('platform-resource-pools', 'Take me there', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
+                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP resource row sets." action={settingsLink('platform-resource-pools', 'Take me there', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
                         {aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft: any) => {
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
@@ -2057,7 +2057,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             );
                         }) : <UnitSettingsReadRow label="Aircraft" value="No aircraft types are linked to this unit yet." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Resource Sharing" description="Whether this unit shares aircraft or resource pools with another unit." action={settingsLink('organisation', 'Take me there')}>
+                    <UnitSettingsGroup title="Resource Sharing" description="Whether this unit shares aircraft or DFP resource rows with another unit." action={settingsLink('organisation', 'Take me there')}>
                         {resourceSharingForUnit.length > 0 ? resourceSharingForUnit.map((group: any, index: number) => (
                             <div key={group.id || `${group.name}-${index}`} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Arrangement" value={group.name || 'Unnamed resource sharing arrangement'} onChange={() => {}} disabled />
@@ -2914,7 +2914,7 @@ const InitialSetupWizard: React.FC<{
     const [trainingRecordsDraft, setTrainingRecordsDraft] = useState('Training Report | Assessment Form | 0 | 5 | Yes | No | Satisfactory | Unsatisfactory');
     const [unitModulesDraft, setUnitModulesDraft] = useState('DFP | On\nNEO Build | On\nProgram Schedule | On\nTraining Records | On');
     const [rankLabelsDraft, setRankLabelsDraft] = useState('1 | Senior Rank 1 | Highest rank shown first\n2 | Senior Rank 2 | Next senior rank\n3 | Team Lead Rank | Operational supervisor level\n4 | Line Rank | Standard operational rank');
-    const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and resource pool capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
+    const [resourceSharingDraft, setResourceSharingDraft] = useState('Resource sharing | Off |  | Unit keeps its own aircraft and DFP resource row capacity.\nStaff sharing | Off |  | Unit only schedules its own staff unless changed later.');
     const [currencyDraft, setCurrencyDraft] = useState('PIC Currency | PIC | Standard crew | ANY | PIC Currency | 1\nInstrument Currency | INST | Standard crew | ANY | Instrument Currency | 1');
     const [scoringDraft, setScoringDraft] = useState('Preparation | Prepared, safe and ready to train. | Not prepared or unsafe to continue. | Unsafe | Major help required | Help required | Meets standard | Above standard | Excellent\nAirmanship | Makes safe decisions and prioritises correctly. | Poor judgement or unsafe prioritisation. | Unsafe | Weak | Developing | Meets standard | Strong | Excellent');
     const [staffCurrencyEventsDraft, setStaffCurrencyEventsDraft] = useState('Annual Instrument Check | INST | Flight | 90 | 90 | 60 | Standard crew | Instrument Currency | ANY | 1');
@@ -3482,7 +3482,7 @@ const InitialSetupWizard: React.FC<{
             setSaveMessage('Enter an aircraft type code before saving.');
             return;
         }
-        saveWizardConfig('Aircraft type and resource pool saved into Settings.', (baseConfig) => {
+        saveWizardConfig('Aircraft type and DFP resource rows saved into Settings.', (baseConfig) => {
             const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
             const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
             const aircraftExists = aircraftTypes.some((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
@@ -3490,7 +3490,7 @@ const InitialSetupWizard: React.FC<{
             const nextPool = {
                 id: primaryResourcePool?.id || createWizardRecordId('pool'),
                 code: primaryResourcePool?.code || `POOL-${resourcePools.length + 1}`,
-                name: resourceDraft.poolName || `${aircraftCode} Resource Pool`,
+                name: resourceDraft.poolName || `${aircraftCode} DFP Row Set`,
                 organisationCode: activeOrganisation?.code || organisationDraft.code || 'DEFAULT',
                 locationCode: resourceDraft.poolLocationCode,
                 unitCode: resourceDraft.poolUnitCode,
@@ -3640,10 +3640,10 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'resources',
-            label: 'Aircraft and resource pools',
+            label: 'Aircraft types and DFP resource rows',
             mandatory: true,
             complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0,
-            summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} resource pools configured` : 'Aircraft types and pools are needed before NEO can build.',
+            summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP resource row set${activeResourcePools.length === 1 ? '' : 's'} configured` : 'Aircraft types and DFP resource rows are needed before NEO can build.',
             settingsSection: 'platform-resource-pools',
         },
         {
@@ -3765,14 +3765,14 @@ const InitialSetupWizard: React.FC<{
             id: 'resource-aircraft',
             title: `What aircraft or main resource does ${unitDraft.code || 'this unit'} use?`,
             label: 'Aircraft',
-            body: 'This creates or updates the aircraft type and the resource pool name.',
+            body: 'This creates or updates the aircraft type and DFP resource row set name.',
             checkIds: ['resources'],
         },
         {
             id: 'resource-counts',
             title: `What can ${unitDraft.code || 'this unit'} schedule?`,
             label: 'Counts',
-            body: 'Enter the numbers NEO can use for aircraft, simulators, trainers, standby and ground rows. Saving this step writes the resource pool into Settings.',
+            body: 'Enter the numbers NEO can use for aircraft, simulators, trainers, standby and ground rows. Saving this step writes the DFP resource rows into Settings.',
             checkIds: ['resources'],
         },
         {
@@ -4838,7 +4838,7 @@ const InitialSetupWizard: React.FC<{
     const renderSharingEditor = () => {
         const rows = parseWizardSharingRows(resourceSharingDraft);
         const editableRows = rows.length > 0 ? rows : [
-            { type: 'Resource sharing', enabled: 'Off', units: '', consequence: 'Unit keeps its own aircraft and resource pool capacity.' },
+            { type: 'Resource sharing', enabled: 'Off', units: '', consequence: 'Unit keeps its own aircraft and DFP resource row capacity.' },
             { type: 'Staff sharing', enabled: 'Off', units: '', consequence: 'Unit only schedules its own staff unless changed later.' },
         ];
         const updateRow = (index: number, field: keyof typeof editableRows[number], value: string) => {

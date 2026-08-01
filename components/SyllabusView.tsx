@@ -360,7 +360,7 @@ const AircraftConfigInfoIcon: React.FC<{ definitions: AircraftConfigurationDefin
                     </span>
                 ))
             ) : (
-                <span>No aircraft configurations are defined for the active resource pool.</span>
+                <span>No aircraft configurations are defined for the active DFP resource rows.</span>
             )}
             <span className="mt-2 block border-t border-gray-700 pt-2 text-gray-400">ANY means aircraft configuration does not matter for this LMP event.</span>
         </span>

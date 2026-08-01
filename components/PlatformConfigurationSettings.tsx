@@ -1336,8 +1336,8 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
   if (area === 'Modules') {
     return { section: 'platform-unit-modules', label: 'Unit Features & Modules' };
   }
-  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools') {
-    return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
+  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
+    return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
   }
   if (area === 'User Access') {
     return { section: 'platform-user-access', label: 'User Access' };
@@ -1356,7 +1356,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
   }
   if (area === 'Unit Separation') {
     if (lowerTitle.includes('resource')) {
-      return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
+      return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
     }
     if (lowerTitle.includes('flight template')) {
       return { section: 'platform-standard-missions', label: 'Flight Templates' };
@@ -1382,11 +1382,11 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   if (area === 'Modules') {
     return 'Open Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
   }
-  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools') {
+  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open Aircraft & Resource Pools, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
+      return 'Open Aircraft Types & DFP Resource Rows, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
-    return 'Open Aircraft & Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.';
+    return 'Open Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and resource counts so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
@@ -1532,7 +1532,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Aircraft & Resource Pools', `${unitCode} has no active resource pool`, 'DFP resource rows and scheduling resources need a configured pool for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'Aircraft Types & DFP Resource Rows', `${unitCode} has no active DFP resource row set`, 'DFP resource rows and scheduling resources need a configured row set for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1549,9 +1549,9 @@ const buildConfigurationHealth = (
           'WARNING',
           'Unit Separation',
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} is a Fixed Crew unit without its own DFP resource pool. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} is a Fixed Crew unit without its own DFP resource row set. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          'Open Aircraft & Resource Pools and add or enable a unit-specific pool if this unit needs independent aircraft, simulator or trainer capacity after separation.',
+          'Open Aircraft Types & DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator or trainer capacity after separation.',
           { focusSubsectionId: 'platform-resource-pools' }
         );
       }
@@ -1569,25 +1569,25 @@ const buildConfigurationHealth = (
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
 
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add('CRITICAL', 'Aircraft & Resource Pools', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add('CRITICAL', 'Aircraft & Resource Pools', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
-      add('WARNING', 'Aircraft & Resource Pools', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('WARNING', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add('CRITICAL', 'Aircraft & Resource Pools', `${poolName} has no usable resources`, 'This pool controls DFP resource rows, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has no usable resources`, 'This row set controls DFP resource rows, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
 
   if (activeResourcePools.length === 0) {
-    add('WARNING', 'Aircraft & Resource Pools', 'No active DFP resource pool', 'At least one active resource pool is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
-  } else if (!items.some((item) => item.area === 'Aircraft & Resource Pools' && item.severity === 'CRITICAL')) {
-    add('OK', 'Aircraft & Resource Pools', 'DFP resource rows are configured', `${activeResourcePools.length} active resource pool${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
+    add('WARNING', 'Aircraft Types & DFP Resource Rows', 'No active DFP resource row set', 'At least one active row set is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
+  } else if (!items.some((item) => item.area === 'Aircraft Types & DFP Resource Rows' && item.severity === 'CRITICAL')) {
+    add('OK', 'Aircraft Types & DFP Resource Rows', 'DFP resource rows are configured', `${activeResourcePools.length} active row set${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
   }
 
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
@@ -4185,7 +4185,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     const password = await showDarkPrompt({
       title: 'Remove Location',
-      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and resource pools assigned to it will be moved to the first remaining location.`,
+      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and DFP resource row sets assigned to it will be moved to the first remaining location.`,
       inputLabel: 'Password',
       inputType: 'password',
       inputPlaceholder: 'Enter password',
@@ -5106,19 +5106,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const deleteSelectedResourcePool = async () => {
     if (!canEditResourcePools) return;
     if (!selectedResourcePoolDeleteOption) {
-      await showDarkAlert('Select a resource pool to delete.', 'Delete Resource Pool', 'warning');
+      await showDarkAlert('Select a DFP resource row set to delete.', 'Delete DFP Resource Rows', 'warning');
       return;
     }
 
     const confirmed = await showDarkConfirm(
-      `Delete resource pool "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes it from Aircraft & Resource Pools. Press Save in this section to apply the deletion.`,
-      'Delete Resource Pool?',
+      `Delete DFP resource row set "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes it from Aircraft Types & DFP Resource Rows. Press Save in this section to apply the deletion.`,
+      'Delete DFP Resource Rows?',
       'warning',
     );
     if (!confirmed) return;
 
     const password = await showDarkPrompt({
-      title: 'Confirm Resource Pool Deletion',
+      title: 'Confirm DFP Resource Row Deletion',
       message: `Enter your password to delete "${selectedResourcePoolDeleteOption.name}".`,
       inputLabel: 'Password',
       inputType: 'password',
@@ -5132,11 +5132,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     try {
       const isValid = await verifyCurrentUserPassword(password);
       if (!isValid) {
-        await showDarkAlert('The password was not accepted. The resource pool was not deleted.', 'Password Required', 'warning');
+        await showDarkAlert('The password was not accepted. The DFP resource row set was not deleted.', 'Password Required', 'warning');
         return;
       }
     } catch {
-      await showDarkAlert('The app could not verify your password. The resource pool was not deleted.', 'Password Check Failed', 'error');
+      await showDarkAlert('The app could not verify your password. The DFP resource row set was not deleted.', 'Password Check Failed', 'error');
       return;
     }
 
@@ -5147,7 +5147,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       )),
     }));
     setSelectedResourcePoolDeleteKey('');
-    onShowSuccess(`Resource pool "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
+    onShowSuccess(`DFP resource row set "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
 
   const save = async (
@@ -5573,8 +5573,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (resourcePoolExitPromptOpenRef.current) return;
     resourcePoolExitPromptOpenRef.current = true;
     const shouldSave = await showDarkConfirm(
-      'You have unsaved Aircraft & Resource Pools changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit Aircraft & Resource Pools edit mode.',
-      'Unsaved Resource Pool Changes',
+      'You have unsaved Aircraft Types & DFP Resource Rows changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit DFP Resource Rows edit mode.',
+      'Unsaved DFP Resource Row Changes',
       'warning',
     );
     resourcePoolExitPromptOpenRef.current = false;
@@ -7233,7 +7233,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 onChange={() => undefined}
                                 info="Flight Templates are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
-                              <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
+                              <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's DFP resource rows. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
                               <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
                               <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
@@ -7845,7 +7845,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       setResourcePoolActiveTab('resourcePools');
                     }}
                     className={platformActionButtonClass}
-                    title="Show or hide resource pool deletion controls"
+                    title="Show or hide DFP resource row set deletion controls"
                   >
                     <span className="text-[9px] leading-tight">Delete<br />Pool</span>
                   </button>
@@ -7861,9 +7861,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={addResourcePool}
                     className={platformActionButtonClass}
-                    title="Add resource pool"
+                    title="Add DFP resource row set"
                   >
-                    <span className="text-[9px] leading-tight">Add<br />Pool</span>
+                    <span className="text-[9px] leading-tight">Add<br />Rows</span>
                   </button>
                   <button
                     type="button"
@@ -8079,19 +8079,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             {showResourcePoolDeletePanel && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
                 <div className="mb-3">
-                  <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Resource Pool Entered In Error</div>
+                  <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete DFP Resource Row Set Entered In Error</div>
                   <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
-                    Select by resource pool name only. Deletion requires your password and is applied only when this section is saved.
+                    Select by DFP resource row set name only. Deletion requires your password and is applied only when this section is saved.
                   </div>
                 </div>
                 <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                   <SelectField
-                    label="Resource Pool"
+                    label="DFP Resource Row Set"
                     value={selectedResourcePoolDeleteKey}
                     disabled={!canEditResourcePools || activeResourcePoolDeleteOptions.length === 0}
                     options={['', ...activeResourcePoolDeleteOptions.map((option) => option.key)]}
                     optionLabels={Object.fromEntries(activeResourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
-                    emptyLabel="Select resource pool"
+                    emptyLabel="Select DFP resource row set"
                     onChange={setSelectedResourcePoolDeleteKey}
                   />
                   <button
@@ -8100,7 +8100,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     onClick={deleteSelectedResourcePool}
                     className="h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Delete Selected Pool
+                    Delete Selected Rows
                   </button>
                 </div>
               </div>
@@ -8126,10 +8126,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-md border border-cyan-400/35 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{pool.code || 'NEW'}</span>
-                        <span className="text-sm font-bold text-white">{pool.name || 'Unnamed resource pool'}</span>
+                        <span className="text-sm font-bold text-white">{pool.name || 'Unnamed DFP resource row set'}</span>
                       </div>
                       <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">
-                        {pool.poolType || 'Dedicated'} pool {pool.unitCode ? `for ${pool.unitCode}` : ''}
+                        {pool.poolType || 'Dedicated'} row set {pool.unitCode ? `for ${pool.unitCode}` : ''}
                       </div>
                     </div>
                     <div className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-right">

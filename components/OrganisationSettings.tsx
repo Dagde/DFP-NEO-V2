@@ -786,7 +786,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           <div>
             <h3 className="text-lg font-semibold text-sky-200 mb-2">Operational Sharing Controls</h3>
             <p className="text-sm text-gray-300">
-              Fleet sharing controls whether selected units schedule against the same aircraft/resource pool on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries.
+              Fleet sharing controls whether selected units schedule against the same aircraft and DFP resource rows on one shared DFP context. Staff sharing is separate: it controls whether instructors may be allocated across unit boundaries.
             </p>
           </div>
           <button
@@ -1010,7 +1010,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           {/* Fleet Sharing Description and Enable Toggle */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
             <p className="text-sm text-gray-400 mb-4">
-              Controls whether selected units operate from one shared aircraft/resource pool and one shared DFP context. This does not share staff unless Staff Sharing is also enabled.
+              Controls whether selected units operate from one shared aircraft row set and one shared DFP context. This does not share staff unless Staff Sharing is also enabled.
             </p>
             <div className="flex items-center">
               <label className="relative inline-flex items-center cursor-pointer">
@@ -1031,13 +1031,13 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             </div>
           </div>
 
-          {/* Persistent resource pool context */}
+          {/* Persistent DFP resource row context */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
             <div className="flex h-full items-center justify-between gap-4">
               <div>
-                <h4 className="text-base font-medium text-white mb-1">Configured Resource Pool</h4>
+                <h4 className="text-base font-medium text-white mb-1">Configured DFP Resource Rows</h4>
                 <p className="text-xs text-gray-400">
-                  Aircraft rows defined in Aircraft & Resource Pools. Daily aircraft availability is entered in Build Priorities.
+                  Aircraft rows defined in Aircraft Types & DFP Resource Rows. Daily aircraft availability is entered in Build Priorities.
                 </p>
               </div>
               <div className="text-right">
@@ -1112,7 +1112,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 </div>
               </div>
               <p className="mt-3 text-xs text-gray-300">
-                Create one arrangement for each shared resource pool in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled.
+                Create one arrangement for each shared DFP resource row set in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled.
               </p>
               {visibleResourceSharingGroups.length > 1 && (
                 <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -1219,7 +1219,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                         <span className="font-semibold text-white text-sm">Combined Pool Mode</span>
                       </div>
                       <p className="text-xs text-gray-300">
-                        Selected units schedule against one aircraft/resource pool and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled.
+                        Selected units schedule against one aircraft row set and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled.
                       </p>
                     </button>
                     
