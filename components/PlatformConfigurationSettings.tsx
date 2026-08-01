@@ -6877,7 +6877,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </span>
                   </div>
                   <TextAreaField
-                    label="Task Names"
+                    label="Mission / Task Names"
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
