@@ -22504,7 +22504,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       doc.setFont("helvetica", "bold");
       doc.setFontSize(17);
       doc.setTextColor(10, 25, 45);
-      doc.text(`${printReportName} Training Report`, margin, y);
+      doc.text(printReportName || "Training Report", margin, y);
       y += 8;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
