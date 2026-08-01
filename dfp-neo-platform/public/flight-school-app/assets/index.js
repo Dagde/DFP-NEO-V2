@@ -100677,6 +100677,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               generatedEvents.splice(removeIndex, 1);
             }
           }
+          rebuildGeneratedEventIndexes();
           listDiag.attempts.push({
             eventKey,
             time,
@@ -101423,7 +101424,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         continue;
       }
       const eventIdx = generatedEvents.indexOf(stbyEvent);
-      if (eventIdx !== -1) generatedEvents.splice(eventIdx, 1);
+      if (eventIdx !== -1) {
+        generatedEvents.splice(eventIdx, 1);
+        rebuildGeneratedEventIndexes();
+      }
       const instructor = findBestInstructorForStby(
         trainee,
         syllabusItem,
@@ -101434,6 +101438,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
       const reinsertIdx = eventIdx !== -1 ? eventIdx : generatedEvents.length;
       generatedEvents.splice(reinsertIdx, 0, stbyEvent);
+      rebuildGeneratedEventIndexes();
       if (instructor) {
         stbyEvent.instructor = instructor;
       } else {
@@ -101887,6 +101892,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (eventIndex < 0) break;
         const originalEvent = generatedEvents[eventIndex];
         generatedEvents.splice(eventIndex, 1);
+        rebuildGeneratedEventIndexes();
         decrementFlightFtdCountsForEvent(originalEvent);
         const candidateWindow = getEventBookingWindowForAlgo({
           startTime: roundedTime,
@@ -101992,6 +101998,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _traineeName: resolved.trainee.fullName
           };
           generatedEvents.splice(eventIndex, 0, replacement);
+          rebuildGeneratedEventIndexes();
           incrementFlightFtdCountsForEvent(replacement);
           traceCurrencyPriority("placementTrace", {
             phase: "compressed-earlier",
@@ -102019,6 +102026,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           moved = true;
         } else {
           generatedEvents.splice(eventIndex, 0, originalEvent);
+          rebuildGeneratedEventIndexes();
           incrementFlightFtdCountsForEvent(originalEvent);
         }
       }

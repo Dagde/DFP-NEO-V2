@@ -18585,6 +18585,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             generatedEvents.splice(removeIndex, 1);
                         }
                     }
+                    rebuildGeneratedEventIndexes();
                     listDiag.attempts.push({
                         eventKey,
                         time,
@@ -19573,7 +19574,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         // Temporarily remove this event from generatedEvents so it doesn't block the instructor check
         const eventIdx = generatedEvents.indexOf(stbyEvent);
-        if (eventIdx !== -1) generatedEvents.splice(eventIdx, 1);
+        if (eventIdx !== -1) {
+            generatedEvents.splice(eventIdx, 1);
+            rebuildGeneratedEventIndexes();
+        }
 
         // Try to find an available instructor for this STBY event at its scheduled time
         const instructor = findBestInstructorForStby(
@@ -19588,6 +19592,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // Re-add the event (use 0 if splice removed it, otherwise use original position)
         const reinsertIdx = eventIdx !== -1 ? eventIdx : generatedEvents.length;
         generatedEvents.splice(reinsertIdx, 0, stbyEvent);
+        rebuildGeneratedEventIndexes();
 
         if (instructor) {
             stbyEvent.instructor = instructor;
@@ -20171,6 +20176,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 if (eventIndex < 0) break;
                 const originalEvent = generatedEvents[eventIndex];
                 generatedEvents.splice(eventIndex, 1);
+                rebuildGeneratedEventIndexes();
                 decrementFlightFtdCountsForEvent(originalEvent);
 
                 const candidateWindow = getEventBookingWindowForAlgo({
@@ -20280,6 +20286,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         _traineeName: resolved.trainee.fullName,
                     };
                     generatedEvents.splice(eventIndex, 0, replacement);
+                    rebuildGeneratedEventIndexes();
                     incrementFlightFtdCountsForEvent(replacement);
                     traceCurrencyPriority('placementTrace', {
                         phase: 'compressed-earlier',
@@ -20307,6 +20314,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     moved = true;
                 } else {
                     generatedEvents.splice(eventIndex, 0, originalEvent);
+                    rebuildGeneratedEventIndexes();
                     incrementFlightFtdCountsForEvent(originalEvent);
                 }
             }
