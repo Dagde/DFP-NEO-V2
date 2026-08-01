@@ -1285,8 +1285,8 @@ const DfpSidePanelTimeline: React.FC<{
         if (selectedResourceKind === 'deployment') return 'DEPLOYMENT';
         if (activeAssistSection === 'taskings' && selectedTaskProfile) {
             const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || '';
-            if (isAirCombatTileMode) return abbreviation ? `Mission - ${abbreviation}` : `Mission - ${selectedTaskProfile}`;
-            return abbreviation ? `Mission - ${abbreviation}` : 'Mission';
+            if (isAirCombatTileMode) return abbreviation || selectedTaskProfile || 'Directed Task';
+            return abbreviation || selectedTaskProfile || 'Directed Task';
         }
         if (activeAssistSection === 'currency' && selectedCurrencyName) {
             return selectedCurrencyName;
@@ -2258,7 +2258,7 @@ const DfpSidePanelTimeline: React.FC<{
     const buildTaskRequestEvents = (request: typeof assistTaskRequests[number]): ScheduleEvent[] => {
         const tasking = request.tasking.trim();
         const abbreviation = taskProfileAbbreviations[tasking] || '';
-        const label = abbreviation ? `Mission - ${abbreviation}` : (tasking || 'Mission');
+        const label = abbreviation || tasking || 'Directed Task';
         const depPoint = request.depPoint.trim().toUpperCase();
         const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
         const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -2269,7 +2269,7 @@ const DfpSidePanelTimeline: React.FC<{
             instructor: '',
             student: '',
             pilot: '',
-            group: aircraftCount > 1 ? `Mission ${index + 1} of ${aircraftCount}` : 'Mission',
+            group: aircraftCount > 1 ? `Directed Task ${index + 1} of ${aircraftCount}` : 'Directed Task',
             flightNumber: label,
             duration: Math.max(0.1, Number(request.duration) || defaultAssistTaskDuration),
             startTime: request.takeoff,
@@ -11067,7 +11067,7 @@ function generateDfpInternal(
 
         if (isTaskingPriorityEvent(event)) {
             skippedCount++;
-            buildDebugLog(`  ↷ DEBUG QUEUED mission priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
+            buildDebugLog(`  ↷ DEBUG QUEUED directed-task priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
             return;
         }
 
@@ -15096,7 +15096,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
         );
         let scheduledCount = 0;
-        buildDebugLog(`DEBUG Scheduling mission priority events: ${orderedTaskingEvents.length}`);
+        buildDebugLog(`DEBUG Scheduling directed-task priority events: ${orderedTaskingEvents.length}`);
         if (isAirCombatBuild) {
             neoBuildDiag.airCombatPriority.taskingQueue = orderedTaskingEvents.map(event => ({
                 ...getTaskingEventIdentity(event),

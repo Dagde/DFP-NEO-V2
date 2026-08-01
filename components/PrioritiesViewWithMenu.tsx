@@ -188,7 +188,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                 step: '01',
                 label: 'Events Builder',
                 shortLabel: 'Events',
-                description: 'Manage priority events, mission requests and currency requests.',
+                description: 'Manage priority events, directed-task requests and currency requests.',
             },
         ]
         : activeFixedCrewTab === 'deployments'
@@ -569,7 +569,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                         <h1 className={`${isFixedCrewModel ? 'mt-1 text-xl' : 'mt-1 text-2xl'} font-bold text-white`}>{isFixedCrewModel ? 'Build Planner' : 'Build Priorities'}</h1>
                         <p className={`${isFixedCrewModel ? 'mt-1 text-xs leading-5' : 'mt-2 text-sm'} text-slate-300`}>
                             {isFixedCrewModel
-                                ? 'Plan mission requests and build weighting for the Fixed Crew model.'
+                                ? 'Plan directed-task requests and build weighting for the Fixed Crew model.'
                                 : 'Configure the build in the same order a supervisor would plan the DFP by hand.'}
                         </p>
                     </div>

@@ -42516,7 +42516,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "01",
       label: "Events Builder",
       shortLabel: "Events",
-      description: "Manage priority events, mission requests and currency requests."
+      description: "Manage priority events, directed-task requests and currency requests."
     }
   ] : activeFixedCrewTab === "deployments" ? [
     {
@@ -42847,7 +42847,7 @@ const PrioritiesViewWithMenu = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${isFixedCrewModel ? "p-4" : "p-5"} border-b border-slate-700/60`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border border-cyan-500/20 bg-cyan-500/10 ${isFixedCrewModel ? "p-3" : "p-4"}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] uppercase tracking-[0.2em] text-cyan-200/70", children: "NEO Build" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: `${isFixedCrewModel ? "mt-1 text-xl" : "mt-1 text-2xl"} font-bold text-white`, children: isFixedCrewModel ? "Build Planner" : "Build Priorities" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan mission requests and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed-task requests and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-0" : "p-4 space-y-3"}`, children: [
         isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 border-b border-slate-700/60 p-3", children: fixedCrewTabs.map((tab) => {
@@ -65395,7 +65395,7 @@ const AppearanceSettings = ({
         {
           value: "event_type",
           label: "Event Type",
-          description: "Courses, packages, mission requests, currency, and other event types each use their own colour.",
+          description: "Courses, packages, directed-task requests, currency, and other event types each use their own colour.",
           swatches: ["bg-cyan-500/70", "bg-violet-500/70", "bg-sky-500/70", "bg-green-500/70"]
         },
         {
@@ -86251,8 +86251,8 @@ const DfpSidePanelTimeline = ({
     if (selectedResourceKind === "deployment") return "DEPLOYMENT";
     if (activeAssistSection === "taskings" && selectedTaskProfile) {
       const abbreviation = taskProfileAbbreviations[selectedTaskProfile] || "";
-      if (isAirCombatTileMode) return abbreviation ? `Mission - ${abbreviation}` : `Mission - ${selectedTaskProfile}`;
-      return abbreviation ? `Mission - ${abbreviation}` : "Mission";
+      if (isAirCombatTileMode) return abbreviation || selectedTaskProfile || "Directed Task";
+      return abbreviation || selectedTaskProfile || "Directed Task";
     }
     if (activeAssistSection === "currency" && selectedCurrencyName) {
       return selectedCurrencyName;
@@ -87049,7 +87049,7 @@ const DfpSidePanelTimeline = ({
   const buildTaskRequestEvents = (request) => {
     const tasking = request.tasking.trim();
     const abbreviation = taskProfileAbbreviations[tasking] || "";
-    const label = abbreviation ? `Mission - ${abbreviation}` : tasking || "Mission";
+    const label = abbreviation || tasking || "Directed Task";
     const depPoint = request.depPoint.trim().toUpperCase();
     const arrivalPoint = request.arrivalPoint.trim().toUpperCase();
     const aircraftCount = Math.max(1, Math.floor(Number(request.aircraftCount) || 1));
@@ -87060,7 +87060,7 @@ const DfpSidePanelTimeline = ({
       instructor: "",
       student: "",
       pilot: "",
-      group: aircraftCount > 1 ? `Mission ${index + 1} of ${aircraftCount}` : "Mission",
+      group: aircraftCount > 1 ? `Directed Task ${index + 1} of ${aircraftCount}` : "Directed Task",
       flightNumber: label,
       duration: Math.max(0.1, Number(request.duration) || defaultAssistTaskDuration),
       startTime: request.takeoff,
@@ -94158,7 +94158,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (isTaskingPriorityEvent(event)) {
       skippedCount++;
-      buildDebugLog(`  ↷ DEBUG QUEUED mission priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
+      buildDebugLog(`  ↷ DEBUG QUEUED directed-task priority event for resource scheduling: ${event.flightNumber} - ${event.group || event.id}`);
       return;
     }
     if (isMandatoryRemedialFlight(event)) {
@@ -97503,7 +97503,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       (left, right) => left.startTime - right.startTime || (left.taskingRequestId || "").localeCompare(right.taskingRequestId || "") || (left.taskingAircraftIndex || 0) - (right.taskingAircraftIndex || 0)
     );
     let scheduledCount = 0;
-    buildDebugLog(`DEBUG Scheduling mission priority events: ${orderedTaskingEvents.length}`);
+    buildDebugLog(`DEBUG Scheduling directed-task priority events: ${orderedTaskingEvents.length}`);
     if (isAirCombatBuild) {
       neoBuildDiag.airCombatPriority.taskingQueue = orderedTaskingEvents.map((event) => ({
         ...getTaskingEventIdentity(event),
