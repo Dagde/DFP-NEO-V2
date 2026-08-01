@@ -670,8 +670,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         optionalHeaders: ['Parent', 'Notes'],
         exampleRows: [
             ['0', 'Organisation', '', 'Top level organisation'],
-            ['1', 'Division', 'Organisation', 'Branch, command, region, or division'],
-            ['2', 'Group', 'Division', 'Operating group, department, wing, or team'],
+            ['1', 'Organisation Level 1', 'Organisation', 'Branch, command, region, division, or equivalent'],
+            ['2', 'Organisation Level 2', 'Organisation Level 1', 'Operating group, department, wing, team, or equivalent'],
         ],
         settingsSection: 'platform-organisation-locations',
         focusSubsectionId: 'platform-organisation-structure',
@@ -696,8 +696,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Unit Code', 'Unit Name', 'Location', 'Unit Type', 'Operating Model'],
         optionalHeaders: ['Parent Organisation', 'Trainees', 'Notes'],
         exampleRows: [
-            ['UNIT-01', 'Unit Name', 'LOC', 'Operational', 'Pooled Crew Model', 'Organisation / Division / Group', 'No', ''],
-            ['UNIT-02', 'Training Unit Name', 'LOC', 'Training', 'Flight School Model', 'Organisation / Training Division / Training Group', 'Yes', ''],
+            ['UNIT-01', 'Unit Name', 'LOC', 'Operational', 'Pooled Crew Model', 'Organisation / Organisation Level 1 / Organisation Level 2', 'No', ''],
+            ['UNIT-02', 'Training Unit Name', 'LOC', 'Training', 'Flight School Model', 'Organisation / Organisation Level 1 / Organisation Level 2', 'Yes', ''],
         ],
         settingsSection: 'platform-units',
     },
@@ -2750,13 +2750,13 @@ const InitialSetupWizard: React.FC<{
         organisationLevelCount: getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3),
         level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || 'Organisation'),
         level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || 'Organisation']),
-        level1Name: String(levelDraftSource(1)?.name || 'Branch / HQ'),
+        level1Name: String(levelDraftSource(1)?.name || 'Organisation Level 1'),
         level1Options: toLines(levelDraftSource(1)?.options || []),
         level1Parents: parentLinesForLevel(1, ''),
-        level2Name: String(levelDraftSource(2)?.name || 'Operating Group'),
+        level2Name: String(levelDraftSource(2)?.name || 'Organisation Level 2'),
         level2Options: toLines(levelDraftSource(2)?.options || []),
         level2Parents: parentLinesForLevel(2, ''),
-        level3Name: String(levelDraftSource(3)?.name || 'Wing / Group'),
+        level3Name: String(levelDraftSource(3)?.name || 'Organisation Level 3'),
         level3Options: toLines(levelDraftSource(3)?.options || []),
         level3Parents: parentLinesForLevel(3, ''),
         additionalLevels: Array.from({ length: Math.max(0, getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3) - 3) }, (_, offset) => {
@@ -5210,7 +5210,7 @@ const InitialSetupWizard: React.FC<{
     ) => (
         <div className="max-w-full overflow-hidden">
             <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]">
-                {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, levelNumber === 1 ? 'Branch / HQ' : levelNumber === 2 ? 'Operating Group' : 'Unit Group')}
+                {wizardField(`Level ${levelNumber} type`, levelName, onNameChange, undefined, `Organisation Level ${levelNumber}`)}
                 <div className="min-w-0 md:w-1/2">
                     {wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true)}
                 </div>

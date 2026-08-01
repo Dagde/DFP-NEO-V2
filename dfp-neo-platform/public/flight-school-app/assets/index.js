@@ -10036,12 +10036,12 @@ const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisat
   const headers = ["Level", "Level Type", "Name", "Parent", "Notes"];
   const rows = [
     ["0", "Organisation", "Organisation", "", "Top level organisation"],
-    ["1", "Division", "Division", "Organisation", "First organisation layer below the top level"],
-    ["2", "Group", "Group", "Division", "Second organisation layer"],
-    ["3", "Department", "Department", "Group", "Add as many levels as needed before units"],
-    ["4", "Team", "Team", "Department", "Optional deeper level"],
-    ["5", "Section", "Section", "Team", "Optional deeper level"],
-    ["6", "Element", "Element", "Section", "Optional deeper level"]
+    ["1", "Organisation Level 1", "Organisation Level 1", "Organisation", "First organisation layer below the top level"],
+    ["2", "Organisation Level 2", "Organisation Level 2", "Organisation Level 1", "Second organisation layer"],
+    ["3", "Organisation Level 3", "Organisation Level 3", "Organisation Level 2", "Add as many levels as needed before units"],
+    ["4", "Organisation Level 4", "Organisation Level 4", "Organisation Level 3", "Optional deeper level"],
+    ["5", "Organisation Level 5", "Organisation Level 5", "Organisation Level 4", "Optional deeper level"],
+    ["6", "Organisation Level 6", "Organisation Level 6", "Organisation Level 5", "Optional deeper level"]
   ];
   const tableRows = [
     `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join("")}</tr>`,
@@ -10469,8 +10469,8 @@ const initialSetupTemplates = [
     optionalHeaders: ["Parent", "Notes"],
     exampleRows: [
       ["0", "Organisation", "", "Top level organisation"],
-      ["1", "Division", "Organisation", "Branch, command, region, or division"],
-      ["2", "Group", "Division", "Operating group, department, wing, or team"]
+      ["1", "Organisation Level 1", "Organisation", "Branch, command, region, division, or equivalent"],
+      ["2", "Organisation Level 2", "Organisation Level 1", "Operating group, department, wing, team, or equivalent"]
     ],
     settingsSection: "platform-organisation-locations",
     focusSubsectionId: "platform-organisation-structure"
@@ -10495,8 +10495,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Unit Code", "Unit Name", "Location", "Unit Type", "Operating Model"],
     optionalHeaders: ["Parent Organisation", "Trainees", "Notes"],
     exampleRows: [
-      ["UNIT-01", "Unit Name", "LOC", "Operational", "Pooled Crew Model", "Organisation / Division / Group", "No", ""],
-      ["UNIT-02", "Training Unit Name", "LOC", "Training", "Flight School Model", "Organisation / Training Division / Training Group", "Yes", ""]
+      ["UNIT-01", "Unit Name", "LOC", "Operational", "Pooled Crew Model", "Organisation / Organisation Level 1 / Organisation Level 2", "No", ""],
+      ["UNIT-02", "Training Unit Name", "LOC", "Training", "Flight School Model", "Organisation / Organisation Level 1 / Organisation Level 2", "Yes", ""]
     ],
     settingsSection: "platform-units"
   },
@@ -11976,13 +11976,13 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     organisationLevelCount: getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3),
     level0Name: String(levelDraftSource(0)?.name || activeOrganisation?.name || "Organisation"),
     level0Options: toLines(levelDraftSource(0)?.options || [activeOrganisation?.name || activeOrganisation?.code || "Organisation"]),
-    level1Name: String(levelDraftSource(1)?.name || "Branch / HQ"),
+    level1Name: String(levelDraftSource(1)?.name || "Organisation Level 1"),
     level1Options: toLines(levelDraftSource(1)?.options || []),
     level1Parents: parentLinesForLevel(1, ""),
-    level2Name: String(levelDraftSource(2)?.name || "Operating Group"),
+    level2Name: String(levelDraftSource(2)?.name || "Organisation Level 2"),
     level2Options: toLines(levelDraftSource(2)?.options || []),
     level2Parents: parentLinesForLevel(2, ""),
-    level3Name: String(levelDraftSource(3)?.name || "Wing / Group"),
+    level3Name: String(levelDraftSource(3)?.name || "Organisation Level 3"),
     level3Options: toLines(levelDraftSource(3)?.options || []),
     level3Parents: parentLinesForLevel(3, ""),
     additionalLevels: Array.from({ length: Math.max(0, getOrganisationLevelCountBeforeUnits(organisationStructureLevels, 3) - 3) }, (_, offset) => {
@@ -14101,7 +14101,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   ] });
   const organisationLevelAnswer = (levelNumber, levelName, levelOptions, parentMappings, onNameChange, onOptionsChange, onParentMappingsChange, placeholder, parentOptions) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-full overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-3 md:grid-cols-[minmax(130px,190px)_minmax(0,1fr)]", children: [
-      wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, levelNumber === 1 ? "Branch / HQ" : levelNumber === 2 ? "Operating Group" : "Unit Group"),
+      wizardField(`Level ${levelNumber} type`, levelName, onNameChange, void 0, `Organisation Level ${levelNumber}`),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 md:w-1/2", children: wizardTextArea(`${levelName || `Level ${levelNumber}`} names`, levelOptions, onOptionsChange, placeholder, true) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: wizardLabelClass, children: "Parents for this level" }),
