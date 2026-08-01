@@ -708,7 +708,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Pool Name', 'Aircraft Type', 'Unit', 'Location', 'Aircraft', 'Sim', 'Trainer', 'Standby', 'Ground'],
         optionalHeaders: ['Notes'],
         exampleRows: [
-            ['Primary DFP Row Set', 'Primary Resource', 'UNIT-01', 'LOC', '4', '0', '0', '1', '0', ''],
+            ['DFP Resource Rows', 'Aircraft Type', 'UNIT-01', 'LOC', '4', '0', '0', '1', '0', ''],
         ],
         settingsSection: 'platform-resource-pools',
     },
@@ -730,7 +730,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit'],
         optionalHeaders: ['Rank', 'Personnel ID', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
         exampleRows: [
-            ['Surname, First', 'UNIT-02', 'Rank', '4000002', '1', 'Course Name', '2026-01-15', 'Primary LMP'],
+            ['Surname, First', 'UNIT-02', 'Rank', '4000002', '1', 'Course Name', '2026-01-15', 'Master LMP'],
         ],
         settingsSection: 'trainee-database',
     },
@@ -741,7 +741,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Master LMP', 'Event Code', 'Event Title', 'Type', 'Duration Minutes'],
         optionalHeaders: ['Aircraft Type', 'Crew Required', 'Pre Flight Minutes', 'Post Flight Minutes'],
         exampleRows: [
-            ['Primary LMP', 'EVENT-001', 'Training event 1', 'Flight', '90', 'Primary Resource', 'Lead 1, Support 1', '90', '60'],
+            ['Master LMP', 'EVENT-001', 'Training event', 'Flight', '90', 'Aircraft Type', 'Crew Role 1, Crew Role 2', '90', '60'],
         ],
         settingsSection: 'platform-master-lmp-access',
     },
@@ -4721,7 +4721,7 @@ const InitialSetupWizard: React.FC<{
                             {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'Rank')}
                             {wizardField('Personnel ID', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '4000002')}
                             {wizardField('Course number', row.courseNumber || '', (value) => updateTraineeRow(index, 'courseNumber', value), undefined, '1')}
-                            {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Primary LMP', `trainee-master-lmp-${index}`)}
+                            {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Master LMP', `trainee-master-lmp-${index}`)}
                             {wizardField('Start date', row.startDate || '', (value) => updateTraineeRow(index, 'startDate', value), undefined, '2026-01-15')}
                         </div>
                     </div>
@@ -6576,8 +6576,8 @@ const InitialSetupWizard: React.FC<{
                 <p>What aircraft type or primary resource should <strong>{unitDraft.code || 'this unit'}</strong> use?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'AIRCRAFT')}
-                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Primary Resource')}
-                    {wizardField('DFP resource row set name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'Primary DFP Resource Row Set')}
+                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Aircraft Type')}
+                    {wizardField('DFP resource row set name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'DFP Resource Rows')}
                 </div>,
             );
         }
@@ -6750,8 +6750,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Choose an existing LMP if it exists, or enter the first LMP to build. This does not change the scheduler logic; it only defines the training stream the unit can use.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Primary LMP', 'master-lmp-code')}
-                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Primary LMP')}
+                    {wizardDataListField('Master LMP code', trainingDraft.lmpCode, (value) => setTrainingDraft((draft) => ({ ...draft, lmpCode: value, lmpName: draft.lmpName || value })), activeMasterLmpCatalogue.map((lmp: any) => String(lmp.code || lmp.name || '')).filter(Boolean), 'Master LMP', 'master-lmp-code')}
+                    {wizardField('Master LMP name', trainingDraft.lmpName, (value) => setTrainingDraft((draft) => ({ ...draft, lmpName: value })), undefined, 'Training Programme')}
                     {wizardTextArea('Description', trainingDraft.description, (value) => setTrainingDraft((draft) => ({ ...draft, description: value })), 'Initial programme or qualification stream')}
                 </div>,
             );

@@ -4335,7 +4335,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         {
           id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
-          name: 'New Unit',
+          name: `UNIT-${prev.units.length + 1}`,
           organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || 'DEFAULT',
           locationCode: defaultLocation,
           unitType: contextUnit?.unitType || '',
