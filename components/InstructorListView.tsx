@@ -109,7 +109,7 @@ const getDefaultNewStaffRole = (
 const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = '', defaultRole = 'Pilot', defaultIsQfi = false): Instructor => ({
     idNumber: generateRandomIdNumber(),
     name: '',
-    rank: 'FLTLT',
+    rank: '',
     role: defaultRole,
     callsignNumber: 0,
     category: 'C',

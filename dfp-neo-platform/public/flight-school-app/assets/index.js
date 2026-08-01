@@ -11496,7 +11496,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs leading-5 text-cyan-100/75", children: "Example: if the task is a configured directed task and the tile label is TSK, the schedule tile can show Task - TSK." })
           ] }),
           taskTileLabelProfiles.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-4 mb-4 overflow-hidden rounded-md border border-cyan-200/20 bg-slate-950/20", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 border-b border-white/10 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-400 md:grid-cols-[minmax(0,1fr)_minmax(150px,0.35fr)]", children: [
@@ -26557,7 +26557,7 @@ const generateNewTraineeTemplate = (defaults = {}) => ({
   fullName: "",
   // Will be constructed on save
   name: "",
-  rank: "PLTOFF",
+  rank: "",
   role: "Trainee",
   course: defaults.course || "",
   seatConfig: "Normal",
@@ -35676,11 +35676,7 @@ const formatDate$2 = (dateString) => {
     return "-";
   }
 };
-const DASHBOARD_RANK_ORDER = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
-const getDashboardRankWeight = (rank) => {
-  const index = DASHBOARD_RANK_ORDER.indexOf(String(rank || ""));
-  return index === -1 ? DASHBOARD_RANK_ORDER.length : index;
-};
+const compareDashboardRank = (left, right) => String(left || "").localeCompare(String(right || ""), void 0, { sensitivity: "base" });
 const formatDashboardStaffName = (staff) => {
   const [lastName, firstName] = String(staff.name || "").split(",").map((part) => part.trim());
   const displayName = firstName ? `${firstName} ${lastName}` : staff.name;
@@ -35713,7 +35709,7 @@ const formatDashboardConversationDate = (dateString) => {
   }
   return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getFullYear()).slice(-2)}`;
 };
-const sortDashboardContacts = (contacts) => [...contacts].sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
+const sortDashboardContacts = (contacts) => [...contacts].sort((a, b) => compareDashboardRank(a.rank, b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
 const groupDashboardMessageContacts = (contacts) => {
   const byUnit = /* @__PURE__ */ new Map();
   contacts.forEach((contact) => {
@@ -35848,7 +35844,7 @@ const MyDashboard = ({
   const continuationShortLabel = continuationTerminology.shortLabel;
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
   const groupedStaffOptions = reactExports.useMemo(() => {
-    const sortedStaff2 = [...staffOptions].filter((staff) => staff?.name).sort((a, b) => String(a.unit || "No Unit").localeCompare(String(b.unit || "No Unit")) || getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
+    const sortedStaff2 = [...staffOptions].filter((staff) => staff?.name).sort((a, b) => String(a.unit || "No Unit").localeCompare(String(b.unit || "No Unit")) || compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
       const unit = String(staff.unit || "No Unit");
@@ -35926,7 +35922,7 @@ const MyDashboard = ({
     });
     const unique = /* @__PURE__ */ new Map();
     [...staffContacts, ...traineeContacts].forEach((contact) => unique.set(normaliseDashboardContactName(contact.name), contact));
-    return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || (a.type === b.type ? 0 : a.type === "Staff" ? -1 : 1) || (a.type === "Trainee" ? a.role.localeCompare(b.role) : 0) || getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
+    return Array.from(unique.values()).sort((a, b) => a.unit.localeCompare(b.unit) || (a.type === b.type ? 0 : a.type === "Staff" ? -1 : 1) || (a.type === "Trainee" ? a.role.localeCompare(b.role) : 0) || compareDashboardRank(a.rank, b.rank) || a.surname.localeCompare(b.surname) || a.firstNames.localeCompare(b.firstNames) || a.displayName.localeCompare(b.displayName));
   }, [dashboardUserUnitSet, formatStaffRole, messageContactStaffOptions, messageContactTraineeOptions]);
   const messageSuggestions = reactExports.useMemo(() => {
     const query = normaliseDashboardContactName(messageToText);
@@ -36125,7 +36121,7 @@ const MyDashboard = ({
   const sameUnitStaff = reactExports.useMemo(() => {
     if (!staffPickerEntry) return [];
     const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || "").trim();
-    return staffOptions.filter((staff) => staff?.name && (!unit || String(staff.unit || "").trim() === unit)).sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
+    return staffOptions.filter((staff) => staff?.name && (!unit || String(staff.unit || "").trim() === unit)).sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
   }, [staffOptions, staffPickerEntry]);
   const mySctRequests = sctRequests.filter((req) => req.name === userName.split(" ").reverse().join(", "));
   const incompletePt051s = React.useMemo(() => {
@@ -38839,7 +38835,6 @@ const PrioritiesView = ({
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const locationDisplayName = String(school || "").trim() || "Selected location";
-  const staffRankOrder = ["WGCDR", "SQNLDR", "FLTLT", "FLGOFF", "PLTOFF", "Mr"];
   const normalisedStaffQualificationCatalogue = reactExports.useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
     [staffQualificationCatalogue]
@@ -39948,7 +39943,7 @@ const PrioritiesView = ({
   const getStaffCurrencyRoleLabel = (role) => getCrewPositionDisplayLabel(role, crewPositionTerminology, role);
   const staffCurrencyRows = reactExports.useMemo(() => {
     return instructorsData.map((instructor) => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).filter((row) => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology)).sort((a, b) => {
-      const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
+      const rankDiff = String(a.instructor.rank || "").localeCompare(String(b.instructor.rank || ""), void 0, { sensitivity: "base" });
       return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
     });
   }, [instructorsData, currencyNames, buildDfpDate, selectedStaffCurrencyRole, crewPositionTerminology]);
@@ -52931,7 +52926,7 @@ const BulkUpdateFlyout = ({
           const newInstructor = {
             idNumber,
             name: "Unnamed Instructor",
-            rank: "FLTLT",
+            rank: "",
             role: "Pilot",
             callsignNumber: 0,
             category: "C",
@@ -53214,7 +53209,7 @@ const getDefaultNewStaffRole = (operationalModel, terminology) => {
 const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "", defaultRole = "Pilot", defaultIsQfi = false) => ({
   idNumber: generateRandomIdNumber(),
   name: "",
-  rank: "FLTLT",
+  rank: "",
   role: defaultRole,
   callsignNumber: 0,
   category: "C",
@@ -66378,7 +66373,7 @@ const OPERATIONAL_RUNBOOK_HELP = {
   releaseChannel: "Select the update stream this system follows. Production is live use; Staging is pre-live testing; Customer Acceptance is formal customer test; Offline Package is an isolated deployment package.",
   supportOwner: "Record who owns support for this deployment. Examples: Unit Admin Cell, Customer Support Desk, Systems Officer, or a named support team.",
   supportContact: "Record how support is contacted. Acceptable formats include an email address, phone number, internal extension, or service desk queue name. Do not enter account passwords or secret tokens.",
-  approvingAuthority: "Record who can approve operational changes or software updates. Examples: Chief Instructor, SQNLDR Operations, System Owner, or Customer Change Board.",
+  approvingAuthority: "Record who can approve operational changes or software updates. Examples: operations lead, system owner, customer change board, or authorised change manager.",
   backupFrequency: "Select how often the database and critical records are backed up. Choose the closest option to the approved local backup process.",
   backupRetentionDays: "Enter the number of days backups are kept before disposal. Whole numbers only. Example: 30 means backups are retained for one month.",
   backupStorageLocation: "Record the approved backup storage location. Correct examples: \\\\backup-server\\dfp-neo\\backups, /srv/dfp-neo/backups, D:\\DFP-NEO\\Backups, or Secure NAS - Aviation Systems Backup Share. Do not enter database URLs, passwords, access keys or tokens.",
@@ -67004,7 +66999,7 @@ const downloadTextFile = (filename, content, mimeType) => {
   URL.revokeObjectURL(url);
 };
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO = {
-  event: "The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a task code.",
+  event: "The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as a lesson code, task code or sortie number.",
   training: "The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, task stream or assigned training sequence.",
   type: "The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, task sortie or other model-specific event type.",
   timing: "The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.",
@@ -71238,7 +71233,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   value: taskProfilesUnlocked ? taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations) : formatTaskProfileAbbreviationText(abbreviations),
                   disabled: !canEditTaskProfiles,
                   onChange: (value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value })),
-                  info: "One label per line, for example Close Air Support - CAS. Equals signs are also accepted."
+                  info: "One label per line, for example Task Name - TSK. Equals signs are also accepted."
                 }
               )
             ] }, unit.code);
@@ -99799,7 +99794,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         idNumber: staff.idNumber,
         fullName: staff.name,
         name: staff.name,
-        rank: "FLTLT",
+        rank: staff.rank || "",
         course: "Staff",
         seatConfig: staff.seatConfig,
         isPaused: false,
@@ -104123,7 +104118,7 @@ const App = () => {
               firstName: ssoUser.firstName || "",
               lastName: ssoUser.lastName || "",
               role: ssoUser.role || "USER",
-              militaryRank: "FLTLT",
+              militaryRank: "",
               userId: ssoUser.userId,
               username: ssoUser.username
             });
@@ -104168,7 +104163,7 @@ const App = () => {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
-            militaryRank: "FLTLT",
+            militaryRank: "",
             userId: user.userId,
             username: user.username
           });
@@ -104208,7 +104203,7 @@ const App = () => {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      militaryRank: "FLTLT",
+      militaryRank: "",
       userId: user.userId,
       username: user.username
     });
@@ -120565,7 +120560,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           MyDashboard,
           {
             userName: dashboardUserName,
-            userRank: dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || "FLTLT",
+            userRank: dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || "",
             events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))),
             onSelectEvent: handleOpenModal,
             onNavigate: handleNavigation,
@@ -122096,7 +122091,7 @@ Do you want to replace the existing entry?`,
           isSupervisor: true,
           onPublish: handlePublish,
           currentUserName,
-          currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
+          currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           instructorsList: instructorsData.map((inst) => ({
             name: inst.name,
             rank: inst.rank,
@@ -122515,7 +122510,7 @@ Do you want to replace the existing entry?`,
           onBuildDfpClick: handleBuildDfp,
           isSupervisor: true,
           onPublish: handlePublish,
-          currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
+          currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",
           currentUserName,
           currentUserLocation: school,
           currentUserUnit: activeUnitCode2 || currentUser2?.unit || "",

@@ -305,7 +305,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                     const newInstructor: Instructor = {
                         idNumber,
                         name: 'Unnamed Instructor',
-                        rank: 'FLTLT',
+                        rank: '',
                         role: 'Pilot',
                         callsignNumber: 0,
                         category: 'C',

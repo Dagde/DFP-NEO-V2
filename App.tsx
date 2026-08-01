@@ -17595,7 +17595,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 idNumber: staff.idNumber,
                 fullName: staff.name,
                 name: staff.name,
-                rank: 'FLTLT',
+                rank: staff.rank || '',
                 course: 'Staff',
                 seatConfig: staff.seatConfig,
                 isPaused: false,
@@ -23032,7 +23032,7 @@ const App: React.FC = () => {
                             firstName: ssoUser.firstName || '',
                             lastName: ssoUser.lastName || '',
                             role: ssoUser.role || 'USER',
-                            militaryRank: 'FLTLT',
+                            militaryRank: '',
                             userId: ssoUser.userId,
                             username: ssoUser.username
                         });
@@ -23082,7 +23082,7 @@ const App: React.FC = () => {
                         firstName: user.firstName,
                         lastName: user.lastName,
                         role: user.role,
-                        militaryRank: 'FLTLT',
+                        militaryRank: '',
                         userId: user.userId,
                         username: user.username
                     });
@@ -23126,7 +23126,7 @@ const App: React.FC = () => {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
-            militaryRank: 'FLTLT',
+            militaryRank: '',
             userId: user.userId,
             username: user.username,
         });
@@ -42971,7 +42971,7 @@ appliedUpdates.forEach(update => {
 
                 return <MyDashboard
                             userName={dashboardUserName}
-                            userRank={dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || 'FLTLT'}
+                            userRank={dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || ''}
                             events={eventsForDate.filter(e => (
                                 [e.instructor, e.pilot, e.fixedCrewPic, e.crew]
                                     .some(name => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))
@@ -44685,7 +44685,7 @@ appliedUpdates.forEach(update => {
                 isSupervisor={true}
                 onPublish={handlePublish}
                 currentUserName={currentUserName}
-                currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || 'FLTLT'}
+                currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                 instructorsList={instructorsData.map(inst => ({
                     name: inst.name,
                     rank: inst.rank,
@@ -45097,7 +45097,7 @@ appliedUpdates.forEach(update => {
                 onBuildDfpClick={handleBuildDfp}
                 isSupervisor={true}
                 onPublish={handlePublish}
-                currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || 'FLTLT'}
+                currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                 currentUserName={currentUserName}
                 currentUserLocation={school}
                 currentUserUnit={activeUnitCode || currentUser?.unit || ''}

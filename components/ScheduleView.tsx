@@ -2168,7 +2168,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data.
                             </p>
                             <p className="mt-2 text-xs leading-5 text-cyan-100/75">
-                                Example: if the task is Close Air Support and the tile label is CAS, the schedule tile can show Task - CAS.
+                                Example: if the task is a configured directed task and the tile label is TSK, the schedule tile can show Task - TSK.
                             </p>
                         </div>
                         {taskTileLabelProfiles.length > 0 ? (

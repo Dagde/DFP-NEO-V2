@@ -141,12 +141,9 @@ const formatDate = (dateString: string | undefined): string => {
     }
 };
 
-const DASHBOARD_RANK_ORDER = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
-
-const getDashboardRankWeight = (rank?: string): number => {
-    const index = DASHBOARD_RANK_ORDER.indexOf(String(rank || ''));
-    return index === -1 ? DASHBOARD_RANK_ORDER.length : index;
-};
+const compareDashboardRank = (left?: string, right?: string): number => (
+    String(left || '').localeCompare(String(right || ''), undefined, { sensitivity: 'base' })
+);
 
 const formatDashboardStaffName = (staff: Instructor): string => {
     const [lastName, firstName] = String(staff.name || '').split(',').map(part => part.trim());
@@ -192,7 +189,7 @@ const formatDashboardConversationDate = (dateString: string): string => {
 
 const sortDashboardContacts = (contacts: DashboardMessageContact[]): DashboardMessageContact[] => (
     [...contacts].sort((a, b) => (
-        getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
+        compareDashboardRank(a.rank, b.rank) ||
         a.surname.localeCompare(b.surname) ||
         a.firstNames.localeCompare(b.firstNames) ||
         a.displayName.localeCompare(b.displayName)
@@ -355,7 +352,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             .filter(staff => staff?.name)
             .sort((a, b) => (
                 String(a.unit || 'No Unit').localeCompare(String(b.unit || 'No Unit')) ||
-                getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
+                compareDashboardRank(a.rank, b.rank) ||
                 String(a.name || '').localeCompare(String(b.name || ''))
             ));
         const groups = new Map<string, Instructor[]>();
@@ -453,7 +450,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             a.unit.localeCompare(b.unit) ||
             (a.type === b.type ? 0 : a.type === 'Staff' ? -1 : 1) ||
             (a.type === 'Trainee' ? a.role.localeCompare(b.role) : 0) ||
-            getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) ||
+            compareDashboardRank(a.rank, b.rank) ||
             a.surname.localeCompare(b.surname) ||
             a.firstNames.localeCompare(b.firstNames) ||
             a.displayName.localeCompare(b.displayName)
@@ -692,7 +689,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         const unit = String(staffPickerEntry.staff.unit || staffPickerEntry.report.unitCode || '').trim();
         return staffOptions
             .filter(staff => staff?.name && (!unit || String(staff.unit || '').trim() === unit))
-            .sort((a, b) => getDashboardRankWeight(a.rank) - getDashboardRankWeight(b.rank) || String(a.name || '').localeCompare(String(b.name || '')));
+            .sort((a, b) => compareDashboardRank(a.rank, b.rank) || String(a.name || '').localeCompare(String(b.name || '')));
     }, [staffOptions, staffPickerEntry]);
     
     const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));

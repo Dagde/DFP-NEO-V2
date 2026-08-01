@@ -1060,7 +1060,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
   const locationDisplayName = String(school || '').trim() || 'Selected location';
-  const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
   const normalisedStaffQualificationCatalogue = useMemo(
     () => normaliseStaffQualificationCatalogue(staffQualificationCatalogue || null),
     [staffQualificationCatalogue],
@@ -2436,7 +2435,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       .filter(row => row.dueCurrencies.length > 0)
       .filter(row => crewPositionValuesMatch(selectedStaffCurrencyRole, row.instructor.role, crewPositionTerminology))
       .sort((a, b) => {
-        const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
+        const rankDiff = String(a.instructor.rank || '').localeCompare(String(b.instructor.rank || ''), undefined, { sensitivity: 'base' });
         return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
       });
   }, [instructorsData, currencyNames, buildDfpDate, selectedStaffCurrencyRole, crewPositionTerminology]);

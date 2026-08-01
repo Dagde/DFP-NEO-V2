@@ -96,7 +96,7 @@ const generateNewTraineeTemplate = (defaults: Partial<Pick<Trainee, 'course' | '
     idNumber: 4000000 + Math.floor(Math.random() * 1000000),
     fullName: '', // Will be constructed on save
     name: '',
-    rank: 'PLTOFF',
+    rank: '',
     role: 'Trainee',
     course: defaults.course || '',
     seatConfig: 'Normal',

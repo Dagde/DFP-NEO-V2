@@ -949,7 +949,7 @@ const OPERATIONAL_RUNBOOK_HELP: Record<string, string> = {
   releaseChannel: 'Select the update stream this system follows. Production is live use; Staging is pre-live testing; Customer Acceptance is formal customer test; Offline Package is an isolated deployment package.',
   supportOwner: 'Record who owns support for this deployment. Examples: Unit Admin Cell, Customer Support Desk, Systems Officer, or a named support team.',
   supportContact: 'Record how support is contacted. Acceptable formats include an email address, phone number, internal extension, or service desk queue name. Do not enter account passwords or secret tokens.',
-  approvingAuthority: 'Record who can approve operational changes or software updates. Examples: Chief Instructor, SQNLDR Operations, System Owner, or Customer Change Board.',
+  approvingAuthority: 'Record who can approve operational changes or software updates. Examples: operations lead, system owner, customer change board, or authorised change manager.',
   backupFrequency: 'Select how often the database and critical records are backed up. Choose the closest option to the approved local backup process.',
   backupRetentionDays: 'Enter the number of days backups are kept before disposal. Whole numbers only. Example: 30 means backups are retained for one month.',
   backupStorageLocation: 'Record the approved backup storage location. Correct examples: \\\\backup-server\\dfp-neo\\backups, /srv/dfp-neo/backups, D:\\DFP-NEO\\Backups, or Secure NAS - Aviation Systems Backup Share. Do not enter database URLs, passwords, access keys or tokens.',
@@ -1730,7 +1730,7 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
 };
 
 const TRAINING_REPORT_OVERVIEW_FIELD_INFO: Record<string, string> = {
-  event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as AA1, IC02 or a task code.',
+  event: 'The label for the assessed event code or sortie identifier. This is the short reference users recognise on the program, DFP and syllabus, such as a lesson code, task code or sortie number.',
   training: 'The label for the training stream that owns the event. Depending on the operational model, this may be a course, LMP, package, task stream or assigned training sequence.',
   type: 'The label for the activity classification or event description. It helps the assessor distinguish whether the report is for a flight, simulator, ground event, task sortie or other model-specific event type.',
   timing: 'The label for the scheduled timing summary. This normally shows the planned start time and duration used to identify the training opportunity being assessed.',
@@ -6934,7 +6934,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       value={taskProfilesUnlocked ? (taskProfileAbbreviationDrafts[unitDraftKey] ?? formatTaskProfileAbbreviationText(abbreviations)) : formatTaskProfileAbbreviationText(abbreviations)}
                       disabled={!canEditTaskProfiles}
                       onChange={(value) => setTaskProfileAbbreviationDrafts((drafts) => ({ ...drafts, [unitDraftKey]: value }))}
-                      info="One label per line, for example Close Air Support - CAS. Equals signs are also accepted."
+                      info="One label per line, for example Task Name - TSK. Equals signs are also accepted."
                     />
                   </div>
                 );
