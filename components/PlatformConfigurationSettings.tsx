@@ -6861,7 +6861,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Directed Task Lists"
-          subtitle="Short task names used when assigning directed tasks. This section does not create full flight templates."
+          subtitle="Short task names used when assigning directed tasks. Reusable directed-flight setups are configured separately."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6883,7 +6883,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the directed-task names available for each operational model. These are not full flight setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
+            Set the directed-task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
