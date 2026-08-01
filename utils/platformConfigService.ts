@@ -198,8 +198,8 @@ export const DEFAULT_PLATFORM_PERMISSION_PROFILES: PlatformPermissionProfile[] =
   },
   {
     id: 'instructor',
-    name: 'Training Staff',
-    description: 'Training staff access to DFP, staff roster, trainee profiles, training reports and LMP records.',
+    name: 'Instructor-Qualified',
+    description: 'Instructor-qualified access to DFP, staff roster, trainee profiles, training reports and LMP records.',
     permissions: ['dfp.view', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
   },
   {

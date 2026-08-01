@@ -776,40 +776,40 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         </div>
       </div>
 
-      {/* Training staff */}
+      {/* Instructor-qualified personnel */}
       <fieldset className={fieldsetShell}>
-        <legend className={legendClass}>Training Staff</legend>
+        <legend className={legendClass}>Instructor-Qualified Personnel</legend>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <InteractiveStatCard
-            title="Training Staff with 4 Events"
+            title="Instructor-Qualified with 4 Events"
             value={stats.instructorsWithFourEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithFourEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Training Staff with 3 Events"
+            title="Instructor-Qualified with 3 Events"
             value={stats.instructorsWithThreeEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithThreeEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Training Staff with 2 Events"
+            title="Instructor-Qualified with 2 Events"
             value={stats.instructorsWithTwoEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithTwoEventsList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Training Staff with 1 Event"
+            title="Instructor-Qualified with 1 Event"
             value={stats.instructorsWithOneEvent}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithOneEventList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Training Staff with 0 Events"
+            title="Instructor-Qualified with 0 Events"
             value={stats.instructorsWithZeroEvents}
             description={`of ${stats.totalAvailableInstructors} available`}
             personnelList={stats.instructorsWithZeroEventsList}
@@ -832,28 +832,28 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
           <InteractiveStatCard
             title="Trainees with their Primary"
             value={stats.traineesWithPrimaryList.length}
-            description="Paired with primary training staff"
+            description="Paired with primary instructor-qualified personnel"
             personnelList={stats.traineesWithPrimaryList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
             title="Trainees with their Secondary"
             value={stats.traineesWithSecondaryList.length}
-            description="Paired with secondary training staff"
+            description="Paired with secondary instructor-qualified personnel"
             personnelList={stats.traineesWithSecondaryList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Trainees with Training Staff from Flight"
+            title="Trainees with Flight Instructor-Qualified"
             value={stats.traineesWithInstructorFromFlightList.length}
-            description="Paired with training staff from same Flight"
+            description="Paired with instructor-qualified personnel from same flight"
             personnelList={stats.traineesWithInstructorFromFlightList}
             onPersonClick={onNavigateAndSelectPerson}
           />
           <InteractiveStatCard
-            title="Trainees with Other Training Staff"
+            title="Trainees with Other Instructor-Qualified"
             value={stats.traineesWithOtherInstructorsList.length}
-            description="Paired with other training staff"
+            description="Paired with other instructor-qualified personnel"
             personnelList={stats.traineesWithOtherInstructorsList}
             onPersonClick={onNavigateAndSelectPerson}
           />

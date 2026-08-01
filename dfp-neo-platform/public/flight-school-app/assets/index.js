@@ -2071,8 +2071,8 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
   },
   {
     id: "instructor",
-    name: "Training Staff",
-    description: "Training staff access to DFP, staff roster, trainee profiles, training reports and LMP records.",
+    name: "Instructor-Qualified",
+    description: "Instructor-qualified access to DFP, staff roster, trainee profiles, training reports and LMP records.",
     permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"]
   },
   {
@@ -42490,7 +42490,7 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "people-rules",
       step: "02",
-      label: "Training Staff Rules",
+      label: "Instructor-Qualified Rules",
       shortLabel: "People",
       description: "Control how instructor preference or restriction should influence placement.",
       hidden: isFixedCrewModel
@@ -43691,12 +43691,12 @@ const PeopleTab = ({
       ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-4 text-center text-slate-400", children: "No trainees are currently waiting for a night flying event." }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: fieldsetShell, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Training Staff" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Instructor-Qualified Personnel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-5 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Training Staff with 4 Events",
+            title: "Instructor-Qualified with 4 Events",
             value: stats.instructorsWithFourEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithFourEventsList,
@@ -43706,7 +43706,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Training Staff with 3 Events",
+            title: "Instructor-Qualified with 3 Events",
             value: stats.instructorsWithThreeEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithThreeEventsList,
@@ -43716,7 +43716,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Training Staff with 2 Events",
+            title: "Instructor-Qualified with 2 Events",
             value: stats.instructorsWithTwoEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithTwoEventsList,
@@ -43726,7 +43726,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Training Staff with 1 Event",
+            title: "Instructor-Qualified with 1 Event",
             value: stats.instructorsWithOneEvent,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithOneEventList,
@@ -43736,7 +43736,7 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Training Staff with 0 Events",
+            title: "Instructor-Qualified with 0 Events",
             value: stats.instructorsWithZeroEvents,
             description: `of ${stats.totalAvailableInstructors} available`,
             personnelList: stats.instructorsWithZeroEventsList,
@@ -43763,7 +43763,7 @@ const PeopleTab = ({
           {
             title: "Trainees with their Primary",
             value: stats.traineesWithPrimaryList.length,
-            description: "Paired with primary training staff",
+            description: "Paired with primary instructor-qualified personnel",
             personnelList: stats.traineesWithPrimaryList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43773,7 +43773,7 @@ const PeopleTab = ({
           {
             title: "Trainees with their Secondary",
             value: stats.traineesWithSecondaryList.length,
-            description: "Paired with secondary training staff",
+            description: "Paired with secondary instructor-qualified personnel",
             personnelList: stats.traineesWithSecondaryList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43781,9 +43781,9 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Trainees with Training Staff from Flight",
+            title: "Trainees with Flight Instructor-Qualified",
             value: stats.traineesWithInstructorFromFlightList.length,
-            description: "Paired with training staff from same Flight",
+            description: "Paired with instructor-qualified personnel from same flight",
             personnelList: stats.traineesWithInstructorFromFlightList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -43791,9 +43791,9 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
           {
-            title: "Trainees with Other Training Staff",
+            title: "Trainees with Other Instructor-Qualified",
             value: stats.traineesWithOtherInstructorsList.length,
-            description: "Paired with other training staff",
+            description: "Paired with other instructor-qualified personnel",
             personnelList: stats.traineesWithOtherInstructorsList,
             onPersonClick: onNavigateAndSelectPerson
           }
@@ -44549,10 +44549,10 @@ const LimitingFactorsSection = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2 text-sm", children: [
         totalLimitingFactors.insufficientInstructors > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Insufficient Training Staff:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Insufficient Instructor-Qualified Personnel:" }),
           " ",
           totalLimitingFactors.insufficientInstructors,
-          " events could not be scheduled due to lack of available training staff"
+          " events could not be scheduled due to lack of available instructor-qualified personnel"
         ] }),
         totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
@@ -44600,10 +44600,10 @@ const LimitingFactorsSection = ({
           " events could not be scheduled because trainees reached their daily event limit"
         ] }),
         totalLimitingFactors.instructorLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Training Staff Daily Limit:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Instructor-Qualified Daily Limit:" }),
           " ",
           totalLimitingFactors.instructorLimit,
-          " events could not be scheduled because training staff reached their daily event limit"
+          " events could not be scheduled because instructor-qualified personnel reached their daily event limit"
         ] }),
         totalLimitingFactors.noTimeSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No Suitable Time Slots:" }),
@@ -66716,7 +66716,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
-      return "Open User Access Context, search for the user, then tick at least one permission profile such as Training Staff, Scheduler or Unit Admin.";
+      return "Open User Access Context, search for the user, then tick at least one configured permission profile that matches their duties.";
     }
     if (lowerTitle.includes("unknown permission profile")) {
       return "Open User Access Context and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.";
@@ -103845,7 +103845,7 @@ const App = () => {
     const timezone = configuredLocation?.timezone ?? configuredLocation?.timeZone ?? configuredLocation?.settings?.timezone ?? fallbackProfile?.timezone ?? null;
     return {
       code: configuredLocation?.code || fallbackProfile?.code || school,
-      name: configuredLocation?.name || fallbackProfile?.name || school,
+      name: configuredLocation?.name || configuredLocation?.code || school,
       latitude: latitude === null || latitude === "" ? null : Number(latitude),
       longitude: longitude === null || longitude === "" ? null : Number(longitude),
       timezone: timezone ? String(timezone) : null

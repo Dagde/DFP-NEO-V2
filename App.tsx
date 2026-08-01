@@ -22692,7 +22692,7 @@ const App: React.FC = () => {
 
         return {
             code: configuredLocation?.code || fallbackProfile?.code || school,
-            name: configuredLocation?.name || fallbackProfile?.name || school,
+            name: configuredLocation?.name || configuredLocation?.code || school,
             latitude: latitude === null || latitude === '' ? null : Number(latitude),
             longitude: longitude === null || longitude === '' ? null : Number(longitude),
             timezone: timezone ? String(timezone) : null,

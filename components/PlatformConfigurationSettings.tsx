@@ -1390,7 +1390,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
-      return 'Open User Access Context, search for the user, then tick at least one permission profile such as Training Staff, Scheduler or Unit Admin.';
+      return 'Open User Access Context, search for the user, then tick at least one configured permission profile that matches their duties.';
     }
     if (lowerTitle.includes('unknown permission profile')) {
       return 'Open User Access Context and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.';

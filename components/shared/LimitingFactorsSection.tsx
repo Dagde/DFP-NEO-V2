@@ -72,7 +72,7 @@ const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
           <ul className="space-y-2 text-sm">
             {totalLimitingFactors.insufficientInstructors > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">Insufficient Training Staff:</strong> {totalLimitingFactors.insufficientInstructors} events could not be scheduled due to lack of available training staff
+                <strong className="text-white">Insufficient Instructor-Qualified Personnel:</strong> {totalLimitingFactors.insufficientInstructors} events could not be scheduled due to lack of available instructor-qualified personnel
               </li>
             )}
             {totalLimitingFactors.noAircraftSlots > 0 && (
@@ -97,7 +97,7 @@ const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
             )}
             {totalLimitingFactors.instructorLimit > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">Training Staff Daily Limit:</strong> {totalLimitingFactors.instructorLimit} events could not be scheduled because training staff reached their daily event limit
+                <strong className="text-white">Instructor-Qualified Daily Limit:</strong> {totalLimitingFactors.instructorLimit} events could not be scheduled because instructor-qualified personnel reached their daily event limit
               </li>
             )}
             {totalLimitingFactors.noTimeSlots > 0 && (

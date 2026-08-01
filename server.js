@@ -1791,7 +1791,7 @@ const PLATFORM_ENTITY_LABELS = {
   CommercialLocation: 'location',
   CommercialUnit: 'unit',
   CommercialAircraftType: 'aircraft type',
-  CommercialResourcePool: 'resource pool',
+  CommercialResourcePool: 'DFP resource row set',
   CommercialUnitModule: 'unit module',
   CommercialLicense: 'licence',
   CommercialSchedulingRuleSet: 'scheduling rule set',
