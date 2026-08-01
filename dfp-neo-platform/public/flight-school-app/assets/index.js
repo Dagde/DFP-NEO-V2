@@ -12073,7 +12073,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   });
   const [resourceDraft, setResourceDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
-    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Primary Resource"),
+    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
     poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
     poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
     poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
@@ -12394,7 +12394,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   reactExports.useEffect(() => {
     setResourceDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
-      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Primary Resource"),
+      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
       poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
       poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
       poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
@@ -15172,7 +15172,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Name: value }), "field-edit:level1-name"),
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Options: value }), "field-edit:level1-options"),
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level1Parents: value }), "field-edit:level1-parents"),
-          "Division A",
+          "Organisation Level 1",
           level1ParentOptions
         )
       );
@@ -15192,7 +15192,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Name: value }), "field-edit:level2-name"),
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Options: value }), "field-edit:level2-options"),
           (value) => updateOrganisationDraft((draft) => ({ ...draft, level2Parents: value }), "field-edit:level2-parents"),
-          "Group A\nGroup B",
+          "Organisation Level 2\nOrganisation Level 2B",
           level2ParentOptions
         )
       );
@@ -15279,7 +15279,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
               ] }, `unit-parent-${row.code}`);
             }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900", children: "Add the organisation levels above first, then return here to choose each unit's parent." })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The wizard will use the first unit as the detailed example, then the same setup questions apply to every other unit you listed." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs leading-5 text-slate-600", children: "The wizard will use the first unit for the detailed setup questions, then apply the same structure to every other unit you listed." })
         ] })
       );
     }
