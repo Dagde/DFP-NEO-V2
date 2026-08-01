@@ -14,13 +14,6 @@ const CALLSIGN_LIMIT = 50;
 
 const norm = (value?: string | null): string => String(value || '').trim().toUpperCase();
 
-const permanentRoleAliases = (value: string): string[] => {
-  if (value === 'SIM IP' || value === 'CONTRACTOR STAFF') {
-    return ['SIM IP', 'CONTRACTOR STAFF'];
-  }
-  return [value];
-};
-
 const personKey = (person: Instructor): string =>
   String((person as any).id || person.idNumber || person.name || '').trim();
 
@@ -36,8 +29,8 @@ const matchesPermanentCallsignRolePolicy = (person: Instructor, allowedRoles: st
   return allowedRoles.some((token) => {
     const value = norm(token);
     if (!value) return false;
-    if (permanentRoleAliases(value).includes(role)) return true;
-    if (value.startsWith('ROLE:') && permanentRoleAliases(value.slice(5)).includes(role)) return true;
+    if (value === role) return true;
+    if (value.startsWith('ROLE:') && value.slice(5) === role) return true;
     if (category && (value === category || value === `CATEGORY:${category}`)) return true;
     if (crew && (value === crew || value === `CREW:${crew}`)) return true;
     return false;

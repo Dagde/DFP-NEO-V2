@@ -7088,7 +7088,6 @@ function generateDfpInternal(
     const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
         getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes('contractor')
-        || ['SIM IP', 'CONTRACTOR STAFF'].includes(String(instructor?.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' '))
     );
     const canContractorStaffWorkEventType = (eventType?: string): boolean => {
         if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
@@ -26134,7 +26133,6 @@ const App: React.FC = () => {
     const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
         getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes('contractor')
-        || ['SIM IP', 'CONTRACTOR STAFF'].includes(String(instructor?.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' '))
     );
     const canContractorStaffWorkEventType = (eventType?: string): boolean => {
         if (!personnelDisplaySettings.simIpDisplayEnabled) return false;

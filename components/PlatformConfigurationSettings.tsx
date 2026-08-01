@@ -3142,9 +3142,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (!nextUnitCode || !nextRole) return;
     const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
     const currentRoles = currentPolicy.permanentRoleValues || [];
-    const equivalentRoles = nextRole === 'CONTRACTOR STAFF' || nextRole === 'SIM IP'
-      ? ['CONTRACTOR STAFF', 'SIM IP']
-      : [nextRole];
+    const equivalentRoles = [nextRole];
     const hasRole = currentRoles.some((role) => equivalentRoles.includes(String(role || '').trim().toUpperCase()));
     const nextRoles = hasRole
       ? currentRoles.filter((role) => !equivalentRoles.includes(String(role || '').trim().toUpperCase()))
@@ -9907,9 +9905,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className="mt-2 grid gap-1.5">
                               {callsignAssignableRoleOptions.map((option) => {
                                 const value = option.value.trim().toUpperCase();
-                                const equivalentValues = value === 'CONTRACTOR STAFF' || value === 'SIM IP'
-                                  ? ['CONTRACTOR STAFF', 'SIM IP']
-                                  : [value];
+                                const equivalentValues = [value];
                                 const isChecked = selectedPermanentRoles.some((role) => equivalentValues.includes(String(role || '').trim().toUpperCase()));
                                 return (
                                   <label key={`${unitCode}-${value}`} className={`flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${

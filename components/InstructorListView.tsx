@@ -51,8 +51,7 @@ const isContractorStaffRole = (
     instructor: Instructor,
     staffQualificationCatalogue?: StaffQualificationCatalogue,
 ): boolean =>
-    getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes('contractor') ||
-    ['SIM IP', 'CONTRACTOR STAFF'].includes(String(instructor.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' '));
+    getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes('contractor');
 const isOfiSupportRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toUpperCase() === 'OFI' || instructor.isOFI === true;
 const getConfiguredQualificationLabel = (
