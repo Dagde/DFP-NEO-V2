@@ -5110,6 +5110,12 @@ const buildUnitEventCallsign = (base, number) => {
 };
 const CALLSIGN_LIMIT = 50;
 const norm = (value) => String(value || "").trim().toUpperCase();
+const permanentRoleAliases = (value) => {
+  if (value === "SIM IP" || value === "CONTRACTOR STAFF") {
+    return ["SIM IP", "CONTRACTOR STAFF"];
+  }
+  return [value];
+};
 const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
 const isCallsignAssignableStaff = (person) => Boolean(person.name) && person.isActive !== false && !person.isAdminStaff;
 const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
@@ -5120,7 +5126,8 @@ const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
   return allowedRoles.some((token) => {
     const value = norm(token);
     if (!value) return false;
-    if (value === role || value === `ROLE:${role}`) return true;
+    if (permanentRoleAliases(value).includes(role)) return true;
+    if (value.startsWith("ROLE:") && permanentRoleAliases(value.slice(5)).includes(role)) return true;
     if (category && (value === category || value === `CATEGORY:${category}`)) return true;
     if (crew && (value === crew || value === `CREW:${crew}`)) return true;
     return false;
@@ -50604,7 +50611,7 @@ const LEGACY_QUALIFICATION_FIELD_BY_ID = {
   contractor: "isContractor",
   "admin-staff": "isAdminStaff"
 };
-const isContractorStaffRoleValue = (value) => String(value || "").trim().toUpperCase() === "SIM IP";
+const isContractorStaffRoleValue = (value) => ["SIM IP", "CONTRACTOR STAFF"].includes(String(value || "").trim().toUpperCase().replace(/[\s-]+/g, " "));
 const isLegacyInstructorRoleValue = (value) => {
   const token = String(value || "").trim().toUpperCase();
   return token === "QFI" || token === "INSTRUCTOR";
@@ -50817,7 +50824,7 @@ const InstructorProfileFlyout = ({
   }, [instructor.service, personnelDisplaySettings2]);
   const staffRoleOptions = reactExports.useMemo(() => {
     const legacyOptions = [
-      { value: "SIM IP", label: simIpDisplayLabel }
+      { value: "CONTRACTOR STAFF", label: simIpDisplayLabel }
     ];
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewOptions = getCrewPositionOptions(
@@ -53155,7 +53162,7 @@ const getStaffArchiveIdentifier = (instructor) => {
   return dbId || instructor.idNumber || null;
 };
 const isQfiRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "QFI" || instructor.isQFI === true || String(instructor.role || "").trim().toUpperCase() === "INSTRUCTOR";
-const isContractorStaffRole = (instructor, staffQualificationCatalogue) => getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes("contractor") || String(instructor.role || "").trim().toUpperCase() === "SIM IP";
+const isContractorStaffRole = (instructor, staffQualificationCatalogue) => getPersonAssignedQualificationIds(instructor, staffQualificationCatalogue, false).includes("contractor") || ["SIM IP", "CONTRACTOR STAFF"].includes(String(instructor.role || "").trim().toUpperCase().replace(/[\s-]+/g, " "));
 const isOfiSupportRole = (instructor) => String(instructor.role || "").trim().toUpperCase() === "OFI" || instructor.isOFI === true;
 const getConfiguredQualificationLabel = (catalogue, qualificationId, fallback) => {
   const targetId = String(qualificationId).trim().toLowerCase();
@@ -68129,7 +68136,9 @@ This permanently removes the organisation record from platform configuration and
     if (!nextUnitCode || !nextRole) return;
     const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
     const currentRoles = currentPolicy.permanentRoleValues || [];
-    const nextRoles = currentRoles.includes(nextRole) ? currentRoles.filter((role) => role !== nextRole) : Array.from(/* @__PURE__ */ new Set([...currentRoles, nextRole]));
+    const equivalentRoles = nextRole === "CONTRACTOR STAFF" || nextRole === "SIM IP" ? ["CONTRACTOR STAFF", "SIM IP"] : [nextRole];
+    const hasRole = currentRoles.some((role) => equivalentRoles.includes(String(role || "").trim().toUpperCase()));
+    const nextRoles = hasRole ? currentRoles.filter((role) => !equivalentRoles.includes(String(role || "").trim().toUpperCase())) : Array.from(/* @__PURE__ */ new Set([...currentRoles, nextRole]));
     updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
   };
   const updateCrewCompositionSettings = (alternateCompositions, currencyProfiles = crewCompositionSettings.currencyProfiles) => {
@@ -70370,7 +70379,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
     const visibleModelSet = new Set(visibleOperationalModelOptions.map((option) => option.value));
     const visibleCrewPositions = crewPositionTerminology.positions.filter((entry) => visibleModelSet.size === 0 || visibleOperationalModelOptions.length === OPERATIONAL_MODEL_OPTIONS.length || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model)));
     const roleOptions = [
-      { value: "SIM IP", label: personnelDisplaySettings2.simIpDisplayLabel || "Contractor Staff" },
+      { value: "CONTRACTOR STAFF", label: personnelDisplaySettings2.simIpDisplayLabel || "Contractor Staff" },
       ...visibleCrewPositions.map((entry) => ({
         value: entry.genericName,
         label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName
@@ -74157,7 +74166,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-wide text-cyan-100/80", children: "Roles receiving permanent callsigns" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-1.5", children: callsignAssignableRoleOptions.map((option) => {
                         const value = option.value.trim().toUpperCase();
-                        const isChecked = selectedPermanentRoles.includes(value);
+                        const equivalentValues = value === "CONTRACTOR STAFF" || value === "SIM IP" ? ["CONTRACTOR STAFF", "SIM IP"] : [value];
+                        const isChecked = selectedPermanentRoles.some((role) => equivalentValues.includes(String(role || "").trim().toUpperCase()));
                         return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${isChecked ? "border-cyan-400/35 bg-cyan-500/10 text-cyan-50" : "border-gray-700 bg-gray-950 text-gray-400"}`, children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
@@ -90806,7 +90816,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   const buildStaffQualificationCatalogue = normaliseStaffQualificationCatalogue(config.staffQualificationCatalogue || null);
   const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
-  const isContractorStaffRole2 = (instructor) => Boolean(instructor) && (getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes("contractor") || String(instructor?.role || "").trim().toUpperCase() === "SIM IP");
+  const isContractorStaffRole2 = (instructor) => Boolean(instructor) && (getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes("contractor") || ["SIM IP", "CONTRACTOR STAFF"].includes(String(instructor?.role || "").trim().toUpperCase().replace(/[\s-]+/g, " ")));
   const canContractorStaffWorkEventType = (eventType) => {
     if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();
@@ -106699,7 +106709,7 @@ const App = () => {
   const instructorLabel2 = personnelDisplaySettings2.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings2);
   const contractorStaffEventEligibility = personnelDisplaySettings2.contractorStaffEventEligibility;
-  const isContractorStaffRole2 = (instructor) => Boolean(instructor) && (getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor") || String(instructor?.role || "").trim().toUpperCase() === "SIM IP");
+  const isContractorStaffRole2 = (instructor) => Boolean(instructor) && (getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor") || ["SIM IP", "CONTRACTOR STAFF"].includes(String(instructor?.role || "").trim().toUpperCase().replace(/[\s-]+/g, " ")));
   const canContractorStaffWorkEventType = (eventType) => {
     if (!personnelDisplaySettings2.simIpDisplayEnabled) return false;
     const key = String(eventType || "").trim().toLowerCase();

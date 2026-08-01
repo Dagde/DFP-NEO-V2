@@ -58,7 +58,7 @@ const LEGACY_QUALIFICATION_FIELD_BY_ID: Record<string, LegacyQualificationField>
 };
 
 const isContractorStaffRoleValue = (value?: string | null): boolean => (
-  String(value || '').trim().toUpperCase() === 'SIM IP'
+  ['SIM IP', 'CONTRACTOR STAFF'].includes(String(value || '').trim().toUpperCase().replace(/[\s-]+/g, ' '))
 );
 
 const isLegacyInstructorRoleValue = (value?: string | null): boolean => {
@@ -376,7 +376,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   }, [instructor.service, personnelDisplaySettings]);
   const staffRoleOptions = useMemo(() => {
     const legacyOptions = [
-      { value: 'SIM IP', label: simIpDisplayLabel },
+      { value: 'CONTRACTOR STAFF', label: simIpDisplayLabel },
     ];
     const crewLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewOptions = getCrewPositionOptions(

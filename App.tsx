@@ -7088,7 +7088,7 @@ function generateDfpInternal(
     const buildContractorStaffEventEligibility = buildPersonnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
         getPersonAssignedQualificationIds(instructor, buildStaffQualificationCatalogue, false).includes('contractor')
-        || String(instructor?.role || '').trim().toUpperCase() === 'SIM IP'
+        || ['SIM IP', 'CONTRACTOR STAFF'].includes(String(instructor?.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' '))
     );
     const canContractorStaffWorkEventType = (eventType?: string): boolean => {
         if (!buildPersonnelDisplaySettings.simIpDisplayEnabled) return false;
@@ -13252,7 +13252,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 candidates = instructors.filter(ip => ip.name === remedialInstructorOverride);
             } else {
                 if (type === 'ftd') {
-                    // FTD: Contractor Staff first when enabled, then QFIs.
+                    // FTD: Contractor Staff first when enabled, then qualified instructors.
                     const simIps = instructors.filter(i =>
                         isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd')
                     );
@@ -13261,7 +13261,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     );
                     candidates = [...simIps, ...availableQfis];
                 } else {
-                    // FLIGHT = QFI plus Contractor Staff only when enabled; CPT/GROUND respect Contractor Staff eligibility.
+                    // FLIGHT = qualified instructors plus Contractor Staff only when enabled; CPT/GROUND respect Contractor Staff eligibility.
                     candidates = instructors.filter(ip => {
                         return isInstructorEligibleForBuildEventType(ip, type);
                     });
@@ -26125,7 +26125,7 @@ const App: React.FC = () => {
     const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
         getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes('contractor')
-        || String(instructor?.role || '').trim().toUpperCase() === 'SIM IP'
+        || ['SIM IP', 'CONTRACTOR STAFF'].includes(String(instructor?.role || '').trim().toUpperCase().replace(/[\s-]+/g, ' '))
     );
     const canContractorStaffWorkEventType = (eventType?: string): boolean => {
         if (!personnelDisplaySettings.simIpDisplayEnabled) return false;

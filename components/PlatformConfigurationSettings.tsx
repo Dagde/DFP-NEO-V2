@@ -3142,8 +3142,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (!nextUnitCode || !nextRole) return;
     const currentPolicy = getUnitCallsignPolicy(unitCallsignSettings, nextUnitCode);
     const currentRoles = currentPolicy.permanentRoleValues || [];
-    const nextRoles = currentRoles.includes(nextRole)
-      ? currentRoles.filter((role) => role !== nextRole)
+    const equivalentRoles = nextRole === 'CONTRACTOR STAFF' || nextRole === 'SIM IP'
+      ? ['CONTRACTOR STAFF', 'SIM IP']
+      : [nextRole];
+    const hasRole = currentRoles.some((role) => equivalentRoles.includes(String(role || '').trim().toUpperCase()));
+    const nextRoles = hasRole
+      ? currentRoles.filter((role) => !equivalentRoles.includes(String(role || '').trim().toUpperCase()))
       : Array.from(new Set([...currentRoles, nextRole]));
     updateUnitCallsignPolicy(nextUnitCode, { permanentRoleValues: nextRoles });
   };
@@ -5967,7 +5971,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       || Array.from(visibleModelSet).some((model) => isCrewPositionAvailableForOperationalModel(entry, model))
     ));
     const roleOptions = [
-      { value: 'SIM IP', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
+      { value: 'CONTRACTOR STAFF', label: personnelDisplaySettings.simIpDisplayLabel || 'Contractor Staff' },
       ...visibleCrewPositions.map((entry) => ({
         value: entry.genericName,
         label: crewPositionLabelMap[entry.genericName] || entry.label || entry.genericName,
@@ -9903,7 +9907,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className="mt-2 grid gap-1.5">
                               {callsignAssignableRoleOptions.map((option) => {
                                 const value = option.value.trim().toUpperCase();
-                                const isChecked = selectedPermanentRoles.includes(value);
+                                const equivalentValues = value === 'CONTRACTOR STAFF' || value === 'SIM IP'
+                                  ? ['CONTRACTOR STAFF', 'SIM IP']
+                                  : [value];
+                                const isChecked = selectedPermanentRoles.some((role) => equivalentValues.includes(String(role || '').trim().toUpperCase()));
                                 return (
                                   <label key={`${unitCode}-${value}`} className={`flex items-center gap-2 rounded border px-2 py-1.5 text-xs font-semibold ${
                                     isChecked
