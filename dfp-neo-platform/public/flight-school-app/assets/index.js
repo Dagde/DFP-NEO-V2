@@ -11608,7 +11608,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Access level", value: rule.accessLevel || "View", options: ["View", "Assign", "Manage"], onChange: (value) => updateMasterLmpAccessRule(rule, { accessLevel: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Location", value: rule.locationCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { locationCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Unit", value: rule.unitCode || "", onChange: (value) => updateMasterLmpAccessRule(rule, { unitCode: value }), disabled: true })
-        ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation defaults apply.", muted: true }) }),
+        ] }, rule.id || index)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Access rules", value: "No unit-specific Master LMP restrictions. Organisation settings apply.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "User Access Scopes", description: "Users or profiles with access that includes this unit.", action: settingsLink("platform-user-access", "Open User Access", { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : "platform-user-access-records" }), children: userAccessScopeCards.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 border-t border-white/10 p-4", children: userAccessScopeCards.map((card, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-white/10 bg-slate-950/35 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -12134,7 +12134,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const [crewLabelsDraft, setCrewLabelsDraft] = reactExports.useState("Pilot = Pilot\nLoadmaster = Loadmaster");
   const [alternateCrewDraft, setAlternateCrewDraft] = reactExports.useState("Reduced crew = Pilot 1, Loadmaster 1");
   const [buildRulesDraft, setBuildRulesDraft] = reactExports.useState({
-    businessRules: "Use default",
+    businessRules: "Use configured rule set",
     maxCrewDutyHours: "12",
     preferredDutyHours: "10",
     aircraftTurnaroundMinutes: "60",
@@ -13917,7 +13917,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       setStaffCurrencyEventsDraft(formatWizardStandardCurrencyEventRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Continuation and currency events are reusable templates for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "Continuation and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-lg border border-slate-300 bg-white p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
           wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "Annual Instrument Check"),

@@ -2297,7 +2297,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Location" value={rule.locationCode || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { locationCode: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Unit" value={rule.unitCode || ''} onChange={(value) => updateMasterLmpAccessRule(rule, { unitCode: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation defaults apply." muted />}
+                        )) : <UnitSettingsReadRow label="Access rules" value="No unit-specific Master LMP restrictions. Organisation settings apply." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="User Access Scopes" description="Users or profiles with access that includes this unit." action={settingsLink('platform-user-access', 'Open User Access', { locationCode: unit.locationCode, focusSubsectionId: unit.locationCode ? `platform-user-access-location-${settingsAnchorSuffix(unit.locationCode)}` : 'platform-user-access-records' })}>
                         {userAccessScopeCards.length > 0 ? (
@@ -2907,7 +2907,7 @@ const InitialSetupWizard: React.FC<{
     const [crewLabelsDraft, setCrewLabelsDraft] = useState('Pilot = Pilot\nLoadmaster = Loadmaster');
     const [alternateCrewDraft, setAlternateCrewDraft] = useState('Reduced crew = Pilot 1, Loadmaster 1');
     const [buildRulesDraft, setBuildRulesDraft] = useState({
-        businessRules: 'Use default',
+        businessRules: 'Use configured rule set',
         maxCrewDutyHours: '12',
         preferredDutyHours: '10',
         aircraftTurnaroundMinutes: '60',
@@ -4958,7 +4958,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    Continuation and currency events are reusable templates for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks.
+                    Continuation and currency events are reusable records for this unit. They pre-fill duration, resource type, crew, currency and aircraft configuration for recurring staff checks.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`standard-currency-event-${index}`} className="space-y-3 rounded-lg border border-slate-300 bg-white p-3">
