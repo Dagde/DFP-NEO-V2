@@ -50,6 +50,12 @@ dev.db
 outputs/
 summarized_conversations/
 
+# Local/legacy workspaces
+DFP-NEO-V2/
+DFP-NEO-Hybrid-V3/
+DFP-NEO-Website/
+snapshots/
+
 # Screenshot and image files
 Screenshot*.jpg
 Screenshot*.png
