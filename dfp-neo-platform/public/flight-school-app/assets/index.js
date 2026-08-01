@@ -13006,7 +13006,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       id: "staff-currency-events",
       title: "Set continuation and currency events",
       label: "Continuation/currency events",
-      body: "Add common continuation and currency event templates now, or leave them for later if the unit is not ready.",
+      body: "Add common continuation and currency event defaults now, or leave them for later if the unit is not ready.",
       checkIds: ["training"]
     },
     {
@@ -15627,7 +15627,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     if (visibleStep.id === "staff-currency-events") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common continuation and currency event templates for this unit. These become reusable starting points for staff checks and currency events." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set up common continuation and currency event defaults for this unit. These become reusable starting points for staff checks and currency events." }),
         renderStandardCurrencyEventsEditor()
       );
     }
@@ -40995,7 +40995,7 @@ const PrioritiesView = ({
   );
   const renderSavedSpecialEvents = () => {
     if (displayedStandardMissionProfiles.length === 0) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No saved flight templates for this unit context." });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500", children: "No directed flight templates for this unit context." });
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: displayedStandardMissionProfiles.map((profile) => {
       const isOpen = openStandardMissionIds.has(profile.id);
@@ -41071,7 +41071,7 @@ const PrioritiesView = ({
         ] }),
         isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-slate-800 px-4 pb-4 pt-3", children: [
           pendingStandardMissionSaveId === profile.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/35 bg-amber-400/10 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these reusable flight template changes permanently, or today only?" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-amber-100", children: "Save these directed flight template changes permanently, or today only?" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -72065,7 +72065,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         SectionHeader,
         {
           title: continuationCurrencyEventsLabel,
-          subtitle: "Continuation and currency event templates. Each event stores crew, CONFIG and currency against the selected aircraft.",
+          subtitle: "Continuation and currency event defaults. Each event stores crew, CONFIG and currency against the selected aircraft.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -75888,7 +75888,7 @@ const sectionDescriptions = {
   "scoring-matrix": "Configure report elements, grades and performance text",
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
-  "sct-events": "Configure continuation and currency event templates",
+  "sct-events": "Configure continuation and currency event defaults",
   "people-profile": "Select courses that NEO Build should leave out of schedule generation",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
@@ -75903,7 +75903,7 @@ const sectionDescriptions = {
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles, crew seats and alternate crew setups",
   "standard-missions": "Reusable directed-flight setups with aircraft, crew, timing and callsign defaults",
-  "currency-profiles": "Configure continuation and currency event templates",
+  "currency-profiles": "Configure continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",

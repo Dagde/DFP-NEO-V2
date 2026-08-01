@@ -7671,7 +7671,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
-          subtitle="Continuation and currency event templates. Each event stores crew, CONFIG and currency against the selected aircraft."
+          subtitle="Continuation and currency event defaults. Each event stores crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
             <button
               type="button"

@@ -3887,7 +3887,7 @@ const InitialSetupWizard: React.FC<{
             id: 'staff-currency-events',
             title: 'Set continuation and currency events',
             label: 'Continuation/currency events',
-            body: 'Add common continuation and currency event templates now, or leave them for later if the unit is not ready.',
+            body: 'Add common continuation and currency event defaults now, or leave them for later if the unit is not ready.',
             checkIds: ['training'],
         },
         {
@@ -6815,7 +6815,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'staff-currency-events') {
             return promptShell(
-                <p>Set up common continuation and currency event templates for this unit. These become reusable starting points for staff checks and currency events.</p>,
+                <p>Set up common continuation and currency event defaults for this unit. These become reusable starting points for staff checks and currency events.</p>,
                 renderStandardCurrencyEventsEditor(),
             );
         }
