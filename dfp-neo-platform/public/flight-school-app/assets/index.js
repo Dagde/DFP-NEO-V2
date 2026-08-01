@@ -73135,7 +73135,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Mode", value: licenseStatus?.runtimeMode || "development" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Enforcement", value: licenseStatus?.enforcementMode || deploymentProfile.enforcementMode }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Signed", value: String(licenseStatus?.verifiedLicenseCount ?? 0) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unsigned Dev", value: String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unsigned", value: String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/30 bg-gray-950 px-3 py-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Deployment Fingerprint" }),
@@ -73565,8 +73565,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                 key
               )) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.overview.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.event, value: "AA1" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.training, value: "Air to Air" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.event, value: "Event 1" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.training, value: "Training Package" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.type, value: "Flight" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.timing, value: "08:00 / 1.2h" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overview.fields.resource, value: getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode) }),

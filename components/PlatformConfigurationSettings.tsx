@@ -8704,7 +8704,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <MetricPill label="Mode" value={licenseStatus?.runtimeMode || 'development'} />
                 <MetricPill label="Enforcement" value={licenseStatus?.enforcementMode || deploymentProfile.enforcementMode} />
                 <MetricPill label="Signed" value={String(licenseStatus?.verifiedLicenseCount ?? 0)} />
-                <MetricPill label="Unsigned Dev" value={String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length)} />
+                <MetricPill label="Unsigned" value={String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length)} />
               </div>
               <div className="rounded border border-cyan-400/30 bg-gray-950 px-3 py-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Deployment Fingerprint</div>
@@ -9130,8 +9130,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.overview.title}>
                   <div className="grid gap-3 md:grid-cols-3">
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.event} value="AA1" />
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.training} value="Air to Air" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.event} value="Event 1" />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.training} value="Training Package" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.type} value="Flight" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.timing} value="08:00 / 1.2h" />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overview.fields.resource} value={getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)} />
