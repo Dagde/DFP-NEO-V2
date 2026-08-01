@@ -708,19 +708,6 @@ function addStaffQualificationToPreferences(preferences = {}, qualificationId = 
   };
 }
 
-const LOCATION_NAME_BY_CODE = {
-  ESL: 'East Sale',
-  PEA: 'Pearce',
-  AMB: 'Amberley',
-  EDI: 'Edinburgh',
-  TIN: 'Tindal',
-  WLM: 'Williamtown',
-};
-
-const LOCATION_CODE_BY_NAME = Object.fromEntries(
-  Object.entries(LOCATION_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), code])
-);
-
 function uniqueStrings(values) {
   return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
 }
@@ -736,9 +723,7 @@ function parseScopeValues(...values) {
 function normaliseLocationCode(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  const upper = raw.toUpperCase();
-  if (LOCATION_NAME_BY_CODE[upper]) return upper;
-  return LOCATION_CODE_BY_NAME[raw.toLowerCase()] || upper;
+  return raw.toUpperCase();
 }
 
 function normaliseHistoricalSeedCourseConfig(input = {}) {
@@ -793,15 +778,34 @@ function normaliseHistoricalSeedSyllabusSequences(input = {}) {
   );
 }
 
-function expandLocationValues(values) {
-  const expanded = [];
-  values.forEach((value) => {
-    const raw = String(value || '').trim();
-    const code = normaliseLocationCode(raw);
-    if (raw) expanded.push(raw);
-    if (code) expanded.push(code);
-    if (LOCATION_NAME_BY_CODE[code]) expanded.push(LOCATION_NAME_BY_CODE[code]);
-  });
+async function getConfiguredLocationScopeAliases(db, values) {
+  const requested = uniqueStrings(values);
+  if (requested.length === 0) return [];
+  const requestedKeys = new Set(requested.map((value) => String(value || '').trim().toLowerCase()).filter(Boolean));
+  const expanded = [...requested, ...requested.map(normaliseLocationCode)];
+  try {
+    const locations = await db.$queryRawUnsafe(`
+      SELECT "code", "iataCode", "name", "settings"
+      FROM "CommercialLocation"
+      WHERE COALESCE("status", 'ACTIVE') <> 'INACTIVE'
+    `);
+    for (const location of locations || []) {
+      const settings = location?.settings && typeof location.settings === 'object' ? location.settings : {};
+      const aliases = uniqueStrings([
+        location.code,
+        location.iataCode,
+        location.name,
+        settings.icaoCode,
+        settings.iataCode,
+        ...(Array.isArray(settings.aliases) ? settings.aliases : []),
+      ]);
+      if (aliases.some((alias) => requestedKeys.has(String(alias || '').trim().toLowerCase()))) {
+        expanded.push(...aliases, ...aliases.map(normaliseLocationCode));
+      }
+    }
+  } catch (error) {
+    console.warn('[DataScope] Could not resolve configured location aliases:', error.message);
+  }
   return uniqueStrings(expanded);
 }
 
@@ -837,8 +841,8 @@ async function getUnitCodesForLocationScope(db, locationValues) {
 async function buildScopedEntityWhere(req, db, fieldNames = { location: 'location', unit: 'unit' }) {
   const locationValues = parseScopeValues(req.query.location, req.query.locations);
   const unitValues = parseScopeValues(req.query.unit, req.query.units);
-  const expandedLocationValues = expandLocationValues(locationValues);
-  const unitsAtLocation = await getUnitCodesForLocationScope(db, locationValues);
+  const expandedLocationValues = await getConfiguredLocationScopeAliases(db, locationValues);
+  const unitsAtLocation = await getUnitCodesForLocationScope(db, expandedLocationValues);
 
   const conditions = [];
   const locationOr = [];
