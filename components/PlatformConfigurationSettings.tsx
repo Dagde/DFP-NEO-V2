@@ -11052,43 +11052,56 @@ const TextAreaField = ({
 };
 
 const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }: { inputId?: string; label: string; labelNoWrap?: boolean; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; maxLength?: number }) => {
-  const [draft, setDraft] = useState(value || '');
+  const limitValue = (nextValue: string) => (typeof maxLength === 'number' ? nextValue.slice(0, maxLength) : nextValue);
+  const [draft, setDraft] = useState(() => limitValue(value || ''));
   const [focused, setFocused] = useState(false);
+  const displayedValue = focused ? draft : limitValue(value || '');
 
   useEffect(() => {
-    if (!focused) setDraft(value || '');
-  }, [focused, value]);
+    if (!focused) setDraft(limitValue(value || ''));
+  }, [focused, maxLength, value]);
+
+  const updateDraft = (nextValue: string) => setDraft(limitValue(nextValue));
 
   const commitDraft = () => {
-    const nextValue = typeof maxLength === 'number' ? draft.slice(0, maxLength) : draft;
+    const nextValue = limitValue(draft);
     setFocused(false);
     setDraft(nextValue);
-    if (nextValue !== (value || '')) onCommit(nextValue);
+    if (nextValue !== limitValue(value || '')) onCommit(nextValue);
   };
 
   return (
-    <Field
-      inputId={inputId}
-      label={label}
-      labelNoWrap={labelNoWrap}
-      value={focused ? draft : value}
-      disabled={disabled}
-      onChange={setDraft}
-      onFocus={() => {
-        setFocused(true);
-        setDraft(value || '');
-      }}
-      onBlur={commitDraft}
-      info={info}
-      maxLength={maxLength}
-      commitOnBlur={false}
-    />
+    <label>
+      <FieldLabel label={label} info={info} noWrap={labelNoWrap} />
+      <input
+        id={inputId}
+        className={fieldClass}
+        value={displayedValue}
+        disabled={disabled}
+        maxLength={maxLength}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, updateDraft, maxLength)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength)}
+        onKeyDown={stopEditableKeyPropagation}
+        onFocus={() => {
+          setFocused(true);
+          setDraft(limitValue(value || ''));
+        }}
+        onBlur={commitDraft}
+        onChange={(event) => updateDraft(event.target.value)}
+      />
+      {typeof maxLength === 'number' ? (
+        <span className="mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+          {displayedValue.length}/{maxLength}
+        </span>
+      ) : null}
+    </label>
   );
 };
 
 const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className = 'lg:col-span-2', fieldClassName = 'w-full', fieldSizingClassName = 'min-h-[74px]' }: { label: string; value: string; disabled: boolean; onCommit: (value: string) => void; info?: string; className?: string; fieldClassName?: string; fieldSizingClassName?: string }) => {
   const [draft, setDraft] = useState(value || '');
   const [focused, setFocused] = useState(false);
+  const displayedValue = focused ? draft : value || '';
 
   useEffect(() => {
     if (!focused) setDraft(value || '');
@@ -11100,22 +11113,23 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
   };
 
   return (
-    <TextAreaField
-      label={label}
-      value={focused ? draft : value}
-      disabled={disabled}
-      onChange={setDraft}
-      onFocus={() => {
-        setFocused(true);
-        setDraft(value || '');
-      }}
-      onBlur={commitDraft}
-      info={info}
-      className={className}
-      fieldClassName={fieldClassName}
-      fieldSizingClassName={fieldSizingClassName}
-      commitOnBlur={false}
-    />
+    <label className={className}>
+      <FieldLabel label={label} info={info} />
+      <textarea
+        className={`${fieldClass.replace('w-full', fieldClassName)} ${fieldSizingClassName} resize-y`}
+        value={displayedValue}
+        disabled={disabled}
+        onBeforeInput={(event) => handleEditableTextBeforeInput(event, setDraft)}
+        onKeyDownCapture={(event) => handleEditableTextKeyDownCapture(event, setDraft)}
+        onKeyDown={stopEditableKeyPropagation}
+        onFocus={() => {
+          setFocused(true);
+          setDraft(value || '');
+        }}
+        onBlur={commitDraft}
+        onChange={(event) => setDraft(event.target.value)}
+      />
+    </label>
   );
 };
 

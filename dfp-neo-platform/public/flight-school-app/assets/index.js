@@ -75181,40 +75181,52 @@ const TextAreaField = ({
   ] });
 };
 const DraftField = ({ inputId, label, labelNoWrap = false, value, disabled, onCommit, info, maxLength }) => {
-  const [draft, setDraft] = reactExports.useState(value || "");
+  const limitValue = (nextValue) => typeof maxLength === "number" ? nextValue.slice(0, maxLength) : nextValue;
+  const [draft, setDraft] = reactExports.useState(() => limitValue(value || ""));
   const [focused, setFocused] = reactExports.useState(false);
+  const displayedValue = focused ? draft : limitValue(value || "");
   reactExports.useEffect(() => {
-    if (!focused) setDraft(value || "");
-  }, [focused, value]);
+    if (!focused) setDraft(limitValue(value || ""));
+  }, [focused, maxLength, value]);
+  const updateDraft = (nextValue) => setDraft(limitValue(nextValue));
   const commitDraft = () => {
-    const nextValue = typeof maxLength === "number" ? draft.slice(0, maxLength) : draft;
+    const nextValue = limitValue(draft);
     setFocused(false);
     setDraft(nextValue);
-    if (nextValue !== (value || "")) onCommit(nextValue);
+    if (nextValue !== limitValue(value || "")) onCommit(nextValue);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Field,
-    {
-      inputId,
-      label,
-      labelNoWrap,
-      value: focused ? draft : value,
-      disabled,
-      onChange: setDraft,
-      onFocus: () => {
-        setFocused(true);
-        setDraft(value || "");
-      },
-      onBlur: commitDraft,
-      info,
-      maxLength,
-      commitOnBlur: false
-    }
-  );
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info, noWrap: labelNoWrap }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        id: inputId,
+        className: fieldClass,
+        value: displayedValue,
+        disabled,
+        maxLength,
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, updateDraft, maxLength),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, updateDraft, maxLength),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setFocused(true);
+          setDraft(limitValue(value || ""));
+        },
+        onBlur: commitDraft,
+        onChange: (event) => updateDraft(event.target.value)
+      }
+    ),
+    typeof maxLength === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
+      displayedValue.length,
+      "/",
+      maxLength
+    ] }) : null
+  ] });
 };
 const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className = "lg:col-span-2", fieldClassName = "w-full", fieldSizingClassName = "min-h-[74px]" }) => {
   const [draft, setDraft] = reactExports.useState(value || "");
   const [focused, setFocused] = reactExports.useState(false);
+  const displayedValue = focused ? draft : value || "";
   reactExports.useEffect(() => {
     if (!focused) setDraft(value || "");
   }, [focused, value]);
@@ -75222,25 +75234,26 @@ const DraftTextAreaField = ({ label, value, disabled, onCommit, info, className 
     setFocused(false);
     if (draft !== (value || "")) onCommit(draft);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    TextAreaField,
-    {
-      label,
-      value: focused ? draft : value,
-      disabled,
-      onChange: setDraft,
-      onFocus: () => {
-        setFocused(true);
-        setDraft(value || "");
-      },
-      onBlur: commitDraft,
-      info,
-      className,
-      fieldClassName,
-      fieldSizingClassName,
-      commitOnBlur: false
-    }
-  );
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "textarea",
+      {
+        className: `${fieldClass.replace("w-full", fieldClassName)} ${fieldSizingClassName} resize-y`,
+        value: displayedValue,
+        disabled,
+        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setDraft),
+        onKeyDownCapture: (event) => handleEditableTextKeyDownCapture(event, setDraft),
+        onKeyDown: stopEditableKeyPropagation,
+        onFocus: () => {
+          setFocused(true);
+          setDraft(value || "");
+        },
+        onBlur: commitDraft,
+        onChange: (event) => setDraft(event.target.value)
+      }
+    )
+  ] });
 };
 const DraftTextInput = ({ value, disabled, placeholder, className, onCommit }) => {
   const [draft, setDraft] = reactExports.useState(value || "");
