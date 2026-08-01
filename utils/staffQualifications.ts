@@ -222,6 +222,20 @@ export const qualificationMatches = (
   ].some(value => normaliseQualificationToken(value) === token);
 };
 
+export const getInstructorQualificationDefinitions = (
+  catalogue?: StaffQualificationCatalogue,
+): StaffQualificationDefinition[] => (
+  normaliseStaffQualificationCatalogue(catalogue).qualifications.filter(qualification => {
+    if (String(qualification.status || 'ACTIVE').toUpperCase() === 'INACTIVE') return false;
+    const tokens = [
+      qualification.id,
+      qualification.code,
+      qualification.name,
+    ].map(normaliseQualificationToken);
+    return tokens.includes('qfi') || tokens.includes('instructor');
+  })
+);
+
 export const normaliseAssignedQualificationIds = (
   source: unknown,
   catalogue?: StaffQualificationCatalogue,

@@ -6,7 +6,11 @@ import {
     isPilotCrewPosition,
 } from '../utils/crewPositionTerminology';
 import {
+    getInstructorQualificationDefinitions,
     normaliseAssignedQualificationIds,
+    normaliseQualificationToken,
+    normaliseStaffQualificationCatalogue,
+    qualificationMatches,
     type StaffQualificationCatalogue,
 } from '../utils/staffQualifications';
 
@@ -105,10 +109,26 @@ const applyQualificationRoles = (
     parsedData: Partial<Instructor>,
     rolesValue: string,
     crewPositionTerminology?: CrewPositionTerminology,
+    staffQualificationCatalogue?: StaffQualificationCatalogue,
 ): void => {
     if (!rolesValue) return;
     const roleTokens = splitListValue(rolesValue);
     const rolesLower = roleTokens.join(' ').toLowerCase();
+    const instructorQualifications = getInstructorQualificationDefinitions(staffQualificationCatalogue);
+    const matchedQualificationIds = roleTokens
+        .flatMap(role => role.split(/[,\s/]+/))
+        .map(role => role.trim())
+        .filter(Boolean)
+        .reduce((ids, token) => {
+            const match = normaliseStaffQualificationCatalogue(staffQualificationCatalogue).qualifications.find(qualification => qualificationMatches(token, qualification));
+            if (match && !ids.includes(match.id)) ids.push(match.id);
+            return ids;
+        }, [] as string[]);
+    const hasLinkedInstructorQualification = roleTokens.some(token => (
+        instructorQualifications.some(qualification => qualificationMatches(token, qualification))
+    ));
+    const hasLegacyInstructorQualification = rolesLower.includes('qfi') || rolesLower.includes('instructor');
+    const hasQualificationId = (id: string): boolean => matchedQualificationIds.some(value => normaliseQualificationToken(value) === id);
     const importedCrewRole = roleTokens
         .map(role => normaliseImportedStaffRole(role, crewPositionTerminology))
         .find(role => role && role !== 'QFI');
@@ -116,10 +136,10 @@ const applyQualificationRoles = (
     parsedData.isExecutive = rolesLower.includes('exec') || rolesLower.includes('executive');
     parsedData.isFlyingSupervisor = rolesLower.includes('fly sup') || rolesLower.includes('flying supervisor') || rolesLower.includes('supervisor');
     parsedData.isTestingOfficer = rolesLower.includes('testing') || rolesLower.includes('test officer');
-    parsedData.isIRE = rolesLower.includes('ire');
-    parsedData.isCFI = rolesLower.includes('cfi');
-    parsedData.isOFI = rolesLower.includes('ofi');
-    parsedData.isQFI = rolesLower.includes('qfi') || rolesLower.includes('instructor');
+    parsedData.isIRE = rolesLower.includes('ire') || hasQualificationId('ire');
+    parsedData.isCFI = rolesLower.includes('cfi') || hasQualificationId('cfi');
+    parsedData.isOFI = rolesLower.includes('ofi') || hasQualificationId('ofi');
+    parsedData.isQFI = hasLegacyInstructorQualification || hasLinkedInstructorQualification;
     parsedData.isAdminStaff = rolesLower.includes('admin');
     if (importedCrewRole) {
         parsedData.role = importedCrewRole;
@@ -133,7 +153,7 @@ const applyQualificationRoles = (
         parsedData.isContractor = true;
     } else if (rolesLower.includes('pilot')) {
         parsedData.role = 'Pilot';
-    } else if (rolesLower.includes('qfi') || rolesLower.includes('instructor')) {
+    } else if (hasLegacyInstructorQualification || hasLinkedInstructorQualification) {
         parsedData.role = 'Pilot';
     }
 };
@@ -287,7 +307,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                 if (permissions) parsedData.permissions = splitListValue(permissions);
 
                 const rolesStr = getStringFromRow(row, ['Roles', 'Qualifications and Roles', 'Qualifications & Roles', 'Qualifications']);
-                applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology);
+                applyQualificationRoles(parsedData, rolesStr, crewPositionTerminology, staffQualificationCatalogue);
                 const importedQualificationIds = normaliseAssignedQualificationIds(rolesStr, staffQualificationCatalogue, false);
                 if (importedQualificationIds.length > 0) {
                     parsedData.preferences = {

@@ -15,7 +15,11 @@ import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '
 import { normaliseCrewCompositionSettings } from '../utils/crewCompositionProfiles';
 import { getCrewPositionLabelMap, normaliseCrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { normalisePersonnelDisplaySettings, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
-import { normaliseStaffQualificationCatalogue } from '../utils/staffQualifications';
+import {
+    getInstructorQualificationDefinitions,
+    normaliseStaffQualificationCatalogue,
+    qualificationMatches,
+} from '../utils/staffQualifications';
 import { normaliseTrainingReportTemplate, normaliseTrainingReportTerminology } from '../utils/trainingReportTerminology';
 import {
     UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS,
@@ -5390,13 +5394,17 @@ const InitialSetupWizard: React.FC<{
                 : parseWizardTraineeRows(effectiveTraineeDraft);
         const firstUnitCode = unitRows[0]?.code || effectiveUnitDraft.code || unitCode || '';
         const firstLocationCode = parseWizardLocationRows(locationsTodayDraft)[0]?.icao || locationDraft.code || '';
+        const instructorQualificationDefinitions = getInstructorQualificationDefinitions(staffQualificationCatalogue);
         const qualificationsToFlags = (qualifications: string) => {
             const tokens = qualifications
                 .split(/[,\s/]+/)
                 .map((token) => token.trim().toUpperCase())
                 .filter(Boolean);
+            const hasLinkedInstructorQualification = tokens.some(token => (
+                instructorQualificationDefinitions.some(qualification => qualificationMatches(token, qualification))
+            ));
             return {
-                isQFI: tokens.includes('QFI') || tokens.includes('CFI') || tokens.includes('OFI'),
+                isQFI: hasLinkedInstructorQualification || tokens.includes('QFI') || tokens.includes('CFI') || tokens.includes('OFI'),
                 isOFI: tokens.includes('OFI'),
                 isCFI: tokens.includes('CFI'),
                 isIRE: tokens.includes('IRE'),
