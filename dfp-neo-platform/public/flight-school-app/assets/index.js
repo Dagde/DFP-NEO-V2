@@ -14289,8 +14289,12 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       return;
     }
     const rawLocationRows = parseWizardLocationRows(locationsTodayDraft);
-    const locationRowsAreOldDefault = rawLocationRows.length === 1 && normaliseUnitSettingsIdentifier(rawLocationRows[0]?.icao) === "YAMB" && activeWizardLocationCode && normaliseUnitSettingsIdentifier(activeWizardLocationCode) !== "YAMB" && activeLocations.length === 0;
-    const locationRows = locationRowsAreOldDefault ? [activeWizardLocationRow] : rawLocationRows;
+    const singleLocationDraftDoesNotMatchContext = rawLocationRows.length === 1 && activeLocations.length === 0 && activeWizardLocationCode && ![
+      rawLocationRows[0]?.icao,
+      rawLocationRows[0]?.iata,
+      rawLocationRows[0]?.name
+    ].some((value) => normaliseUnitSettingsIdentifier(value) === normaliseUnitSettingsIdentifier(activeWizardLocationCode));
+    const locationRows = singleLocationDraftDoesNotMatchContext ? [activeWizardLocationRow] : rawLocationRows;
     const unitRows = parseWizardUnitRows(unitsTodayDraft);
     const effectiveUnitDraft = overrides.unitDraft ?? unitDraft;
     const cleanLocations = (locationRows.length > 0 ? locationRows : [{
