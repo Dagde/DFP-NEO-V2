@@ -599,6 +599,7 @@ const TaskingProfileInput: React.FC<{
   const suggestions = getTaskProfileSuggestions(value, taskProfiles);
   const configuredProfileCount = taskProfiles.filter((profile) => String(profile || '').trim()).length;
   const showSuggestions = isOpen;
+  const settingsPathText = 'Settings > Platform & Deployment > Directed Task Lists';
 
   const selectProfile = (profile: string) => {
     onChange(profile);
@@ -646,8 +647,8 @@ const TaskingProfileInput: React.FC<{
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
-                  ? 'Keep typing to enter this task manually.'
-                  : `${operationalModelLabel} has no saved directed-task names yet. Add them in Settings > Platform & Deployment > Directed Task Lists, or type a task name manually.`}
+                  ? `Keep typing to enter this task manually, or update the list in ${settingsPathText}.`
+                  : `${operationalModelLabel} has no saved directed-task names yet. Add them in ${settingsPathText}, or type a task name manually.`}
               </span>
             </div>
           )}
@@ -746,10 +747,9 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const taskingHeaderTitle = request.tasking.trim() || 'New directed-task request';
       const taskingHeaderDate = request.date || 'Date TBA';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
-      const directedTaskHint = request.tasking
-        || (taskProfiles.some(profile => String(profile || '').trim())
-          ? 'Select from Directed Task Lists or type a task'
-          : 'Add names in Settings > Platform & Deployment > Directed Task Lists, or type a task');
+      const directedTaskHint = taskProfiles.some(profile => String(profile || '').trim())
+        ? 'Names come from Settings > Platform & Deployment > Directed Task Lists; you can also type a task.'
+        : 'Add names in Settings > Platform & Deployment > Directed Task Lists, or type a task.';
       return (
         <div key={request.id} className="overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10">
           <button
