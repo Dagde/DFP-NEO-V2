@@ -9,7 +9,7 @@ import {
 const usage = `
 Usage:
   node scripts/generate-license.mjs --private-key ./licence-private.pem --output ./customer.license.json \\
-    --license-key RAAF-ESL-001 --license-name "RAAF ESL Offline" --organisation-code RAAF \\
+    --license-key CUSTOMER-001 --license-name "Customer Offline" --organisation-code CUSTOMER \\
     --deployment-mode "Fully Offline" --modules DFP,NEO_BUILD,TRAINING --fingerprint DFP-ABC123
 
 Input modes:
@@ -20,9 +20,9 @@ Input modes:
 Common options when not using --input:
   --license-key <key>                 Customer-visible licence key.
   --license-name <name>               Customer-visible licence name.
-  --organisation-code <code>          Example: RAAF.
-  --organisation-name <name>          Example: Royal Australian Air Force.
-  --deployment-mode <mode>            Online SaaS, Private Defence Network, Fully Offline, Hybrid Offline Sync.
+  --organisation-code <code>          Customer organisation code.
+  --organisation-name <name>          Customer organisation name.
+  --deployment-mode <mode>            Online SaaS, Private Network, Fully Offline, Hybrid Offline Sync.
   --valid-from yyyy-mm-dd             Licence start date.
   --valid-until yyyy-mm-dd            Licence expiry date.
   --modules A,B,C                     Licensed module codes.

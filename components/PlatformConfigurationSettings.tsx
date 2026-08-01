@@ -474,10 +474,16 @@ const normaliseStandardMissionProfiles = (source: unknown): StandardMissionProfi
 
 const DEPLOYMENT_MODE_OPTIONS = [
   'Online SaaS',
-  'Private Defence Network',
+  'Private Network',
   'Fully Offline',
   'Hybrid Offline Sync',
 ];
+
+const normaliseDeploymentMode = (value?: string | null): string => {
+  const trimmed = String(value || '').trim();
+  if (/^private\s+defence\s+network$/i.test(trimmed)) return 'Private Network';
+  return DEPLOYMENT_MODE_OPTIONS.includes(trimmed) ? trimmed : 'Online SaaS';
+};
 
 const LICENSE_VALIDATION_OPTIONS = [
   'Online licence check',
@@ -494,9 +500,16 @@ const LICENSE_ENFORCEMENT_OPTIONS = [
 
 const AUTH_MODEL_OPTIONS = [
   'Local accounts',
-  'Defence SSO',
-  'Hybrid local and SSO',
+  'Organisation SSO',
+  'Hybrid local and organisation SSO',
 ];
+
+const normaliseAuthenticationModel = (value?: string | null): string => {
+  const trimmed = String(value || '').trim();
+  if (/^defence\s+sso$/i.test(trimmed)) return 'Organisation SSO';
+  if (/^hybrid\s+local\s+and\s+sso$/i.test(trimmed)) return 'Hybrid local and organisation SSO';
+  return AUTH_MODEL_OPTIONS.includes(trimmed) ? trimmed : 'Local accounts';
+};
 
 const RELEASE_CHANNEL_OPTIONS = [
   'Production',
@@ -2266,6 +2279,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const deploymentProfile = {
     ...DEFAULT_DEPLOYMENT_PROFILE,
     ...(primaryOrganisationSettings.deploymentProfile || {}),
+    mode: normaliseDeploymentMode(primaryOrganisationSettings.deploymentProfile?.mode),
+    authModel: normaliseAuthenticationModel(primaryOrganisationSettings.deploymentProfile?.authModel),
     enforcementMode: normaliseEnforcementMode(primaryOrganisationSettings.deploymentProfile?.enforcementMode),
   };
   const deploymentReadiness = primaryOrganisationSettings.deploymentReadiness || {};
@@ -8431,7 +8446,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-deployment-readiness" className={getSectionClass('platform-deployment-readiness')}>
         <SectionHeader
           title="Deployment Readiness"
-          subtitle="Record readiness for SaaS, defence network, fully offline and hybrid deployments."
+          subtitle="Record readiness for SaaS, private-network, fully offline and hybrid deployments."
           action={renderSectionEditSaveButton('platform-deployment-readiness')}
         />
         <div className="space-y-4 p-4">
@@ -8488,7 +8503,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <h5 className="text-sm font-bold text-white">Offline And On-Prem Readiness Checklist</h5>
-              <InfoHint text="Use these checks to confirm the responsibilities for offline or private-network operation before the system is installed on a defence network." />
+              <InfoHint text="Use these checks to confirm the responsibilities for offline or private-network operation before the system is installed on a restricted or customer-managed network." />
               <span className="ml-auto text-xs font-semibold text-gray-400">
                 {readinessCompleteCount} of {DEPLOYMENT_READINESS_ITEMS.length} complete
               </span>
@@ -8786,7 +8801,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <DraftField label="Licence Name" value={license.licenseName || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { licenseName: value })} />
                   <DraftField label="Licence Key" value={license.licenseKey || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { licenseKey: value })} />
                   <SelectField label="Organisation" value={license.organisationCode || config.organisations[0]?.code || 'DEFAULT'} disabled={!canEditSection('platform-licensing')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
-                  <SelectField label="Deployment Model" value={license.deploymentMode || 'Online SaaS'} disabled={!canEditSection('platform-licensing')} options={['Online SaaS', 'Private Defence Network', 'Fully Offline', 'Hybrid Offline Sync']} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
+                  <SelectField label="Deployment Model" value={normaliseDeploymentMode(license.deploymentMode || 'Online SaaS')} disabled={!canEditSection('platform-licensing')} options={DEPLOYMENT_MODE_OPTIONS} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
                   <SelectField label="Status" value={license.status || 'ACTIVE'} disabled={!canEditSection('platform-licensing')} options={['ACTIVE', 'SUSPENDED', 'EXPIRED', 'INACTIVE']} onChange={(value) => updateRow('licenses', index, { status: value })} />
                   <DraftField label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
                   <DateField label="Valid From" value={license.validFrom || ''} disabled={!canEditSection('platform-licensing')} onChange={(value) => updateRow('licenses', index, { validFrom: value })} />
