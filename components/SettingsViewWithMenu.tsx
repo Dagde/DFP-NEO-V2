@@ -484,7 +484,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'trainee-reallocation': 'Preview trainee instructor allocation across configured units',
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'organisation': 'Fleet sharing and multi-unit configuration',
-  'crew-composition': 'Aircraft-specific crew roles and composition profiles',
+  'crew-composition': 'Aircraft-specific crew roles, crew seats and alternate crew setups',
   'standard-missions': 'Flight Templates with aircraft, crew, timing and callsign defaults',
   'currency-profiles': 'Continuation and currency event defaults',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
