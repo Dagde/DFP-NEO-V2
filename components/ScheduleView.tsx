@@ -2184,7 +2184,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ) : <UnitSettingsReadRow label="Directed task tile labels" value="No directed-task names are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Flight Templates" description="Regular unit flight templates scoped to this unit." action={settingsLink('standard-missions', 'Open Flight Templates', { focusSubsectionId: 'platform-standard-mission-records' })}>
+                    <UnitSettingsGroup title="Mission / Flight Templates" description="Regular unit mission and flight templates scoped to this unit." action={settingsLink('standard-missions', 'Open Mission / Flight Templates', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
@@ -2192,7 +2192,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Flight Templates" value="No flight templates are configured for this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Mission / Flight Templates" value="No mission or flight templates are configured for this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build event templates are configured under Training & Standards." action={settingsLink('sct-events', 'Open Continuation Events')}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />
