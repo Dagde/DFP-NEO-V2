@@ -2171,7 +2171,7 @@ const OrganisationMyUnitSettings: React.FC<{
         if (activeCategory === 'training') {
             return (
                 <div className="space-y-4">
-                    <UnitSettingsGroup title="Schedule Tile Labels" description="Short display names for directed task schedule tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Open Directed Task Lists', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
+                    <UnitSettingsGroup title="Schedule Tile Labels" description="Short labels for directed task schedule tiles on this unit's schedule." action={<div className="flex items-center gap-2"><span className={unitSettingsMutedPillClass}>{Object.keys(taskAbbreviations || {}).length} configured</span>{settingsLink('platform-task-profiles', 'Open Directed Task Lists', { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })}</div>}>
                         <div className="border-t border-white/10 px-4 py-3">
                             <p className="text-sm leading-6 text-slate-300">
                                 Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data.
@@ -2195,7 +2195,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         ) : <UnitSettingsReadRow label="Directed task tile labels" value="No directed task names are configured for this operating model." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Directed Task Setups" description="Reusable directed-task setups scoped to this unit." action={settingsLink('standard-missions', 'Open Directed Task Setups', { focusSubsectionId: 'platform-standard-mission-records' })}>
+                    <UnitSettingsGroup title="Directed Task Setups" description="Full reusable directed tasks with aircraft, crew, timing and callsign defaults for this unit." action={settingsLink('standard-missions', 'Open Directed Task Setups', { focusSubsectionId: 'platform-standard-mission-records' })}>
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
@@ -2203,7 +2203,7 @@ const OrganisationMyUnitSettings: React.FC<{
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>
-                        )) : <UnitSettingsReadRow label="Directed Task Setups" value="No directed-task setups are configured for this unit." muted />}
+                        )) : <UnitSettingsReadRow label="Directed Task Setups" value="No full directed task setups are configured for this unit." muted />}
                     </UnitSettingsGroup>
                     <UnitSettingsGroup title={configuredContinuationCurrencyEventsLabel} description="Request and build event defaults are configured under Training & Standards." action={settingsLink('sct-events', `Open ${configuredContinuationCurrencyEventsLabel}`)}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />

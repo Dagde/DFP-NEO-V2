@@ -3727,7 +3727,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     if (displayedStandardMissionProfiles.length === 0) {
       return (
         <div className="mt-4 rounded-lg border border-slate-700 px-3 py-6 text-center text-sm text-slate-500">
-          No directed-task setups for this unit context.
+          No full directed task setups for this unit context.
         </div>
       );
     }

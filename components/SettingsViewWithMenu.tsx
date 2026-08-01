@@ -484,7 +484,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'validation': 'Master cancellation code table used by cancellation records and analytics',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'crew-composition': 'Aircraft-specific crew roles, crew seats and alternate crew setups',
-  'standard-missions': 'Reusable directed-task setups with aircraft, crew, timing and callsign defaults',
+  'standard-missions': 'Full reusable directed tasks with aircraft, crew, timing and callsign defaults',
   'currency-profiles': 'Configure continuation and currency event defaults',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
