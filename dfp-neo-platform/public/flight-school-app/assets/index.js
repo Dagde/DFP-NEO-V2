@@ -10169,9 +10169,7 @@ const formatSnapshotDate = (dateStr) => {
 };
 const normaliseOrgChartValue = (value) => String(value || "").trim().replace(/\s+/g, " ");
 const normaliseOrgChartKey = (value) => normaliseOrgChartValue(value).toLowerCase();
-const ORGANISATION_LABEL_ALIASES = {
-  "air movements group": "Air Mobility Group"
-};
+const ORGANISATION_LABEL_ALIASES = {};
 const getActiveOrganisation = (platformConfig2) => (platformConfig2?.organisations || []).find((organisation) => String(organisation?.status || "ACTIVE").toUpperCase() === "ACTIVE") || platformConfig2?.organisations?.[0] || null;
 const getOrganisationStructureRootLabel = (activeOrganisation, levels) => {
   const levelZeroOptions = Array.isArray(levels[0]?.options) ? levels[0].options : [];

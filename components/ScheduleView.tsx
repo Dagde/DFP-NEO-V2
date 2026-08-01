@@ -250,9 +250,7 @@ const normaliseOrgChartValue = (value: unknown): string =>
 const normaliseOrgChartKey = (value: unknown): string =>
     normaliseOrgChartValue(value).toLowerCase();
 
-const ORGANISATION_LABEL_ALIASES: Record<string, string> = {
-    'air movements group': 'Air Mobility Group',
-};
+const ORGANISATION_LABEL_ALIASES: Record<string, string> = {};
 
 const getActiveOrganisation = (platformConfig: any): any => (
     (platformConfig?.organisations || []).find((organisation: any) => (
