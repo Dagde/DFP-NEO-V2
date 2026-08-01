@@ -1386,7 +1386,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
     if (lowerTitle.includes('no usable resources')) {
       return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
-    return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and resource counts so they match active platform records.';
+    return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and DFP row quantities so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
@@ -1582,7 +1582,7 @@ const buildConfigurationHealth = (
     const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has no usable resources`, 'This row set controls DFP resource rows, but all resource counts are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has no usable resources`, 'This row set controls DFP resource rows, but all DFP row quantities are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
 

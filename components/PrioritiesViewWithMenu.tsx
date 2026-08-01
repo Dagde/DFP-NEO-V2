@@ -102,6 +102,7 @@ interface PrioritiesViewWithMenuProps {
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   instructorLabel?: string;
+  continuationShortLabel?: string;
   onNavigateToSettingsSection?: (request: {
     sectionId: string;
     unitCode?: string;
@@ -175,7 +176,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         'events-builder': [
             { label: 'Highest Priority Table', target: '.highest-priority-events-card' },
             { label: 'Directed Tasks', target: '.tasking-events-card' },
-            { label: 'Continuation / Currency Requests', target: '.specific-currency-card' },
+            { label: `${props.continuationShortLabel || 'ContT'} / Currency Requests`, target: '.specific-currency-card' },
             { label: 'Saved Special Events', target: '.saved-special-events-card' },
         ],
         'deployments': [

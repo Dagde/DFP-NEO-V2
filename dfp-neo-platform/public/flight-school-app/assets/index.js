@@ -38934,11 +38934,13 @@ const PrioritiesView = ({
   unitCallsignSettings,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   instructorLabel = "Instructor",
+  continuationShortLabel = "ContT",
   onNavigateToSettingsSection
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const continuationCurrencyRequestsLabel = `${continuationShortLabel} / Currency Requests`;
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
@@ -42077,7 +42079,7 @@ const PrioritiesView = ({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "specific-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Continuation / Currency Requests" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: continuationCurrencyRequestsLabel }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddSctRequest("flight"), className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "+ Add",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -42623,7 +42625,7 @@ const PrioritiesViewWithMenu = (props) => {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
       { label: "Directed Tasks", target: ".tasking-events-card" },
-      { label: "Continuation / Currency Requests", target: ".specific-currency-card" },
+      { label: `${props.continuationShortLabel || "ContT"} / Currency Requests`, target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
     "deployments": [
@@ -66829,7 +66831,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
     if (lowerTitle.includes("no usable resources")) {
       return "Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.";
     }
-    return "Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and resource counts so they match active platform records.";
+    return "Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and DFP row quantities so they match active platform records.";
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
@@ -66987,7 +66989,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add("CRITICAL", "Aircraft Types & DFP Resource Rows", `${poolName} has no usable resources`, "This row set controls DFP resource rows, but all resource counts are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add("CRITICAL", "Aircraft Types & DFP Resource Rows", `${poolName} has no usable resources`, "This row set controls DFP resource rows, but all DFP row quantities are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
   if (activeResourcePools.length === 0) {
@@ -120451,6 +120453,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             onSaveStandardMissionProfile: handleSaveStandardMissionProfileFromPlanner,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             instructorLabel,
+            continuationShortLabel: getSctTerminology(platformConfig, activeUnitCode).shortLabel,
             onNavigateToSettingsSection: handleNavigateToSettingsSection,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             unitCallsignSettings: activeUnitCallsignSettings,

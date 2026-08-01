@@ -280,6 +280,7 @@ interface PrioritiesViewProps {
   unitCallsignSettings?: UnitCallsignSettings;
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   instructorLabel?: string;
+  continuationShortLabel?: string;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
   onNavigateToSettingsSection?: (request: {
     sectionId: string;
@@ -1118,11 +1119,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   unitCallsignSettings,
   staffQualificationCatalogue,
   instructorLabel = 'Instructor',
+  continuationShortLabel = 'ContT',
   onNavigateToSettingsSection,
 }) => {
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const continuationCurrencyRequestsLabel = `${continuationShortLabel} / Currency Requests`;
   const aircraftCapacityMax = Math.max(0, Math.floor(Number(maxAircraftCount ?? availableAircraftCount) || 0));
   const ftdCapacityMax = Math.max(0, Math.floor(Number(maxFtdCount ?? availableFtdCount) || 0));
   const cptCapacityMax = Math.max(0, Math.floor(Number(maxCptCount ?? availableCptCount) || 0));
@@ -4849,7 +4852,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
         <div className="specific-currency-card rounded-lg border border-fuchsia-400/60 bg-slate-900 shadow-[0_0_0_1px_rgba(232,121,249,0.14),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-sky-400">Continuation / Currency Requests</h2>
+              <h2 className="text-xl font-semibold text-sky-400">{continuationCurrencyRequestsLabel}</h2>
               <button onClick={() => onAddSctRequest('flight')} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
                 <span>+ Add<br />Request</span>
               </button>
@@ -5333,7 +5336,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional Currency Events</h2>
             <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority currency events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
             {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
-              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority currency events. Add continuation or currency requests with MEDIUM or LOW priority in the Continuation / Currency Requests section above.</p>
+              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority currency events. Add {continuationShortLabel} or currency requests with MEDIUM or LOW priority in the {continuationCurrencyRequestsLabel} section above.</p>
             )}
 
               {/* Currency Flights - MEDIUM/LOW */}
