@@ -25,7 +25,6 @@ import type { DispatchStaggerSettings } from '../utils/dispatchStagger';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { isFixedCrewLikeOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
@@ -872,14 +871,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
 
     const getGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-    const isFixedCrewSettingsContext = isFixedCrewLikeOperationalModel(props.activeOperationalModel);
-    const isSectionAvailable = (section: SettingsMenuSection) => (
-        section !== 'standard-missions' || isFixedCrewSettingsContext
-    );
     const visibleSettingGroups = sectionGroups
         .map(group => ({
             ...group,
-            visibleSections: group.sections.filter(section => isSectionAvailable(section) && matchesSettingsSearch(section, group.label)),
+            visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
         }))
         .filter(group => group.visibleSections.length > 0);
     const hasSettingsMatches = visibleSettingGroups.length > 0;

@@ -76190,11 +76190,9 @@ const SettingsViewWithMenu = (props) => {
     ].some((value) => value.toLowerCase().includes(query));
   };
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  const isFixedCrewSettingsContext = isFixedCrewLikeOperationalModel(props.activeOperationalModel);
-  const isSectionAvailable = (section) => section !== "standard-missions" || isFixedCrewSettingsContext;
   const visibleSettingGroups = sectionGroups.map((group) => ({
     ...group,
-    visibleSections: group.sections.filter((section) => isSectionAvailable(section) && matchesSettingsSearch(section, group.label))
+    visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
   const getDefaultSectionForGroup = (group) => {
