@@ -66416,7 +66416,8 @@ const formatDateLabel = (value) => {
 };
 const formatCommercialLicenceDisplayName = (license) => {
   const rawName = String(license?.licenseName || license?.licenseKey || "").trim();
-  const neutralName = rawName.replace(/^RAAF\s+/i, "").replace(/\s+Evaluation Licen[cs]e$/i, " Initial Licence").trim();
+  const withoutLegacyOrganisation = rawName.replace(/^RAAF\s+/i, "").trim();
+  const neutralName = withoutLegacyOrganisation.replace(/^Evaluation Licen[cs]e$/i, "Initial Licence").replace(/\s+Evaluation Licen[cs]e$/i, " Initial Licence").trim();
   return neutralName || "Licence";
 };
 const getLicenceStatusSummary = (license) => {

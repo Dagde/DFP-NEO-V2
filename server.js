@@ -8696,7 +8696,11 @@ async function seedCommercialLicenseIfEmpty(db) {
             THEN regexp_replace("licenseKey", '-EVAL$', '-STARTER')
           ELSE "licenseKey"
         END,
-        "licenseName" = regexp_replace(regexp_replace(regexp_replace("licenseName", '^RAAF[[:space:]]+', ''), ' Evaluation Licence$', ' Initial Licence'), ' Evaluation License$', ' Initial Licence'),
+        "licenseName" = CASE
+          WHEN trim(regexp_replace(COALESCE("licenseName", ''), '^RAAF[[:space:]]+', '', 'i')) ~* '^Evaluation Licen[cs]e$'
+            THEN 'Initial Licence'
+          ELSE trim(regexp_replace(regexp_replace(regexp_replace(COALESCE("licenseName", ''), '^RAAF[[:space:]]+', '', 'i'), '[[:space:]]+Evaluation Licence$', ' Initial Licence', 'i'), '[[:space:]]+Evaluation License$', ' Initial Licence', 'i'))
+        END,
         "features" = COALESCE("features", '{}'::jsonb) - 'developmentOnly' || '{"seededBy":"Initial licensing foundation"}'::jsonb,
         "notes" = CASE
           WHEN "notes" ILIKE 'Development licensing foundation record.%'
@@ -8708,6 +8712,8 @@ async function seedCommercialLicenseIfEmpty(db) {
         ("features"->>'seededBy' = 'Development licensing foundation'
           OR "licenseName" ILIKE '% Evaluation Licence'
           OR "licenseName" ILIKE '% Evaluation License'
+          OR "licenseName" ILIKE 'Evaluation Licence'
+          OR "licenseName" ILIKE 'Evaluation License'
           OR "licenseKey" LIKE '%-EVAL')
     `);
     return;

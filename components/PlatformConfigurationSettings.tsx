@@ -1030,8 +1030,11 @@ const formatDateLabel = (value: any): string => {
 
 const formatCommercialLicenceDisplayName = (license: any): string => {
   const rawName = String(license?.licenseName || license?.licenseKey || '').trim();
-  const neutralName = rawName
+  const withoutLegacyOrganisation = rawName
     .replace(/^RAAF\s+/i, '')
+    .trim();
+  const neutralName = withoutLegacyOrganisation
+    .replace(/^Evaluation Licen[cs]e$/i, 'Initial Licence')
     .replace(/\s+Evaluation Licen[cs]e$/i, ' Initial Licence')
     .trim();
   return neutralName || 'Licence';
