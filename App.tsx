@@ -1856,7 +1856,7 @@ const DfpSidePanelTimeline: React.FC<{
         { id: 'flying', label: 'Flying Window' },
         { id: 'resources', label: 'Resources Available' },
         { id: 'training', label: 'Training Priority' },
-        { id: 'taskings', label: 'Mission Requests' },
+        { id: 'taskings', label: 'Directed Tasks' },
         { id: 'currency', label: 'Currency events' },
         { id: 'crew', label: 'Crew' },
         { id: 'course', label: 'Course events' },
@@ -2945,10 +2945,10 @@ const DfpSidePanelTimeline: React.FC<{
         }
         if (wizardStep === 8) {
             return questionShell(
-                'Which saved mission requests must be scheduled?',
+                'Which saved directed tasks must be scheduled?',
                 wizardTaskRows.length
-                    ? <p>Select events from Highest Priority Events and the Mission Requests section, then continue.</p>
-                    : <p>No saved mission requests are waiting in NEO Assist.</p>,
+                    ? <p>Select events from Highest Priority Events and the Directed Tasks section, then continue.</p>
+                    : <p>No saved directed tasks are waiting in NEO Assist.</p>,
                 wizardTaskRows.length ? wizardTaskRows.map(request => (
                     <button
                         key={request.selectionId}
@@ -3702,7 +3702,7 @@ const DfpSidePanelTimeline: React.FC<{
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         <div className="min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2">
-                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Mission Requests</p>
+                            <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70">Directed Tasks</p>
                             <p className="mt-2 text-sm font-semibold text-cyan-50">{scheduledTaskCount > 0 ? 'Mandatory' : 'None'}</p>
                             <p className="mt-0.5 text-[9px] text-cyan-100/60">{scheduledTaskCount} scheduled</p>
                         </div>

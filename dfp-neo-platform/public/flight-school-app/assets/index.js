@@ -41110,7 +41110,7 @@ const PrioritiesView = ({
       remedial: events.filter((event) => getPriorityEventGroup(event) === "remedial")
     };
     const groups = [
-      { key: "tasking", label: "Mission Requests", events: groupedEvents.tasking },
+      { key: "tasking", label: "Directed Tasks", events: groupedEvents.tasking },
       { key: "currency", label: "Currency", events: groupedEvents.currency },
       { key: "remedial", label: "Remedial", events: groupedEvents.remedial }
     ];
@@ -41904,12 +41904,12 @@ const PrioritiesView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-directed-events space-y-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fourth Input" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Mission Requests" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Tasks" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Mission Requests" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Directed Tasks" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addTaskingRequest, className: "btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
             "+ Add",
             /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -42472,7 +42472,7 @@ const PrioritiesViewWithMenu = (props) => {
     {
       id: "directed-events",
       step: "04",
-      label: "Mission Requests",
+      label: "Directed Tasks",
       shortLabel: "Exceptions",
       description: "Manage currency requests and high-priority events."
     }
@@ -42485,7 +42485,7 @@ const PrioritiesViewWithMenu = (props) => {
   const fixedCrewPlannerSections = {
     "events-builder": [
       { label: "Highest Priority Table", target: ".highest-priority-events-card" },
-      { label: "Mission Requests", target: ".tasking-events-card" },
+      { label: "Directed Tasks", target: ".tasking-events-card" },
       { label: "Continuation / Currency Requests", target: ".specific-currency-card" },
       { label: "Saved Special Events", target: ".saved-special-events-card" }
     ],
@@ -48565,7 +48565,7 @@ const AirCombatIntelligenceTab = ({
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Mission Requests", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked mission requests", accent: "text-orange-200" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Directed Tasks", value: numberLabel(analysis.taskingEvents.length), subtext: "Marked directed task events", accent: "text-orange-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: "Currency", value: numberLabel(analysis.currencyEvents.length), subtext: "Currency marked events", accent: "text-fuchsia-200" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard, { label: isFixedCrewLike ? "Assessment events" : "Night", value: numberLabel(isFixedCrewLike ? analysis.assessmentEvents.length : analysis.nightEvents.length), subtext: isFixedCrewLike ? "Events requiring a training report/assessment" : "Night-coded events on this DFP", accent: "text-indigo-200" })
         ] })
@@ -86691,7 +86691,7 @@ const DfpSidePanelTimeline = ({
     { id: "flying", label: "Flying Window" },
     { id: "resources", label: "Resources Available" },
     { id: "training", label: "Training Priority" },
-    { id: "taskings", label: "Mission Requests" },
+    { id: "taskings", label: "Directed Tasks" },
     { id: "currency", label: "Currency events" },
     { id: "crew", label: "Crew" },
     { id: "course", label: "Course events" },
@@ -87619,8 +87619,8 @@ const DfpSidePanelTimeline = ({
     }
     if (wizardStep === 8) {
       return questionShell(
-        "Which saved mission requests must be scheduled?",
-        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select events from Highest Priority Events and the Mission Requests section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved mission requests are waiting in NEO Assist." }),
+        "Which saved directed tasks must be scheduled?",
+        wizardTaskRows.length ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Select events from Highest Priority Events and the Directed Tasks section, then continue." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved directed tasks are waiting in NEO Assist." }),
         wizardTaskRows.length ? wizardTaskRows.map((request) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -88340,7 +88340,7 @@ const DfpSidePanelTimeline = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-2 py-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold text-cyan-50", children: "Operational build priority" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-[68px] rounded border border-cyan-500/25 bg-cyan-500/10 p-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Mission Requests" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[8px] font-semibold uppercase tracking-[0.12em] text-cyan-100/70", children: "Directed Tasks" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm font-semibold text-cyan-50", children: scheduledTaskCount > 0 ? "Mandatory" : "None" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[9px] text-cyan-100/60", children: [
               scheduledTaskCount,

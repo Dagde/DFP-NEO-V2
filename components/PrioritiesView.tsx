@@ -3946,7 +3946,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       remedial: events.filter(event => getPriorityEventGroup(event) === 'remedial'),
     };
     const groups: Array<{ key: 'tasking' | 'currency' | 'remedial'; label: string; events: ScheduleEvent[] }> = [
-      { key: 'tasking', label: 'Mission Requests', events: groupedEvents.tasking },
+      { key: 'tasking', label: 'Directed Tasks', events: groupedEvents.tasking },
       { key: 'currency', label: 'Currency', events: groupedEvents.currency },
       { key: 'remedial', label: 'Remedial', events: groupedEvents.remedial },
     ];
@@ -4749,13 +4749,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         <div className="section-directed-events space-y-6">
         <div className="directed-events-intro-card rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
-            <h2 className="mt-1 text-xl font-semibold text-white">Mission Requests</h2>
+            <h2 className="mt-1 text-xl font-semibold text-white">Directed Tasks</h2>
             <p className="mt-1 text-sm text-slate-300">Review hard requests and build exceptions after the normal course weighting is set.</p>
         </div>
 
         <div className="tasking-events-card rounded-lg border border-cyan-400/55 bg-slate-900 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_18px_36px_rgba(0,0,0,0.22)] p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-sky-400">Mission Requests</h2>
+              <h2 className="text-xl font-semibold text-sky-400">Directed Tasks</h2>
               <button onClick={addTaskingRequest} className="btn-aluminium-brushed flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold leading-tight">
                 <span>+ Add<br />Request</span>
               </button>
