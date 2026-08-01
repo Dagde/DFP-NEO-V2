@@ -38448,7 +38448,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching tasking name" : "No tasking names configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved tasking names yet. Add them in Settings > Platform & Deployment > Tasking Lists, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved directed-task names yet. Add them in Settings > Platform & Deployment > Directed Task Lists, or type manually.` })
     ] }) })
   ] });
 };
