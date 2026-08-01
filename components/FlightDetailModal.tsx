@@ -31,7 +31,7 @@ import {
 } from '../utils/crewPositionTerminology';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
-import { getContinuationEventNames, normaliseContinuationEventSettings } from '../utils/continuationEvents';
+import { getContinuationEventNames, isContinuationScheduleEvent, normaliseContinuationEventSettings } from '../utils/continuationEvents';
 import {
     getQualificationsForOperationalModel,
     normaliseAssignedQualificationIds,
@@ -544,7 +544,7 @@ const uniqueOptionValues = (values: string[]): string[] => {
 
 const inferEventCategory = (event: ScheduleEvent): EventCategory => (
     normaliseEventCategoryValue((event as any).eventCategory)
-    || (((event as any).isSct || isContinuationFlightCode(event.flightNumber)) ? 'sct' : 'lmp_event')
+    || (isContinuationScheduleEvent(event) ? 'sct' : 'lmp_event')
 );
 
 const getContinuationPilotName = (event: ScheduleEvent): string =>
@@ -2494,6 +2494,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             await showDarkAlert('No formation callsign is configured for this unit and location. Add one in Settings before saving this formation event.', 'Formation Callsign Required', 'warning');
             return;
         }
+        const selectedContinuationEvent = eventCategory === 'sct' ? getConfiguredContinuationEvent(flightNumber) : undefined;
+        const continuationEventName = selectedContinuationEvent
+            ? (selectedContinuationEvent.currency || selectedContinuationEvent.name || flightNumber)
+            : flightNumber;
+        const continuationEventCode = selectedContinuationEvent
+            ? (selectedContinuationEvent.code || flightNumber)
+            : flightNumber;
+
         const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
             let eventColor = event.color;
             
@@ -2578,6 +2586,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 
                 // Save event category for LMP Currency handling
                 eventCategory: eventCategory,
+                continuationEventName: eventCategory === 'sct' ? continuationEventName : undefined,
+                continuationEventCode: eventCategory === 'sct' ? continuationEventCode : undefined,
             };
             
             // Debug logging for continuation events
@@ -2786,7 +2796,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
     // Determine if we should show Trainee/Group fields (only for LMP Event and LMP Currency)
     const showTraineeFields = eventCategory === 'lmp_event' || eventCategory === 'lmp_currency';
     
-    // Determine if we should show Crew field (only for SCT and Staff CAT when Dual)
+    // Determine if we should show Crew field (only for continuation, Staff CAT and TWR DI when Dual)
     const showCrewField = (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && crewMember.flightType === 'Dual';
     const soloStaffSource = isAirCombatModel && eventCategory === 'sct' ? airCombatPilotsByUnit : staffInstructorsByUnit;
     
@@ -2918,7 +2928,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     )}
                 </>
                ) : (
-                   // Solo - Use staff dropdown for SCT and Staff CAT
+                   // Solo - use staff dropdown for continuation, Staff CAT and TWR DI events.
                    useStaffOnly ? (
                        <div>
                            <label className="block text-sm font-medium text-gray-400">Pilot</label>

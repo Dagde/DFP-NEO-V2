@@ -2893,6 +2893,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           ].filter(Boolean).join('\n'),
           currency: selectedFixedCrewCurrencyProfile?.currency || undefined,
           eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || undefined,
+          continuationEventName: eventCategory === 'sct'
+            ? (selectedFixedCrewCurrencyProfile?.currency || selectedFixedCrewCurrencyProfile?.name || flightNumber)
+            : undefined,
+          continuationEventCode: eventCategory === 'sct'
+            ? (selectedFixedCrewCurrencyProfile?.code || flightNumber)
+            : undefined,
           dayNight: selectedFixedCrewCurrencyProfile?.dayNight,
           group: formatFixedCrewDisplayGroup(assignedCrewGroup),
           groupTraineeIds: [],
@@ -2972,6 +2978,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           dayNight: selectedContinuationProfile?.dayNight,
           currency: selectedContinuationProfile?.currency,
           eventCode: selectedContinuationProfile?.code,
+          continuationEventName: eventCategory === 'sct'
+            ? (selectedContinuationProfile?.currency || selectedContinuationProfile?.name || flightNumber)
+            : undefined,
+          continuationEventCode: eventCategory === 'sct'
+            ? (selectedContinuationProfile?.code || flightNumber)
+            : undefined,
         } as any);
       });
     } else {

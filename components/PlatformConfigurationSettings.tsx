@@ -1343,7 +1343,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
       return { section: 'platform-resource-pools', label: 'Aircraft & Resource Pools' };
     }
     if (lowerTitle.includes('profiles')) {
-      return { section: 'platform-standard-missions', label: 'Reusable Flight Profiles' };
+      return { section: 'platform-standard-missions', label: 'Flight Templates' };
     }
   }
   return null;
@@ -1583,13 +1583,13 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit profiles need per-unit copies',
-      `${missingCompositeClones} unit-scoped reusable flight profile, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
-      'Open Reusable Flight Profiles, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.',
-      { section: 'platform-standard-missions', label: 'Reusable Flight Profiles', focusSubsectionId: 'platform-standard-missions' }
+      'Open Flight Templates, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.',
+      { section: 'platform-standard-missions', label: 'Flight Templates', focusSubsectionId: 'platform-standard-missions' }
     );
   } else {
-    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Reusable flight profiles, alternate crew profiles and continuation/currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
+    add('OK', 'Unit Separation', 'Combined-unit profiles are split-ready', 'Flight templates, alternate crew profiles and continuation/currency events have per-unit records where needed.', 'unit-separation-profiles-ok');
   }
 
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
@@ -6833,8 +6833,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
-          title="Task Profiles"
-          subtitle="Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed."
+          title="Mission / Task Profiles"
+          subtitle="Mission or task names shown in Mission Requests for each operational model. Users can still type a task manually if the assigned task is not listed."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -7124,7 +7124,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
-          title="Reusable Flight Profiles"
+          title="Flight Templates"
           subtitle="Full flight templates with default aircraft, crew, timing, callsign and formation settings."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
@@ -7136,14 +7136,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!fixedCrewContext ? (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Reusable Flight Profiles are available when the selected unit model supports recurring flight templates.
+              Flight Templates are available when the selected unit model supports recurring flight templates.
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New reusable flight profiles default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name.
+                  New flight templates default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
@@ -7209,7 +7209,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 value={activeStandardMissionUnitLabel}
                                 disabled
                                 onChange={() => undefined}
-                                info="Reusable Flight Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                                info="Flight Templates are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                               />
                               <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />

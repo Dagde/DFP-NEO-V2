@@ -13,6 +13,7 @@ import {
   type TileStatusSettings,
 } from '../utils/tileStatusSettings';
 import { resolveScheduleTileBackgroundColor } from '../utils/tileColorResolver';
+import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 
 interface FlightTileProps {
   event: ScheduleEvent | EventSegment;
@@ -369,7 +370,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
 
   // For continuation events, pilot field contains PIC and student field contains crew when dual.
-  const isSctEvent = event.eventCategory === 'sct';
+  const isSctEvent = isContinuationScheduleEvent(event);
   const isTaskingEvent = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-');
   const isAirCombatCrewEvent = (event as any)._source === 'air-combat-priority-formation'
       || (event.type === 'flight' && !!event.pilot && !!event.crew && !event.student && !event.instructor);

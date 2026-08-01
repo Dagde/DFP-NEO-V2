@@ -4932,9 +4932,10 @@ const getContinuationEventNames = (events) => Array.from(new Set(
 const isContinuationScheduleEvent = (event) => {
   if (!event || typeof event !== "object") return false;
   const source = event;
-  if (String(source.eventCategory || "").trim().toLowerCase() === "sct") return true;
+  const category = String(source.eventCategory || source.category || "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+  if (category === "sct" || category === "continuation" || category === "continuationtraining" || category === "contt") return true;
   if (source.isSct === true || source.isContinuation === true || source.isContinuationTraining === true) return true;
-  if (source.sctRequestId || source.continuationRequestId || source.continuationEventId || source.continuationProfileId) return true;
+  if (source.sctRequestId || source.continuationRequestId || source.continuationEventId || source.continuationProfileId || source.continuationEventName || source.continuationEventCode) return true;
   const flightNumber = String(source.flightNumber || "").trim().toUpperCase();
   return flightNumber === "SCT" || flightNumber === "SCT FORM" || flightNumber.startsWith("SCT ");
 };
@@ -8695,7 +8696,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
     scaledFontSize = 10;
   }
   scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
-  const isSctEvent = event.eventCategory === "sct";
+  const isSctEvent = isContinuationScheduleEvent(event);
   const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isAirCombatCrewEvent = event._source === "air-combat-priority-formation" || event.type === "flight" && !!event.pilot && !!event.crew && !event.student && !event.instructor;
   const isFixedCrewCrewEvent = !!event.fixedCrewGroup;
@@ -11489,9 +11490,9 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0 text-sm font-semibold text-slate-100", children: profile }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xs font-semibold leading-5 ${taskAbbreviations[profile] ? "text-slate-100" : "text-slate-500"}`, children: taskAbbreviations[profile] || "Uses default tile label" })
             ] }, profile))
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Task profile tile labels", value: "No task profiles are configured for this operating model.", muted: true })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Mission/task tile labels", value: "No mission or task profiles are configured for this operating model.", muted: true })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Reusable Flight Profiles", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Flight Templates", description: "Regular unit flight templates scoped to this unit.", action: settingsLink("standard-missions", "Take me there", { focusSubsectionId: "platform-standard-mission-records" }), children: standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Short title", value: profile.shortTitle || profile.code || "", onChange: (value) => updateStandardMissionProfile(profile, { shortTitle: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Profile name", value: profile.missionName || "", onChange: (value) => updateStandardMissionProfile(profile, { missionName: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
@@ -27873,7 +27874,7 @@ const uniqueOptionValues = (values) => {
     return true;
   });
 };
-const inferEventCategory = (event) => normaliseEventCategoryValue(event.eventCategory) || (event.isSct || isContinuationFlightCode(event.flightNumber) ? "sct" : "lmp_event");
+const inferEventCategory = (event) => normaliseEventCategoryValue(event.eventCategory) || (isContinuationScheduleEvent(event) ? "sct" : "lmp_event");
 const getContinuationPilotName = (event) => stripCrewSuffix(event.pilot || event.instructor || event.student || "");
 const makeInitialCrewMember = (sourceEvent) => {
   const inferredCategory = inferEventCategory(sourceEvent);
@@ -29310,6 +29311,9 @@ ${swapNote}` : swapNote
       await showDarkAlert("No formation callsign is configured for this unit and location. Add one in Settings before saving this formation event.", "Formation Callsign Required", "warning");
       return;
     }
+    const selectedContinuationEvent = eventCategory === "sct" ? getConfiguredContinuationEvent(flightNumber) : void 0;
+    const continuationEventName = selectedContinuationEvent ? selectedContinuationEvent.currency || selectedContinuationEvent.name || flightNumber : flightNumber;
+    const continuationEventCode = selectedContinuationEvent ? selectedContinuationEvent.code || flightNumber : flightNumber;
     const eventsToSave = crew.map((c, index) => {
       let eventColor = event.color;
       const traineeName = c.student || c.pilot;
@@ -29378,7 +29382,9 @@ ${swapNote}` : swapNote
         deploymentAircraftCount: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentAircraftCount : void 0,
         assignedDeploymentId: selectedDeploymentId || void 0,
         // Save event category for LMP Currency handling
-        eventCategory
+        eventCategory,
+        continuationEventName: eventCategory === "sct" ? continuationEventName : void 0,
+        continuationEventCode: eventCategory === "sct" ? continuationEventCode : void 0
       };
       return savedEvent;
     });
@@ -29641,7 +29647,7 @@ ${swapNote}` : swapNote
           // Include PAX option for continuation events
         )
       ] }) : (
-        // Solo - Use staff dropdown for SCT and Staff CAT
+        // Solo - use staff dropdown for continuation, Staff CAT and TWR DI events.
         useStaffOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Pilot" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -32703,6 +32709,8 @@ const AddFlightTileModal = ({
             ].filter(Boolean).join("\n"),
             currency: selectedFixedCrewCurrencyProfile?.currency || void 0,
             eventCode: selectedFixedCrewCurrencyProfile?.code || selectedFixedCrewEvent?.code || void 0,
+            continuationEventName: eventCategory === "sct" ? selectedFixedCrewCurrencyProfile?.currency || selectedFixedCrewCurrencyProfile?.name || flightNumber : void 0,
+            continuationEventCode: eventCategory === "sct" ? selectedFixedCrewCurrencyProfile?.code || flightNumber : void 0,
             dayNight: selectedFixedCrewCurrencyProfile?.dayNight,
             group: formatFixedCrewDisplayGroup$1(assignedCrewGroup),
             groupTraineeIds: [],
@@ -32771,7 +32779,9 @@ const AddFlightTileModal = ({
           formationSize: isFormation ? crewDrafts.length : void 0,
           dayNight: selectedContinuationProfile?.dayNight,
           currency: selectedContinuationProfile?.currency,
-          eventCode: selectedContinuationProfile?.code
+          eventCode: selectedContinuationProfile?.code,
+          continuationEventName: eventCategory === "sct" ? selectedContinuationProfile?.currency || selectedContinuationProfile?.name || flightNumber : void 0,
+          continuationEventCode: eventCategory === "sct" ? selectedContinuationProfile?.code || flightNumber : void 0
         });
       });
     } else {
@@ -38375,7 +38385,7 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           onChange(event.target.value);
           setIsOpen(true);
         },
-        placeholder: "Task profile",
+        placeholder: "Mission/task profile",
         className: "h-10 w-full rounded-md border border-slate-600 bg-slate-800 px-2 text-sm font-semibold text-white focus:ring-sky-500"
       }
     ),
@@ -38392,14 +38402,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onCha
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: profile }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: [
             operationalModelLabel,
-            " task profile"
+            " mission/task profile"
           ] })
         ]
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching task profile" : "No task profiles configured" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved task profiles yet. Add them in Settings > Platform & Deployment > Task Profiles, or type manually.` })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching mission/task profile" : "No mission/task profiles configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? "Keep typing to enter this task manually." : `${operationalModelLabel} has no saved mission or task profiles yet. Add them in Settings > Platform & Deployment > Mission / Task Profiles, or type manually.` })
     ] }) })
   ] });
 };
@@ -38480,7 +38490,7 @@ const TaskingRequestTable = ({
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(13rem,1.6fr)_minmax(10rem,1.1fr)_minmax(6.5rem,0.64fr)_minmax(6.5rem,0.64fr)]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Task Profile", hint: request.tasking || "Select or type task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TaskingFieldPanel, { label: "Mission/Task Profile", hint: request.tasking || "Select or type mission/task profile", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               TaskingProfileInput,
               {
                 value: request.tasking,
@@ -66600,7 +66610,7 @@ const getConfigurationHealthSettingsLink = (area, title) => {
       return { section: "platform-resource-pools", label: "Aircraft & Resource Pools" };
     }
     if (lowerTitle.includes("profiles")) {
-      return { section: "platform-standard-missions", label: "Reusable Flight Profiles" };
+      return { section: "platform-standard-missions", label: "Flight Templates" };
     }
   }
   return null;
@@ -66799,13 +66809,13 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit profiles need per-unit copies",
-      `${missingCompositeClones} unit-scoped reusable flight profile, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped flight template, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
-      "Open Reusable Flight Profiles, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.",
-      { section: "platform-standard-missions", label: "Reusable Flight Profiles", focusSubsectionId: "platform-standard-missions" }
+      "Open Flight Templates, press Edit, then Save. If the missing records are alternate crew or continuation/currency records, also open the matching settings section and save it.",
+      { section: "platform-standard-missions", label: "Flight Templates", focusSubsectionId: "platform-standard-missions" }
     );
   } else {
-    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Reusable flight profiles, alternate crew profiles and continuation/currency events have per-unit records where needed.", "unit-separation-profiles-ok");
+    add("OK", "Unit Separation", "Combined-unit profiles are split-ready", "Flight templates, alternate crew profiles and continuation/currency events have per-unit records where needed.", "unit-separation-profiles-ok");
   }
   const pendingCompositePlannerKeys = getPendingCompositePlannerStorageKeys();
   if (pendingCompositePlannerKeys.length > 0) {
@@ -71072,8 +71082,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Task Profiles",
-          subtitle: "Task names shown in Directed Events for each operational model. Users can still type a task manually if the assigned task is not listed.",
+          title: "Mission / Task Profiles",
+          subtitle: "Mission or task names shown in Mission Requests for each operational model. Users can still type a task manually if the assigned task is not listed.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -71394,7 +71404,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Reusable Flight Profiles",
+          title: "Flight Templates",
           subtitle: "Full flight templates with default aircraft, crew, timing, callsign and formation settings.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
@@ -71402,13 +71412,13 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Reusable Flight Profiles are available when the selected unit model supports recurring flight templates." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Flight Templates are available when the selected unit model supports recurring flight templates." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
             activeStandardMissionUnitLabel || "No unit selected"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New reusable flight profiles default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New flight templates default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name." })
         ] }),
         standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No reusable flight profiles configured for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
@@ -71458,7 +71468,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         value: activeStandardMissionUnitLabel,
                         disabled: true,
                         onChange: () => void 0,
-                        info: "Reusable Flight Profiles are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
+                        info: "Flight Templates are scoped to the current unit context. Change the top-left context selector to work on a different unit or composite unit."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Defaults from the selected unit's resource pool. Type the aircraft code manually if the unit setup is incomplete." }),
@@ -75521,12 +75531,12 @@ const sectionLabels = {
   "validation": "Cancellation Codes",
   "organisation": "Resource Sharing",
   "crew-composition": "Crew Composition",
-  "standard-missions": "Reusable Flight Profiles",
+  "standard-missions": "Flight Templates",
   "currency-profiles": "Continuation & Currency Events",
   "platform-configuration-health": "Configuration Health",
   "platform-organisation-locations": "Organisation, Bases & Areas",
   "platform-units": "Units & Ownership",
-  "platform-task-profiles": "Task Profiles",
+  "platform-task-profiles": "Mission / Task Profiles",
   "platform-master-lmp-access": "Master LMP Access",
   "platform-resource-pools": "Aircraft & Resource Pools",
   "platform-unit-modules": "Unit Features & Modules",
@@ -75666,12 +75676,12 @@ const sectionDescriptions = {
   "validation": "Master cancellation code table used by cancellation records and analytics",
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles and composition profiles",
-  "standard-missions": "Reusable flight templates with aircraft, crew, timing and callsign defaults",
+  "standard-missions": "Flight templates with aircraft, crew, timing and callsign defaults",
   "currency-profiles": "Continuation and currency event defaults",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Task profile lists by operational model",
+  "platform-task-profiles": "Mission and task profile lists by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -90608,15 +90618,15 @@ const DfpSidePanelTimeline = ({
         ),
         showAssistTaskForm && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Task Profile",
+            "Mission/Task Profile",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: taskProfileSelectValue, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select task profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select mission/task profile" }),
               taskProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: profile, children: profile }, profile))
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
-            "Manual task profile",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type task profile manually" })
+            "Manual mission/task profile",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: selectedTaskProfile, onChange: (event) => selectAssistTask(event.target.value), className: fieldClass2, placeholder: "Type mission/task profile manually" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "font-semibold uppercase tracking-[0.1em] text-slate-400", children: [
             "Date",
@@ -93597,7 +93607,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (!crewLabel) return null;
     return crewUnit ? `CREW ${crewLabel}/${crewUnit}` : `CREW ${crewLabel}`;
   };
-  const isFixedCrewSctEventForDiag = (event) => event?.isSct === true || event?.eventCategory === "sct" || /^sct-(flight|ftd)-/.test(String(event?.id || ""));
+  const isFixedCrewSctEventForDiag = (event) => isContinuationScheduleEvent(event) || /^sct-(flight|ftd)-/.test(String(event?.id || ""));
   const getFixedCrewSctRequestIdForDiag = (event) => {
     const explicitId = String(event?.sctRequestId || "").trim();
     if (explicitId) return explicitId;
@@ -93716,7 +93726,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const crewUnit = getFixedCrewCrewUnit(crew);
       return crewUnit ? `CREW ${crewLabel}/${crewUnit}` : `CREW ${crewLabel}`;
     };
-    const isFixedCrewSctEvent = (event) => event?.isSct === true || event?.eventCategory === "sct" || /^sct-(flight|ftd)-/.test(String(event?.id || ""));
+    const isFixedCrewSctEvent = (event) => isContinuationScheduleEvent(event) || /^sct-(flight|ftd)-/.test(String(event?.id || ""));
     const getFixedCrewSctRequestId = (event) => {
       const explicitId = String(event?.sctRequestId || "").trim();
       if (explicitId) return explicitId;
@@ -114597,7 +114607,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       } else {
         const isNextDayView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
         saveToNextDayBuild2 = mainEvent.date === buildDfpDate && isNextDayView;
-        if (mainEvent.eventCategory === "sct") {
+        if (isContinuationScheduleEvent(mainEvent)) {
           logScheduleDebug("🔍 Continuation Save Decision:", {
             activeView,
             isNextDayView,
@@ -114624,7 +114634,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const otherEvents = nextDayBuildEvents.filter((e) => !existingEventIds.has(e.id) && !removedNextDayConflictIds.has(e.id));
         const eventsForBuild = eventsToSave.map(({ date: date2, ...rest }) => rest);
         eventsToSave.forEach((e) => {
-          if (e.eventCategory === "sct") {
+          if (isContinuationScheduleEvent(e)) {
             logScheduleDebug("🔄 Updating continuation event in nextDayBuildEvents:", {
               id: e.id,
               student: e.student,
@@ -116087,7 +116097,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
     const highestPriorityEventsBeforeSync = highestPriorityEvents;
     const rawSyncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
     const isTaskingEvent2 = (event) => event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
-    const isSctPriorityEvent = (event) => event.isSct === true || event.eventCategory === "sct" || /^sct-(flight|ftd)-/.test(String(event.id || ""));
+    const isSctPriorityEvent = (event) => isContinuationScheduleEvent(event) || /^sct-(flight|ftd)-/.test(String(event.id || ""));
     const getSctRequestIdFromEvent = (event) => {
       const explicitId = String(event.sctRequestId || "").trim();
       if (explicitId) return explicitId;

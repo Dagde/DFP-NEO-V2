@@ -107,9 +107,20 @@ export const getContinuationEventNames = (events: unknown): string[] => (
 export const isContinuationScheduleEvent = (event: unknown): boolean => {
   if (!event || typeof event !== 'object') return false;
   const source = event as Record<string, unknown>;
-  if (String(source.eventCategory || '').trim().toLowerCase() === 'sct') return true;
+  const category = String(source.eventCategory || source.category || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  if (category === 'sct' || category === 'continuation' || category === 'continuationtraining' || category === 'contt') return true;
   if (source.isSct === true || source.isContinuation === true || source.isContinuationTraining === true) return true;
-  if (source.sctRequestId || source.continuationRequestId || source.continuationEventId || source.continuationProfileId) return true;
+  if (
+    source.sctRequestId ||
+    source.continuationRequestId ||
+    source.continuationEventId ||
+    source.continuationProfileId ||
+    source.continuationEventName ||
+    source.continuationEventCode
+  ) return true;
   const flightNumber = String(source.flightNumber || '').trim().toUpperCase();
   return flightNumber === 'SCT' || flightNumber === 'SCT FORM' || flightNumber.startsWith('SCT ');
 };

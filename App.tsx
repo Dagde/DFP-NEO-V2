@@ -3994,14 +3994,14 @@ const DfpSidePanelTimeline: React.FC<{
                     {showAssistTaskForm && (
                         <div className="grid grid-cols-2 gap-2 rounded border border-cyan-400/20 bg-slate-950/45 p-2">
                             <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                Task Profile
+                                Mission/Task Profile
                                 <select value={taskProfileSelectValue} onChange={event => selectAssistTask(event.target.value)} className={fieldClass}>
-                                    <option value="">Select task profile</option>
+                                    <option value="">Select mission/task profile</option>
                                     {taskProfiles.map(profile => <option key={profile} value={profile}>{profile}</option>)}
                                 </select>
                             </label>
-                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual task profile
-                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type task profile manually" />
+                            <label className="col-span-2 font-semibold uppercase tracking-[0.1em] text-slate-400">Manual mission/task profile
+                                <input value={selectedTaskProfile} onChange={event => selectAssistTask(event.target.value)} className={fieldClass} placeholder="Type mission/task profile manually" />
                             </label>
                             <label className="font-semibold uppercase tracking-[0.1em] text-slate-400">Date
                                 <input type="date" value={assistTaskDate} onChange={event => setAssistTaskDate(event.target.value)} className={fieldClass} />
@@ -8156,8 +8156,7 @@ function generateDfpInternal(
     };
 
     const isFixedCrewSctEventForDiag = (event: Partial<ScheduleEvent> | any): boolean => (
-        event?.isSct === true ||
-        event?.eventCategory === 'sct' ||
+        isContinuationScheduleEvent(event) ||
         /^sct-(flight|ftd)-/.test(String(event?.id || ''))
     );
 
@@ -8288,8 +8287,7 @@ function generateDfpInternal(
             return crewUnit ? `CREW ${crewLabel}/${crewUnit}` : `CREW ${crewLabel}`;
         };
         const isFixedCrewSctEvent = (event: Partial<ScheduleEvent> | any): boolean => (
-            event?.isSct === true ||
-            event?.eventCategory === 'sct' ||
+            isContinuationScheduleEvent(event) ||
             /^sct-(flight|ftd)-/.test(String(event?.id || ''))
         );
         const getFixedCrewSctRequestId = (event: Partial<ScheduleEvent> | any): string => {
@@ -33458,7 +33456,7 @@ const App: React.FC = () => {
                 saveToNextDayBuild = mainEvent.date === buildDfpDate && isNextDayView;
 
                 // Debug logging for continuation events
-                if (mainEvent.eventCategory === 'sct') {
+                if (isContinuationScheduleEvent(mainEvent)) {
                     logScheduleDebug('🔍 Continuation Save Decision:', {
                         activeView,
                         isNextDayView,
@@ -33493,7 +33491,7 @@ const App: React.FC = () => {
 
                 // Debug logging for continuation event updates
                 eventsToSave.forEach(e => {
-                    if (e.eventCategory === 'sct') {
+                    if (isContinuationScheduleEvent(e)) {
                         logScheduleDebug('🔄 Updating continuation event in nextDayBuildEvents:', {
                             id: e.id,
                             student: e.student,
@@ -35288,7 +35286,7 @@ const App: React.FC = () => {
             event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || '').startsWith('tasking-')
         );
         const isSctPriorityEvent = (event: ScheduleEvent) => (
-            event.isSct === true || event.eventCategory === 'sct' || /^sct-(flight|ftd)-/.test(String(event.id || ''))
+            isContinuationScheduleEvent(event) || /^sct-(flight|ftd)-/.test(String(event.id || ''))
         );
         const getSctRequestIdFromEvent = (event: ScheduleEvent): string => {
             const explicitId = String(event.sctRequestId || '').trim();
