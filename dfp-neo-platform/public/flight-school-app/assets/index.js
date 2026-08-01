@@ -71448,7 +71448,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           subtitle: "Full flight templates with default aircraft, crew, timing, callsign and formation settings.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Profile" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Template" })
           ] }) : null
         }
       ),
@@ -71472,7 +71472,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: profile.shortTitle || "TASK" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Profile" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-black text-white", children: profile.missionName || "Unnamed Template" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400", children: profile.resourceType })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: profile.description || "No description entered." })
@@ -71486,11 +71486,11 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Profile Details" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Template Details" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Name, short tile title and notes." })
                   ] }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[1fr_150px]", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Template Name", value: profile.missionName, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { missionName: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Short Title", value: profile.shortTitle, disabled: !canEditSection("platform-standard-missions"), maxLength: 8, onCommit: (value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() }) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DraftTextAreaField, { label: "Description", value: profile.description, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { description: value }) }) })
@@ -71534,7 +71534,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                             onChange: (event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })
                           }
                         ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation profile" })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: "Formation template" })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "No. Aircraft", value: profile.formationAircraft, disabled: !canEditSection("platform-standard-missions") || !profile.isFormation, onChange: (value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) }) })
@@ -71553,7 +71553,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-3", children: ["STANDARD", "ALTERNATE", "CUSTOM"].map((mode) => {
                       const selected = crewMode === mode;
                       const modeLabel = mode === "STANDARD" ? "Standard Crew" : mode === "ALTERNATE" ? "Alternate Crew" : "Custom Crew";
-                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate crew profile." : "Use the manual role list below.";
+                      const modeHint = mode === "STANDARD" ? "Use the aircraft standard crew." : mode === "ALTERNATE" ? "Use one alternate crew setup." : "Use the manual role list below.";
                       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "button",
                         {
@@ -71583,7 +71583,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                         }
                       ),
                       missionCrewOptions.filter((option) => option.mode === "ALTERNATE").length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100", children: [
-                        "No alternate crew profiles exist for ",
+                        "No alternate crew setups exist for ",
                         missionAircraftTypeCode || "this aircraft",
                         "."
                       ] }) : null
@@ -71594,7 +71594,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Required Roles" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this profile must include when scheduled." : "Only used when Custom Crew is selected." })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this template must include when scheduled." : "Only used when Custom Crew is selected." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", className: platformActionButtonClass, children: "Add Role" })
                   ] }),

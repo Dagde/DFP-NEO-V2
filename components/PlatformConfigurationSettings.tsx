@@ -7144,7 +7144,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Profile</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Template</button>
             </div>
           ) : null}
         />
@@ -7180,7 +7180,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'TASK'}</span>
-                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Profile'}</h4>
+                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Template'}</h4>
                             <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
                           </div>
                           <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
@@ -7198,12 +7198,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Profile Details</div>
+                                <div className={resourceSectionPanelTitleClass}>Template Details</div>
                                 <div className={resourceSectionPanelHintClass}>Name, short tile title and notes.</div>
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-[1fr_150px]">
-                              <DraftField label="Profile Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <DraftField label="Template Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
                               <DraftField label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onCommit={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
@@ -7246,7 +7246,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     disabled={!canEditSection('platform-standard-missions')}
                                     onChange={(event) => updateStandardMissionProfile(profile.id, { isFormation: event.target.checked })}
                                   />
-                                  <span className="text-sm font-semibold text-gray-200">Formation profile</span>
+                                  <span className="text-sm font-semibold text-gray-200">Formation template</span>
                                 </label>
                               </div>
                               <NumberField label="No. Aircraft" value={profile.formationAircraft} disabled={!canEditSection('platform-standard-missions') || !profile.isFormation} onChange={(value) => updateStandardMissionProfile(profile.id, { formationAircraft: clampWholeNumber(value, 2, 2, 24) })} />
@@ -7272,7 +7272,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   const modeHint = mode === 'STANDARD'
                                     ? 'Use the aircraft standard crew.'
                                     : mode === 'ALTERNATE'
-                                      ? 'Use one alternate crew profile.'
+                                      ? 'Use one alternate crew setup.'
                                       : 'Use the manual role list below.';
                                   return (
                                     <button
@@ -7309,7 +7309,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   />
                                   {missionCrewOptions.filter((option) => option.mode === 'ALTERNATE').length === 0 ? (
                                     <div className="mt-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                                      No alternate crew profiles exist for {missionAircraftTypeCode || 'this aircraft'}.
+                                      No alternate crew setups exist for {missionAircraftTypeCode || 'this aircraft'}.
                                     </div>
                                   ) : null}
                                 </div>
@@ -7325,7 +7325,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
                                 <div className={resourceSectionPanelTitleClass}>Required Roles</div>
-                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this profile must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
+                                <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this template must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
                               </div>
                               <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
                             </div>
