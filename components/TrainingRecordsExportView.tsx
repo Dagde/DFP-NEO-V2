@@ -892,9 +892,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     exportCommentFieldLabels.assessor,
                     exportAssessorLabel,
                     instructorLabel,
-                    exportAssessorLabel,
                     'Report Instructor',
                     'Assessor',
+                    // Legacy exports may still contain this old section heading.
                     'QFI',
                 ),
             },

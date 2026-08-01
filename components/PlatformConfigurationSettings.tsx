@@ -6852,7 +6852,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-task-profiles" className={getSectionClass('platform-task-profiles')}>
         <SectionHeader
           title="Tasking Lists"
-          subtitle="Tasking names shown in Mission Requests for each operational model. Users can still type a task manually if the assigned task is not listed."
+          subtitle="Short task names used when assigning directed tasks. Full aircraft, crew, timing and callsign setups are managed in Flight Templates when the selected model supports them."
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               <button
@@ -6874,7 +6874,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the tasking names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
+            Set the task names available for each operational model. These are not full flight setups. Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleOperationalModelOptions.map((option) => {
@@ -7143,7 +7143,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-standard-missions" className={getSectionClass('platform-standard-missions')}>
         <SectionHeader
           title="Flight Templates"
-          subtitle="Full flight templates with default aircraft, crew, timing, callsign and formation settings."
+          subtitle="Reusable flight setups with default aircraft, crew, timing, callsign and formation settings."
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
@@ -7161,7 +7161,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
                 <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New flight templates default to the unit home location and unit default callsign. Use these when a recurring task needs more than a task name.
+                  New flight templates default to the unit home location and unit default callsign. Use these when a recurring task needs a full reusable setup, not just a task name.
                 </p>
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
