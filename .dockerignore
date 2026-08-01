@@ -1,6 +1,8 @@
 .git
 node_modules
+**/node_modules
 dist
+**/.next
 .DS_Store
 
 # Local/legacy workspaces must not be copied into deployment images.
@@ -14,3 +16,5 @@ snapshots
 playwright-report
 test-results
 coverage
+tmp
+snapshot-report.md
