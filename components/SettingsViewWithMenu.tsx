@@ -491,7 +491,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-units': 'Unit type, base ownership and operating status',
   'platform-task-profiles': 'Short directed task names by operational model',
   'platform-master-lmp-access': 'Location and unit access to Master LMPs',
-  'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
+  'platform-resource-pools': 'Aircraft types and DFP resource row sets',
   'platform-unit-modules': 'Enable features and modules for each unit',
   'platform-settings-visibility': 'Control which settings records are visible using unit, location, aircraft type and organisation filters',
   'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid readiness checks',

@@ -187,6 +187,7 @@ interface InstructorListViewProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
   trainingReportDisplayName?: string;
+  trainingReportStatusFieldLabel?: string;
   defaultUnitCode?: string;
   defaultLocationName?: string;
 }
@@ -234,6 +235,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     staffQualificationCatalogue,
     sctTerminology,
     trainingReportDisplayName = 'Training Report',
+    trainingReportStatusFieldLabel = 'Mission Status',
     defaultUnitCode = '',
     defaultLocationName = '',
 }) => {
@@ -898,6 +900,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     staffQualificationCatalogue={staffQualificationCatalogue}
                     sctTerminology={sctTerminology}
                     trainingReportDisplayName={trainingReportDisplayName}
+                    trainingReportStatusFieldLabel={trainingReportStatusFieldLabel}
                 />
         )}
 

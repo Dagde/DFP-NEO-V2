@@ -128,6 +128,7 @@ interface InstructorProfileFlyoutProps {
   staffQualificationCatalogue?: StaffQualificationCatalogue;
   sctTerminology?: SctTerminology;
   trainingReportDisplayName?: string;
+  trainingReportStatusFieldLabel?: string;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -339,6 +340,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   staffQualificationCatalogue,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
   trainingReportDisplayName = 'Training Report',
+  trainingReportStatusFieldLabel = 'Mission Status',
 }) => {
   const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -1389,7 +1391,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Event</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Training</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Report</th>
-                              <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">Result</th>
+                              <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300">{trainingReportStatusFieldLabel}</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">{instructorLabel}</th>
                               <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300">Unit</th>
                               <th className="px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300">Delete</th>

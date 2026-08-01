@@ -43606,6 +43606,7 @@ appliedUpdates.forEach(update => {
                             staffQualificationCatalogue={activeStaffQualificationCatalogue}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             trainingReportDisplayName={configuredTrainingReportDisplayName}
+                            trainingReportStatusFieldLabel={configuredTrainingReportStatusFieldLabel}
                             defaultLocationName={activeLocationDisplayName}
                         />;
                 case 'Trainees':

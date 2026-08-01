@@ -21042,6 +21042,7 @@ const AcademicLmpTab = ({
   canOpenPt051 = true,
   onAccessDenied,
   trainingReportDisplayName = "Training Report",
+  trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
   instructorLabel = "Instructor"
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
@@ -21255,7 +21256,7 @@ const AcademicLmpTab = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4 mt-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Date", value: lessonScore.date }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: instructorLabel, value: lessonScore.instructor || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Result", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 font-bold", children: "Complete ✓" }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: trainingReportStatusFieldLabel2, value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 font-bold", children: "Complete ✓" }) })
           ] }),
           lessonScore.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: lessonScore.notes }) }) })
         ] });
@@ -21466,6 +21467,7 @@ const TraineeLmpView = ({
           canOpenPt051,
           onAccessDenied,
           trainingReportDisplayName,
+          trainingReportStatusFieldLabel,
           instructorLabel
         }
       ) : (
@@ -25168,6 +25170,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     aircraftConfigurations,
                     aircraftCrewComposition,
                     trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
+                    trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
                     instructorLabel: activeReportAssessorDisplayLabel
                   }
                 ) });
@@ -50916,7 +50919,8 @@ const InstructorProfileFlyout = ({
   crewPositionTerminology,
   staffQualificationCatalogue: staffQualificationCatalogue2,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY,
-  trainingReportDisplayName = "Training Report"
+  trainingReportDisplayName = "Training Report",
+  trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status"
 }) => {
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
@@ -51911,7 +51915,7 @@ const InstructorProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Event" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Training" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Report" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Result" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wide text-gray-300", children: trainingReportStatusFieldLabel2 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: instructorLabel }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Unit" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-2 text-right text-[10px] font-bold uppercase tracking-wide text-gray-300", children: "Delete" })
@@ -53383,6 +53387,7 @@ const InstructorListView = ({
   staffQualificationCatalogue: staffQualificationCatalogue2,
   sctTerminology,
   trainingReportDisplayName = "Training Report",
+  trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2 = "Mission Status",
   defaultUnitCode = "",
   defaultLocationName = ""
 }) => {
@@ -53914,7 +53919,8 @@ const InstructorListView = ({
         crewPositionTerminology,
         staffQualificationCatalogue: staffQualificationCatalogue2,
         sctTerminology,
-        trainingReportDisplayName
+        trainingReportDisplayName,
+        trainingReportStatusFieldLabel: trainingReportStatusFieldLabel2
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -75901,7 +75907,7 @@ const sectionDescriptions = {
   "platform-units": "Unit type, base ownership and operating status",
   "platform-task-profiles": "Short directed task names by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
-  "platform-resource-pools": "Aircraft types, shared pools and resource counts",
+  "platform-resource-pools": "Aircraft types and DFP resource row sets",
   "platform-unit-modules": "Enable features and modules for each unit",
   "platform-settings-visibility": "Control which settings records are visible using unit, location, aircraft type and organisation filters",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid readiness checks",
@@ -121238,6 +121244,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             staffQualificationCatalogue: activeStaffQualificationCatalogue,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             trainingReportDisplayName: configuredTrainingReportDisplayName,
+            trainingReportStatusFieldLabel: configuredTrainingReportStatusFieldLabel,
             defaultLocationName: activeLocationDisplayName
           }
         );

@@ -2410,6 +2410,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             aircraftConfigurations={aircraftConfigurations}
                             aircraftCrewComposition={aircraftCrewComposition}
                             trainingReportDisplayName={activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName}
+                            trainingReportStatusFieldLabel={activeTrainingReportTemplate.modules.overallAssessment.fields.result || 'Mission Status'}
                             instructorLabel={activeReportAssessorDisplayLabel}
                           />
                         </div>

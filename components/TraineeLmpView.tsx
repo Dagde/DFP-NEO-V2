@@ -49,6 +49,7 @@ interface TraineeLmpViewProps {
   onInsertCustomEvent?: (trainee: Trainee, event: InsertLmpEventRequest) => Promise<boolean> | boolean;
   onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
   trainingReportDisplayName?: string;
+  trainingReportStatusFieldLabel?: string;
   instructorLabel?: string;
 }
 
@@ -872,6 +873,7 @@ interface AcademicLmpTabProps {
     canOpenPt051?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
     trainingReportDisplayName?: string;
+    trainingReportStatusFieldLabel?: string;
     instructorLabel?: string;
 }
 
@@ -884,6 +886,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
     canOpenPt051 = true,
     onAccessDenied,
     trainingReportDisplayName = 'Training Report',
+    trainingReportStatusFieldLabel = 'Mission Status',
     instructorLabel = 'Instructor',
 }) => {
     const [selectedLesson, setSelectedLesson] = useState<SyllabusItemDetail | null>(null);
@@ -1124,7 +1127,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                                     <div className="grid grid-cols-3 gap-4 mt-2">
                                         <DetailCard label="Date" value={lessonScore.date} />
                                         <DetailCard label={instructorLabel} value={lessonScore.instructor || '—'} />
-                                        <DetailCard label="Result" value={
+                                        <DetailCard label={trainingReportStatusFieldLabel} value={
                                             <span className="text-green-300 font-bold">Complete ✓</span>
                                         } />
                                     </div>
@@ -1387,6 +1390,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         canOpenPt051={canOpenPt051}
                         onAccessDenied={onAccessDenied}
                         trainingReportDisplayName={trainingReportDisplayName}
+                        trainingReportStatusFieldLabel={trainingReportStatusFieldLabel}
                         instructorLabel={instructorLabel}
                     />
                 ) : (
