@@ -34868,6 +34868,15 @@ Do you still want to include them in this academic session?`,
     ] })
   ] });
 };
+const normaliseCourseToken = (value) => String(value || "").trim().toUpperCase().replace(/\s+/g, "");
+const getGroundSyllabusCourseTokens = (item) => {
+  const rawValues = [
+    ...Array.isArray(item.courses) ? item.courses : [],
+    item.module,
+    item.lmpType
+  ];
+  return Array.from(new Set(rawValues.map(normaliseCourseToken).filter(Boolean)));
+};
 const AddGroundEventFlyout = ({
   onClose,
   onSave,
@@ -34917,13 +34926,28 @@ const AddGroundEventFlyout = ({
   const traineeSelectorRef = reactExports.useRef(null);
   const availableTrainees = reactExports.useMemo(() => traineesData.filter((t) => !t.isPaused).map((t) => t.fullName), [traineesData]);
   const activeCourseNames = reactExports.useMemo(() => Object.keys(activeCourses), [activeCourses]);
+  const selectedCourseGroundSyllabus = reactExports.useMemo(() => {
+    const selectedCourseToken = normaliseCourseToken(selectedCourse);
+    if (!selectedCourseToken) return groundSyllabus;
+    const matchingItems = groundSyllabus.filter((item) => getGroundSyllabusCourseTokens(item).includes(selectedCourseToken));
+    return matchingItems.length > 0 ? matchingItems : groundSyllabus;
+  }, [groundSyllabus, selectedCourse]);
   const isCptEvent = reactExports.useMemo(() => flightNumber.includes("CPT"), [flightNumber]);
   const [selectedCpt, setSelectedCpt] = reactExports.useState(cptResourceOptions[0] || "CPT 1");
   const cptLabel = resourceDisplayNames.cpt;
   reactExports.useEffect(() => {
-    const selectedSyllabus = groundSyllabus.find((s) => s.code === flightNumber);
+    const selectedSyllabus = selectedCourseGroundSyllabus.find((s) => s.code === flightNumber) || groundSyllabus.find((s) => s.code === flightNumber);
     if (selectedSyllabus) setDuration(selectedSyllabus.duration);
-  }, [flightNumber, groundSyllabus]);
+  }, [flightNumber, groundSyllabus, selectedCourseGroundSyllabus]);
+  reactExports.useEffect(() => {
+    if (selectedCourseGroundSyllabus.length === 0) {
+      if (flightNumber) setFlightNumber("");
+      return;
+    }
+    if (!selectedCourseGroundSyllabus.some((s) => s.code === flightNumber)) {
+      setFlightNumber(selectedCourseGroundSyllabus[0]?.code || "");
+    }
+  }, [flightNumber, selectedCourseGroundSyllabus]);
   reactExports.useEffect(() => {
     if (activeCourseNames.length === 0) {
       if (selectedCourse) setSelectedCourse("");
@@ -35035,7 +35059,7 @@ const AddGroundEventFlyout = ({
           right: 0,
           bottom: 0,
           backgroundColor: "rgba(0,0,0,0.70)",
-          zIndex: 9999,
+          zIndex: 9e3,
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "center",
@@ -35094,11 +35118,14 @@ const AddGroundEventFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-event", className: "block text-sm font-medium text-gray-400", children: "Event" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-event", value: flightNumber, onChange: (e) => setFlightNumber(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: groundSyllabus.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: s.code, children: [
-                        s.code,
-                        " - ",
-                        s.eventDescription
-                      ] }, s.code)) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { id: "ground-event", value: flightNumber, onChange: (e) => setFlightNumber(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: [
+                        selectedCourseGroundSyllabus.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "No ground events available" }),
+                        selectedCourseGroundSyllabus.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: s.code, children: [
+                          s.code,
+                          " - ",
+                          s.eventDescription
+                        ] }, s.code))
+                      ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-instructor", className: "block text-sm font-medium text-gray-400", children: instructorLabel2 }),

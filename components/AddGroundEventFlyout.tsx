@@ -42,6 +42,17 @@ interface AddGroundEventFlyoutProps {
 
 type TabKey = 'ground' | 'academics';
 
+const normaliseCourseToken = (value: unknown): string => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+
+const getGroundSyllabusCourseTokens = (item: SyllabusItemDetail): string[] => {
+    const rawValues = [
+        ...(Array.isArray(item.courses) ? item.courses : []),
+        item.module,
+        item.lmpType,
+    ];
+    return Array.from(new Set(rawValues.map(normaliseCourseToken).filter(Boolean)));
+};
+
 const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     onClose,
     onSave,
@@ -100,15 +111,31 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     const traineeSelectorRef = useRef<HTMLDivElement>(null);
     const availableTrainees = useMemo(() => traineesData.filter(t => !t.isPaused).map(t => t.fullName), [traineesData]);
     const activeCourseNames = useMemo(() => Object.keys(activeCourses), [activeCourses]);
+    const selectedCourseGroundSyllabus = useMemo(() => {
+        const selectedCourseToken = normaliseCourseToken(selectedCourse);
+        if (!selectedCourseToken) return groundSyllabus;
+        const matchingItems = groundSyllabus.filter(item => getGroundSyllabusCourseTokens(item).includes(selectedCourseToken));
+        return matchingItems.length > 0 ? matchingItems : groundSyllabus;
+    }, [groundSyllabus, selectedCourse]);
 
     const isCptEvent = useMemo(() => flightNumber.includes('CPT'), [flightNumber]);
     const [selectedCpt, setSelectedCpt] = useState(cptResourceOptions[0] || 'CPT 1');
     const cptLabel = resourceDisplayNames.cpt;
 
     useEffect(() => {
-        const selectedSyllabus = groundSyllabus.find(s => s.code === flightNumber);
+        const selectedSyllabus = selectedCourseGroundSyllabus.find(s => s.code === flightNumber) || groundSyllabus.find(s => s.code === flightNumber);
         if (selectedSyllabus) setDuration(selectedSyllabus.duration);
-    }, [flightNumber, groundSyllabus]);
+    }, [flightNumber, groundSyllabus, selectedCourseGroundSyllabus]);
+
+    useEffect(() => {
+        if (selectedCourseGroundSyllabus.length === 0) {
+            if (flightNumber) setFlightNumber('');
+            return;
+        }
+        if (!selectedCourseGroundSyllabus.some(s => s.code === flightNumber)) {
+            setFlightNumber(selectedCourseGroundSyllabus[0]?.code || '');
+        }
+    }, [flightNumber, selectedCourseGroundSyllabus]);
 
     useEffect(() => {
         if (activeCourseNames.length === 0) {
@@ -229,7 +256,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                 style={{
                     position: 'fixed', inset: 0, top: 0, left: 0, right: 0, bottom: 0,
                     backgroundColor: 'rgba(0,0,0,0.70)',
-                    zIndex: 9999,
+                    zIndex: 9000,
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
@@ -302,7 +329,8 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                     <div>
                                         <label htmlFor="ground-event" className="block text-sm font-medium text-gray-400">Event</label>
                                         <select id="ground-event" value={flightNumber} onChange={e => setFlightNumber(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm">
-                                            {groundSyllabus.map(s => <option key={s.code} value={s.code}>{s.code} - {s.eventDescription}</option>)}
+                                            {selectedCourseGroundSyllabus.length === 0 && <option value="">No ground events available</option>}
+                                            {selectedCourseGroundSyllabus.map(s => <option key={s.code} value={s.code}>{s.code} - {s.eventDescription}</option>)}
                                         </select>
                                     </div>
                                     <div>
