@@ -5537,7 +5537,7 @@ app.post('/api/scores', async (req, res) => {
           event,
           score: score !== undefined ? parseInt(score) : 3,
           date: date ? new Date(date) : new Date(),
-          instructor: instructor || 'DCO',
+          instructor: instructor || '',
           notes: notes || '',
           details: details || null,
         },
@@ -10401,10 +10401,10 @@ app.post('/api/historical-data/seed', async (req, res) => {
       return res.status(400).json({ error: 'No active trainees found in database' });
     }
     if (instructorQualifiedStaff.length === 0) {
-      return res.status(400).json({ error: 'No instructor-qualified staff found in database' });
+      return res.status(400).json({ error: 'No staff with an instructor qualification found in database' });
     }
 
-    console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${instructorQualifiedStaff.length} instructor-qualified staff`);
+    console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${instructorQualifiedStaff.length} staff with instructor qualifications`);
 
     // Course configuration supplied by the admin performing the seed.
     // progressRange: [startEvent, endEvent] places each trainee inside that range.
