@@ -11495,7 +11495,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
             Object.keys(taskAbbreviations || {}).length,
             " configured"
           ] }),
-          settingsLink("platform-task-profiles", "Open Task Profiles", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
+          settingsLink("platform-task-profiles", "Open Directed Task Lists", { focusSubsectionId: `platform-task-tile-abbreviations-${unitFocusAnchor}` })
         ] }), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 px-4 py-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-6 text-slate-300", children: "Use this when a full task name is too long for the DFP tile. It only changes the short label shown on the schedule tile; it does not change the task, training requirement, or event data." }),
