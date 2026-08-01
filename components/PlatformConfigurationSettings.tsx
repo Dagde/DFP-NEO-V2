@@ -1601,7 +1601,7 @@ const buildConfigurationHealth = (
       'WARNING',
       'Unit Separation',
       'Combined-unit records need per-unit copies',
-      `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped directed flight template, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? '' : 's'} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       'unit-separation-profile-clones',
       `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: 'platform-standard-missions', label: 'Directed Flight Templates', focusSubsectionId: 'platform-standard-missions' }
@@ -6885,7 +6885,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="space-y-4 p-4">
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-            Set the short directed-task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Templates.
+            Set the short directed task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Templates.
             Unit schedule tile labels are optional and only change the short text shown on schedule tiles.
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -6898,7 +6898,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
                         {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model directed-task names.'
+                          ? 'Use this for Fighter / Strike model directed task names.'
                           : 'Shown when a unit is assigned this operational model.'}
                       </p>
                     </div>
@@ -6911,7 +6911,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     value={taskProfilesUnlocked ? (taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles)) : formatTaskProfileText(profiles)}
                     disabled={!canEditTaskProfiles}
                     onChange={(value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value }))}
-                    info="One directed-task name per line. Single-line comma or semicolon pasted lists are also accepted."
+                    info="One directed task name per line. Single-line comma or semicolon pasted lists are also accepted."
                   />
                 </div>
               );

@@ -674,12 +674,12 @@ const TaskingProfileInput: React.FC<{
           ) : (
             <div className="px-2 py-2 text-left">
               <span className="block text-xs font-bold text-cyan-100">
-                {configuredProfileCount > 0 ? 'No matching directed task' : 'No directed-task names configured'}
+                {configuredProfileCount > 0 ? 'No matching directed task' : 'No directed task names configured'}
               </span>
               <span className="block whitespace-normal break-words text-[10px] leading-tight text-slate-300">
                 {configuredProfileCount > 0
                   ? <>Keep typing to enter this task manually, or update the list in {settingsPathLink}.</>
-                  : <>{operationalModelLabel} has no saved directed-task names yet. Add them in {settingsPathLink}, or type a task name manually.</>}
+                  : <>{operationalModelLabel} has no saved directed task names yet. Add them in {settingsPathLink}, or type a task name manually.</>}
               </span>
             </div>
           )}
@@ -794,7 +794,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   <div className="space-y-3 pb-24">
     {taskingRequests.length === 0 && (
       <div className="rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500">
-        No directed-task requests configured.
+        No directed task requests configured.
       </div>
     )}
     {taskingRequests.map(request => {
@@ -805,7 +805,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map(entry => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || 'New directed-task request';
+      const taskingHeaderTitle = request.tasking.trim() || 'New directed task request';
       const taskingHeaderDate = request.date || 'Date TBA';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
       const directedTaskHint = taskProfiles.some(profile => String(profile || '').trim())
@@ -4210,7 +4210,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </h3>
                                     <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">
                                         {priorityAllocationModel === 'air_combat'
-                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed-task and currency requests are attempted."
+                                            ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed task and currency requests are attempted."
                                             : priorityAllocationModel === 'fixed_crew'
                                                 ? 'Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day.'
                                                 : `Set how ${operationalModelLabel.replace(/\s+Model$/i, '')} training capacity is shared across active courses for this locality.`}

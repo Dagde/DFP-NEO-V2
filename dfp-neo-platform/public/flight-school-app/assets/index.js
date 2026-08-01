@@ -38528,14 +38528,14 @@ const TaskingProfileInput = ({ value, taskProfiles, operationalModelLabel, onOpe
       },
       profile
     )) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 py-2 text-left", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching directed task" : "No directed-task names configured" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-cyan-100", children: configuredProfileCount > 0 ? "No matching directed task" : "No directed task names configured" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block whitespace-normal break-words text-[10px] leading-tight text-slate-300", children: configuredProfileCount > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         "Keep typing to enter this task manually, or update the list in ",
         settingsPathLink,
         "."
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         operationalModelLabel,
-        " has no saved directed-task names yet. Add them in ",
+        " has no saved directed task names yet. Add them in ",
         settingsPathLink,
         ", or type a task name manually."
       ] }) })
@@ -38606,7 +38606,7 @@ const TaskingRequestTable = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
-    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed-task requests configured." }),
+    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed task requests configured." }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -38615,7 +38615,7 @@ const TaskingRequestTable = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || "New directed-task request";
+      const taskingHeaderTitle = request.tasking.trim() || "New directed task request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
       const directedTaskHint = taskProfiles.some((profile) => String(profile || "").trim()) ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -41389,7 +41389,7 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-bold text-emerald-100", children: priorityAllocationModel === "air_combat" ? "Air Combat Course & Package Priority" : priorityAllocationModel === "fixed_crew" ? "Fixed Crew Course & Package Priority" : `${operationalModelLabel.replace(/\s+Model$/i, "")} Course Priority` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed-task and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-emerald-100/75", children: priorityAllocationModel === "air_combat" ? "Set how remaining Air Combat capacity is shared across this unit's assigned courses and packages after directed task and currency requests are attempted." : priorityAllocationModel === "fixed_crew" ? "Select which Fixed Crew courses and packages NEO Build may schedule, then weight the order when several streams compete for the same day." : `Set how ${operationalModelLabel.replace(/\s+Model$/i, "")} training capacity is shared across active courses for this locality.` })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `rounded border px-2 py-1 text-xs font-semibold ${fixedCrewEnabledStreamTotal === 100 ? "border-emerald-500/30 bg-emerald-950/50 text-emerald-100" : "border-amber-400/40 bg-amber-500/10 text-amber-100"}`, children: [
@@ -42639,7 +42639,7 @@ const PrioritiesViewWithMenu = (props) => {
       step: "01",
       label: "Events Builder",
       shortLabel: "Events",
-      description: "Manage priority events, directed-task requests and currency requests."
+      description: "Manage priority events, directed task requests and currency requests."
     }
   ] : activeFixedCrewTab === "deployments" ? [
     {
@@ -42970,7 +42970,7 @@ const PrioritiesViewWithMenu = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${isFixedCrewModel ? "p-4" : "p-5"} border-b border-slate-700/60`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border border-cyan-500/20 bg-cyan-500/10 ${isFixedCrewModel ? "p-3" : "p-4"}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] uppercase tracking-[0.2em] text-cyan-200/70", children: "NEO Build" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: `${isFixedCrewModel ? "mt-1 text-xl" : "mt-1 text-2xl"} font-bold text-white`, children: isFixedCrewModel ? "Build Planner" : "Build Priorities" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed-task requests and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `${isFixedCrewModel ? "mt-1 text-xs leading-5" : "mt-2 text-sm"} text-slate-300`, children: isFixedCrewModel ? "Plan directed task requests and build weighting for the Fixed Crew model." : "Configure the build in the same order a supervisor would plan the DFP by hand." })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: `flex-1 overflow-y-auto ${isFixedCrewModel ? "p-0" : "p-4 space-y-3"}`, children: [
         isFixedCrewModel && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 border-b border-slate-700/60 p-3", children: fixedCrewTabs.map((tab) => {
@@ -65531,7 +65531,7 @@ const AppearanceSettings = ({
         {
           value: "event_type",
           label: "Event Type",
-          description: "Courses, packages, directed-task requests, currency, and other event types each use their own colour.",
+          description: "Courses, packages, directed task requests, currency, and other event types each use their own colour.",
           swatches: ["bg-cyan-500/70", "bg-violet-500/70", "bg-sky-500/70", "bg-green-500/70"]
         },
         {
@@ -66998,7 +66998,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       "WARNING",
       "Unit Separation",
       "Combined-unit records need per-unit copies",
-      `${missingCompositeClones} unit-scoped directed flight template, alternate crew or currency record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
+      `${missingCompositeClones} unit-scoped directed flight template, alternate crew or ${healthContinuationCurrencyEventsLabel} record${missingCompositeClones === 1 ? "" : "s"} will be created the next time the affected settings section is saved, so separated units can continue to see them.`,
       "unit-separation-profile-clones",
       `Open Settings → Platform & Deployment → Directed Flight Templates, Settings → Crew Composition → Crew Composition, and Settings → Training & Standards → ${healthContinuationCurrencyEventsLabel} for the affected unit context, then press Edit and Save so each unit receives its own configured records.`,
       { section: "platform-standard-missions", label: "Directed Flight Templates", focusSubsectionId: "platform-standard-missions" }
@@ -71303,14 +71303,14 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed-task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Templates. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Templates. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-directed-task-list-${option.value}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-start justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-white", children: option.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model directed-task names." : "Shown when a unit is assigned this operational model." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: option.value === "air_combat" ? "Use this for Fighter / Strike model directed task names." : "Shown when a unit is assigned this operational model." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: [
                 profiles.length,
@@ -71325,7 +71325,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                 value: taskProfilesUnlocked ? taskProfileDrafts[option.value] ?? formatTaskProfileText(profiles) : formatTaskProfileText(profiles),
                 disabled: !canEditTaskProfiles,
                 onChange: (value) => setTaskProfileDrafts((drafts) => ({ ...drafts, [option.value]: value })),
-                info: "One directed-task name per line. Single-line comma or semicolon pasted lists are also accepted."
+                info: "One directed task name per line. Single-line comma or semicolon pasted lists are also accepted."
               }
             )
           ] }, option.value);
@@ -75899,7 +75899,7 @@ const sectionDescriptions = {
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",
-  "platform-task-profiles": "Short directed-task names by operational model",
+  "platform-task-profiles": "Short directed task names by operational model",
   "platform-master-lmp-access": "Location and unit access to Master LMPs",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
   "platform-unit-modules": "Enable features and modules for each unit",
@@ -87885,10 +87885,10 @@ const DfpSidePanelTimeline = ({
             " active course/package streams and totals ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "100%" }),
             "."
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed-task and currency requests will drive the build." }),
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Routine Fixed Crew course/package training is currently off, so directed task and currency requests will drive the build." }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: useRoutineTraining, children: "Yes, use normal training" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed-task requests only" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: disableRoutineTraining, children: "No, directed task requests only" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -87961,7 +87961,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: wizardChoiceClass, onClick: () => {
             onUpdateAirCombatSchedulingWeights({ courses: 0, trainingPackages: 0 });
             advanceWizard();
-          }, children: "No, directed-task requests only" }),
+          }, children: "No, directed task requests only" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "sm:col-span-2 rounded-xl border border-slate-300 bg-white/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between text-sm font-bold text-slate-800", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -88650,7 +88650,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-slate-700 bg-slate-950/45 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-cyan-100", children: "Priority order" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: [
-              ["01", "Mandatory directed-task requests", `${scheduledTaskCount} scheduled`],
+              ["01", "Mandatory directed task requests", `${scheduledTaskCount} scheduled`],
               ["02", "Directed currency", `${scheduledCurrencyCount} scheduled`],
               ["03", "Training packages", `${airCombatSchedulingWeights.trainingPackages}% training share`],
               ["04", "Course events", `${airCombatSchedulingWeights.courses}% training share`]
@@ -88664,7 +88664,7 @@ const DfpSidePanelTimeline = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-violet-100", children: "Course/Package" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed-task requests." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[9px] text-violet-100/65", children: "Balances routine Air Combat training after directed task requests." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-violet-500/30 bg-violet-950/50 px-2 py-1 font-semibold text-violet-100", children: [
                 airCombatSchedulingWeights.courses,
@@ -88742,7 +88742,7 @@ const DfpSidePanelTimeline = ({
       const rows = [...localRows, ...visibleRemoteRows.map((row) => ({ ...row, ignored: false, source: "remote" }))];
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-[10px] text-slate-200", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 space-y-1 overflow-y-auto pr-1", children: [
-          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed-task requests entered." }),
+          rows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-slate-700 bg-slate-950/45 px-2 py-2 text-slate-500", children: "No directed task requests entered." }),
           rows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_auto] items-center gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 truncate", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-slate-100", children: row.tasking }),
@@ -101042,7 +101042,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const dueTaskingEvents = pendingTaskingEvents().filter((event) => getTaskingRequestedStart(event) <= taskingTime + 1e-3);
       if (dueTaskingEvents.length > 0) {
-        recordProgress({ message: "Scheduling directed-task priority events...", percentage: 45 });
+        recordProgress({ message: "Scheduling directed task priority events...", percentage: 45 });
         scheduleTaskingPriorityEvents(dueTaskingEvents);
       }
       currentStart = Math.max(currentStart, taskingTime);
@@ -101174,7 +101174,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       scheduleAirCombatTrainingPriorityEvents("night");
     }
     if (airCombatDayTaskingEvents.length > 0) {
-      recordProgress({ message: "Scheduling Air Combat mandatory directed-task requests...", percentage: 45 });
+      recordProgress({ message: "Scheduling Air Combat mandatory directed task requests...", percentage: 45 });
       scheduleTaskingPriorityEvents(airCombatDayTaskingEvents);
     }
     if (airCombatDayCurrencyEvents.length > 0) {
