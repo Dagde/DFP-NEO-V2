@@ -71301,7 +71301,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the directed-task names available for each operational model. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80", children: "Set the short directed-task names available for each operational model. This section is for names only. Full reusable flight setups are configured in Settings → Platform & Deployment → Directed Flight Templates. Unit schedule tile labels are optional and only change the short text shown on schedule tiles." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-4 lg:grid-cols-2", children: visibleOperationalModelOptions.map((option) => {
           const profiles = taskProfiles[option.value] || [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: `platform-directed-task-list-${option.value}`, className: "rounded-lg border border-gray-700 bg-gray-900 p-3", children: [
