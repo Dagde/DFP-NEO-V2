@@ -377,8 +377,12 @@ const getConfiguredLocationAliases = (location: PlatformLocation): string[] => {
   const directAliases = [
     location.code,
     location.iataCode,
+    location.name,
+    location.settings?.iataCode,
+    location.settings?.icaoCode,
     location.settings?.legacyCode,
     location.settings?.runtimeCode,
+    ...(Array.isArray(location.settings?.aliases) ? location.settings.aliases : []),
   ].map((value) => String(value || '').trim()).filter(Boolean);
   const profileAliases = directAliases.flatMap(getKnownLocationAliases);
   return uniqueValues([...directAliases, ...profileAliases]);
@@ -387,7 +391,7 @@ const getConfiguredLocationAliases = (location: PlatformLocation): string[] => {
 const resolveRuntimeLocationCode = (
   config: PlatformConfig | null,
   locationCode: string,
-  supportedCodes: string[] = ['ESL', 'PEA'],
+  supportedCodes: string[] = [],
 ): string => {
   const rawCode = String(locationCode || '').trim();
   if (!rawCode) return '';
@@ -397,7 +401,9 @@ const resolveRuntimeLocationCode = (
     getConfiguredLocationAliases(location).some((alias) => normaliseLocationIdentifier(alias) === normaliseLocationIdentifier(rawCode))
   ));
   const aliases = matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(rawCode);
-  const supportedAlias = aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias)));
+  const supportedAlias = supported.size > 0
+    ? aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias)))
+    : '';
   return supportedAlias || rawCode;
 };
 
@@ -431,16 +437,18 @@ export const loadPlatformConfigFromDB = async (): Promise<PlatformConfig | null>
 
 export const getLocationCodesForCurrentRuntime = (
   config: PlatformConfig | null,
-  supportedCodes: string[] = ['ESL', 'PEA'],
+  supportedCodes: string[] = [],
 ): string[] => {
   const supported = new Set(supportedCodes.map((code) => normaliseLocationIdentifier(code)));
   const configuredCodes = (config?.locations || [])
     .filter((location) => location.status !== 'INACTIVE')
     .map((location) => {
       const aliases = getConfiguredLocationAliases(location);
-      return aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias))) || location.code;
+      return supported.size > 0
+        ? aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias))) || location.code
+        : location.code;
     })
-    .filter((code) => supported.has(normaliseLocationIdentifier(code)));
+    .filter((code) => supported.size === 0 || supported.has(normaliseLocationIdentifier(code)));
 
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
@@ -707,7 +715,7 @@ const resolvePermissionsForRows = (
 export const getPlatformAccessContext = (
   config: PlatformConfig | null,
   userIdentifiers: Array<string | null | undefined>,
-  supportedCodes: string[] = ['ESL', 'PEA'],
+  supportedCodes: string[] = [],
 ): PlatformAccessContext => {
   const activeRows = ((config?.userAccess || []) as PlatformAccessRow[])
     .map(normaliseAccessRow)

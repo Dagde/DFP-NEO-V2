@@ -2166,20 +2166,24 @@ const getConfiguredLocationAliases = (location) => {
   const directAliases = [
     location.code,
     location.iataCode,
+    location.name,
+    location.settings?.iataCode,
+    location.settings?.icaoCode,
     location.settings?.legacyCode,
-    location.settings?.runtimeCode
+    location.settings?.runtimeCode,
+    ...Array.isArray(location.settings?.aliases) ? location.settings.aliases : []
   ].map((value) => String(value || "").trim()).filter(Boolean);
   const profileAliases = directAliases.flatMap(getKnownLocationAliases);
   return uniqueValues$1([...directAliases, ...profileAliases]);
 };
-const resolveRuntimeLocationCode = (config, locationCode, supportedCodes = ["ESL", "PEA"]) => {
+const resolveRuntimeLocationCode = (config, locationCode, supportedCodes = []) => {
   const rawCode = String(locationCode || "").trim();
   if (!rawCode) return "";
   const supported = new Set(supportedCodes.map((code) => normaliseLocationIdentifier(code)));
   const activeLocations = (config?.locations || []).filter((location) => location.status !== "INACTIVE");
   const matchingLocation = activeLocations.find((location) => getConfiguredLocationAliases(location).some((alias) => normaliseLocationIdentifier(alias) === normaliseLocationIdentifier(rawCode)));
   const aliases = matchingLocation ? getConfiguredLocationAliases(matchingLocation) : getKnownLocationAliases(rawCode);
-  const supportedAlias = aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias)));
+  const supportedAlias = supported.size > 0 ? aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias))) : "";
   return supportedAlias || rawCode;
 };
 const locationCodesAreEquivalent = (left, right) => {
@@ -2206,12 +2210,12 @@ const loadPlatformConfigFromDB = async () => {
     return null;
   }
 };
-const getLocationCodesForCurrentRuntime = (config, supportedCodes = ["ESL", "PEA"]) => {
+const getLocationCodesForCurrentRuntime = (config, supportedCodes = []) => {
   const supported = new Set(supportedCodes.map((code) => normaliseLocationIdentifier(code)));
   const configuredCodes = (config?.locations || []).filter((location) => location.status !== "INACTIVE").map((location) => {
     const aliases = getConfiguredLocationAliases(location);
-    return aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias))) || location.code;
-  }).filter((code) => supported.has(normaliseLocationIdentifier(code)));
+    return supported.size > 0 ? aliases.find((alias) => supported.has(normaliseLocationIdentifier(alias))) || location.code : location.code;
+  }).filter((code) => supported.size === 0 || supported.has(normaliseLocationIdentifier(code)));
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
 const normaliseAccessValue = (value) => String(value || "").trim().toLowerCase();
@@ -2384,7 +2388,7 @@ const resolvePermissionsForRows = (config, rows) => {
     isPlatformAdmin
   };
 };
-const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ESL", "PEA"]) => {
+const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) => {
   const activeRows = (config?.userAccess || []).map(normaliseAccessRow).filter((row) => normaliseAccessValue(row.status) !== "inactive").map((row) => ({
     ...row,
     locationCode: row.locationCode ? resolveRuntimeLocationCode(config, row.locationCode, supportedCodes) : row.locationCode
@@ -103316,33 +103320,39 @@ const App = () => {
   const knownDfpLocationAliases = reactExports.useCallback((identifier) => {
     const rawIdentifier = String(identifier || "").trim();
     if (!rawIdentifier) return [];
-    const profile = getDefaultAirfieldSolarProfile(rawIdentifier);
-    const profileAliases = profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
-    const legacyAliasMap = {
-      ESL: ["YMES", "EAST SALE"],
-      YMES: ["ESL", "EAST SALE"],
-      "EAST SALE": ["ESL", "YMES"],
-      PEA: ["YPEA", "PEARCE"],
-      YPEA: ["PEA", "PEARCE"],
-      PEARCE: ["PEA", "YPEA"],
-      WLM: ["YWLM", "WILLIAMTOWN"],
-      YWLM: ["WLM", "WILLIAMTOWN"],
-      WILLIAMTOWN: ["WLM", "YWLM"],
-      AMB: ["YAMB", "AMBERLEY"],
-      YAMB: ["AMB", "AMBERLEY"],
-      AMBERLEY: ["AMB", "YAMB"],
-      EDI: ["EDN", "YPED", "EDINBURGH"],
-      EDN: ["EDI", "YPED", "EDINBURGH"],
-      YPED: ["EDI", "EDN", "EDINBURGH"],
-      EDINBURGH: ["EDI", "EDN", "YPED"],
-      TIN: ["YPTN", "TINDAL"],
-      YPTN: ["TIN", "TINDAL"],
-      TINDAL: ["TIN", "YPTN"]
-    };
-    const seedAliases = [rawIdentifier, ...profileAliases].map((alias) => String(alias || "").trim().toUpperCase()).filter(Boolean);
-    const mappedAliases = seedAliases.flatMap((alias) => legacyAliasMap[alias] || []);
-    return [...new Set([...seedAliases, ...mappedAliases].map((alias) => String(alias || "").trim().toUpperCase()).filter(Boolean))];
-  }, []);
+    const normaliseAlias = (value) => String(value || "").trim().toUpperCase();
+    const normaliseKey2 = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    const rawAliases = [rawIdentifier].map(normaliseAlias).filter(Boolean);
+    const rawProfile = getDefaultAirfieldSolarProfile(rawIdentifier);
+    const rawAliasKeys = new Set([
+      ...rawAliases,
+      ...rawProfile ? [rawProfile.code, rawProfile.iataCode, rawProfile.icao, rawProfile.name].map(normaliseAlias) : []
+    ].map(normaliseKey2).filter(Boolean));
+    const configuredAliases = (platformConfig2?.locations || []).filter((location) => location.status !== "INACTIVE").flatMap((location) => {
+      const directAliases = [
+        location?.code,
+        location?.iataCode,
+        location?.icao,
+        location?.icaoCode,
+        location?.name,
+        location?.settings?.iataCode,
+        location?.settings?.icaoCode,
+        location?.settings?.legacyCode,
+        location?.settings?.runtimeCode,
+        ...Array.isArray(location?.aliases) ? location.aliases : [],
+        ...Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []
+      ].map(normaliseAlias).filter(Boolean);
+      const directAliasKeys = new Set(directAliases.map(normaliseKey2).filter(Boolean));
+      const matchesConfiguredLocation = Array.from(rawAliasKeys).some((aliasKey) => directAliasKeys.has(aliasKey));
+      if (!matchesConfiguredLocation) return [];
+      const profileAliases = directAliases.flatMap((alias) => {
+        const profile = getDefaultAirfieldSolarProfile(alias);
+        return profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
+      });
+      return [...directAliases, ...profileAliases].map(normaliseAlias).filter(Boolean);
+    });
+    return [...new Set([...rawAliases, ...configuredAliases].filter(Boolean))];
+  }, [platformConfig2]);
   const getLocationSelectorAliases = reactExports.useCallback((location) => {
     const directAliases = [
       location?.code,

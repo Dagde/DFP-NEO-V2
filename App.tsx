@@ -21978,35 +21978,45 @@ const App: React.FC = () => {
     const knownDfpLocationAliases = useCallback((identifier: unknown): string[] => {
         const rawIdentifier = String(identifier || '').trim();
         if (!rawIdentifier) return [];
-        const profile = getDefaultAirfieldSolarProfile(rawIdentifier);
-        const profileAliases = profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
-        const legacyAliasMap: Record<string, string[]> = {
-            ESL: ['YMES', 'EAST SALE'],
-            YMES: ['ESL', 'EAST SALE'],
-            'EAST SALE': ['ESL', 'YMES'],
-            PEA: ['YPEA', 'PEARCE'],
-            YPEA: ['PEA', 'PEARCE'],
-            PEARCE: ['PEA', 'YPEA'],
-            WLM: ['YWLM', 'WILLIAMTOWN'],
-            YWLM: ['WLM', 'WILLIAMTOWN'],
-            WILLIAMTOWN: ['WLM', 'YWLM'],
-            AMB: ['YAMB', 'AMBERLEY'],
-            YAMB: ['AMB', 'AMBERLEY'],
-            AMBERLEY: ['AMB', 'YAMB'],
-            EDI: ['EDN', 'YPED', 'EDINBURGH'],
-            EDN: ['EDI', 'YPED', 'EDINBURGH'],
-            YPED: ['EDI', 'EDN', 'EDINBURGH'],
-            EDINBURGH: ['EDI', 'EDN', 'YPED'],
-            TIN: ['YPTN', 'TINDAL'],
-            YPTN: ['TIN', 'TINDAL'],
-            TINDAL: ['TIN', 'YPTN'],
-        };
-        const seedAliases = [rawIdentifier, ...profileAliases]
-            .map(alias => String(alias || '').trim().toUpperCase())
+        const normaliseAlias = (value: unknown): string => String(value || '').trim().toUpperCase();
+        const normaliseKey = (value: unknown): string => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const rawAliases = [rawIdentifier]
+            .map(normaliseAlias)
             .filter(Boolean);
-        const mappedAliases = seedAliases.flatMap(alias => legacyAliasMap[alias] || []);
-        return [...new Set([...seedAliases, ...mappedAliases].map(alias => String(alias || '').trim().toUpperCase()).filter(Boolean))];
-    }, []);
+        const rawProfile = getDefaultAirfieldSolarProfile(rawIdentifier);
+        const rawAliasKeys = new Set([
+            ...rawAliases,
+            ...(rawProfile ? [rawProfile.code, rawProfile.iataCode, rawProfile.icao, rawProfile.name].map(normaliseAlias) : []),
+        ].map(normaliseKey).filter(Boolean));
+
+        const configuredAliases = (platformConfig?.locations || [])
+            .filter((location: any) => location.status !== 'INACTIVE')
+            .flatMap((location: any) => {
+                const directAliases = [
+                    location?.code,
+                    location?.iataCode,
+                    location?.icao,
+                    location?.icaoCode,
+                    location?.name,
+                    location?.settings?.iataCode,
+                    location?.settings?.icaoCode,
+                    location?.settings?.legacyCode,
+                    location?.settings?.runtimeCode,
+                    ...(Array.isArray(location?.aliases) ? location.aliases : []),
+                    ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+                ].map(normaliseAlias).filter(Boolean);
+                const directAliasKeys = new Set(directAliases.map(normaliseKey).filter(Boolean));
+                const matchesConfiguredLocation = Array.from(rawAliasKeys).some((aliasKey) => directAliasKeys.has(aliasKey));
+                if (!matchesConfiguredLocation) return [];
+                const profileAliases = directAliases.flatMap((alias) => {
+                    const profile = getDefaultAirfieldSolarProfile(alias);
+                    return profile ? [profile.code, profile.iataCode, profile.icao, profile.name] : [];
+                });
+                return [...directAliases, ...profileAliases].map(normaliseAlias).filter(Boolean);
+            });
+
+        return [...new Set([...rawAliases, ...configuredAliases].filter(Boolean))];
+    }, [platformConfig]);
 
     const getLocationSelectorAliases = useCallback((location: any): string[] => {
         const directAliases = [
