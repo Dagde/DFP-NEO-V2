@@ -4987,8 +4987,6 @@ const personMatchesConfiguredLocation = (platformConfig: any, person: any, selec
     return !personLocation;
 };
 
-// --- MOCK DATA ---
-import { ESL_DATA } from './mockData';
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
 import { loadSyllabusFromDB, clearSyllabusCache, createSyllabusItem, updateSyllabusItem } from './lib/syllabusService';
