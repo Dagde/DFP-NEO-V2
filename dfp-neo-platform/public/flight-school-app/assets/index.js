@@ -81125,6 +81125,11 @@ const CoursesManagementView = ({
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const normaliseCourseFilterValue = (value) => String(value || "").trim().toLowerCase();
 const ALL_COURSES_FILTER_VALUE = "__all_courses__";
+const normaliseCompletionStatusCode = (value) => String(value || "").trim().toUpperCase();
+const getCompletionStatusFilterValue = (value) => {
+  const normalisedCode = normaliseCompletionStatusCode(value);
+  return normalisedCode ? `completion:${normalisedCode}` : "";
+};
 const normalisePersonFilterValue = (value) => String(value || "").replace(/\s+[–-]\s+.+$/, "").replace(/\s+/g, " ").trim().toLowerCase();
 const eventPersonMatchesSelection = (eventName, selectedName) => {
   const normalisedEventName = normalisePersonFilterValue(eventName);
@@ -81226,16 +81231,20 @@ const TrainingRecordsExportView = ({
   );
   const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
   const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
-  const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce((acc, result) => {
-    if (result.enabled !== false) acc[result.code] = result.label || result.code;
+  const enabledCompletionResults = activeTrainingReportTemplate.completionResults.filter((result) => result.enabled !== false && normaliseCompletionStatusCode(result.code));
+  const primaryCompletionResult = enabledCompletionResults[0] || { code: "DCO", label: "Complete" };
+  const primaryCompletionResultCode = normaliseCompletionStatusCode(primaryCompletionResult.code) || "DCO";
+  const exportCompletionResultLabels = enabledCompletionResults.reduce((acc, result) => {
+    const code = normaliseCompletionStatusCode(result.code);
+    if (code) acc[code] = result.label || result.code;
     return acc;
   }, {});
-  const statusCompletionOptions = activeTrainingReportTemplate.completionResults.filter((result) => result.enabled !== false).map((result) => ({
-    value: result.code.toLowerCase(),
+  const statusCompletionOptions = enabledCompletionResults.map((result) => ({
+    value: getCompletionStatusFilterValue(result.code),
     label: result.label || result.code
-  }));
-  const activeStatusCompletionOptions = statusCompletionOptions.length > 0 ? statusCompletionOptions : [{ value: "dco", label: "Complete" }];
-  const exportCompletedStatusLabel = exportCompletionResultLabels.DCO || "Complete";
+  })).filter((option) => option.value);
+  const activeStatusCompletionOptions = statusCompletionOptions.length > 0 ? statusCompletionOptions : [{ value: getCompletionStatusFilterValue("DCO"), label: "Complete" }];
+  const exportCompletedStatusLabel = exportCompletionResultLabels[primaryCompletionResultCode] || primaryCompletionResult.label || "Complete";
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
   const [singleDate, setSingleDate] = reactExports.useState("");
@@ -81377,11 +81386,10 @@ const TrainingRecordsExportView = ({
   const getEventStatusBucket = (event) => {
     const assessment = findAssessmentForEvent(event);
     const eventScore = findScoreForEvent(event);
-    const completionResult = String(assessment?.dcoResult || eventScore?.dcoResult || eventScore?.outcome || "").trim().toUpperCase();
+    const completionResult = normaliseCompletionStatusCode(assessment?.dcoResult || eventScore?.dcoResult || eventScore?.outcome);
     const overallResult = String(assessment?.overallResult || eventScore?.overallResult || eventScore?.outcome || "").trim().toUpperCase();
-    if (completionResult === "DCO") return "dco";
-    if (completionResult === "DPCO") return "dpco";
-    if (completionResult === "DNCO") return "dnco";
+    const completionStatusFilter = getCompletionStatusFilterValue(completionResult);
+    if (completionStatusFilter) return completionStatusFilter;
     if (overallResult === "P" || overallResult === "PASS") return "pass";
     if (overallResult === "F" || overallResult === "FAIL") return "fail";
     return "";
@@ -82033,7 +82041,7 @@ const TrainingRecordsExportView = ({
               instructorName: event.instructor || "",
               overallGrade: "No Grade",
               overallResult: "P",
-              dcoResult: "DCO",
+              dcoResult: primaryCompletionResultCode,
               overallComments: "",
               scores: [],
               isCompleted: true,
@@ -82042,7 +82050,7 @@ const TrainingRecordsExportView = ({
           } else {
             assessment = {
               ...assessment,
-              dcoResult: "DCO",
+              dcoResult: primaryCompletionResultCode,
               overallGrade: "No Grade",
               overallResult: "P",
               isCompleted: true

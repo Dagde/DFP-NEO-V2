@@ -36,7 +36,8 @@ type RecordType = 'all' | 'trainees' | 'staff' | 'events';
 type TimePeriod = 'all-time' | 'single-date' | 'date-range';
 type OutputFormat = 'pdf' | 'excel' | 'csv';
 type EventType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
-type StatusFilter = 'all' | 'dco' | 'dpco' | 'dnco' | 'pass' | 'fail';
+type CompletionStatusFilter = `completion:${string}`;
+type StatusFilter = 'all' | CompletionStatusFilter | 'pass' | 'fail';
 type RemedialFilter = 'all' | 'yes' | 'no';
 type ExportCommentSectionKey = 'assessor' | 'weather' | 'profile' | 'overall' | 'nest';
 
@@ -58,6 +59,14 @@ const escapeRegExp = (value: string): string =>
 const normaliseCourseFilterValue = (value?: string): string =>
     String(value || '').trim().toLowerCase();
 const ALL_COURSES_FILTER_VALUE = '__all_courses__';
+
+const normaliseCompletionStatusCode = (value?: string | null): string =>
+    String(value || '').trim().toUpperCase();
+
+const getCompletionStatusFilterValue = (value?: string | null): CompletionStatusFilter | '' => {
+    const normalisedCode = normaliseCompletionStatusCode(value);
+    return normalisedCode ? `completion:${normalisedCode}` : '';
+};
 const normalisePersonFilterValue = (value?: string): string =>
     String(value || '')
         .replace(/\s+[–-]\s+.+$/, '')
@@ -215,20 +224,25 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     );
     const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
     const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
-    const exportCompletionResultLabels = activeTrainingReportTemplate.completionResults.reduce<Record<string, string>>((acc, result) => {
-        if (result.enabled !== false) acc[result.code] = result.label || result.code;
+    const enabledCompletionResults = activeTrainingReportTemplate.completionResults
+        .filter(result => result.enabled !== false && normaliseCompletionStatusCode(result.code));
+    const primaryCompletionResult = enabledCompletionResults[0] || { code: 'DCO', label: 'Complete' };
+    const primaryCompletionResultCode = normaliseCompletionStatusCode(primaryCompletionResult.code) || 'DCO';
+    const exportCompletionResultLabels = enabledCompletionResults.reduce<Record<string, string>>((acc, result) => {
+        const code = normaliseCompletionStatusCode(result.code);
+        if (code) acc[code] = result.label || result.code;
         return acc;
     }, {});
-    const statusCompletionOptions = activeTrainingReportTemplate.completionResults
-        .filter(result => result.enabled !== false)
+    const statusCompletionOptions = enabledCompletionResults
         .map(result => ({
-            value: result.code.toLowerCase() as StatusFilter,
+            value: getCompletionStatusFilterValue(result.code) as StatusFilter,
             label: result.label || result.code,
-        }));
+        }))
+        .filter(option => option.value);
     const activeStatusCompletionOptions = statusCompletionOptions.length > 0
         ? statusCompletionOptions
-        : [{ value: 'dco' as StatusFilter, label: 'Complete' }];
-    const exportCompletedStatusLabel = exportCompletionResultLabels.DCO || 'Complete';
+        : [{ value: getCompletionStatusFilterValue('DCO') as StatusFilter, label: 'Complete' }];
+    const exportCompletedStatusLabel = exportCompletionResultLabels[primaryCompletionResultCode] || primaryCompletionResult.label || 'Complete';
 
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -432,12 +446,11 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const getEventStatusBucket = (event: ScheduleEvent): StatusFilter | '' => {
         const assessment = findAssessmentForEvent(event);
         const eventScore = findScoreForEvent(event);
-        const completionResult = String(assessment?.dcoResult || eventScore?.dcoResult || eventScore?.outcome || '').trim().toUpperCase();
+        const completionResult = normaliseCompletionStatusCode(assessment?.dcoResult || eventScore?.dcoResult || eventScore?.outcome);
         const overallResult = String(assessment?.overallResult || eventScore?.overallResult || eventScore?.outcome || '').trim().toUpperCase();
+        const completionStatusFilter = getCompletionStatusFilterValue(completionResult);
 
-        if (completionResult === 'DCO') return 'dco';
-        if (completionResult === 'DPCO') return 'dpco';
-        if (completionResult === 'DNCO') return 'dnco';
+        if (completionStatusFilter) return completionStatusFilter;
         if (overallResult === 'P' || overallResult === 'PASS') return 'pass';
         if (overallResult === 'F' || overallResult === 'FAIL') return 'fail';
         return '';
@@ -1363,7 +1376,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                             instructorName: event.instructor || '',
                             overallGrade: 'No Grade' as any,
                             overallResult: 'P',
-                            dcoResult: 'DCO',
+                            dcoResult: primaryCompletionResultCode,
                             overallComments: '',
                             scores: [],
                             isCompleted: true,
@@ -1373,7 +1386,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                         // Update existing assessment
                         assessment = {
                             ...assessment,
-                            dcoResult: 'DCO',
+                            dcoResult: primaryCompletionResultCode,
                             overallGrade: 'No Grade' as any,
                             overallResult: 'P',
                             isCompleted: true
