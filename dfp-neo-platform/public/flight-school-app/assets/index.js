@@ -91003,9 +91003,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return areUnitsInSameStaffSharingGroup(traineeUnit, instructorUnit);
   };
+  let getGeneratedEventsForPersonForBuild = null;
   const calculateInstructorDutyHours = (instructorName, includeProposedEvent) => {
-    const eventsToCheck = includeProposedEvent ? [...generatedEvents, includeProposedEvent] : generatedEvents;
-    const instructorEvents = eventsToCheck.filter((e) => getPersonnel(e).includes(instructorName));
+    const indexedEvents = getGeneratedEventsForPersonForBuild ? getGeneratedEventsForPersonForBuild(instructorName) : generatedEvents.filter((e) => getPersonnel(e).includes(instructorName));
+    const instructorEvents = includeProposedEvent ? [...indexedEvents, includeProposedEvent] : indexedEvents;
     if (instructorEvents.length === 0) return 0;
     const bookingWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
     let totalDutyHours = 0;
@@ -91073,7 +91074,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return getEventDayNightClassification2(event, syllabusDetails, sctEvents);
   };
   const isPersonScheduledForDayEvents = (personName) => {
-    const hasDayEvents = generatedEvents.some((e) => {
+    const hasDayEvents = getGeneratedEventsForPerson(personName).some((e) => {
       if (!eventIncludesPerson2(e, personName)) return false;
       const classification = getGeneratedEventDayNightClassification(e);
       const isDay = classification === "Day";
@@ -91082,7 +91083,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return hasDayEvents;
   };
   const isPersonScheduledForNightEvents = (personName) => {
-    const hasScheduledNightEvents = generatedEvents.some((e) => {
+    const hasScheduledNightEvents = getGeneratedEventsForPerson(personName).some((e) => {
       if (!eventIncludesPerson2(e, personName)) return false;
       const classification = getGeneratedEventDayNightClassification(e);
       const isNight = classification === "Night";
@@ -91170,6 +91171,39 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     _isNext: void 0,
     _traineeName: e.student || e.pilot || ""
   }));
+  const generatedEventsByPerson = /* @__PURE__ */ new Map();
+  const getBuildPersonKey = (personName) => normalizeBuildPersonnelName(personName);
+  const indexGeneratedEvent = (event) => {
+    const names = /* @__PURE__ */ new Set([
+      ...getPersonnel(event),
+      ...getPersonnelIdentityRefs(event).map((ref) => ref.label)
+    ]);
+    names.forEach((name) => {
+      const key = getBuildPersonKey(name);
+      if (!key) return;
+      let bucket = generatedEventsByPerson.get(key);
+      if (!bucket) {
+        bucket = /* @__PURE__ */ new Set();
+        generatedEventsByPerson.set(key, bucket);
+      }
+      bucket.add(event);
+    });
+  };
+  const rebuildGeneratedEventIndexes = () => {
+    generatedEventsByPerson.clear();
+    generatedEvents.forEach(indexGeneratedEvent);
+  };
+  const pushGeneratedEvent = (event) => {
+    generatedEvents.push(event);
+    indexGeneratedEvent(event);
+  };
+  const getGeneratedEventsForPerson = (personName) => {
+    const key = getBuildPersonKey(personName);
+    if (!key) return [];
+    return Array.from(generatedEventsByPerson.get(key) || []);
+  };
+  getGeneratedEventsForPersonForBuild = getGeneratedEventsForPerson;
+  rebuildGeneratedEventIndexes();
   const buildContinuationShortLabel = getSctTerminology(config.platformConfig, buildActiveUnitCode).shortLabel;
   const neoBuildDiag = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -92889,7 +92923,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           postEnd: void 0,
           _source: source
         };
-        generatedEvents.push(placed);
+        pushGeneratedEvent(placed);
         fixedCrewPerf.counters.placements += 1;
         pushFixedCrewPlacement({
           event: placed.flightNumber,
@@ -93178,7 +93212,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               soloOrDual: "Dual",
               _source: source
             };
-            generatedEvents.push(placed2);
+            pushGeneratedEvent(placed2);
             fixedCrewPerf.counters.placements += 1;
             fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
             fixedCrewStaffDailyCountCache.clear();
@@ -93302,7 +93336,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             soloOrDual: "Dual",
             _source: source
           };
-          generatedEvents.push(placed);
+          pushGeneratedEvent(placed);
           fixedCrewPerf.counters.placements += 1;
           fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
           fixedCrewStaffDailyCountCache.clear();
@@ -94351,6 +94385,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           _isNext: void 0,
           _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || ""
         };
+        rebuildGeneratedEventIndexes();
         if (event.isRemedial || event.id?.startsWith("remedial-")) {
           traceRemedialMovement("priorityPlacementTrace", {
             phase: "highest-priority-remedial-updated-existing-generated-event",
@@ -94368,7 +94403,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return;
       }
       const placedPriorityEvent = { ...eventWithoutDate, _source: "highest-priority", _isNext: void 0, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || "" };
-      generatedEvents.push(placedPriorityEvent);
+      pushGeneratedEvent(placedPriorityEvent);
       traceTaskProvenance("generatedPushes", "highest-priority-fixed-placement", placedPriorityEvent, {
         priorityEventId: event.id,
         priorityEventType: event.type,
@@ -95518,7 +95553,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   });
                 }
                 if (result && typeof result === "object" && "id" in result) {
-                  generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                  pushGeneratedEvent({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
                   if (isPlusOne && next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
                     traceFormation("laterScheduledEvents", {
                       phase: "plus-one-scheduled-after-unscheduled-formation-next",
@@ -95852,7 +95887,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return traceScheduleReject("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
     }
-    const traineeOverlapEvents = generatedEvents.filter((e) => {
+    const traineeOverlapEvents = getGeneratedEventsForPerson(trainee.fullName).filter((e) => {
       if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
       const hasTraineeConflict = options.traineeOverlapRole === "trainee" ? eventHasPersonWithRole(e, trainee.fullName, "trainee") : eventHasPerson(e, trainee.fullName);
       if (!hasTraineeConflict) return false;
@@ -95885,7 +95920,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         flightNumber: syllabusItem.code,
         type
       };
-      const traineeTurnaroundConflict = generatedEvents.find((existing) => {
+      const traineeTurnaroundConflict = getGeneratedEventsForPerson(trainee.fullName).find((existing) => {
         if (isStbyResource(existing.resourceId)) return false;
         const hasTraineeTurnaroundConflict = options.traineeOverlapRole === "trainee" ? eventHasPersonWithRole(existing, trainee.fullName, "trainee") : eventHasPerson(existing, trainee.fullName);
         if (!hasTraineeTurnaroundConflict) return false;
@@ -96053,7 +96088,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (ipCounts.flightFtd >= flightFtdLimit) return null;
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventLimit) return null;
         }
-        const hasOverlap = generatedEvents.some((e) => {
+        const hasOverlap = getGeneratedEventsForPerson(instructor2.name).some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, instructor2.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -96091,7 +96126,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (hasOverlap) return null;
         if (isNightPass && isPlusOneCheck) {
           const { next } = traineeNextEventMap.get(traineeForCheck.fullName);
-          const firstNightEvent = generatedEvents.find(
+          const firstNightEvent = getGeneratedEventsForPerson(traineeForCheck.fullName).find(
             (e) => e.flightNumber === next?.id && getPersonnel(e).includes(traineeForCheck.fullName) && getPersonnel(e).includes(instructor2.name)
           );
           if (firstNightEvent) {
@@ -96348,7 +96383,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
         }
-        const overlappingEvents = generatedEvents.filter((e) => {
+        const overlappingEvents = getGeneratedEventsForPerson(ip.name).filter((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, ip.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -96422,8 +96457,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
         }
-        const proposedEvents = [...generatedEvents, { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type }];
-        const ipEvents = proposedEvents.filter((e) => getPersonnel(e).includes(ip.name) && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
+        const ipEvents = [
+          ...getGeneratedEventsForPerson(ip.name),
+          { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type }
+        ].filter((e) => getPersonnel(e).includes(ip.name) && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
         if (!remedialInstructorOverride && ipEvents.length > 0) {
           const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
           const firstEvent = sortedIpEvents[0];
@@ -96983,7 +97020,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         buildDebugLog(`Skipping ${sup.name} - would exceed soft limit of ${preferredDutyPeriod}hrs`);
         continue;
       }
-      const hasOverlapAtStart = generatedEvents.some((e) => {
+      const hasOverlapAtStart = getGeneratedEventsForPerson(sup.name).some((e) => {
         if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
         if (!getPersonnel(e).includes(sup.name)) return false;
         const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -97002,7 +97039,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           flightNumber: "Duty Sup",
           type: "ground"
         };
-        const proposedEvents = [...generatedEvents, proposedDutySupEvent2];
+        const proposedEvents = [...getGeneratedEventsForPerson(sup.name), proposedDutySupEvent2];
         const instructorEventsForDay = proposedEvents.filter((e) => getPersonnel(e).includes(sup.name));
         if (instructorEventsForDay.length > 0) {
           const bookingWindows = instructorEventsForDay.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
@@ -97013,7 +97050,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             break;
           }
         }
-        const hasFutureOverlap = generatedEvents.some((e) => {
+        const hasFutureOverlap = getGeneratedEventsForPerson(sup.name).some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!getPersonnel(e).includes(sup.name)) return false;
           const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -97028,7 +97065,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     if (bestSupervisor && maxDuration > 0) {
-      generatedEvents.push({
+      pushGeneratedEvent({
         id: v4(),
         type: "ground",
         instructor: bestSupervisor.name,
@@ -97061,7 +97098,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const dutyEnd = e.startTime + e.duration;
       return dutyStart < ceaseNightFlying && dutyEnd > commenceNightFlying;
     });
-    const nightDutySupHasOverlap = generatedEvents.some((e) => {
+    const nightDutySupHasOverlap = getGeneratedEventsForPerson(nightDutySup.name).some((e) => {
       if (!getPersonnel(e).includes(nightDutySup.name)) return false;
       const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
@@ -97071,7 +97108,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     } else if (nightDutySupHasOverlap) {
       buildDebugLog(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
     } else {
-      generatedEvents.push({
+      pushGeneratedEvent({
         id: v4(),
         type: "ground",
         instructor: nightDutySup.name,
@@ -98034,7 +98071,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       }
       if (placedEvent) {
-        generatedEvents.push(placedEvent);
+        pushGeneratedEvent(placedEvent);
         traceTaskProvenance("generatedPushes", "tasking-priority-placement", placedEvent, {
           priorityEventId: priorityEvent.id,
           taskingRequestId: priorityEvent.taskingRequestId || null,
@@ -99272,7 +99309,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           continue;
         }
         stagedEvents.forEach((event, index) => {
-          generatedEvents.push(event);
+          pushGeneratedEvent(event);
           traceTaskProvenance("generatedPushes", "air-combat-training-formation-placement", event, {
             kind,
             assignmentCode: code,
@@ -99656,7 +99693,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               candidateSlotsRejected++;
               continue;
             }
-            generatedEvents.push(candidate);
+            pushGeneratedEvent(candidate);
             lastAirCombatTrainingPlacement = { kind, type, startTime };
             traceTaskProvenance("generatedPushes", "air-combat-training-placement", candidate, {
               kind,
@@ -100249,7 +100286,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               } : null
             }, 3500);
             if (result && typeof result === "object" && "id" in result) {
-              generatedEvents.push({ ...result, _source: "highest-priority-currency", _isNext: true, _traineeName: resolved.trainee.fullName });
+              pushGeneratedEvent({ ...result, _source: "highest-priority-currency", _isNext: true, _traineeName: resolved.trainee.fullName });
               const tCounts = eventCounts.get(resolved.trainee.fullName);
               const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
               if (tCounts) tCounts.flightFtd++;
@@ -100617,7 +100654,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _traineeName: trainee.fullName
           };
           stagedEvents.push(stagedEvent);
-          generatedEvents.push(stagedEvent);
+          pushGeneratedEvent(stagedEvent);
           traceFormation("groupBuildTrace", {
             phase: "formation-member-staged",
             diagnosticLabel,
@@ -100995,7 +101032,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         (event) => event.resourceId === "Duty Sup" && event.flightNumber === "Night Duty Sup" && event.startTime < ceaseNightFlying && event.startTime + event.duration > commenceNightFlying
       );
       if (!existingNightDutySup && nightDutySup) {
-        generatedEvents.push({
+        pushGeneratedEvent({
           id: v4(),
           type: "ground",
           instructor: nightDutySup.name,
@@ -101151,7 +101188,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             for (let time = soloSearchStart; time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - scheduledDuration + 1e-3; time += TIME_INCREMENT) {
               const result = scheduleEvent(trainee, syllabusItem, time, "flight", false, false, primaryOnly);
               if (result && typeof result === "object" && "id" in result) {
-                generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
+                pushGeneratedEvent({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
                 const tCounts = eventCounts.get(trainee.fullName);
                 tCounts.flightFtd++;
                 lastPlacedTime = Math.max(lastPlacedTime, time);
@@ -101436,7 +101473,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           const isSoloStby = next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id);
           const stbyInstructor = isSoloStby ? "" : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents) || "TBA";
           const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, "STBY");
-          generatedEvents.push({
+          pushGeneratedEvent({
             id: v4(),
             type: "flight",
             instructor: stbyInstructor,
@@ -101480,7 +101517,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
             const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly);
             if (result && result.resourceId?.startsWith("FTD ")) {
-              generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
+              pushGeneratedEvent({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
               const tCounts = eventCounts.get(trainee.fullName);
               const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
               if (tCounts) tCounts.flightFtd++;
@@ -101527,7 +101564,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (!resourceId) continue;
         const instructor = findBestInstructorForStby(trainee, next, time, next.duration, "ftd", generatedEvents);
         if (!instructor) continue;
-        generatedEvents.push({
+        pushGeneratedEvent({
           id: v4(),
           type: "ftd",
           instructor,
@@ -101592,7 +101629,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             });
             if (!hasConflict) {
               const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, "ftd", generatedEvents);
-              generatedEvents.push({
+              pushGeneratedEvent({
                 id: v4(),
                 type: "ftd",
                 instructor: instructor || "TBA",

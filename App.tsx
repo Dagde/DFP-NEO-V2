@@ -7293,13 +7293,16 @@ function generateDfpInternal(
 
     // --- HELPER FUNCTIONS ---
 
+    let getGeneratedEventsForPersonForBuild: ((personName: string) => any[]) | null = null;
+
     // Calculate total duty hours for an instructor including all assigned events (day and night)
     const calculateInstructorDutyHours = (instructorName: string, includeProposedEvent?: any): number => {
-        const eventsToCheck = includeProposedEvent
-            ? [...generatedEvents, includeProposedEvent]
-            : generatedEvents;
-
-        const instructorEvents = eventsToCheck.filter(e => getPersonnel(e).includes(instructorName));
+        const indexedEvents = getGeneratedEventsForPersonForBuild
+            ? getGeneratedEventsForPersonForBuild(instructorName)
+            : generatedEvents.filter(e => getPersonnel(e).includes(instructorName));
+        const instructorEvents = includeProposedEvent
+            ? [...indexedEvents, includeProposedEvent]
+            : indexedEvents;
 
         if (instructorEvents.length === 0) return 0;
 
@@ -7408,7 +7411,7 @@ function generateDfpInternal(
     // Check if a person has day events using Master LMP Day/Night field
     // NOTE: This includes Active DFP events since generatedEvents is initialized with them
     const isPersonScheduledForDayEvents = (personName: string): boolean => {
-        const hasDayEvents = generatedEvents.some(e => {
+        const hasDayEvents = getGeneratedEventsForPerson(personName).some(e => {
             if (!eventIncludesPerson(e, personName)) return false;
             const classification = getGeneratedEventDayNightClassification(e);
             const isDay = classification === 'Day';
@@ -7423,7 +7426,7 @@ function generateDfpInternal(
     // NOTE: This now includes Active DFP events since generatedEvents is initialized with them
     const isPersonScheduledForNightEvents = (personName: string): boolean => {
         // Check both already scheduled night events AND intended night assignments using Master LMP Day/Night field
-        const hasScheduledNightEvents = generatedEvents.some(e => {
+        const hasScheduledNightEvents = getGeneratedEventsForPerson(personName).some(e => {
             if (!eventIncludesPerson(e, personName)) return false;
             const classification = getGeneratedEventDayNightClassification(e);
             const isNight = classification === 'Night';
@@ -7534,6 +7537,40 @@ function generateDfpInternal(
         _isNext: undefined,
         _traineeName: e.student || e.pilot || ''
     }));
+    type GeneratedBuildEvent = typeof generatedEvents[number];
+    const generatedEventsByPerson = new Map<string, Set<GeneratedBuildEvent>>();
+    const getBuildPersonKey = (personName?: string): string => normalizeBuildPersonnelName(personName);
+    const indexGeneratedEvent = (event: GeneratedBuildEvent) => {
+        const names = new Set<string>([
+            ...getPersonnel(event),
+            ...getPersonnelIdentityRefs(event).map(ref => ref.label),
+        ]);
+        names.forEach(name => {
+            const key = getBuildPersonKey(name);
+            if (!key) return;
+            let bucket = generatedEventsByPerson.get(key);
+            if (!bucket) {
+                bucket = new Set<GeneratedBuildEvent>();
+                generatedEventsByPerson.set(key, bucket);
+            }
+            bucket.add(event);
+        });
+    };
+    const rebuildGeneratedEventIndexes = () => {
+        generatedEventsByPerson.clear();
+        generatedEvents.forEach(indexGeneratedEvent);
+    };
+    const pushGeneratedEvent = (event: GeneratedBuildEvent) => {
+        generatedEvents.push(event);
+        indexGeneratedEvent(event);
+    };
+    const getGeneratedEventsForPerson = (personName?: string): GeneratedBuildEvent[] => {
+        const key = getBuildPersonKey(personName);
+        if (!key) return [];
+        return Array.from(generatedEventsByPerson.get(key) || []);
+    };
+    getGeneratedEventsForPersonForBuild = getGeneratedEventsForPerson;
+    rebuildGeneratedEventIndexes();
     const buildContinuationShortLabel = getSctTerminology(config.platformConfig, buildActiveUnitCode).shortLabel;
 
     const neoBuildDiag: any = {
@@ -9555,7 +9592,7 @@ function generateDfpInternal(
                     postEnd: undefined,
                     _source: source,
                 };
-                generatedEvents.push(placed);
+                pushGeneratedEvent(placed);
                 fixedCrewPerf.counters.placements += 1;
                 pushFixedCrewPlacement({
                     event: placed.flightNumber,
@@ -9852,7 +9889,7 @@ function generateDfpInternal(
                             soloOrDual: 'Dual',
                             _source: source,
                         };
-                        generatedEvents.push(placed);
+                        pushGeneratedEvent(placed);
                         fixedCrewPerf.counters.placements += 1;
                         fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
                         fixedCrewStaffDailyCountCache.clear();
@@ -9977,7 +10014,7 @@ function generateDfpInternal(
                         soloOrDual: 'Dual',
                         _source: source,
                     };
-                    generatedEvents.push(placed);
+                    pushGeneratedEvent(placed);
                     fixedCrewPerf.counters.placements += 1;
                     fixedCrewPerf.counters.staffDailyCountCacheClears += 1;
                     fixedCrewStaffDailyCountCache.clear();
@@ -11239,6 +11276,7 @@ function generateDfpInternal(
                     _isNext: undefined,
                     _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || ''
                 };
+                rebuildGeneratedEventIndexes();
                 if (event.isRemedial || event.id?.startsWith('remedial-')) {
                     traceRemedialMovement('priorityPlacementTrace', {
                         phase: 'highest-priority-remedial-updated-existing-generated-event',
@@ -11257,7 +11295,7 @@ function generateDfpInternal(
             }
 
             const placedPriorityEvent = { ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' };
-            generatedEvents.push(placedPriorityEvent);
+            pushGeneratedEvent(placedPriorityEvent);
             traceTaskProvenance('generatedPushes', 'highest-priority-fixed-placement', placedPriorityEvent, {
                 priorityEventId: event.id,
                 priorityEventType: event.type,
@@ -12664,7 +12702,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     });
                                 }
                                 if (result && typeof result === 'object' && 'id' in result) {
-                                    generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                    pushGeneratedEvent({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
                                     if (isPlusOne && next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
                                         traceFormation('laterScheduledEvents', {
                                             phase: 'plus-one-scheduled-after-unscheduled-formation-next',
@@ -13065,7 +13103,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return traceScheduleReject('TRAINEE_STATICALLY_UNAVAILABLE', { proposedBookingWindow });
         }
 
-        const traineeOverlapEvents = generatedEvents.filter(e => {
+        const traineeOverlapEvents = getGeneratedEventsForPerson(trainee.fullName).filter(e => {
             if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
             const hasTraineeConflict = options.traineeOverlapRole === 'trainee'
                 ? eventHasPersonWithRole(e, trainee.fullName, 'trainee')
@@ -13102,7 +13140,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 flightNumber: syllabusItem.code,
                 type,
             } as Omit<ScheduleEvent, 'date'>;
-            const traineeTurnaroundConflict = generatedEvents.find(existing => {
+            const traineeTurnaroundConflict = getGeneratedEventsForPerson(trainee.fullName).find(existing => {
                 if (isStbyResource(existing.resourceId)) return false;
                 const hasTraineeTurnaroundConflict = options.traineeOverlapRole === 'trainee'
                     ? eventHasPersonWithRole(existing, trainee.fullName, 'trainee')
@@ -13304,7 +13342,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
                 // Any instructor booking-window overlap blocks assignment, regardless of event type.
-                const hasOverlap = generatedEvents.some(e => {
+                const hasOverlap = getGeneratedEventsForPerson(instructor.name).some(e => {
                          if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
                          if (!eventHasPerson(e, instructor.name)) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -13346,7 +13384,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // Special check for second night flight turnaround for the same crew
                 if (isNightPass && isPlusOneCheck) {
                     const { next } = traineeNextEventMap.get(traineeForCheck.fullName)!;
-                    const firstNightEvent = generatedEvents.find(e =>
+                    const firstNightEvent = getGeneratedEventsForPerson(traineeForCheck.fullName).find(e =>
                         e.flightNumber === next?.id &&
                         getPersonnel(e).includes(traineeForCheck.fullName) &&
                         getPersonnel(e).includes(instructor.name)
@@ -13681,7 +13719,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
                 // Any instructor booking-window overlap blocks assignment, regardless of event type.
-                const overlappingEvents = generatedEvents.filter(e => {
+                const overlappingEvents = getGeneratedEventsForPerson(ip.name).filter(e => {
                          if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
                          if (!eventHasPerson(e, ip.name)) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -13760,8 +13798,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 }
                 // ─────────────────────────────────────────────────────────────────────
 
-                const proposedEvents = [...generatedEvents, { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
-                const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
+                const ipEvents = [
+                    ...getGeneratedEventsForPerson(ip.name),
+                    { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>,
+                ].filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
                 if (!remedialInstructorOverride && ipEvents.length > 0) {
                     const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
                     const firstEvent = sortedIpEvents[0];
@@ -14489,7 +14529,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 continue;
             }
 
-            const hasOverlapAtStart = generatedEvents.some(e => {
+            const hasOverlapAtStart = getGeneratedEventsForPerson(sup.name).some(e => {
                 if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
                 if (!getPersonnel(e).includes(sup.name)) return false;
                 const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -14514,7 +14554,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     flightNumber: 'Duty Sup',
                     type: 'ground' as const
                 };
-                const proposedEvents = [...generatedEvents, proposedDutySupEvent];
+                const proposedEvents = [...getGeneratedEventsForPerson(sup.name), proposedDutySupEvent];
 
                 // Calculate total duty hours for the entire day
                 const instructorEventsForDay = proposedEvents.filter(e => getPersonnel(e).includes(sup.name));
@@ -14533,7 +14573,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     }
                 }
 
-                const hasFutureOverlap = generatedEvents.some(e => {
+                const hasFutureOverlap = getGeneratedEventsForPerson(sup.name).some(e => {
                     if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
                     if (!getPersonnel(e).includes(sup.name)) return false;
                     const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -14551,7 +14591,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         }
 
         if (bestSupervisor && maxDuration > 0) {
-            generatedEvents.push({
+            pushGeneratedEvent({
                 id: uuidv4(), type: 'ground', instructor: bestSupervisor.name,
                 flightNumber: 'Duty Sup', duration: maxDuration, startTime: currentSupTime, resourceId: 'Duty Sup',
                 color: 'bg-amber-500/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
@@ -14579,7 +14619,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             return dutyStart < ceaseNightFlying && dutyEnd > commenceNightFlying;
         });
 
-        const nightDutySupHasOverlap = generatedEvents.some(e => {
+        const nightDutySupHasOverlap = getGeneratedEventsForPerson(nightDutySup.name).some(e => {
             if (!getPersonnel(e).includes(nightDutySup!.name)) return false;
             const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
             return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
@@ -14591,7 +14631,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             buildDebugLog(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
         } else {
             // Schedule Night Duty Sup using the pre-selected supervisor
-            generatedEvents.push({
+            pushGeneratedEvent({
                 id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
                 flightNumber: 'Night Duty Sup', duration: ceaseNightFlying - commenceNightFlying, startTime: commenceNightFlying, resourceId: 'Duty Sup',
                 color: 'bg-amber-700/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
@@ -15635,7 +15675,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             }
 
             if (placedEvent) {
-                generatedEvents.push(placedEvent);
+                pushGeneratedEvent(placedEvent);
                 traceTaskProvenance('generatedPushes', 'tasking-priority-placement', placedEvent, {
                     priorityEventId: priorityEvent.id,
                     taskingRequestId: priorityEvent.taskingRequestId || null,
@@ -17062,7 +17102,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     continue;
                 }
                 stagedEvents.forEach((event, index) => {
-                    generatedEvents.push(event);
+                    pushGeneratedEvent(event);
                     traceTaskProvenance('generatedPushes', 'air-combat-training-formation-placement', event, {
                         kind,
                         assignmentCode: code,
@@ -17455,7 +17495,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             candidateSlotsRejected++;
                             continue;
                         }
-                        generatedEvents.push(candidate);
+                        pushGeneratedEvent(candidate);
                         lastAirCombatTrainingPlacement = { kind, type, startTime };
                         traceTaskProvenance('generatedPushes', 'air-combat-training-placement', candidate, {
                             kind,
@@ -18077,7 +18117,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             } : null,
                         }, 3500);
                         if (result && typeof result === 'object' && 'id' in result) {
-                            generatedEvents.push({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
+                            pushGeneratedEvent({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
                             const tCounts = eventCounts.get(resolved.trainee.fullName);
                             const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
                             if (tCounts) tCounts.flightFtd++;
@@ -18521,7 +18561,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         _traineeName: trainee.fullName,
                     };
                     stagedEvents.push(stagedEvent);
-                    generatedEvents.push(stagedEvent);
+                    pushGeneratedEvent(stagedEvent);
                     traceFormation('groupBuildTrace', {
                         phase: 'formation-member-staged',
                         diagnosticLabel,
@@ -18950,7 +18990,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 event.startTime + event.duration > commenceNightFlying
             );
             if (!existingNightDutySup && nightDutySup) {
-                generatedEvents.push({
+                pushGeneratedEvent({
                     id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
                     flightNumber: 'Night Duty Sup', duration: ceaseNightFlying - commenceNightFlying, startTime: commenceNightFlying, resourceId: 'Duty Sup',
                     color: 'bg-amber-700/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
@@ -19134,7 +19174,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                          time += TIME_INCREMENT) {
                         const result = scheduleEvent(trainee, syllabusItem, time, 'flight', false, false, primaryOnly);
                         if (result && typeof result === 'object' && 'id' in result) {
-                            generatedEvents.push({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
+                            pushGeneratedEvent({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
                             const tCounts = eventCounts.get(trainee.fullName)!;
                             tCounts.flightFtd++;
                             lastPlacedTime = Math.max(lastPlacedTime, time);
@@ -19608,7 +19648,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const stbyInstructor = isSoloStby ? '' : (findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents) || 'TBA');
                 const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
 
-                generatedEvents.push({
+                pushGeneratedEvent({
                     id: uuidv4(),
                     type: 'flight',
                     instructor: stbyInstructor,
@@ -19673,7 +19713,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
                     const result = scheduleEvent(trainee, next, time, 'ftd', false, false, primaryOnly);
                     if (result && result.resourceId?.startsWith('FTD ')) {
-                        generatedEvents.push({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
+                        pushGeneratedEvent({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
                         const tCounts = eventCounts.get(trainee.fullName);
                         const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
                         if (tCounts) tCounts.flightFtd++;
@@ -19736,7 +19776,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'ftd', generatedEvents);
             if (!instructor) continue;
 
-            generatedEvents.push({
+            pushGeneratedEvent({
                 id: uuidv4(),
                 type: 'ftd',
                 instructor,
@@ -19819,7 +19859,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, 'ftd', generatedEvents);
 
                         // Create STBY FTD event
-                        generatedEvents.push({
+                        pushGeneratedEvent({
                             id: uuidv4(),
                             type: 'ftd',
                             instructor: instructor || 'TBA',
