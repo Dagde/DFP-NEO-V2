@@ -6897,9 +6897,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div>
                       <h4 className="text-sm font-bold text-white">{option.label}</h4>
                       <p className="mt-1 text-xs text-gray-400">
-                        {option.value === 'air_combat'
-                          ? 'Use this for Fighter / Strike model directed task names.'
-                          : 'Shown when a unit is assigned this operational model.'}
+                        Shown when a unit is assigned this operational model.
                       </p>
                     </div>
                     <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
