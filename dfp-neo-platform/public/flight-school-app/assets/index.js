@@ -13859,7 +13859,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       setCurrencyDraft(formatWizardCurrencyRows(nextRows));
     };
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "A continuation/currency event is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900", children: "A Continuation & Currency Events record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event." }),
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end", children: [
         wizardField("Event name", row.name || "", (value) => updateRow(index, "name", value), void 0, "PIC Currency"),
         wizardField("Code", row.code || "", (value) => updateRow(index, "code", value.toUpperCase()), void 0, "PIC"),
@@ -15603,7 +15603,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     if (visibleStep.id === "currencies") {
       return promptShell(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create the continuation/currency events this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Create the Continuation & Currency Events records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately." }),
         renderCurrencyEditor()
       );
     }

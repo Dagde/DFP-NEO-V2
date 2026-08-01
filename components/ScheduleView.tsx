@@ -4879,7 +4879,7 @@ const InitialSetupWizard: React.FC<{
         return (
             <div className="space-y-3">
                 <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold leading-5 text-blue-900">
-                    A continuation/currency event is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event.
+                    A Continuation & Currency Events record is a reusable request preset. It fills in the crew, aircraft configuration, currency type and aircraft count when someone requests that event.
                 </div>
                 {editableRows.map((row, index) => (
                     <div key={`currency-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-3 xl:items-end">
@@ -6791,7 +6791,7 @@ const InitialSetupWizard: React.FC<{
         }
         if (visibleStep.id === 'currencies') {
             return promptShell(
-                <p>Create the continuation/currency events this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately.</p>,
+                <p>Create the Continuation & Currency Events records this unit will use. The full event setup can still be refined after setup, but these records give the unit useful defaults immediately.</p>,
                 renderCurrencyEditor(),
             );
         }
