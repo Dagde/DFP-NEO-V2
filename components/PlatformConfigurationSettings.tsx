@@ -7418,14 +7418,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Roles</div>
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Crew Positions</div>
               <div className="mt-1 text-lg font-black text-cyan-100">{visibleCrewPositionEntries.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Roles currently relevant to this aircraft tab.</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Crew positions currently relevant to this aircraft tab.</div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Alternate Profiles</div>
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Alternate Crew Setups</div>
               <div className="mt-1 text-lg font-black text-orange-100">{displayAircraftAlternateCompositions.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Profiles for {displayCrewCompositionAircraftCode || 'this aircraft'} only.</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Alternate crew setups for {displayCrewCompositionAircraftCode || 'this aircraft'} only.</div>
             </div>
           </div>
 
