@@ -671,9 +671,9 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Level', 'Name'],
         optionalHeaders: ['Parent', 'Notes'],
         exampleRows: [
-            ['0', 'Example Organisation', '', 'Top level organisation'],
-            ['1', 'Division A', 'Example Organisation', 'Branch, command, region, or division'],
-            ['2', 'Group A', 'Division A', 'Operating group, department, wing, or team'],
+            ['0', 'Organisation', '', 'Top level organisation'],
+            ['1', 'Division', 'Organisation', 'Branch, command, region, or division'],
+            ['2', 'Group', 'Division', 'Operating group, department, wing, or team'],
         ],
         settingsSection: 'platform-organisation-locations',
         focusSubsectionId: 'platform-organisation-structure',
@@ -698,8 +698,8 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Unit Code', 'Unit Name', 'Location', 'Unit Type', 'Operating Model'],
         optionalHeaders: ['Parent Organisation', 'Trainees', 'Notes'],
         exampleRows: [
-            ['OPS-01', 'Operations Unit', 'HOME', 'Operational', 'Pooled Crew Model', 'Example Organisation / Operations Division / Operations Group', 'No', ''],
-            ['TRG-01', 'Training Unit', 'TRAIN', 'Training', 'Flight School Model', 'Example Organisation / Training Division / Training Group', 'Yes', ''],
+            ['UNIT-01', 'Unit Name', 'LOC', 'Operational', 'Pooled Crew Model', 'Organisation / Division / Group', 'No', ''],
+            ['UNIT-02', 'Training Unit Name', 'LOC', 'Training', 'Flight School Model', 'Organisation / Training Division / Training Group', 'Yes', ''],
         ],
         settingsSection: 'platform-units',
     },
@@ -710,7 +710,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Pool Name', 'Aircraft Type', 'Unit', 'Location', 'Aircraft', 'Sim', 'Trainer', 'Standby', 'Ground'],
         optionalHeaders: ['Notes'],
         exampleRows: [
-            ['Primary DFP Row Set', 'Primary Resource', 'OPS-01', 'HOME', '4', '0', '0', '1', '0', ''],
+            ['Primary DFP Row Set', 'Primary Resource', 'UNIT-01', 'LOC', '4', '0', '0', '1', '0', ''],
         ],
         settingsSection: 'platform-resource-pools',
     },
@@ -721,7 +721,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit', 'Role'],
         optionalHeaders: ['Rank', 'Personnel ID', 'Qualifications', 'Email'],
         exampleRows: [
-            ['Smith, Alex', 'OPS-01', 'Operator', 'Role Level', '1234567', 'Supervisor; Assessor', 'alex.smith@example.com'],
+            ['Surname, First', 'UNIT-01', 'Pilot', 'Rank', '4000001', 'Supervisor; Assessor', 'person@example.com'],
         ],
         settingsSection: 'staff-database',
     },
@@ -732,7 +732,7 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
         requiredHeaders: ['Name', 'Unit'],
         optionalHeaders: ['Rank', 'Personnel ID', 'Course Number', 'Course', 'Start Date', 'Master LMP'],
         exampleRows: [
-            ['Jones, Taylor', 'TRG-01', 'Learner Level', '7654321', '1', 'Initial Course', '2026-01-15', 'Primary LMP'],
+            ['Surname, First', 'UNIT-02', 'Rank', '4000002', '1', 'Course Name', '2026-01-15', 'Primary LMP'],
         ],
         settingsSection: 'trainee-database',
     },
@@ -2850,7 +2850,7 @@ const InitialSetupWizard: React.FC<{
             : formatWizardLocationRows([activeWizardLocationRow]) || 'LOC1 | LOC | Home Location',
     ).length));
     const [unitDraft, setUnitDraft] = useState({
-        code: String(currentUnit?.code || unitCode || 'UNIT-A'),
+        code: String(currentUnit?.code || unitCode || 'UNIT-01'),
         name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
         locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
         unitType: String(currentUnit?.unitType || ''),
@@ -2905,7 +2905,7 @@ const InitialSetupWizard: React.FC<{
         minGapBetweenEventsMinutes: '0',
     });
     const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
-    const [staffDraft, setStaffDraft] = useState('Smith, Alex | UNIT-A | Pilot | PIC');
+    const [staffDraft, setStaffDraft] = useState('Surname, First | UNIT-01 | Pilot | Qualification');
     const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = useState('Course 1');
     const [traineeCourseInputRows, setTraineeCourseInputRows] = useState<string[]>(() => ['Course 1']);
     const [traineeDraft, setTraineeDraft] = useState('');
@@ -3223,7 +3223,7 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         setUnitDraft({
-            code: String(currentUnit?.code || unitCode || 'UNIT-A'),
+            code: String(currentUnit?.code || unitCode || 'UNIT-01'),
             name: String(currentUnit?.name || currentUnit?.code || unitCode || 'Unit'),
             locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ''),
             unitType: String(currentUnit?.unitType || ''),
@@ -4516,11 +4516,11 @@ const InitialSetupWizard: React.FC<{
                             </button>
                         </div>
                         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                            {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Smith')}
-                            {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'Alex')}
-                            {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-A', `staff-unit-${index}`)}
+                            {wizardField('Surname', row.surname || '', (value) => updateStaffRow(index, 'surname', value), undefined, 'Surname')}
+                            {wizardField('Given names', row.givenNames || '', (value) => updateStaffRow(index, 'givenNames', value), undefined, 'First')}
+                            {wizardDataListField('Unit', row.unit || '', (value) => updateStaffRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-01', `staff-unit-${index}`)}
                             {wizardField('Position', row.position || '', (value) => updateStaffRow(index, 'position', value), undefined, 'Pilot')}
-                            {wizardField('Qualifications', row.qualifications || '', (value) => updateStaffRow(index, 'qualifications', value), undefined, 'PIC')}
+                            {wizardField('Qualifications', row.qualifications || '', (value) => updateStaffRow(index, 'qualifications', value), undefined, 'Qualification')}
                         </div>
                     </div>
                 ))}
@@ -4717,11 +4717,11 @@ const InitialSetupWizard: React.FC<{
                             </button>
                         </div>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            {wizardField('Surname', row.surname || '', (value) => updateTraineeRow(index, 'surname', value), undefined, 'Jones')}
-                            {wizardField('Given names', row.givenNames || '', (value) => updateTraineeRow(index, 'givenNames', value), undefined, 'Taylor')}
-                            {wizardDataListField('Unit', row.unit || '', (value) => updateTraineeRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-A', `trainee-unit-${index}`)}
-                            {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'Learner Level')}
-                            {wizardField('Personnel ID', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '7654321')}
+                            {wizardField('Surname', row.surname || '', (value) => updateTraineeRow(index, 'surname', value), undefined, 'Surname')}
+                            {wizardField('Given names', row.givenNames || '', (value) => updateTraineeRow(index, 'givenNames', value), undefined, 'First')}
+                            {wizardDataListField('Unit', row.unit || '', (value) => updateTraineeRow(index, 'unit', value.toUpperCase()), unitOptions, unitDraft.code || 'UNIT-01', `trainee-unit-${index}`)}
+                            {wizardField('Rank', row.rank || '', (value) => updateTraineeRow(index, 'rank', value), undefined, 'Rank')}
+                            {wizardField('Personnel ID', row.pmkeys || '', (value) => updateTraineeRow(index, 'pmkeys', value), undefined, '4000002')}
                             {wizardField('Course number', row.courseNumber || '', (value) => updateTraineeRow(index, 'courseNumber', value), undefined, '1')}
                             {wizardDataListField('Master LMP', row.masterLmp || '', (value) => updateTraineeRow(index, 'masterLmp', value), courseOptions, trainingDraft.lmpCode || 'Primary LMP', `trainee-master-lmp-${index}`)}
                             {wizardField('Start date', row.startDate || '', (value) => updateTraineeRow(index, 'startDate', value), undefined, '2026-01-15')}
@@ -4856,7 +4856,7 @@ const InitialSetupWizard: React.FC<{
                     <div key={`sharing-row-${index}`} className="grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[150px_110px_minmax(0,1fr)]">
                         {wizardField('Sharing type', row.type || '', (value) => updateRow(index, 'type', value), ['Resource sharing', 'Staff sharing'])}
                         {wizardField('Enabled', row.enabled || 'Off', (value) => updateRow(index, 'enabled', value), ['Off', 'On'])}
-                        {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, 'UNIT-A, UNIT-B', `sharing-units-${index}`)}
+                        {wizardDataListField('Shared with units', row.units || '', (value) => updateRow(index, 'units', value.toUpperCase()), unitOptions, 'UNIT-01, UNIT-02', `sharing-units-${index}`)}
                         <div className="md:col-span-3">
                             {wizardField('Consequence / plain English note', row.consequence || '', (value) => updateRow(index, 'consequence', value), undefined, 'Unit can borrow aircraft capacity from listed units.')}
                         </div>
@@ -6431,7 +6431,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>List each unit you want to configure in this setup run. Use one line per unit. Format: <strong>Unit code | Unit name</strong>.</p>,
                 <div>
-                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, 'OPS-01 | Operations Unit\nTRG-01 | Training Unit', true)}
+                    {wizardTextArea('Units to set up today', unitsTodayDraft, setUnitsTodayDraft, 'UNIT-01 | Unit Name\nUNIT-02 | Training Unit Name', true)}
                     <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className={wizardLabelClass}>Parent organisation for each unit</p>
                         <p className="mt-1 text-xs leading-5 text-slate-600">
@@ -6538,7 +6538,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Now we will set up the first unit using the app. What is the unit code and name?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-A')}
+                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
                     {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
                 </div>,
             );
@@ -6547,7 +6547,7 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies.</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-A')}
+                    {wizardField('Unit code', unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), undefined, 'UNIT-01')}
                     {wizardField('Unit name', unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), undefined, 'Unit')}
                     {wizardDataListField('Home location', unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, 'LOC1')}
                     {wizardField('Unit type', unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions)}

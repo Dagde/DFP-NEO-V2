@@ -12,13 +12,13 @@ export const downloadOrganisationStructureTemplateFile = (
 ) => {
   const headers = ['Level', 'Level Type', 'Name', 'Parent', 'Notes'];
   const rows = [
-    ['0', 'Organisation', 'Example Organisation', '', 'Top level organisation'],
-    ['1', 'Division', 'Division A', 'Example Organisation', 'First organisation layer below the top level'],
-    ['2', 'Group', 'Group A', 'Division A', 'Second organisation layer'],
-    ['3', 'Department', 'Department A', 'Group A', 'Add as many levels as needed before units'],
-    ['4', 'Team', 'Team A', 'Department A', 'Optional deeper level'],
-    ['5', 'Section', 'Section A', 'Team A', 'Optional deeper level'],
-    ['6', 'Element', 'Element A', 'Section A', 'Optional deeper level'],
+    ['0', 'Organisation', 'Organisation', '', 'Top level organisation'],
+    ['1', 'Division', 'Division', 'Organisation', 'First organisation layer below the top level'],
+    ['2', 'Group', 'Group', 'Division', 'Second organisation layer'],
+    ['3', 'Department', 'Department', 'Group', 'Add as many levels as needed before units'],
+    ['4', 'Team', 'Team', 'Department', 'Optional deeper level'],
+    ['5', 'Section', 'Section', 'Team', 'Optional deeper level'],
+    ['6', 'Element', 'Element', 'Section', 'Optional deeper level'],
   ];
   const tableRows = [
     `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join('')}</tr>`,

@@ -10041,13 +10041,13 @@ const escapeOrganisationTemplateHtml = (value) => String(value ?? "").replace(/&
 const downloadOrganisationStructureTemplateFile = (fileName = "DFP_NEO_Organisation_Structure_Template.xls") => {
   const headers = ["Level", "Level Type", "Name", "Parent", "Notes"];
   const rows = [
-    ["0", "Organisation", "Example Organisation", "", "Top level organisation"],
-    ["1", "Division", "Division A", "Example Organisation", "First organisation layer below the top level"],
-    ["2", "Group", "Group A", "Division A", "Second organisation layer"],
-    ["3", "Department", "Department A", "Group A", "Add as many levels as needed before units"],
-    ["4", "Team", "Team A", "Department A", "Optional deeper level"],
-    ["5", "Section", "Section A", "Team A", "Optional deeper level"],
-    ["6", "Element", "Element A", "Section A", "Optional deeper level"]
+    ["0", "Organisation", "Organisation", "", "Top level organisation"],
+    ["1", "Division", "Division", "Organisation", "First organisation layer below the top level"],
+    ["2", "Group", "Group", "Division", "Second organisation layer"],
+    ["3", "Department", "Department", "Group", "Add as many levels as needed before units"],
+    ["4", "Team", "Team", "Department", "Optional deeper level"],
+    ["5", "Section", "Section", "Team", "Optional deeper level"],
+    ["6", "Element", "Element", "Section", "Optional deeper level"]
   ];
   const tableRows = [
     `<tr>${headers.map((header) => `<th>${escapeOrganisationTemplateHtml(header)}</th>`).join("")}</tr>`,
@@ -10476,9 +10476,9 @@ const initialSetupTemplates = [
     requiredHeaders: ["Level", "Name"],
     optionalHeaders: ["Parent", "Notes"],
     exampleRows: [
-      ["0", "Example Organisation", "", "Top level organisation"],
-      ["1", "Division A", "Example Organisation", "Branch, command, region, or division"],
-      ["2", "Group A", "Division A", "Operating group, department, wing, or team"]
+      ["0", "Organisation", "", "Top level organisation"],
+      ["1", "Division", "Organisation", "Branch, command, region, or division"],
+      ["2", "Group", "Division", "Operating group, department, wing, or team"]
     ],
     settingsSection: "platform-organisation-locations",
     focusSubsectionId: "platform-organisation-structure"
@@ -10503,8 +10503,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Unit Code", "Unit Name", "Location", "Unit Type", "Operating Model"],
     optionalHeaders: ["Parent Organisation", "Trainees", "Notes"],
     exampleRows: [
-      ["OPS-01", "Operations Unit", "HOME", "Operational", "Pooled Crew Model", "Example Organisation / Operations Division / Operations Group", "No", ""],
-      ["TRG-01", "Training Unit", "TRAIN", "Training", "Flight School Model", "Example Organisation / Training Division / Training Group", "Yes", ""]
+      ["UNIT-01", "Unit Name", "LOC", "Operational", "Pooled Crew Model", "Organisation / Division / Group", "No", ""],
+      ["UNIT-02", "Training Unit Name", "LOC", "Training", "Flight School Model", "Organisation / Training Division / Training Group", "Yes", ""]
     ],
     settingsSection: "platform-units"
   },
@@ -10515,7 +10515,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Pool Name", "Aircraft Type", "Unit", "Location", "Aircraft", "Sim", "Trainer", "Standby", "Ground"],
     optionalHeaders: ["Notes"],
     exampleRows: [
-      ["Primary DFP Row Set", "Primary Resource", "OPS-01", "HOME", "4", "0", "0", "1", "0", ""]
+      ["Primary DFP Row Set", "Primary Resource", "UNIT-01", "LOC", "4", "0", "0", "1", "0", ""]
     ],
     settingsSection: "platform-resource-pools"
   },
@@ -10526,7 +10526,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit", "Role"],
     optionalHeaders: ["Rank", "Personnel ID", "Qualifications", "Email"],
     exampleRows: [
-      ["Smith, Alex", "OPS-01", "Operator", "Role Level", "1234567", "Supervisor; Assessor", "alex.smith@example.com"]
+      ["Surname, First", "UNIT-01", "Pilot", "Rank", "4000001", "Supervisor; Assessor", "person@example.com"]
     ],
     settingsSection: "staff-database"
   },
@@ -10537,7 +10537,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit"],
     optionalHeaders: ["Rank", "Personnel ID", "Course Number", "Course", "Start Date", "Master LMP"],
     exampleRows: [
-      ["Jones, Taylor", "TRG-01", "Learner Level", "7654321", "1", "Initial Course", "2026-01-15", "Primary LMP"]
+      ["Surname, First", "UNIT-02", "Rank", "4000002", "1", "Course Name", "2026-01-15", "Primary LMP"]
     ],
     settingsSection: "trainee-database"
   },
@@ -12072,7 +12072,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     activeLocations.length > 0 ? activeLocations.map((location) => `${location.code || ""} | ${location.iataCode || location.settings?.iataCode || ""} | ${location.name || location.code || ""}`).join("\n") : formatWizardLocationRows([activeWizardLocationRow]) || "LOC1 | LOC | Home Location"
   ).length));
   const [unitDraft, setUnitDraft] = reactExports.useState({
-    code: String(currentUnit?.code || unitCode || "UNIT-A"),
+    code: String(currentUnit?.code || unitCode || "UNIT-01"),
     name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit"),
     locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
     unitType: String(currentUnit?.unitType || ""),
@@ -12127,7 +12127,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
     minGapBetweenEventsMinutes: "0"
   });
   const buildRulesDraftText = formatWizardBuildRulesDraft(buildRulesDraft);
-  const [staffDraft, setStaffDraft] = reactExports.useState("Smith, Alex | UNIT-A | Pilot | PIC");
+  const [staffDraft, setStaffDraft] = reactExports.useState("Surname, First | UNIT-01 | Pilot | Qualification");
   const [traineeCourseOptionsDraft, setTraineeCourseOptionsDraft] = reactExports.useState("Course 1");
   const [traineeCourseInputRows, setTraineeCourseInputRows] = reactExports.useState(() => ["Course 1"]);
   const [traineeDraft, setTraineeDraft] = reactExports.useState("");
@@ -12391,7 +12391,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
   }, [locationsTodayDraft]);
   reactExports.useEffect(() => {
     setUnitDraft({
-      code: String(currentUnit?.code || unitCode || "UNIT-A"),
+      code: String(currentUnit?.code || unitCode || "UNIT-01"),
       name: String(currentUnit?.name || currentUnit?.code || unitCode || "Unit"),
       locationCode: String(currentUnit?.locationCode || activeWizardLocationCode || currentLocation?.code || ""),
       unitType: String(currentUnit?.unitType || ""),
@@ -13543,11 +13543,11 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           }, children: "Delete" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-2 xl:grid-cols-3", children: [
-          wizardField("Surname", row.surname || "", (value) => updateStaffRow(index, "surname", value), void 0, "Smith"),
-          wizardField("Given names", row.givenNames || "", (value) => updateStaffRow(index, "givenNames", value), void 0, "Alex"),
-          wizardDataListField("Unit", row.unit || "", (value) => updateStaffRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-A", `staff-unit-${index}`),
+          wizardField("Surname", row.surname || "", (value) => updateStaffRow(index, "surname", value), void 0, "Surname"),
+          wizardField("Given names", row.givenNames || "", (value) => updateStaffRow(index, "givenNames", value), void 0, "First"),
+          wizardDataListField("Unit", row.unit || "", (value) => updateStaffRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-01", `staff-unit-${index}`),
           wizardField("Position", row.position || "", (value) => updateStaffRow(index, "position", value), void 0, "Pilot"),
-          wizardField("Qualifications", row.qualifications || "", (value) => updateStaffRow(index, "qualifications", value), void 0, "PIC")
+          wizardField("Qualifications", row.qualifications || "", (value) => updateStaffRow(index, "qualifications", value), void 0, "Qualification")
         ] })
       ] }, `staff-row-${index}`)),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -13719,11 +13719,11 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           }, children: "Delete" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-4", children: [
-          wizardField("Surname", row.surname || "", (value) => updateTraineeRow(index, "surname", value), void 0, "Jones"),
-          wizardField("Given names", row.givenNames || "", (value) => updateTraineeRow(index, "givenNames", value), void 0, "Taylor"),
-          wizardDataListField("Unit", row.unit || "", (value) => updateTraineeRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-A", `trainee-unit-${index}`),
-          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "Learner Level"),
-          wizardField("Personnel ID", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "7654321"),
+          wizardField("Surname", row.surname || "", (value) => updateTraineeRow(index, "surname", value), void 0, "Surname"),
+          wizardField("Given names", row.givenNames || "", (value) => updateTraineeRow(index, "givenNames", value), void 0, "First"),
+          wizardDataListField("Unit", row.unit || "", (value) => updateTraineeRow(index, "unit", value.toUpperCase()), unitOptions, unitDraft.code || "UNIT-01", `trainee-unit-${index}`),
+          wizardField("Rank", row.rank || "", (value) => updateTraineeRow(index, "rank", value), void 0, "Rank"),
+          wizardField("Personnel ID", row.pmkeys || "", (value) => updateTraineeRow(index, "pmkeys", value), void 0, "4000002"),
           wizardField("Course number", row.courseNumber || "", (value) => updateTraineeRow(index, "courseNumber", value), void 0, "1"),
           wizardDataListField("Master LMP", row.masterLmp || "", (value) => updateTraineeRow(index, "masterLmp", value), courseOptions, trainingDraft.lmpCode || "Primary LMP", `trainee-master-lmp-${index}`),
           wizardField("Start date", row.startDate || "", (value) => updateTraineeRow(index, "startDate", value), void 0, "2026-01-15")
@@ -13836,7 +13836,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       editableRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-0 gap-2 rounded-lg border border-slate-300 bg-white p-3 md:grid-cols-2 xl:grid-cols-[150px_110px_minmax(0,1fr)]", children: [
         wizardField("Sharing type", row.type || "", (value) => updateRow(index, "type", value), ["Resource sharing", "Staff sharing"]),
         wizardField("Enabled", row.enabled || "Off", (value) => updateRow(index, "enabled", value), ["Off", "On"]),
-        wizardDataListField("Shared with units", row.units || "", (value) => updateRow(index, "units", value.toUpperCase()), unitOptions, "UNIT-A, UNIT-B", `sharing-units-${index}`),
+        wizardDataListField("Shared with units", row.units || "", (value) => updateRow(index, "units", value.toUpperCase()), unitOptions, "UNIT-01, UNIT-02", `sharing-units-${index}`),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: wizardField("Consequence / plain English note", row.consequence || "", (value) => updateRow(index, "consequence", value), void 0, "Unit can borrow aircraft capacity from listed units.") })
       ] }, `sharing-row-${index}`))
     ] });
@@ -15257,7 +15257,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
           "."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "OPS-01 | Operations Unit\nTRG-01 | Training Unit", true),
+          wizardTextArea("Units to set up today", unitsTodayDraft, setUnitsTodayDraft, "UNIT-01 | Unit Name\nUNIT-02 | Training Unit Name", true),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: wizardLabelClass, children: "Parent organisation for each unit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-5 text-slate-600", children: "Choose the immediate parent each unit sits under in the organisation tree." }),
@@ -15346,7 +15346,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Now we will set up the first unit using the app. What is the unit code and name?" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-A"),
+          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-01"),
           wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit")
         ] })
       );
@@ -15355,7 +15355,7 @@ const InitialSetupWizard = ({ platformConfig: platformConfig2, unitCode, locatio
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Set the identity and operating model for the first unit. The operating model is important because it controls which scheduler logic applies." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-A"),
+          wizardField("Unit code", unitDraft.code, (value) => setUnitDraft((draft) => ({ ...draft, code: value.toUpperCase() })), void 0, "UNIT-01"),
           wizardField("Unit name", unitDraft.name, (value) => setUnitDraft((draft) => ({ ...draft, name: value })), void 0, "Unit"),
           wizardDataListField("Home location", unitDraft.locationCode, (value) => setUnitDraft((draft) => ({ ...draft, locationCode: value.toUpperCase() })), wizardLocationIcaoOptions, "LOC1"),
           wizardField("Unit type", unitDraft.unitType, (value) => setUnitDraft((draft) => ({ ...draft, unitType: value })), unitTypeOptions),
@@ -73815,7 +73815,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                 value: personnelDisplaySettings2.instructorLabel,
                 disabled: !canEditRankTerminology,
                 onCommit: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
-                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings2.instructorLabel || "Instructor"}: Smith, Alex. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
+                info: `The instructor display term is the duty label users see on schedules, reports and event details. The qualification label is what appears on a person's profile as something they hold. They are linked, but they are not automatically the same because one describes the duty being performed and the other describes the person's qualification. Example: a profile can show Qualification: ${linkedInstructorQualificationLabel}, while a report says ${personnelDisplaySettings2.instructorLabel || "Instructor"}: Surname, First. If your organisation wants both labels to match, also rename the linked qualification in Personnel Qualifications.`
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
