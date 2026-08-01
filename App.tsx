@@ -44043,7 +44043,7 @@ appliedUpdates.forEach(update => {
                                             event: eventId,
                                             score: overallScore,
                                             date: assessment.date || new Date().toISOString().split('T')[0],
-                                            instructor: assessment.instructorName || assessment.dcoResult || 'DCO',
+                                            instructor: assessment.instructorName || '',
                                             notes: assessment.overallComments || '',
                                         }),
                                     })
@@ -44059,7 +44059,7 @@ appliedUpdates.forEach(update => {
                                                     event: eventId,
                                                     score: overallScore as 0 | 1 | 2 | 3 | 4 | 5,
                                                     date: assessment.date || '',
-                                                    instructor: assessment.instructorName || 'DCO',
+                                                    instructor: assessment.instructorName || '',
                                                     notes: '',
                                                     details: [],
                                                 };

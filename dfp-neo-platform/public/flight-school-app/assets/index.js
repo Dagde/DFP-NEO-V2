@@ -121663,7 +121663,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                         event: eventId,
                         score: overallScore,
                         date: assessment.date || (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
-                        instructor: assessment.instructorName || assessment.dcoResult || "DCO",
+                        instructor: assessment.instructorName || "",
                         notes: assessment.overallComments || ""
                       })
                     }).then((res) => res.json()).then((data) => {
@@ -121675,7 +121675,7 @@ ${err instanceof Error ? err.message : String(err)}`, `${selectedTrainingReportN
                             event: eventId,
                             score: overallScore,
                             date: assessment.date || "",
-                            instructor: assessment.instructorName || "DCO",
+                            instructor: assessment.instructorName || "",
                             notes: "",
                             details: []
                           };
