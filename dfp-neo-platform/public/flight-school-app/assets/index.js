@@ -10482,8 +10482,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Code", "Name", "Timezone"],
     optionalHeaders: ["Training Areas", "Notes"],
     exampleRows: [
-      ["HOME", "Home Base", "UTC", "Area A; Area B", "Primary operating location"],
-      ["TRAIN", "Training Base", "UTC", "Area 1; Area 2", "Training location"]
+      ["LOC-01", "Location Name", "UTC", "Area 1; Area 2", "Operating location"],
+      ["LOC-02", "Second Location Name", "UTC", "Area 3; Area 4", "Additional operating location"]
     ],
     settingsSection: "platform-organisation-locations",
     focusSubsectionId: "platform-locations"
@@ -10495,8 +10495,8 @@ const initialSetupTemplates = [
     requiredHeaders: ["Unit Code", "Unit Name", "Location", "Unit Type", "Operating Model"],
     optionalHeaders: ["Parent Organisation", "Trainees", "Notes"],
     exampleRows: [
-      ["UNIT-01", "Unit Name", "LOC", "Operational", "Pooled Crew Model", "Organisation / Organisation Level 1 / Organisation Level 2", "No", ""],
-      ["UNIT-02", "Training Unit Name", "LOC", "Training", "Flight School Model", "Organisation / Organisation Level 1 / Organisation Level 2", "Yes", ""]
+      ["UNIT-01", "Unit Name", "LOC-01", "Operational", "Pooled Crew Model", "Organisation / Organisation Level 1 / Organisation Level 2", "No", ""],
+      ["UNIT-02", "Training Unit Name", "LOC-01", "Training", "Flight School Model", "Organisation / Organisation Level 1 / Organisation Level 2", "Yes", ""]
     ],
     settingsSection: "platform-units"
   },
@@ -10507,7 +10507,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Pool Name", "Aircraft Type", "Unit", "Location", "Aircraft", "Sim", "Trainer", "Standby", "Ground"],
     optionalHeaders: ["Notes"],
     exampleRows: [
-      ["DFP Resource Rows", "Aircraft Type", "UNIT-01", "LOC", "4", "0", "0", "1", "0", ""]
+      ["DFP Resource Rows", "Aircraft Type", "UNIT-01", "LOC-01", "4", "0", "0", "1", "0", ""]
     ],
     settingsSection: "platform-resource-pools"
   },
@@ -10518,7 +10518,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit", "Role"],
     optionalHeaders: ["Rank", "Personnel ID", "Qualifications", "Email"],
     exampleRows: [
-      ["Surname, First", "UNIT-01", "Pilot", "Rank", "4000001", "Supervisor; Assessor", "person@example.com"]
+      ["Surname, First", "UNIT-01", "Role", "Rank", "4000001", "Qualification 1; Qualification 2", "person@example.com"]
     ],
     settingsSection: "staff-database"
   },
@@ -10529,7 +10529,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Name", "Unit"],
     optionalHeaders: ["Rank", "Personnel ID", "Course Number", "Course", "Start Date", "Master LMP"],
     exampleRows: [
-      ["Surname, First", "UNIT-02", "Rank", "4000002", "1", "Course Name", "2026-01-15", "Master LMP"]
+      ["Surname, First", "UNIT-02", "Rank", "4000002", "1", "Course Name", "2026-01-15", "Master LMP Name"]
     ],
     settingsSection: "trainee-database"
   },
@@ -10540,7 +10540,7 @@ const initialSetupTemplates = [
     requiredHeaders: ["Master LMP", "Event Code", "Event Title", "Type", "Duration Minutes"],
     optionalHeaders: ["Aircraft Type", "Crew Required", "Pre Flight Minutes", "Post Flight Minutes"],
     exampleRows: [
-      ["Master LMP", "EVENT-001", "Training event", "Flight", "90", "Aircraft Type", "Crew Role 1, Crew Role 2", "90", "60"]
+      ["Master LMP Name", "EVENT-001", "Training event", "Flight", "90", "Aircraft Type", "Crew Role 1, Crew Role 2", "90", "60"]
     ],
     settingsSection: "platform-master-lmp-access"
   },
