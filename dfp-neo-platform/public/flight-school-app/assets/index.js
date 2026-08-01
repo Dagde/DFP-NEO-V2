@@ -90696,6 +90696,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildDebugLog = (...args) => {
     if (neoBuildVerboseDiagnostics) console.log(...args);
   };
+  const isDetailedNeoBuildDiagnosticsEnabled = neoBuildVerboseDiagnostics || neoBuildLiveDiagnostics;
+  const getNeoBuildTraceLimit = (normalLimit, detailedLimit) => isDetailedNeoBuildDiagnosticsEnabled ? detailedLimit : normalLimit;
   let _overlapRejCount = 0;
   const _traineeTotal = config.trainees.length;
   const _traineeDb = config.trainees.filter((t) => t._dataSource === "database").length;
@@ -93831,6 +93833,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const forcedRemedialInstructorConflicts = [];
   const traceMandatoryRemedial = (bucket, entry, limit = 1200) => {
     const list = neoBuildDiag.mandatoryRemedialFlights[bucket];
+    limit = getNeoBuildTraceLimit(Math.min(limit, 300), limit);
     if (list.length >= limit) return;
     list.push({
       sequence: list.length + 1,
@@ -93840,6 +93843,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const traceRemedialMovement = (bucket, entry, limit = 1500) => {
     const list = neoBuildDiag.remedialDataMovement[bucket];
+    limit = getNeoBuildTraceLimit(Math.min(limit, 300), limit);
     if (list.length >= limit) return;
     list.push({
       sequence: list.length + 1,
@@ -93849,6 +93853,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const traceDayFlightGap = (bucket, entry, limit = 8e3) => {
     const list = neoBuildDiag.dayFlightGapDiagnostics[bucket];
+    limit = getNeoBuildTraceLimit(Math.min(limit, 600), limit);
     if (list.length >= limit) return;
     list.push({
       sequence: list.length + 1,
@@ -93858,6 +93863,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const traceFormation = (bucket, entry, limit = 2e3) => {
     const list = neoBuildDiag.formationResourceDiagnostics[bucket];
+    limit = getNeoBuildTraceLimit(Math.min(limit, 300), limit);
     if (list.length >= limit) return;
     list.push({
       sequence: list.length + 1,
@@ -94759,6 +94765,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       coursePrioritiesCount: coursePriorities.length,
       coursePercentagesCount: coursePercentages.size
     };
+    if (!isDetailedNeoBuildDiagnosticsEnabled) return;
     try {
       localStorage.setItem("flight_school_priority_diag_report", JSON.stringify(neoBuildDiag.flightSchoolPriority));
     } catch (error) {
@@ -97378,6 +97385,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const pushAirCombatDiag = (bucket, entry, limit = 500) => {
     const diag = neoBuildDiag.airCombatPriority;
     if (!diag || !Array.isArray(diag[bucket])) return;
+    limit = getNeoBuildTraceLimit(Math.min(limit, 220), limit);
     diag[bucket].push(entry);
     if (diag[bucket].length > limit) diag[bucket] = diag[bucket].slice(-limit);
     if (bucket === "trainingAttempts") {
