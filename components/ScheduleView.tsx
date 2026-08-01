@@ -2193,7 +2193,7 @@ const OrganisationMyUnitSettings: React.FC<{
                         {standardMissionProfiles.length > 0 ? standardMissionProfiles.map((profile: any) => (
                             <div key={profile.id || profile.missionName} className="border-t border-white/10 first:border-t-0">
                                 <UnitSettingsField label="Short title" value={profile.shortTitle || profile.code || ''} onChange={(value) => updateStandardMissionProfile(profile, { shortTitle: value })} disabled={!canEdit} />
-                                <UnitSettingsField label="Template name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
+                                <UnitSettingsField label="Directed flight template name" value={profile.missionName || ''} onChange={(value) => updateStandardMissionProfile(profile, { missionName: value })} disabled={!canEdit} />
                                 <UnitSettingsField label="Aircraft type" value={profile.aircraftTypeCode || ''} onChange={(value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value })} disabled={!canEdit} />
                                 <UnitSettingsNumberField label="Duration minutes" value={Number(profile.durationMinutes ?? 0)} onChange={(value) => updateStandardMissionProfile(profile, { durationMinutes: value })} disabled={!canEdit} />
                             </div>

@@ -7159,7 +7159,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Template</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Flight Template</button>
             </div>
           ) : null}
         />
@@ -7195,7 +7195,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded border border-cyan-400/30 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{profile.shortTitle || 'TASK'}</span>
-                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Template'}</h4>
+                            <h4 className="text-base font-black text-white">{profile.missionName || 'Unnamed Directed Flight Template'}</h4>
                             <span className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-400">{profile.resourceType}</span>
                           </div>
                           <p className="mt-1 text-xs text-gray-500">{profile.description || 'No description entered.'}</p>
@@ -7213,12 +7213,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelClass}>
                             <div className={resourceSectionPanelHeaderClass}>
                               <div>
-                                <div className={resourceSectionPanelTitleClass}>Template Details</div>
+                                <div className={resourceSectionPanelTitleClass}>Directed Flight Details</div>
                                 <div className={resourceSectionPanelHintClass}>Name, short tile title and notes.</div>
                               </div>
                             </div>
                             <div className="grid gap-3 md:grid-cols-[1fr_150px]">
-                              <DraftField label="Template Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
+                              <DraftField label="Directed Flight Template Name" value={profile.missionName} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { missionName: value })} />
                               <DraftField label="Short Title" value={profile.shortTitle} disabled={!canEditSection('platform-standard-missions')} maxLength={8} onCommit={(value) => updateStandardMissionProfile(profile.id, { shortTitle: value.slice(0, 8).toUpperCase() })} />
                             </div>
                             <div className="mt-3">
