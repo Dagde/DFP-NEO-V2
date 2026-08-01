@@ -38761,7 +38761,7 @@ const TaskingRequestTable = ({
   ] });
 };
 const PrioritiesView = ({
-  school = "ESL",
+  school = "",
   coursePriorities,
   onUpdatePriorities,
   coursePercentages,

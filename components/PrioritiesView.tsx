@@ -968,7 +968,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
 
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
-  school = 'ESL',
+  school = '',
   coursePriorities, 
   onUpdatePriorities, 
   coursePercentages, 
