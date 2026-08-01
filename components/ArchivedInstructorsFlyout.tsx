@@ -51,8 +51,8 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
           onClick={e => e.stopPropagation()}
         >
           <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-lg">
-            <h2 id="archived-list-title" className="text-xl font-bold text-white">Archived Profiles</h2>
-            <button onClick={onClose} className="text-white hover:text-gray-300" aria-label="Close archived profiles list">
+            <h2 id="archived-list-title" className="text-xl font-bold text-white">Archived Staff</h2>
+            <button onClick={onClose} className="text-white hover:text-gray-300" aria-label="Close archived staff list">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -60,7 +60,7 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
           </div>
           <div className="p-6 flex-1 overflow-y-auto" aria-labelledby="archived-list-title">
             <div className="mb-4">
-              <label className="sr-only" htmlFor="archived-profile-search">Search archived profiles</label>
+              <label className="sr-only" htmlFor="archived-profile-search">Search archived staff</label>
               <input
                 id="archived-profile-search"
                 type="text"
@@ -98,7 +98,7 @@ const ArchivedInstructorsFlyout: React.FC<ArchivedInstructorsFlyoutProps> = ({
                 </ul>
             ) : (
                 <p className="text-gray-500 text-center italic py-8">
-                  {archivedInstructors.length > 0 ? 'No archived profiles match that search.' : 'No instructors have been archived.'}
+                  {archivedInstructors.length > 0 ? 'No archived staff match that search.' : 'No staff have been archived.'}
                 </p>
             )}
           </div>

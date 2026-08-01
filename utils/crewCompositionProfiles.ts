@@ -156,7 +156,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
   const currencyRows = Array.isArray(source.currencyProfiles) ? source.currencyProfiles : [];
   const currencyProfiles = currencyRows.map((row: any, index: number): CurrencyProfile => {
     const rawName = String(row?.name || row?.profileName || row?.label || '');
-    const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
+    const fallbackName = String(row?.currency || row?.event || `Currency Event ${index + 1}`).trim();
     const name = rawName.length > 0 ? rawName : fallbackName;
     const config = String(row?.config || row?.aircraftConfigId || 'ANY').trim() || 'ANY';
     return {

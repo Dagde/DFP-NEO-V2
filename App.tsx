@@ -35347,7 +35347,7 @@ const App: React.FC = () => {
 
             if (sameUnitCrews.length === 0) {
                 showDarkAlert(
-                    `${event.flightNumber || event.taskingName || 'Priority event'} has PIC ${picName}, but no same-unit crews are available to assign. Assign a crew in Build Planner or update the staff crew profiles before running NEO Build.`,
+                    `${event.flightNumber || event.taskingName || 'Priority event'} has PIC ${picName}, but no same-unit crews are available to assign. Assign a crew in Build Planner or update the staff crew assignments before running NEO Build.`,
                     'Crew Required',
                     'warning'
                 );

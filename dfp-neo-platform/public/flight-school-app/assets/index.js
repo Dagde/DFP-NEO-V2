@@ -4866,7 +4866,7 @@ const normaliseCrewCompositionSettings = (value) => {
   const currencyRows = Array.isArray(source.currencyProfiles) ? source.currencyProfiles : [];
   const currencyProfiles = currencyRows.map((row, index) => {
     const rawName = String(row?.name || row?.profileName || row?.label || "");
-    const fallbackName = String(row?.currency || row?.event || `Currency Profile ${index + 1}`).trim();
+    const fallbackName = String(row?.currency || row?.event || `Currency Event ${index + 1}`).trim();
     const name = rawName.length > 0 ? rawName : fallbackName;
     const config = String(row?.config || row?.aircraftConfigId || "ANY").trim() || "ANY";
     return {
@@ -53272,12 +53272,12 @@ const ArchivedInstructorsFlyout = ({
             onClick: (e) => e.stopPropagation(),
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 rounded-t-lg", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "archived-list-title", className: "text-xl font-bold text-white", children: "Archived Profiles" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close archived profiles list", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { id: "archived-list-title", className: "text-xl font-bold text-white", children: "Archived Staff" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close archived staff list", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 flex-1 overflow-y-auto", "aria-labelledby": "archived-list-title", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "sr-only", htmlFor: "archived-profile-search", children: "Search archived profiles" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "sr-only", htmlFor: "archived-profile-search", children: "Search archived staff" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
@@ -53314,7 +53314,7 @@ const ArchivedInstructorsFlyout = ({
                     ]
                   },
                   String(getArchiveIdentifier(instructor) || instructor.name)
-                )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: archivedInstructors.length > 0 ? "No archived profiles match that search." : "No instructors have been archived." })
+                )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center italic py-8", children: archivedInstructors.length > 0 ? "No archived staff match that search." : "No staff have been archived." })
               ] })
             ]
           }
@@ -114424,7 +114424,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       const sameUnitCrews = Array.from(crewGroups.values()).filter((group) => !eventUnit || group.unit === eventUnit).sort((left, right) => left.label.localeCompare(right.label, void 0, { numeric: true }));
       if (sameUnitCrews.length === 0) {
         showDarkAlert2(
-          `${event.flightNumber || event.taskingName || "Priority event"} has PIC ${picName}, but no same-unit crews are available to assign. Assign a crew in Build Planner or update the staff crew profiles before running NEO Build.`,
+          `${event.flightNumber || event.taskingName || "Priority event"} has PIC ${picName}, but no same-unit crews are available to assign. Assign a crew in Build Planner or update the staff crew assignments before running NEO Build.`,
           "Crew Required",
           "warning"
         );
