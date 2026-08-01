@@ -11506,7 +11506,7 @@ const OrganisationMyUnitSettings = ({ platformConfig: platformConfig2, unitCode,
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: profile.aircraftTypeCode || "", onChange: (value) => updateStandardMissionProfile(profile, { aircraftTypeCode: value }), disabled: true }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Duration minutes", value: Number(profile.durationMinutes ?? 0), onChange: (value) => updateStandardMissionProfile(profile, { durationMinutes: value }), disabled: true })
         ] }, profile.id || profile.missionName)) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Flight Templates", value: "No flight templates are configured for this unit.", muted: true }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build defaults are configured under Training & Standards.", action: settingsLink("sct-events", "Take me there"), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(UnitSettingsGroup, { title: "Continuation & Currency Events", description: "Request and build event templates are configured under Training & Standards.", action: settingsLink("sct-events", "Take me there"), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Source", value: "Training & Standards" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Events", value: "Continuation and currency event rows are edited in one place." })
         ] }),
@@ -66782,7 +66782,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
         "WARNING",
         "Locations",
         `${locationCode} daylight data incomplete`,
-        defaultProfile ? "The app can currently fall back to a system daylight profile for this known location, but the location should store its own latitude, longitude and IANA timezone for offline daylight calculations." : "Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.",
+        defaultProfile ? "The app can currently calculate daylight from a built-in backup profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations." : "Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.",
         `location-${locationCode}-solar`,
         void 0,
         { focusLocationCode: locationCode }
@@ -71918,7 +71918,7 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
         SectionHeader,
         {
           title: continuationCurrencyEventsLabel,
-          subtitle: "Continuation and currency event defaults. Each event stores crew, CONFIG and currency against the selected aircraft.",
+          subtitle: "Continuation and currency event templates. Each event stores crew, CONFIG and currency against the selected aircraft.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -75724,7 +75724,7 @@ const sectionDescriptions = {
   "scoring-matrix": "Configure report elements, grades and performance text",
   "training-report-template": "Configure report labels, grades and repeat rules",
   "currencies": "Manage currency expiry requirements",
-  "sct-events": "Continuation and currency event defaults",
+  "sct-events": "Configure continuation and currency event templates",
   "people-profile": "Select courses that NEO Build should leave out of schedule generation",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Set daily event limits and duty supervisor session limits",
@@ -75739,7 +75739,7 @@ const sectionDescriptions = {
   "organisation": "Fleet sharing and multi-unit configuration",
   "crew-composition": "Aircraft-specific crew roles, crew seats and alternate crew setups",
   "standard-missions": "Reusable flight setups with aircraft, crew, timing and callsign defaults",
-  "currency-profiles": "Continuation and currency event defaults",
+  "currency-profiles": "Configure continuation and currency event templates",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
   "platform-units": "Unit type, base ownership and operating status",

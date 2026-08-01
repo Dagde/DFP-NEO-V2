@@ -2196,7 +2196,7 @@ const OrganisationMyUnitSettings: React.FC<{
                             </div>
                         )) : <UnitSettingsReadRow label="Flight Templates" value="No flight templates are configured for this unit." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build defaults are configured under Training & Standards." action={settingsLink('sct-events', 'Take me there')}>
+                    <UnitSettingsGroup title="Continuation & Currency Events" description="Request and build event templates are configured under Training & Standards." action={settingsLink('sct-events', 'Take me there')}>
                         <UnitSettingsReadRow label="Source" value="Training & Standards" />
                         <UnitSettingsReadRow label="Events" value="Continuation and currency event rows are edited in one place." />
                     </UnitSettingsGroup>

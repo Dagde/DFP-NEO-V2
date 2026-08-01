@@ -1495,7 +1495,7 @@ const buildConfigurationHealth = (
         'Locations',
         `${locationCode} daylight data incomplete`,
         defaultProfile
-          ? 'The app can currently fall back to a system daylight profile for this known location, but the location should store its own latitude, longitude and IANA timezone for offline daylight calculations.'
+          ? 'The app can currently calculate daylight from a built-in backup profile, but this location should store its own latitude, longitude and IANA timezone for offline daylight calculations.'
           : 'Offline FL/LL calculation needs latitude, longitude and an IANA timezone for this location.',
         `location-${locationCode}-solar`,
         undefined,
@@ -7663,7 +7663,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-currency-profiles" className={getSectionClass('platform-currency-profiles')}>
         <SectionHeader
           title={continuationCurrencyEventsLabel}
-          subtitle="Continuation and currency event defaults. Each event stores crew, CONFIG and currency against the selected aircraft."
+          subtitle="Continuation and currency event templates. Each event stores crew, CONFIG and currency against the selected aircraft."
           action={canEdit ? (
             <button
               type="button"
