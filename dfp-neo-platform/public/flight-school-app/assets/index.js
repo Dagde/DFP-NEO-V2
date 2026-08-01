@@ -10838,8 +10838,8 @@ const parseWizardEditablePipeRows = (value, keys) => String(value || "").split(/
   }, {});
 }).filter((row) => Object.values(row).some((entry) => String(entry || "").trim()));
 const formatWizardEditablePipeRows = (rows, keys) => rows.filter((row) => keys.some((key) => String(row[key] || "").trim())).map((row) => keys.map((key) => String(row[key] || "")).join("|")).join("\n");
-const parseWizardTrainingReportRows = (value) => parseWizardPipeRows(value, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "demoGrade", "passLabel", "failLabel"]);
-const formatWizardTrainingReportRows = (rows) => formatWizardPipeRows(rows, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "demoGrade", "passLabel", "failLabel"]);
+const parseWizardTrainingReportRows = (value) => parseWizardPipeRows(value, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "noGradeOption", "passLabel", "failLabel"]);
+const formatWizardTrainingReportRows = (rows) => formatWizardPipeRows(rows, ["genericName", "organisationName", "gradeMin", "gradeMax", "showNumbers", "noGradeOption", "passLabel", "failLabel"]);
 const parseWizardRankRows = (value) => parseWizardPipeRows(value, ["order", "ranks", "notes"]);
 const formatWizardRankRows = (rows) => formatWizardPipeRows(rows, ["order", "ranks", "notes"]);
 const parseWizardSharingRows = (value) => parseWizardPipeRows(value, ["type", "enabled", "units", "consequence"]);
@@ -13766,7 +13766,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   };
   const renderTrainingRecordsEditor = () => {
     const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-    const row = rows[0] || { genericName: "Training Report", organisationName: "Assessment Form", gradeMin: "0", gradeMax: "5", showNumbers: "Yes", demoGrade: "No", passLabel: "Satisfactory", failLabel: "Unsatisfactory" };
+    const row = rows[0] || { genericName: "Training Report", organisationName: "Assessment Form", gradeMin: "0", gradeMax: "5", showNumbers: "Yes", noGradeOption: "No", passLabel: "Satisfactory", failLabel: "Unsatisfactory" };
     const updateRow = (field, value) => {
       setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
     };
@@ -13778,7 +13778,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         wizardField("Lowest grade", row.gradeMin, (value) => updateRow("gradeMin", value), void 0, "0"),
         wizardField("Highest grade", row.gradeMax, (value) => updateRow("gradeMax", value), void 0, "5"),
         wizardField("Show grade numbers", row.showNumbers, (value) => updateRow("showNumbers", value), ["Yes", "No"]),
-        wizardField("Include No Grade option", row.demoGrade, (value) => updateRow("demoGrade", value), ["No", "Yes"]),
+        wizardField("Include No Grade option", row.noGradeOption, (value) => updateRow("noGradeOption", value), ["No", "Yes"]),
         wizardField("Satisfactory label", row.passLabel, (value) => updateRow("passLabel", value), void 0, "Satisfactory"),
         wizardField("Unsatisfactory label", row.failLabel, (value) => updateRow("failLabel", value), void 0, "Unsatisfactory")
       ] })

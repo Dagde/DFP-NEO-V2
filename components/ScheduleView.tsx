@@ -1135,13 +1135,13 @@ const parseWizardTrainingReportRows = (value: string) => parseWizardPipeRows<{
     gradeMin: string;
     gradeMax: string;
     showNumbers: string;
-    demoGrade: string;
+    noGradeOption: string;
     passLabel: string;
     failLabel: string;
-}>(value, ['genericName', 'organisationName', 'gradeMin', 'gradeMax', 'showNumbers', 'demoGrade', 'passLabel', 'failLabel']);
+}>(value, ['genericName', 'organisationName', 'gradeMin', 'gradeMax', 'showNumbers', 'noGradeOption', 'passLabel', 'failLabel']);
 
 const formatWizardTrainingReportRows = (rows: ReturnType<typeof parseWizardTrainingReportRows>) => (
-    formatWizardPipeRows(rows, ['genericName', 'organisationName', 'gradeMin', 'gradeMax', 'showNumbers', 'demoGrade', 'passLabel', 'failLabel'])
+    formatWizardPipeRows(rows, ['genericName', 'organisationName', 'gradeMin', 'gradeMax', 'showNumbers', 'noGradeOption', 'passLabel', 'failLabel'])
 );
 
 const parseWizardRankRows = (value: string) => parseWizardPipeRows<{ order: string; ranks: string; notes: string }>(value, ['order', 'ranks', 'notes']);
@@ -4759,7 +4759,7 @@ const InitialSetupWizard: React.FC<{
     };
     const renderTrainingRecordsEditor = () => {
         const rows = parseWizardTrainingReportRows(trainingRecordsDraft);
-        const row = rows[0] || { genericName: 'Training Report', organisationName: 'Assessment Form', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', demoGrade: 'No', passLabel: 'Satisfactory', failLabel: 'Unsatisfactory' };
+        const row = rows[0] || { genericName: 'Training Report', organisationName: 'Assessment Form', gradeMin: '0', gradeMax: '5', showNumbers: 'Yes', noGradeOption: 'No', passLabel: 'Satisfactory', failLabel: 'Unsatisfactory' };
         const updateRow = (field: keyof typeof row, value: string) => {
             setTrainingRecordsDraft(formatWizardTrainingReportRows([{ ...row, [field]: value }]));
         };
@@ -4774,7 +4774,7 @@ const InitialSetupWizard: React.FC<{
                     {wizardField('Lowest grade', row.gradeMin, (value) => updateRow('gradeMin', value), undefined, '0')}
                     {wizardField('Highest grade', row.gradeMax, (value) => updateRow('gradeMax', value), undefined, '5')}
                     {wizardField('Show grade numbers', row.showNumbers, (value) => updateRow('showNumbers', value), ['Yes', 'No'])}
-                    {wizardField('Include No Grade option', row.demoGrade, (value) => updateRow('demoGrade', value), ['No', 'Yes'])}
+                    {wizardField('Include No Grade option', row.noGradeOption, (value) => updateRow('noGradeOption', value), ['No', 'Yes'])}
                     {wizardField('Satisfactory label', row.passLabel, (value) => updateRow('passLabel', value), undefined, 'Satisfactory')}
                     {wizardField('Unsatisfactory label', row.failLabel, (value) => updateRow('failLabel', value), undefined, 'Unsatisfactory')}
                 </div>
