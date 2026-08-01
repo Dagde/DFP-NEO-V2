@@ -72096,8 +72096,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Aircraft Types & Resource Pools",
-          subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply aircraft type and resource pool changes, then return this section to read-only mode." : "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.",
+          title: "Aircraft Types & DFP Resource Rows",
+          subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply aircraft type and DFP resource row changes, then return this section to read-only mode." : "Aircraft type defines capability; DFP resource rows define the aircraft, simulator, procedural trainer, standby and ground rows shown on the DFP. Click Edit before making changes.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -72184,13 +72184,13 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Capability, category and crew-seat rules." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Resource Pools" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "DFP Resource Rows" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: config.resourcePools.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared DFP resources." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared DFP row sets." })
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 pb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20", role: "tablist", "aria-label": "Aircraft and resource pool sections", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20", role: "tablist", "aria-label": "Aircraft and DFP resource row sections", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -72218,10 +72218,10 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
               className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Resource Pools" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DFP Resource Rows" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100", children: config.resourcePools.length })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Resources, labels and DFP rows" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Rows, labels and resource ownership" })
               ]
             }
           )
@@ -72352,8 +72352,8 @@ This removes it from Aircraft & Resource Pools. Press Save in this section to ap
           })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Resource Pools" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map resources to units, labels, aircraft numbering and DFP resource rows." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "DFP Resource Rows" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map DFP rows to units, labels, aircraft numbering and owned or shared resources." })
           ] }),
           showResourcePoolDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -75632,7 +75632,7 @@ const sectionLabels = {
   "platform-units": "Units & Ownership",
   "platform-task-profiles": "Directed Task Lists",
   "platform-master-lmp-access": "Master LMP Access",
-  "platform-resource-pools": "Aircraft & Resource Pools",
+  "platform-resource-pools": "Aircraft Types & DFP Resource Rows",
   "platform-unit-modules": "Unit Features & Modules",
   "platform-settings-visibility": "Settings Visibility",
   "platform-deployment-readiness": "Deployment Readiness",

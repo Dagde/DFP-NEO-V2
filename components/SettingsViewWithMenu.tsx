@@ -292,7 +292,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-units': 'Units & Ownership',
     'platform-task-profiles': 'Directed Task Lists',
     'platform-master-lmp-access': 'Master LMP Access',
-    'platform-resource-pools': 'Aircraft & Resource Pools',
+    'platform-resource-pools': 'Aircraft Types & DFP Resource Rows',
     'platform-unit-modules': 'Unit Features & Modules',
     'platform-settings-visibility': 'Settings Visibility',
     'platform-deployment-readiness': 'Deployment Readiness',

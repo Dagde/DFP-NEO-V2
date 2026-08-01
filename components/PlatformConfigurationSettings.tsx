@@ -7830,10 +7830,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-resource-pools" className={getSectionClass('platform-resource-pools')}>
         <SectionHeader
-          title="Aircraft Types & Resource Pools"
+          title="Aircraft Types & DFP Resource Rows"
           subtitle={resourcePoolsUnlocked
-            ? 'Editing is active. Press Save to apply aircraft type and resource pool changes, then return this section to read-only mode.'
-            : 'Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources. Click Edit before making changes.'}
+            ? 'Editing is active. Press Save to apply aircraft type and DFP resource row changes, then return this section to read-only mode.'
+            : 'Aircraft type defines capability; DFP resource rows define the aircraft, simulator, procedural trainer, standby and ground rows shown on the DFP. Click Edit before making changes.'}
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {resourcePoolsUnlocked ? (
@@ -7902,14 +7902,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Capability, category and crew-seat rules.</div>
             </div>
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Resource Pools</div>
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">DFP Resource Rows</div>
               <div className="mt-1 text-lg font-black text-cyan-100">{config.resourcePools.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Dedicated or shared DFP resources.</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Dedicated or shared DFP row sets.</div>
             </div>
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20" role="tablist" aria-label="Aircraft and resource pool sections">
+          <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20" role="tablist" aria-label="Aircraft and DFP resource row sections">
             <button
               type="button"
               role="tab"
@@ -7939,10 +7939,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               }`}
             >
               <span className="flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide">
-                <span>Resource Pools</span>
+                <span>DFP Resource Rows</span>
                 <span className="rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100">{config.resourcePools.length}</span>
               </span>
-              <span className="mt-1 block text-[11px] leading-relaxed">Resources, labels and DFP rows</span>
+              <span className="mt-1 block text-[11px] leading-relaxed">Rows, labels and resource ownership</span>
             </button>
           </div>
           {resourcePoolActiveTab === 'aircraftTypes' ? (
@@ -8073,8 +8073,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : (
           <div className="space-y-3" role="tabpanel">
             <div>
-              <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">Resource Pools</h4>
-              <p className="mt-1 text-xs text-gray-500">Map resources to units, labels, aircraft numbering and DFP resource rows.</p>
+              <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">DFP Resource Rows</h4>
+              <p className="mt-1 text-xs text-gray-500">Map DFP rows to units, labels, aircraft numbering and owned or shared resources.</p>
             </div>
             {showResourcePoolDeletePanel && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
