@@ -732,7 +732,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
   <div className="space-y-3 pb-24">
     {taskingRequests.length === 0 && (
       <div className="rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500">
-        No directed event requests configured.
+        No mission requests configured.
       </div>
     )}
     {taskingRequests.map(request => {
@@ -743,7 +743,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map(entry => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? 'High' : 'Medium');
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || 'New directed event request';
+      const taskingHeaderTitle = request.tasking.trim() || 'New mission request';
       const taskingHeaderDate = request.date || 'Date TBA';
       const taskingHeaderTime = timeOptions.find(opt => opt.value === request.takeoff)?.label || 'Time TBA';
       return (
@@ -756,7 +756,7 @@ const TaskingRequestTable: React.FC<TaskingRequestTableProps> = ({
           >
             <span className="min-w-0">
               <span className="block truncate text-sm font-black text-cyan-50">{taskingHeaderTitle}</span>
-              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Directed Event</span>
+              <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Mission Request</span>
             </span>
             <span className="flex shrink-0 items-center gap-2 text-right">
               <span className="rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white">{taskingHeaderDate}</span>
@@ -2636,7 +2636,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       instructor: '',
       student: '',
       pilot: '',
-      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : 'Directed Event',
+      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : 'Mission Request',
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),

@@ -38483,7 +38483,7 @@ const TaskingRequestTable = ({
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 pb-24", children: [
-    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No directed event requests configured." }),
+    taskingRequests.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 px-4 py-5 text-sm italic text-gray-500", children: "No mission requests configured." }),
     taskingRequests.map((request) => {
       const canSubmit = Boolean(request.tasking.trim() && request.date && request.depPoint.trim() && request.arrivalPoint.trim());
       const depPointSuggestions = getTaskingAirfieldSuggestions(request.depPoint, airfieldLookup);
@@ -38492,7 +38492,7 @@ const TaskingRequestTable = ({
       const showCallsignUnitLabels = new Set(unitCallsignEntries.map((entry) => entry.unitCode)).size > 1;
       const schedulerPriority = request.schedulerPriority || (request.isMandatory !== false ? "High" : "Medium");
       const isExpanded = expandedTaskingIds.has(request.id);
-      const taskingHeaderTitle = request.tasking.trim() || "New directed event request";
+      const taskingHeaderTitle = request.tasking.trim() || "New mission request";
       const taskingHeaderDate = request.date || "Date TBA";
       const taskingHeaderTime = timeOptions.find((opt) => opt.value === request.takeoff)?.label || "Time TBA";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-xl border border-cyan-500/25 bg-slate-900/45 shadow-lg shadow-black/10", children: [
@@ -38506,7 +38506,7 @@ const TaskingRequestTable = ({
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate text-sm font-black text-cyan-50", children: taskingHeaderTitle }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Directed Event" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75", children: "Mission Request" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex shrink-0 items-center gap-2 text-right", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/25 bg-slate-950/35 px-2 py-1 text-[11px] font-black text-white", children: taskingHeaderDate }),
@@ -40063,7 +40063,7 @@ const PrioritiesView = ({
       instructor: "",
       student: "",
       pilot: "",
-      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : "Directed Event",
+      group: aircraftCount > 1 ? `Aircraft ${index + 1} of ${aircraftCount}` : "Mission Request",
       flightNumber: taskingDisplayLabel,
       callsign: eventCallsign,
       duration: Math.max(0.1, Number(request.duration) || 0.1),
