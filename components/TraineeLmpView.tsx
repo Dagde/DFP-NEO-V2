@@ -733,10 +733,11 @@ const DetailView: React.FC<{
     score: Score | undefined;
     resourceDisplayNames?: ResourceDisplayNames;
     aircraftConfigurations?: AircraftConfigurationDefinition[];
+    instructorLabel?: string;
     isRemedial?: boolean;
     isAddedItem?: boolean;
     onDelete?: (item: SyllabusItemDetail) => void;
-}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], isRemedial = false, isAddedItem = false, onDelete }) => (
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftConfigurations = [], instructorLabel = 'Instructor', isRemedial = false, isAddedItem = false, onDelete }) => (
     <div className="space-y-6">
         {isRemedial && (
             <div className="flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3">
@@ -871,6 +872,7 @@ interface AcademicLmpTabProps {
     canOpenPt051?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
     trainingReportDisplayName?: string;
+    instructorLabel?: string;
 }
 
 const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
@@ -882,6 +884,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
     canOpenPt051 = true,
     onAccessDenied,
     trainingReportDisplayName = 'Training Report',
+    instructorLabel = 'Instructor',
 }) => {
     const [selectedLesson, setSelectedLesson] = useState<SyllabusItemDetail | null>(null);
 
@@ -1384,6 +1387,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         canOpenPt051={canOpenPt051}
                         onAccessDenied={onAccessDenied}
                         trainingReportDisplayName={trainingReportDisplayName}
+                        instructorLabel={instructorLabel}
                     />
                 ) : (
                     /* ── NEO Build LMP Tab (existing) ── */
@@ -1458,6 +1462,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         score={scores.find(s => s.event === selectedItem.code)}
                                         resourceDisplayNames={resourceDisplayNames}
                                         aircraftConfigurations={aircraftConfigurations}
+                                        instructorLabel={instructorLabel}
                                         isRemedial={isRemedialLmpItem(selectedItem)}
                                         isAddedItem={isAddedLmpItem(selectedItem, masterLmpKeys)}
                                         onDelete={isRemedialLmpItem(selectedItem) && onDeleteRemedialItem
