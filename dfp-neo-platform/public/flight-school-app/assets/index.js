@@ -6177,6 +6177,14 @@ const getCrewRolesSignature = (roles) => (roles || []).map((role) => {
     eligibleRoles.join("|")
   ].join(":");
 }).sort().join(";");
+const createFirstConfiguredRoleRow = (roleOptions) => {
+  const firstRole = roleOptions[0];
+  return firstRole ? {
+    role: firstRole.value,
+    crewPositionId: firstRole.id,
+    count: 1
+  } : null;
+};
 const CrewRequirementEditor = ({
   value,
   aircraftCrewComposition,
@@ -6203,9 +6211,10 @@ const CrewRequirementEditor = ({
       onChange({ mode: "aircraft_default" });
       return;
     }
+    const firstConfiguredRole = createFirstConfiguredRoleRow(roleOptions);
     onChange({
       mode: "custom",
-      roles: customRows.length > 0 ? customRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
+      roles: customRows.length > 0 ? customRows : firstConfiguredRole ? [firstConfiguredRole] : []
     });
   };
   const setPreset = (presetId) => {
@@ -6222,9 +6231,10 @@ const CrewRequirementEditor = ({
       mode: "custom",
       roles: preset.roles || []
     }).roles || [];
+    const firstConfiguredRole = createFirstConfiguredRoleRow(roleOptions);
     onChange({
       mode: "custom",
-      roles: presetRows.length > 0 ? presetRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
+      roles: presetRows.length > 0 ? presetRows : firstConfiguredRole ? [firstConfiguredRole] : []
     });
   };
   const updateRole = (index, updates) => {
@@ -6232,19 +6242,22 @@ const CrewRequirementEditor = ({
     onChange({ mode: "custom", roles: nextRows });
   };
   const addRole = () => {
+    const firstConfiguredRole = createFirstConfiguredRoleRow(roleOptions);
+    if (!firstConfiguredRole) return;
     onChange({
       mode: "custom",
       roles: [
         ...customRows,
-        { role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id || makeRoleId(), count: 1 }
+        { ...firstConfiguredRole, crewPositionId: firstConfiguredRole.crewPositionId || makeRoleId() }
       ]
     });
   };
   const removeRole = (index) => {
     const nextRows = customRows.filter((_row, rowIndex) => rowIndex !== index);
+    const firstConfiguredRole = createFirstConfiguredRoleRow(roleOptions);
     onChange({
       mode: "custom",
-      roles: nextRows.length > 0 ? nextRows : [{ role: roleOptions[0]?.value || "Pilot", crewPositionId: roleOptions[0]?.id, count: 1 }]
+      roles: nextRows.length > 0 ? nextRows : firstConfiguredRole ? [firstConfiguredRole] : []
     });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded-md border border-slate-600/70 bg-slate-950/50 ${compact ? "flex h-full min-h-[8rem] flex-col p-2" : "p-3"} text-xs text-slate-200`, children: [
@@ -6322,11 +6335,13 @@ const CrewRequirementEditor = ({
           }
         )
       ] }, `${row.crewPositionId || row.role}-${index}`)),
+      customRows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-slate-700 bg-slate-950/60 px-2 py-2 text-[11px] leading-relaxed text-slate-400", children: "No crew roles configured." }) : null,
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
           onClick: addRole,
+          disabled: roleOptions.length === 0,
           className: "rounded border border-cyan-500/40 px-2 py-1 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/10",
           children: "+ Add role"
         }
