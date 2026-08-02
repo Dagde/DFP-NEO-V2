@@ -5112,7 +5112,7 @@ const createNeoBuildTimingReport = (buildDate: string, counters: Record<string, 
     };
 };
 
-const NEO_BUILD_GENERATION_START_DELAY_MS = 100;
+const NEO_BUILD_GENERATION_START_DELAY_MS = 500;
 const NEO_BUILD_NAVIGATION_DELAY_MS = 250;
 
 const saveNeoBuildTimingReport = (report?: NeoBuildTimingReport) => {
