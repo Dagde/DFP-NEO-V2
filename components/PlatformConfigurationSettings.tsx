@@ -8309,6 +8309,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               </div>
             )}
+            {visibleAircraftTypeRows.length === 0 && (
+              <div className="rounded-lg border border-dashed border-orange-400/35 bg-orange-500/10 p-4">
+                <div className="text-sm font-black text-orange-100">No aircraft types configured.</div>
+                <p className="mt-1 text-xs leading-relaxed text-orange-50/75">
+                  Press Edit, then Add Aircraft Type to create the first aircraft type for this setup.
+                </p>
+              </div>
+            )}
             {visibleAircraftTypeRows.map(({ aircraft, index }) => {
               const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
               const crewPositionOptions = getCrewPositionOptions(
@@ -8462,6 +8470,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     Delete Selected Rows
                   </button>
                 </div>
+              </div>
+            )}
+            {visibleResourcePoolRows.length === 0 && (
+              <div className="rounded-lg border border-dashed border-cyan-400/35 bg-cyan-500/10 p-4">
+                <div className="text-sm font-black text-cyan-100">No DFP resource row sets configured.</div>
+                <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
+                  Press Edit, then Add Rows to create the rows that drive the DFP resource columns.
+                </p>
               </div>
             )}
             {visibleResourcePoolRows.map(({ pool, index }) => {
