@@ -12131,8 +12131,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     hasTrainees: currentUnit?.settings?.hasTrainees !== false
   });
   const [resourceDraft, setResourceDraft] = reactExports.useState({
-    aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
-    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
+    aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
+    aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
     poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
     poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
     poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
@@ -12143,7 +12143,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "")
   });
   const [crewDraft, setCrewDraft] = reactExports.useState({
-    aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || "AIRCRAFT"),
+    aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ""),
     standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || [])
   });
   const [accessDraft, setAccessDraft] = reactExports.useState({
@@ -12452,8 +12452,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   }, [activeWizardLocationCode, currentUnit?.code, currentUnit?.name, currentUnit?.locationCode, currentUnit?.unitType, currentUnit?.settings?.operationalModel, currentUnit?.settings?.hasTrainees, unitCode, currentLocation?.code, unitTypeOptions]);
   reactExports.useEffect(() => {
     setResourceDraft({
-      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
-      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "Aircraft Type"),
+      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
+      aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
       poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
       poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
       poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
@@ -12464,7 +12464,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? "")
     });
     setCrewDraft({
-      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || "AIRCRAFT"),
+      aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
       standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || [])
     });
   }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
@@ -15448,8 +15448,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           " use?"
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "AIRCRAFT"),
-          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Aircraft Type"),
+          wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "Enter aircraft code"),
+          wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Enter aircraft or resource type"),
           wizardField("DFP resource row set name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "DFP Resource Rows")
         ] })
       );
@@ -15470,7 +15470,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       return promptShell(
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events." }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "AIRCRAFT") }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: wizardDataListField("Aircraft type", crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || "Enter aircraft code") }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-2", children: [
             renderCrewCompositionEditor("Standard crew composition", crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value }))),
             renderCrewCompositionEditor("Alternate crew composition", alternateCrewDraft, setAlternateCrewDraft, "Add alternate position")

@@ -2873,8 +2873,8 @@ const InitialSetupWizard: React.FC<{
         hasTrainees: currentUnit?.settings?.hasTrainees !== false,
     });
     const [resourceDraft, setResourceDraft] = useState({
-        aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'AIRCRAFT'),
-        aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'Aircraft Type'),
+        aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
+        aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
         poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || 'Home'} ${primaryAircraftType?.code || 'Resource'} Pool`),
         poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ''),
         poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ''),
@@ -2885,7 +2885,7 @@ const InitialSetupWizard: React.FC<{
         ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
     });
     const [crewDraft, setCrewDraft] = useState({
-        aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || 'AIRCRAFT'),
+        aircraftCode: String(primaryAircraftType?.code || resourceDraft.aircraftCode || ''),
         standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
     });
     const [accessDraft, setAccessDraft] = useState({
@@ -3249,8 +3249,8 @@ const InitialSetupWizard: React.FC<{
 
     useEffect(() => {
         setResourceDraft({
-            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'AIRCRAFT'),
-            aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'Aircraft Type'),
+            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
+            aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
             poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || 'Home'} ${primaryAircraftType?.code || 'Resource'} Pool`),
             poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ''),
             poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ''),
@@ -3261,7 +3261,7 @@ const InitialSetupWizard: React.FC<{
             ground: String(primaryResourcePool?.settings?.ground ?? primaryResourcePool?.ground ?? ''),
         });
         setCrewDraft({
-            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || 'AIRCRAFT'),
+            aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ''),
             standardSeats: formatRoleRequirementsText(normaliseAircraftCrewComposition(primaryAircraftType?.crewComposition || null).standardSeats || []),
         });
     }, [primaryAircraftType?.code, primaryAircraftType?.name, JSON.stringify(primaryAircraftType?.crewComposition || {}), primaryResourcePool?.name, primaryResourcePool?.unitCode, primaryResourcePool?.locationCode, primaryResourcePool?.aircraftTypeCode, JSON.stringify(primaryResourcePool?.settings || {}), currentUnit?.code, currentUnit?.locationCode, currentLocation?.code, currentLocation?.name]);
@@ -6594,8 +6594,8 @@ const InitialSetupWizard: React.FC<{
             return promptShell(
                 <p>What aircraft type or primary resource should <strong>{unitDraft.code || 'this unit'}</strong> use?</p>,
                 <div className="grid gap-3 md:grid-cols-2">
-                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'AIRCRAFT')}
-                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Aircraft Type')}
+                    {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'Enter aircraft code')}
+                    {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Enter aircraft or resource type')}
                     {wizardField('DFP resource row set name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'DFP Resource Rows')}
                 </div>,
             );
@@ -6617,7 +6617,7 @@ const InitialSetupWizard: React.FC<{
                 <p>Tell NEO what normal crew looks like. This prevents the scheduler from creating unrealistic solo or under-crewed events.</p>,
                 <div className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
-                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'AIRCRAFT')}
+                        {wizardDataListField('Aircraft type', crewDraft.aircraftCode || resourceDraft.aircraftCode, (value) => setCrewDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase() })), Array.from(new Set([resourceDraft.aircraftCode, ...activeAircraftTypes.map((aircraft: any) => aircraft.code)].filter(Boolean))), resourceDraft.aircraftCode || 'Enter aircraft code')}
                     </div>
                     <div className="grid gap-3 xl:grid-cols-2">
                         {renderCrewCompositionEditor('Standard crew composition', crewDraft.standardSeats, (value) => setCrewDraft((draft) => ({ ...draft, standardSeats: value })))}
