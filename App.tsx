@@ -46721,6 +46721,7 @@ appliedUpdates.forEach(update => {
                 startInEditMode={airCombatTrainingReportDraft.startInEditMode === true}
                 reportName={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName}
                 trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode)}
+                phraseBank={getUnitTrainingReportPhraseBank(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode, phraseBank)}
                 instructorLabel={instructorLabel}
                 currentUserName={currentUserName}
                 locationCode={school}

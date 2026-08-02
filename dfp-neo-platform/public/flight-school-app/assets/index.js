@@ -21652,7 +21652,7 @@ const PT051_STRUCTURE$1 = [
 PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY$3 = "__scoringMatrixElementGroups";
-const SCORING_MATRIX_ELEMENT_LIST_KEY$4 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_LIST_KEY$5 = "__scoringMatrixElements";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
 const formatTrainingReportDisplayDate = (dateString) => {
   if (!dateString) return "";
@@ -21712,12 +21712,12 @@ const pushTrainingReportNotesDiag$1 = (stage, payload = {}) => {
   } catch {
   }
 };
-const getConfiguredReportElements = (phraseBank) => {
-  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$4];
+const getConfiguredReportElements$1 = (phraseBank) => {
+  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$5];
   return Array.isArray(configured) ? configured : void 0;
 };
 const normaliseAssessedElements$1 = (elements, phraseBank) => {
-  const configuredReportElements = getConfiguredReportElements(phraseBank);
+  const configuredReportElements = getConfiguredReportElements$1(phraseBank);
   const source = Array.isArray(elements) ? elements : configuredReportElements || DEFAULT_ASSESSED_ELEMENTS$1;
   const seen = /* @__PURE__ */ new Set();
   const selected = source.map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
@@ -55069,7 +55069,7 @@ const SCORING_MATRIX_ASSESSABLE_ELEMENTS = [
   "Lookout",
   "Knowledge"
 ];
-const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_LIST_KEY$4 = "__scoringMatrixElements";
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = /* @__PURE__ */ new Set(["generic flying elements"]);
 const getScoringMatrixElementOptions = (phraseBank) => {
   const seen = /* @__PURE__ */ new Map();
@@ -55079,14 +55079,14 @@ const getScoringMatrixElementOptions = (phraseBank) => {
     if (!clean || SCORING_MATRIX_NON_ASSESSABLE_KEYS.has(key) || seen.has(key)) return;
     seen.set(key, clean);
   };
-  const configuredElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
+  const configuredElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$4];
   if (Array.isArray(configuredElements)) {
     configuredElements.forEach(add);
   } else {
     DEFAULT_ASSESSED_ELEMENTS.forEach(add);
     SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
     Object.keys(phraseBank || {}).forEach((key) => {
-      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3) add(key);
+      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$4) add(key);
     });
   }
   return Array.from(seen.values());
@@ -58399,6 +58399,7 @@ const formatTrainingReportDate = (dateString) => {
   });
 };
 const COMMENT_SECTION_KEYS = ["assessor", "weather", "profile", "overall", "nest", "notes"];
+const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
 const escapeRegExp$1 = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const parseReportComments = (raw, sectionLabels2 = {}) => {
   const defaults = {
@@ -58450,6 +58451,10 @@ const parseReportComments = (raw, sectionLabels2 = {}) => {
   return parsed;
 };
 const buildReportComments = (sections, sectionLabels2) => COMMENT_SECTION_KEYS.map((key) => [sectionLabels2[key] || key, sections[key]]).filter(([, value]) => String(value || "").trim()).map(([label, value]) => `${label}: ${String(value).trim()}`).join("\n\n");
+const getConfiguredReportElements = (phraseBank) => {
+  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
+  return Array.isArray(configured) ? configured : void 0;
+};
 const stripGeneratedFollowUpNotes = (value, generatedPrefix = "") => {
   const lines = String(value || "").split("\n");
   const cleanedPrefix = generatedPrefix.trim();
@@ -58574,6 +58579,7 @@ const AirCombatTrainingReportModal = ({
   startInEditMode = false,
   reportName = "Training Report",
   trainingReportTemplate = null,
+  phraseBank,
   instructorLabel: instructorLabel2 = "Instructor",
   currentUserName = "",
   locationCode = "",
@@ -58757,9 +58763,10 @@ const AirCombatTrainingReportModal = ({
     ] }) : eventCode2 || "N/A" })
   ] });
   const assessmentElements = reactExports.useMemo(() => {
-    const source = Array.isArray(matchedItem?.assessedElements) ? matchedItem.assessedElements : ["Airmanship", "Preparation", "Technique"];
+    const configuredReportElements = getConfiguredReportElements(phraseBank);
+    const source = Array.isArray(matchedItem?.assessedElements) ? matchedItem.assessedElements : configuredReportElements || ["Airmanship", "Preparation", "Technique"];
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
-  }, [matchedItem?.assessedElements]);
+  }, [matchedItem?.assessedElements, phraseBank]);
   const selectRecentEvent = (event) => {
     const nextDuration = Number(event.duration || matchedItem?.duration || 1);
     const nextEventCode = String(event.flightNumber || event.eventCode || "").trim();
@@ -124295,6 +124302,7 @@ Do you want to replace the existing entry?`,
         startInEditMode: airCombatTrainingReportDraft.startInEditMode === true,
         reportName: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode).displayName,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
+        phraseBank: getUnitTrainingReportPhraseBank(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode, phraseBank),
         instructorLabel: instructorLabel2,
         currentUserName,
         locationCode: school,

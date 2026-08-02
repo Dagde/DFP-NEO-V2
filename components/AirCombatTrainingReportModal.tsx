@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AirCombatTrainingAssignment, AirCombatTrainingReport, Instructor, ScheduleEvent, SyllabusItemDetail } from '../types';
+import { AirCombatTrainingAssignment, AirCombatTrainingReport, Instructor, PhraseBank, ScheduleEvent, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import {
   DEFAULT_TRAINING_REPORT_TEMPLATE,
@@ -21,6 +21,7 @@ interface AirCombatTrainingReportModalProps {
   startInEditMode?: boolean;
   reportName?: string;
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
+  phraseBank?: PhraseBank;
   instructorLabel?: string;
   currentUserName?: string;
   locationCode?: string;
@@ -62,6 +63,7 @@ const formatTrainingReportDate = (dateString?: string): string => {
 const COMMENT_SECTION_KEYS = ['assessor', 'weather', 'profile', 'overall', 'nest', 'notes'] as const;
 type CommentSectionKey = typeof COMMENT_SECTION_KEYS[number];
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
+const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 
 const escapeRegExp = (value: string): string => (
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -137,6 +139,11 @@ const buildReportComments = (
     .map(([label, value]) => `${label}: ${String(value).trim()}`)
     .join('\n\n')
 );
+
+const getConfiguredReportElements = (phraseBank?: PhraseBank): string[] | undefined => {
+  const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+  return Array.isArray(configured) ? configured : undefined;
+};
 
 const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): string => {
   const lines = String(value || '').split('\n');
@@ -291,6 +298,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   startInEditMode = false,
   reportName = 'Training Report',
   trainingReportTemplate = null,
+  phraseBank,
   instructorLabel = 'Instructor',
   currentUserName = '',
   locationCode = '',
@@ -536,11 +544,12 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     </div>
   );
   const assessmentElements = useMemo(() => {
+    const configuredReportElements = getConfiguredReportElements(phraseBank);
     const source = Array.isArray(matchedItem?.assessedElements)
       ? matchedItem.assessedElements
-      : ['Airmanship', 'Preparation', 'Technique'];
+      : (configuredReportElements || ['Airmanship', 'Preparation', 'Technique']);
     return Array.from(new Set(source.map(element => String(element || '').trim()).filter(Boolean)));
-  }, [matchedItem?.assessedElements]);
+  }, [matchedItem?.assessedElements, phraseBank]);
   const selectRecentEvent = (event: ScheduleEvent) => {
     const nextDuration = Number(event.duration || matchedItem?.duration || 1);
     const nextEventCode = String(event.flightNumber || event.eventCode || '').trim();
