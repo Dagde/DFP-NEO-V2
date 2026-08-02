@@ -4889,6 +4889,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setSelectedProfileId(id);
   };
 
+  const deleteSelectedPermissionProfile = () => {
+    if (!selectedPermissionProfile) return;
+    if (!window.confirm(`Delete permission profile "${selectedPermissionProfile.name || selectedPermissionProfile.id}"?`)) return;
+    const nextProfiles = permissionProfiles.filter((profile) => profile.id !== selectedPermissionProfile.id);
+    updatePermissionProfiles(nextProfiles);
+    setSelectedProfileId(nextProfiles[0]?.id || '');
+  };
+
   const displayUserName = (user: any): string => {
     const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
     return fullName || user.displayName || user.username || user.userId || 'Unknown User';
@@ -9192,6 +9200,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-permission-profiles')}
+              <button
+                type="button"
+                onClick={deleteSelectedPermissionProfile}
+                disabled={!canEditSection('platform-permission-profiles') || !selectedPermissionProfile}
+                className={platformActionButtonClass}
+              >
+                <span className="text-[9px] leading-tight">Delete<br />Profile</span>
+              </button>
               <button type="button" onClick={addPermissionProfile} disabled={!canEditSection('platform-permission-profiles')} className={platformActionButtonClass}>
                 <span className="text-[9px] leading-tight">Add<br />Profile</span>
               </button>
@@ -9200,6 +9216,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         />
         <div className="grid gap-4 p-4 xl:grid-cols-[340px,1fr]">
           <div className="space-y-2">
+            {permissionProfiles.length === 0 && (
+              <div className="rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400">
+                No permission profiles configured.
+              </div>
+            )}
             {permissionProfiles.map((profile) => (
               <button
                 key={profile.id}

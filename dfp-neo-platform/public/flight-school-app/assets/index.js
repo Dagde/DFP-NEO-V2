@@ -69906,6 +69906,13 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     ]);
     setSelectedProfileId(id);
   };
+  const deleteSelectedPermissionProfile = () => {
+    if (!selectedPermissionProfile) return;
+    if (!window.confirm(`Delete permission profile "${selectedPermissionProfile.name || selectedPermissionProfile.id}"?`)) return;
+    const nextProfiles = permissionProfiles.filter((profile) => profile.id !== selectedPermissionProfile.id);
+    updatePermissionProfiles(nextProfiles);
+    setSelectedProfileId(nextProfiles[0]?.id || "");
+  };
   const displayUserName = (user) => {
     const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
     return fullName || user.displayName || user.username || user.userId || "Unknown User";
@@ -73786,6 +73793,20 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           subtitle: "Build reusable permission profiles. Profiles define what a user can do; access scopes define where they can do it.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-permission-profiles"),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: deleteSelectedPermissionProfile,
+                disabled: !canEditSection("platform-permission-profiles") || !selectedPermissionProfile,
+                className: platformActionButtonClass,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                  "Delete",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Profile"
+                ] })
+              }
+            ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addPermissionProfile, disabled: !canEditSection("platform-permission-profiles"), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
               "Add",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -73795,22 +73816,25 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[340px,1fr]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            type: "button",
-            onClick: () => setSelectedProfileId(profile.id),
-            className: `w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? "border-cyan-400 bg-cyan-500/20" : "border-gray-700 bg-gray-900 hover:bg-gray-950"}`,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: profile.name }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
-                profile.permissions.length,
-                " permissions"
-              ] })
-            ]
-          },
-          profile.id
-        )) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          permissionProfiles.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 px-4 py-5 text-sm text-gray-400", children: "No permission profiles configured." }),
+          permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => setSelectedProfileId(profile.id),
+              className: `w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? "border-cyan-400 bg-cyan-500/20" : "border-gray-700 bg-gray-900 hover:bg-gray-950"}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: profile.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
+                  profile.permissions.length,
+                  " permissions"
+                ] })
+              ]
+            },
+            profile.id
+          ))
+        ] }),
         selectedPermissionProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEditSection("platform-permission-profiles"), onCommit: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
