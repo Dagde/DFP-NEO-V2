@@ -12159,6 +12159,35 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     const nightPairings = new Map<string, string>();
     let instructors = [...originalInstructors.map(i => ({...i, unavailability: [...(i.unavailability || [])]}))];
+    const baseInstructorPoolCache = new Map<string, Instructor[]>();
+    const unitEligibleInstructorCache = new Map<string, boolean>();
+    const getBaseInstructorPoolForEventType = (eventType: string): Instructor[] => {
+        const eventTypeKey = (eventType || '').toLowerCase();
+        const cachedPool = baseInstructorPoolCache.get(eventTypeKey);
+        if (cachedPool) return cachedPool;
+        const pool = eventTypeKey === 'ftd'
+            ? [
+                ...instructors.filter(i => isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd')),
+                ...instructors.filter(i => isQfiBuildInstructor(i)),
+            ]
+            : instructors.filter(ip => isInstructorEligibleForBuildEventType(ip, eventTypeKey));
+        baseInstructorPoolCache.set(eventTypeKey, pool);
+        return pool;
+    };
+    const isInstructorEligibleByUnitForBuild = (instructor: Instructor, trainee: Trainee): boolean => {
+        const cacheKey = [
+            normalizeBuildPersonnelName(instructor.name),
+            normalizeUnit(instructor.unit || ''),
+            normalizeBuildPersonnelName(trainee.fullName),
+            normalizeUnit(trainee.unit || ''),
+        ].join('|');
+        if (unitEligibleInstructorCache.has(cacheKey)) {
+            return unitEligibleInstructorCache.get(cacheKey)!;
+        }
+        const eligible = isInstructorEligibleByUnit(instructor, trainee);
+        unitEligibleInstructorCache.set(cacheKey, eligible);
+        return eligible;
+    };
 
     // ── DIAGNOSTIC: Capture instructor config at build start ──
     _diagInitInstructors(buildDate, instructors);
@@ -12582,7 +12611,21 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     prerequisites: item?.prerequisites || [],
                 };
             }),
-            unplaced: [] as { trainee: string; event: string | null; eventType: string | null }[],
+            unplaced: [] as {
+                trainee: string;
+                course?: string | null;
+                unit?: string | null;
+                event: string | null;
+                eventType: string | null;
+                dayNight?: string | null;
+                sortieType?: string | null;
+                duration?: number | null;
+                resourceNumber?: number | null;
+                recoveredInFinal?: boolean;
+                finalResourceId?: string | null;
+                finalStartTime?: number | null;
+                finalSource?: string | null;
+            }[],
         };
         neoBuildDiag.scheduleLists[listName] = listDiag;
         saveNeoBuildDiag(`schedule-list-start:${listName}`);
@@ -12897,8 +12940,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
                 return {
                     trainee: trainee.fullName,
+                    course: trainee.course || null,
+                    unit: trainee.unit || null,
                     event: item?.code || null,
                     eventType: item?.type || null,
+                    dayNight: item?.dayNight || null,
+                    sortieType: item?.sortieType || null,
+                    duration: typeof item?.duration === 'number' ? item.duration : null,
+                    resourceNumber: typeof item?.resourceNumber === 'number' ? item.resourceNumber : null,
                 };
             });
             listDiag.passSummaries.push({
@@ -12941,6 +12990,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 .slice(0, 8),
             firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
             firstRejectionSample: listDiag.rejectionSamples[0] || null,
+            unplacedSample: listDiag.unplaced.slice(0, 12),
         });
         markBuildTiming(`schedule-list:${listName}`, {
             durationMs: listDiag.durationMs,
@@ -13507,21 +13557,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // cannot remove them before the remedial conflict override is evaluated.
                 candidates = instructors.filter(ip => ip.name === remedialInstructorOverride);
             } else {
-                if (type === 'ftd') {
-                    // FTD: Contractor Staff first when enabled, then qualified instructors.
-                    const simIps = instructors.filter(i =>
-                        isContractorStaffRole(i) && canContractorStaffWorkEventType('ftd')
-                    );
-                    const availableQfis = instructors.filter(i =>
-                        isQfiBuildInstructor(i)
-                    );
-                    candidates = [...simIps, ...availableQfis];
-                } else {
-                    // FLIGHT = qualified instructors plus Contractor Staff only when enabled; CPT/GROUND respect Contractor Staff eligibility.
-                    candidates = instructors.filter(ip => {
-                        return isInstructorEligibleForBuildEventType(ip, type);
-                    });
-                }
+                candidates = [...getBaseInstructorPoolForEventType(type)];
 
                 candidates = candidates.filter(ip => {
                     return canAssignPersonForScheduledWindow(ip.name, startTime);
@@ -13560,9 +13596,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     totalInstructors: instructors.length,
                     candidatesAfterRoleAndDayNight: _afterQualFilter,
                     candidateNames: candidates.slice(0, 20).map(ip => ip.name),
-                    intendedNightCandidatesFiltered: instructors
+                    intendedNightCandidatesFiltered: getBaseInstructorPoolForEventType(type)
                         .filter(ip => {
-                            if (!isInstructorEligibleForBuildEventType(ip, type)) return false;
                             return getScheduledDayNightForStart(startTime) === 'Day' && isPersonScheduledForNightEvents(ip.name);
                         })
                         .slice(0, 20)
@@ -13572,7 +13607,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
             // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
             if (!requiredRemedialInstructor) {
-                candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+                candidates = candidates.filter(ip => isInstructorEligibleByUnitForBuild(ip, traineeForCheck));
             }
             if (options.excludeInstructorNames && options.excludeInstructorNames.length > 0) {
                 const excludedNames = new Set(options.excludeInstructorNames.map(normalizeBuildPersonnelName));
@@ -14062,6 +14097,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 preFlightNotes: schedulePreFlightNotes,
                 trainingReportForwardedNotes: scheduleForwardedNotes,
                 trainingReportNextEventExtensions: scheduleExtensionLedger,
+                _source: 'stby-hard-mode',
+                _isNext: !isPlusOne,
+                _traineeName: trainee.fullName,
             };
             options.diagnosticTrace?.({
                 phase: 'schedule-event',
@@ -19749,7 +19787,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     origin: school,
                     destination: school,
                     preStart: next.preFlightTime,
-                    postEnd: next.postFlightTime
+                    postEnd: next.postFlightTime,
+                    _source: 'stby-flight-recovery',
+                    _isNext: true,
+                    _traineeName: trainee.fullName,
                 });
 
                 placed = true;
@@ -19960,7 +20001,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             origin: school,
                             destination: school,
                             preStart: next.preFlightTime,
-                            postEnd: next.postFlightTime
+                            postEnd: next.postFlightTime,
+                            _source: 'stby-ftd-recovery',
+                            _isNext: true,
+                            _traineeName: trainee.fullName,
                         });
 
                         buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || 'TBA'}`);
@@ -21465,6 +21509,76 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         maxMs: neoBuildDiag.scheduleAttemptTiming.overall.maxMs,
         slowest: neoBuildDiag.scheduleAttemptTiming.slowest.slice(0, 5),
     });
+    const annotateScheduleListUnplacedRecovery = () => {
+        const allUnplacedRows: any[] = [];
+        const findFinalRecoveredEvent = (row: any) => {
+            const rowTrainee = normalizeBuildPersonnelName(row?.trainee || '');
+            const rowEvent = String(row?.event || '').trim();
+            if (!rowTrainee || !rowEvent) return null;
+            return sortedEvents.find((event: any) => {
+                const finalEventCode = String(event.flightNumber || '').trim();
+                if (finalEventCode !== rowEvent) return false;
+                const finalNames = [
+                    event._traineeName,
+                    event.student,
+                    event.pilot,
+                    ...(Array.isArray(event.crew) ? event.crew : []),
+                    ...(Array.isArray(event.attendees) ? event.attendees : []),
+                ].map((name: any) => normalizeBuildPersonnelName(name || '')).filter(Boolean);
+                return finalNames.includes(rowTrainee);
+            }) || null;
+        };
+
+        Object.entries(neoBuildDiag.scheduleLists || {}).forEach(([listName, diag]: [string, any]) => {
+            if (!Array.isArray(diag.unplaced)) return;
+            diag.unplaced = diag.unplaced.map((row: any) => {
+                const recoveredEvent: any = findFinalRecoveredEvent(row);
+                const annotatedRow = {
+                    ...row,
+                    recoveredInFinal: !!recoveredEvent,
+                    finalResourceId: recoveredEvent?.resourceId || null,
+                    finalStartTime: typeof recoveredEvent?.startTime === 'number' ? recoveredEvent.startTime : null,
+                    finalSource: recoveredEvent?._source || null,
+                };
+                allUnplacedRows.push({ listName, ...annotatedRow });
+                return annotatedRow;
+            });
+        });
+
+        const recoveredRows = allUnplacedRows.filter(row => row.recoveredInFinal);
+        const unresolvedRows = allUnplacedRows.filter(row => !row.recoveredInFinal);
+        neoBuildDiag.unplacedRecoverySummary = {
+            totalUnplacedRows: allUnplacedRows.length,
+            recoveredInFinal: recoveredRows.length,
+            unresolvedInFinal: unresolvedRows.length,
+            recoveredBySource: recoveredRows.reduce<Record<string, number>>((acc, row) => {
+                const sourceKey = row.finalSource || 'unknown';
+                acc[sourceKey] = (acc[sourceKey] || 0) + 1;
+                return acc;
+            }, {}),
+            recoveredSample: recoveredRows.slice(0, 40).map(row => ({
+                listName: row.listName,
+                trainee: row.trainee || null,
+                event: row.event || null,
+                finalResourceId: row.finalResourceId || null,
+                finalStartTime: row.finalStartTime ?? null,
+                finalSource: row.finalSource || null,
+            })),
+            unresolvedSample: unresolvedRows.slice(0, 40).map(row => ({
+                listName: row.listName,
+                trainee: row.trainee || null,
+                course: row.course || null,
+                unit: row.unit || null,
+                event: row.event || null,
+                eventType: row.eventType || null,
+                dayNight: row.dayNight || null,
+                sortieType: row.sortieType || null,
+                duration: row.duration ?? null,
+                resourceNumber: row.resourceNumber ?? null,
+            })),
+        };
+    };
+    annotateScheduleListUnplacedRecovery();
 
     neoBuildDiag.final = {
         totalEvents: sortedEvents.length,
@@ -21484,6 +21598,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             acc[prefix] = (acc[prefix] || 0) + 1;
             return acc;
         }, {}),
+        unplacedRecoverySummary: neoBuildDiag.unplacedRecoverySummary,
         firstEvents: sortedEvents.slice(0, 80).map(event => ({
             id: event.id,
             flightNumber: event.flightNumber,
