@@ -2712,6 +2712,7 @@ const normaliseStringList$1 = (source) => {
   return String(source || "").split(/\r?\n|;|,/).map((value) => value.trim()).filter(Boolean);
 };
 const normaliseOperationalModels = (source) => {
+  if (Array.isArray(source) && source.length === 0) return [];
   const values = normaliseStringList$1(source);
   if (values.length === 0) return [DEFAULT_OPERATIONAL_MODEL];
   return Array.from(new Set(values.map((value) => normaliseOperationalModel(value))));
@@ -74770,7 +74771,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Operational Models" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-1 rounded border border-gray-700 bg-gray-900/70 p-2 sm:grid-cols-2", children: OPERATIONAL_MODEL_OPTIONS.map((option) => {
-                const selectedModels = entry.operationalModels?.length ? entry.operationalModels : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                const selectedModels = Array.isArray(entry.operationalModels) ? entry.operationalModels : [];
                 const isSelected = selectedModels.includes(option.value);
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "label",

@@ -158,6 +158,7 @@ const normaliseStringList = (source: unknown): string[] => {
 };
 
 const normaliseOperationalModels = (source: unknown): OperationalModelCode[] => {
+  if (Array.isArray(source) && source.length === 0) return [];
   const values = normaliseStringList(source);
   if (values.length === 0) return [DEFAULT_OPERATIONAL_MODEL];
   return Array.from(new Set(values.map(value => normaliseOperationalModel(value))));

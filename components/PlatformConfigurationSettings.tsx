@@ -10141,9 +10141,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operational Models</label>
                     <div className="grid gap-1 rounded border border-gray-700 bg-gray-900/70 p-2 sm:grid-cols-2">
                       {OPERATIONAL_MODEL_OPTIONS.map((option) => {
-                        const selectedModels = entry.operationalModels?.length
-                          ? entry.operationalModels
-                          : OPERATIONAL_MODEL_OPTIONS.map((modelOption) => modelOption.value);
+                        const selectedModels = Array.isArray(entry.operationalModels) ? entry.operationalModels : [];
                         const isSelected = selectedModels.includes(option.value);
                         return (
                           <label
