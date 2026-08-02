@@ -12639,6 +12639,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             noSyllabusItem: 0,
             blockedPrimaryMissing: 0,
             noSearchWindow: 0,
+            cachedResourceRejections: 0,
             rejectionReasons: {} as Record<string, number>,
             rejectionPatterns: {} as Record<string, {
                 count: number;
@@ -12695,6 +12696,93 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         };
         neoBuildDiag.scheduleLists[listName] = listDiag;
         saveNeoBuildDiag(`schedule-list-start:${listName}`);
+        const ftdNoResourceCache = new Map<string, Record<string, any>>();
+        const makeFtdNoResourceCacheKey = (
+            time: number,
+            duration: number,
+            generatedEventCount: number
+        ): string => [
+            generatedEventCount,
+            Number(time).toFixed(4),
+            Number(duration).toFixed(2),
+            ftdCount,
+        ].join('|');
+        const recordScheduleListRejection = (traceEntry: Record<string, any>) => {
+            if (traceEntry?.outcome !== 'rejected') return;
+            const reason = traceEntry.reason || 'UNKNOWN_REJECTION';
+            const details = traceEntry.details || {};
+            const resourcePrefix = typeof details.resourcePrefix === 'string' ? details.resourcePrefix : null;
+            const rawResourceCount = Number(details.resourceCount);
+            const resourceCount = Number.isFinite(rawResourceCount) ? rawResourceCount : null;
+            const eventKey = String(traceEntry.event || '').trim() || '(no event)';
+            const patternKey = [
+                reason,
+                traceEntry.type || type,
+                eventKey,
+                resourcePrefix || '-',
+                resourceCount ?? '-',
+                traceEntry.dayNight || '-',
+                traceEntry.primaryPreferOnly ? 'priority-only' : 'any-instructor',
+                traceEntry.requirePreferredNightAircraft ? 'preferred-night-aircraft' : 'any-aircraft',
+            ].join('|');
+            if (!listDiag.rejectionPatterns[patternKey]) {
+                listDiag.rejectionPatterns[patternKey] = {
+                    count: 0,
+                    reason,
+                    event: eventKey === '(no event)' ? null : eventKey,
+                    eventType: traceEntry.eventType || null,
+                    type: traceEntry.type || type,
+                    dayNight: traceEntry.dayNight || null,
+                    resourcePrefix,
+                    resourceCount,
+                    primaryPreferOnly: typeof traceEntry.primaryPreferOnly === 'boolean' ? traceEntry.primaryPreferOnly : null,
+                    requirePreferredNightAircraft: typeof traceEntry.requirePreferredNightAircraft === 'boolean' ? traceEntry.requirePreferredNightAircraft : null,
+                    firstDisplayTime: traceEntry.displayTime || null,
+                    lastDisplayTime: traceEntry.displayTime || null,
+                    firstTrainee: traceEntry.trainee || null,
+                    sampleTrainees: [],
+                    sampleDetails: [],
+                };
+            }
+            const pattern = listDiag.rejectionPatterns[patternKey];
+            pattern.count++;
+            pattern.lastDisplayTime = traceEntry.displayTime || pattern.lastDisplayTime;
+            if (
+                traceEntry.trainee &&
+                pattern.sampleTrainees.length < 8 &&
+                !pattern.sampleTrainees.includes(traceEntry.trainee)
+            ) {
+                pattern.sampleTrainees.push(traceEntry.trainee);
+            }
+            if (pattern.sampleDetails.length < 5) {
+                pattern.sampleDetails.push({
+                    startTime: traceEntry.startTime,
+                    displayTime: traceEntry.displayTime,
+                    resourcePrefix,
+                    resourceCount,
+                    earlyResourceCheck: details.earlyResourceCheck === true,
+                    cachedResourceCheck: details.cachedResourceCheck === true,
+                    compatibleResourceCandidateCount: details.compatibleResourceCandidateCount ?? null,
+                    aircraftConfigMismatchCount: details.aircraftConfigMismatchCount ?? null,
+                    count: details.count ?? null,
+                    limit: details.limit ?? null,
+                    proposed: details.proposed ?? null,
+                });
+            }
+            listDiag.rejectionReasons[reason] = (listDiag.rejectionReasons[reason] || 0) + 1;
+            if (listDiag.rejectionSamples.length < 80) {
+                listDiag.rejectionSamples.push({
+                    reason,
+                    trainee: traceEntry.trainee,
+                    event: traceEntry.event,
+                    type: traceEntry.type,
+                    startTime: traceEntry.startTime,
+                    displayTime: traceEntry.displayTime,
+                    dayNight: traceEntry.dayNight,
+                    details: traceEntry.details,
+                });
+            }
+        };
 
         const segments: { start: number, end: number, count: number }[] = [];
         if ((type === 'cpt' || type === 'ground') && !isNightPass) {
@@ -12857,80 +12945,60 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                             for (let time = earliestEventStart; time <= cappedLatestEventStart; time += timeIncrement) {
                                 listDiag.attempts++;
+                                const ftdNoResourceCacheKey = type === 'ftd'
+                                    ? makeFtdNoResourceCacheKey(time, scheduledDuration, generatedEvents.length)
+                                    : null;
+                                const cachedFtdNoResource = ftdNoResourceCacheKey
+                                    ? ftdNoResourceCache.get(ftdNoResourceCacheKey)
+                                    : null;
+                                if (cachedFtdNoResource) {
+                                    listDiag.cachedResourceRejections++;
+                                    recordScheduleListRejection({
+                                        phase: 'schedule-event',
+                                        outcome: 'rejected',
+                                        reason: 'NO_RESOURCE_AVAILABLE',
+                                        trainee: trainee.fullName,
+                                        event: syllabusItem.code,
+                                        eventId: syllabusItem.id,
+                                        eventType: syllabusItem.type,
+                                        type,
+                                        startTime: time,
+                                        displayTime: _fmtT(time),
+                                        dayNight: syllabusItem.dayNight,
+                                        primaryPreferOnly: primaryOnly,
+                                        requirePreferredNightAircraft: requireNightAircraftReuse,
+                                        details: {
+                                            ...cachedFtdNoResource,
+                                            cachedResourceCheck: true,
+                                        },
+                                    });
+                                    recordNeoBuildAttemptTiming({
+                                        listName,
+                                        type,
+                                        outcome: 'rejected',
+                                        reason: 'NO_RESOURCE_AVAILABLE',
+                                        durationMs: 0,
+                                        trainee: trainee.fullName,
+                                        event: syllabusItem.code || syllabusItem.id,
+                                        startTime: time,
+                                    });
+                                    continue;
+                                }
                                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse, {
                                     diagnosticListName: listName,
                                     diagnosticTrace: (traceEntry) => {
-                                        if (traceEntry?.outcome !== 'rejected') return;
-                                        const reason = traceEntry.reason || 'UNKNOWN_REJECTION';
-                                        const details = traceEntry.details || {};
-                                        const resourcePrefix = typeof details.resourcePrefix === 'string' ? details.resourcePrefix : null;
-                                        const rawResourceCount = Number(details.resourceCount);
-                                        const resourceCount = Number.isFinite(rawResourceCount) ? rawResourceCount : null;
-                                        const eventKey = String(traceEntry.event || '').trim() || '(no event)';
-                                        const patternKey = [
-                                            reason,
-                                            traceEntry.type || type,
-                                            eventKey,
-                                            resourcePrefix || '-',
-                                            resourceCount ?? '-',
-                                            traceEntry.dayNight || '-',
-                                            traceEntry.primaryPreferOnly ? 'priority-only' : 'any-instructor',
-                                            traceEntry.requirePreferredNightAircraft ? 'preferred-night-aircraft' : 'any-aircraft',
-                                        ].join('|');
-                                        if (!listDiag.rejectionPatterns[patternKey]) {
-                                            listDiag.rejectionPatterns[patternKey] = {
-                                                count: 0,
-                                                reason,
-                                                event: eventKey === '(no event)' ? null : eventKey,
-                                                eventType: traceEntry.eventType || null,
-                                                type: traceEntry.type || type,
-                                                dayNight: traceEntry.dayNight || null,
-                                                resourcePrefix,
-                                                resourceCount,
-                                                primaryPreferOnly: typeof traceEntry.primaryPreferOnly === 'boolean' ? traceEntry.primaryPreferOnly : null,
-                                                requirePreferredNightAircraft: typeof traceEntry.requirePreferredNightAircraft === 'boolean' ? traceEntry.requirePreferredNightAircraft : null,
-                                                firstDisplayTime: traceEntry.displayTime || null,
-                                                lastDisplayTime: traceEntry.displayTime || null,
-                                                firstTrainee: traceEntry.trainee || null,
-                                                sampleTrainees: [],
-                                                sampleDetails: [],
-                                            };
-                                        }
-                                        const pattern = listDiag.rejectionPatterns[patternKey];
-                                        pattern.count++;
-                                        pattern.lastDisplayTime = traceEntry.displayTime || pattern.lastDisplayTime;
+                                        recordScheduleListRejection(traceEntry);
                                         if (
-                                            traceEntry.trainee &&
-                                            pattern.sampleTrainees.length < 8 &&
-                                            !pattern.sampleTrainees.includes(traceEntry.trainee)
+                                            ftdNoResourceCacheKey &&
+                                            traceEntry?.outcome === 'rejected' &&
+                                            traceEntry.reason === 'NO_RESOURCE_AVAILABLE' &&
+                                            traceEntry.details?.earlyResourceCheck === true
                                         ) {
-                                            pattern.sampleTrainees.push(traceEntry.trainee);
-                                        }
-                                        if (pattern.sampleDetails.length < 5) {
-                                            pattern.sampleDetails.push({
-                                                startTime: traceEntry.startTime,
-                                                displayTime: traceEntry.displayTime,
-                                                resourcePrefix,
-                                                resourceCount,
-                                                earlyResourceCheck: details.earlyResourceCheck === true,
-                                                compatibleResourceCandidateCount: details.compatibleResourceCandidateCount ?? null,
-                                                aircraftConfigMismatchCount: details.aircraftConfigMismatchCount ?? null,
-                                                count: details.count ?? null,
-                                                limit: details.limit ?? null,
-                                                proposed: details.proposed ?? null,
-                                            });
-                                        }
-                                        listDiag.rejectionReasons[reason] = (listDiag.rejectionReasons[reason] || 0) + 1;
-                                        if (listDiag.rejectionSamples.length < 80) {
-                                            listDiag.rejectionSamples.push({
-                                                reason,
-                                                trainee: traceEntry.trainee,
-                                                event: traceEntry.event,
-                                                type: traceEntry.type,
-                                                startTime: traceEntry.startTime,
-                                                displayTime: traceEntry.displayTime,
-                                                dayNight: traceEntry.dayNight,
-                                                details: traceEntry.details,
+                                            ftdNoResourceCache.set(ftdNoResourceCacheKey, {
+                                                resourcePrefix: traceEntry.details.resourcePrefix,
+                                                resourceCount: traceEntry.details.resourceCount,
+                                                earlyResourceCheck: true,
+                                                cachedFromDisplayTime: traceEntry.displayTime,
                                             });
                                         }
                                     },
@@ -12950,6 +13018,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                 }
                                 if (result && typeof result === 'object' && 'id' in result) {
                                     pushGeneratedEvent({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                    ftdNoResourceCache.clear();
                                     if (listDiag.placed.length < 80) {
                                         listDiag.placed.push({
                                             trainee: trainee.fullName,
@@ -13121,6 +13190,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             noSearchWindow: listDiag.noSearchWindow,
             noSyllabusItem: listDiag.noSyllabusItem,
             blockedPrimaryMissing: listDiag.blockedPrimaryMissing,
+            cachedResourceRejections: listDiag.cachedResourceRejections,
             passSummaries: listDiag.passSummaries.slice(-12),
             topRejectionReasons: Object.entries(listDiag.rejectionReasons)
                 .sort((a: any, b: any) => b[1] - a[1])
@@ -13141,6 +13211,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             candidateSlots: listDiag.candidateSlots,
             successes: listDiag.successes,
             generatedDelta: listDiag.generatedDelta,
+            cachedResourceRejections: listDiag.cachedResourceRejections,
             topRejectionReasons: Object.entries(listDiag.rejectionReasons)
                 .sort((a: any, b: any) => b[1] - a[1])
                 .slice(0, 5),
@@ -13230,6 +13301,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 trainee: trainee.fullName,
                 event: syllabusItem.code,
                 eventId: syllabusItem.id,
+                eventType: syllabusItem.type,
                 type,
                 startTime,
                 displayTime: _fmtT(startTime),
