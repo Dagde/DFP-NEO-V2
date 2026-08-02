@@ -111433,7 +111433,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const getLmpTypeForTrainee = (trainee) => {
     return getConfiguredLmpTypeForTrainee(trainee);
   };
-  const persistTraineeLmp = async (trainee, lmp, excludedCompletedEvents = []) => {
+  const persistTraineeLmp = async (trainee, lmp, excludedCompletedEvents = [], options = {}) => {
     const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
     const traineeDbId = trainee.id || matchedTrainee?.id;
     if (!traineeDbId) {
@@ -111454,6 +111454,8 @@ ${error instanceof Error ? error.message : String(error)}`,
       lmpType: getLmpTypeForTrainee(trainee),
       completedEventIds: completedEventIds.length,
       excludedCompletedEvents,
+      source: options.source || "manual",
+      skipReadBack: options.skipReadBack === true,
       ...summariseTrainingReportLmpItems(lmp)
     });
     const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
@@ -111496,6 +111498,14 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!Array.isArray(savedEvents) || savedEvents.length === 0) {
       throw new Error("Individual LMP save response did not include persisted events");
     }
+    if (options.skipReadBack === true) {
+      pushDfpDataDiag("report-lmp:persist:readback-skipped", {
+        traineeFullName: trainee.fullName,
+        traineeDbId,
+        source: options.source || "manual"
+      });
+      return savedEvents;
+    }
     try {
       const readBackResponse = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
         credentials: "include"
@@ -111508,6 +111518,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         ok: readBackResponse.ok,
         lmpType: readBackData?.lmp?.lmpType || null,
         completedEventIds: Array.isArray(readBackData?.lmp?.completedEventIds) ? readBackData.lmp.completedEventIds.length : null,
+        source: options.source || "manual",
         ...summariseTrainingReportLmpItems(readBackData?.lmp?.events)
       });
     } catch (readBackError) {
@@ -115450,9 +115461,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         if (changedTrainees.length > 0) {
           buildTraineeLMPs = reconciledLMPs;
           setTraineeLMPs(reconciledLMPs);
+          const persistStart = performance.now();
+          let persistedFollowUpLmps = 0;
           for (const changed of changedTrainees) {
             try {
-              await persistTraineeLmp(changed.trainee, changed.lmp);
+              await persistTraineeLmp(changed.trainee, changed.lmp, [], {
+                skipReadBack: true,
+                source: "neo-build-report-followups"
+              });
+              persistedFollowUpLmps += 1;
             } catch (persistError) {
               pushDfpDataDiag("build:report-followups:persist-failed", {
                 traineeFullName: changed.trainee.fullName,
@@ -115460,6 +115477,11 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               });
             }
           }
+          pushDfpDataDiag("build:report-followups:persist-complete", {
+            changedTrainees: changedTrainees.length,
+            persistedFollowUpLmps,
+            durationMs: Math.round(performance.now() - persistStart)
+          });
         }
         pushDfpDataDiag("build:report-followups:reconciled", {
           fetchedAssessments: allAssessments.length,

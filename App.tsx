@@ -31550,7 +31550,12 @@ const App: React.FC = () => {
         return getConfiguredLmpTypeForTrainee(trainee);
     };
 
-    const persistTraineeLmp = async (trainee: Trainee, lmp: SyllabusItemDetail[], excludedCompletedEvents: string[] = []): Promise<SyllabusItemDetail[]> => {
+    const persistTraineeLmp = async (
+        trainee: Trainee,
+        lmp: SyllabusItemDetail[],
+        excludedCompletedEvents: string[] = [],
+        options: { skipReadBack?: boolean; source?: string } = {}
+    ): Promise<SyllabusItemDetail[]> => {
         const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
         const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
         if (!traineeDbId) {
@@ -31578,6 +31583,8 @@ const App: React.FC = () => {
             lmpType: getLmpTypeForTrainee(trainee),
             completedEventIds: completedEventIds.length,
             excludedCompletedEvents,
+            source: options.source || 'manual',
+            skipReadBack: options.skipReadBack === true,
             ...summariseTrainingReportLmpItems(lmp),
         });
         const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
@@ -31623,6 +31630,15 @@ const App: React.FC = () => {
             throw new Error('Individual LMP save response did not include persisted events');
         }
 
+        if (options.skipReadBack === true) {
+            pushDfpDataDiag('report-lmp:persist:readback-skipped', {
+                traineeFullName: trainee.fullName,
+                traineeDbId,
+                source: options.source || 'manual',
+            });
+            return savedEvents;
+        }
+
         try {
             const readBackResponse = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
                 credentials: 'include',
@@ -31635,6 +31651,7 @@ const App: React.FC = () => {
                 ok: readBackResponse.ok,
                 lmpType: readBackData?.lmp?.lmpType || null,
                 completedEventIds: Array.isArray(readBackData?.lmp?.completedEventIds) ? readBackData.lmp.completedEventIds.length : null,
+                source: options.source || 'manual',
                 ...summariseTrainingReportLmpItems(readBackData?.lmp?.events),
             });
         } catch (readBackError) {
@@ -36420,9 +36437,15 @@ const App: React.FC = () => {
                 if (changedTrainees.length > 0) {
                     buildTraineeLMPs = reconciledLMPs;
                     setTraineeLMPs(reconciledLMPs);
+                    const persistStart = performance.now();
+                    let persistedFollowUpLmps = 0;
                     for (const changed of changedTrainees) {
                         try {
-                            await persistTraineeLmp(changed.trainee, changed.lmp);
+                            await persistTraineeLmp(changed.trainee, changed.lmp, [], {
+                                skipReadBack: true,
+                                source: 'neo-build-report-followups',
+                            });
+                            persistedFollowUpLmps += 1;
                         } catch (persistError) {
                             pushDfpDataDiag('build:report-followups:persist-failed', {
                                 traineeFullName: changed.trainee.fullName,
@@ -36430,6 +36453,11 @@ const App: React.FC = () => {
                             });
                         }
                     }
+                    pushDfpDataDiag('build:report-followups:persist-complete', {
+                        changedTrainees: changedTrainees.length,
+                        persistedFollowUpLmps,
+                        durationMs: Math.round(performance.now() - persistStart),
+                    });
                 }
 
                 pushDfpDataDiag('build:report-followups:reconciled', {
