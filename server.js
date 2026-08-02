@@ -5131,7 +5131,13 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       }
 
       const overlayWriteStartedAt = Date.now();
-      overlayUpsertCount += await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
+      const overlaySyncStats = { skippedUnchanged: 0 };
+      overlayUpsertCount += await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, {
+        deactivateMissing: false,
+        existingOverlays: overlayEvents,
+        stats: overlaySyncStats,
+      });
+      skippedUnchangedOverlayCount += overlaySyncStats.skippedUnchanged;
       overlayWriteMs += Date.now() - overlayWriteStartedAt;
 
       if (lmpPayloadUnchanged) {
@@ -10118,6 +10124,9 @@ async function migrateIndividualLmpOverlays(db) {
 async function upsertTraineeLmpOverlays(db, traineeId, traineeFullName, events, options = {}) {
   const overlays = (Array.isArray(events) ? events : []).filter(isLmpOverlayItemForSync);
   const overlayIds = overlays.map(item => item.id || item.code).filter(Boolean);
+  const existingOverlayMap = new Map((Array.isArray(options.existingOverlays) ? options.existingOverlays : [])
+    .map(item => [item?.id || item?.code, item])
+    .filter(([overlayId]) => Boolean(overlayId)));
 
   if (options.deactivateMissing) {
     if (overlayIds.length > 0) {
@@ -10152,6 +10161,13 @@ async function upsertTraineeLmpOverlays(db, traineeId, traineeFullName, events, 
     payload.resourceNumber = normalizedResourceNumber;
     payload.resourceCount = normalizedResourceNumber;
     payload.resourcesPhysical = alignPhysicalResourcesForSync(payload.resourcesPhysical, normalizedResourceNumber);
+    const existingOverlay = existingOverlayMap.get(overlayId);
+    if (existingOverlay && sameLmpEventsForSync([existingOverlay], [payload])) {
+      if (options.stats && typeof options.stats === 'object') {
+        options.stats.skippedUnchanged = (options.stats.skippedUnchanged || 0) + 1;
+      }
+      continue;
+    }
     const rowId = `tlmpo-${safeIdentifier(`${traineeId}-${overlayId}`)}`.slice(0, 180);
     const packageId = item.remedialPackageId || deriveRemedialPackageId(item) || null;
     await db.$executeRawUnsafe(`
