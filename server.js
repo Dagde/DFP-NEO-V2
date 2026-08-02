@@ -4797,6 +4797,15 @@ const getLmpCanonicalCompletionKeyForSync = (item) =>
   normalizeLmpCompletionKeyForSync(item?.masterEventId) ||
   normalizeLmpCompletionKeyForSync(item?.id);
 
+const getLmpPrerequisiteKeysForSync = (item) => {
+  const prerequisiteValues = [
+    ...(Array.isArray(item?.prerequisites) ? item.prerequisites : []),
+    ...(Array.isArray(item?.prerequisitesGround) ? item.prerequisitesGround : []),
+    ...(Array.isArray(item?.prerequisitesFlying) ? item.prerequisitesFlying : []),
+  ];
+  return Array.from(new Set(prerequisiteValues.map(normalizeLmpCompletionKeyForSync).filter(Boolean)));
+};
+
 const addDirectLmpPrerequisiteCompletionsForSync = (scoreMap, lmpEvents) => {
   const events = Array.isArray(lmpEvents) ? lmpEvents : [];
   if (events.length === 0) return [];
@@ -4814,10 +4823,7 @@ const addDirectLmpPrerequisiteCompletionsForSync = (scoreMap, lmpEvents) => {
       const completedAt = getLmpCompletionTimestampForSync(item, scoreMap);
       if (!completedAt) continue;
 
-      (item?.prerequisites || []).forEach(prerequisite => {
-        const prerequisiteKey = normalizeLmpCompletionKeyForSync(prerequisite);
-        if (!prerequisiteKey) return;
-
+      getLmpPrerequisiteKeysForSync(item).forEach(prerequisiteKey => {
         const prerequisiteItem = itemByKey.get(prerequisiteKey);
         const canonicalKey = prerequisiteItem
           ? getLmpCanonicalCompletionKeyForSync(prerequisiteItem)
