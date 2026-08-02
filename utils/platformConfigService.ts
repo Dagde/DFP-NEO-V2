@@ -476,7 +476,12 @@ const masterLmpAccessWeight = (level: MasterLmpAccessLevel): number => (
 );
 
 export const normaliseMasterLmpAccessRules = (config: PlatformConfig | null): PlatformMasterLmpAccessRule[] => {
-  const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
+  const organisationSettings = config?.organisations?.[0]?.settings as any;
+  const hasConfiguredAccess = !!organisationSettings
+    && Object.prototype.hasOwnProperty.call(organisationSettings, 'masterLmpAccess');
+  const configured = hasConfiguredAccess
+    ? organisationSettings.masterLmpAccess
+    : organisationSettings?.masterLmpAccessRules;
   const source = Array.isArray(configured)
     ? configured
     : [];

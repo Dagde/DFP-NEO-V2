@@ -2235,7 +2235,9 @@ const normaliseOptionalOperationalModel = (value) => {
 };
 const masterLmpAccessWeight = (level) => level === "Manage" ? 3 : level === "Assign" ? 2 : 1;
 const normaliseMasterLmpAccessRules = (config) => {
-  const configured = config?.organisations?.[0]?.settings?.masterLmpAccess;
+  const organisationSettings = config?.organisations?.[0]?.settings;
+  const hasConfiguredAccess = !!organisationSettings && Object.prototype.hasOwnProperty.call(organisationSettings, "masterLmpAccess");
+  const configured = hasConfiguredAccess ? organisationSettings.masterLmpAccess : organisationSettings?.masterLmpAccessRules;
   const source = Array.isArray(configured) ? configured : [];
   return source.map((rule, index) => ({
     id: String(rule.id || `master-lmp-access-${index + 1}`),
@@ -69730,9 +69732,10 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       schedulingRuleSets: (Array.isArray(prev.schedulingRuleSets) ? prev.schedulingRuleSets : []).map((ruleSet) => removedCode && normaliseUnitCode2(ruleSet.aircraftTypeCode) === removedCode ? { ...ruleSet, aircraftTypeCode: null } : ruleSet),
       organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => {
         const nextSettings = { ...organisation.settings || {} };
-        if (Array.isArray(nextSettings.masterLmpAccess)) {
-          nextSettings.masterLmpAccess = nextSettings.masterLmpAccess.map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule);
-        }
+        ["masterLmpAccess", "masterLmpAccessRules"].forEach((accessKey) => {
+          if (!Array.isArray(nextSettings[accessKey])) return;
+          nextSettings[accessKey] = nextSettings[accessKey].map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule);
+        });
         return {
           ...organisation,
           settings: clearDeletedAircraftSettings(nextSettings)

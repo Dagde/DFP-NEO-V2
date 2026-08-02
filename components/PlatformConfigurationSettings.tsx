@@ -4657,13 +4657,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       )),
       organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => {
         const nextSettings = { ...(organisation.settings || {}) };
-        if (Array.isArray(nextSettings.masterLmpAccess)) {
-          nextSettings.masterLmpAccess = nextSettings.masterLmpAccess.map((rule: any) => (
+        ['masterLmpAccess', 'masterLmpAccessRules'].forEach((accessKey) => {
+          if (!Array.isArray(nextSettings[accessKey])) return;
+          nextSettings[accessKey] = nextSettings[accessKey].map((rule: any) => (
             removedCode && normaliseUnitCode(rule.aircraftTypeCode) === removedCode
               ? { ...rule, aircraftTypeCode: null }
               : rule
           ));
-        }
+        });
         return {
           ...organisation,
           settings: clearDeletedAircraftSettings(nextSettings),
