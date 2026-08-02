@@ -36327,10 +36327,34 @@ const App: React.FC = () => {
                     buildTrainees: buildTraineeNameSet.size,
                     lmpCount: buildTraineeLMPs.size,
                 });
+                const buildTraineeNames = Array.from(buildTraineeNameSet);
+                let useScopedFollowUpFetch = true;
                 while (true) {
-                    const response = await fetch(`${apiBase}/trainee-performance?limit=${pageSize}&offset=${offset}`, {
+                    const scopedFollowUpParams = new URLSearchParams({
+                        limit: String(pageSize),
+                        offset: String(offset),
+                        followUpOnly: 'true',
+                        traineeFullNames: JSON.stringify(buildTraineeNames),
+                    });
+                    const legacyFollowUpParams = new URLSearchParams({
+                        limit: String(pageSize),
+                        offset: String(offset),
+                    });
+                    const scopedUrl = `${apiBase}/trainee-performance?${scopedFollowUpParams.toString()}`;
+                    const legacyUrl = `${apiBase}/trainee-performance?${legacyFollowUpParams.toString()}`;
+                    let response = await fetch(useScopedFollowUpFetch ? scopedUrl : legacyUrl, {
                         credentials: 'include',
                     });
+                    if (useScopedFollowUpFetch && !response.ok && offset === 0) {
+                        useScopedFollowUpFetch = false;
+                        pushDfpDataDiag('build:report-followups:scoped-fetch-failed-fallback', {
+                            status: response.status,
+                            text: await response.text().catch(() => ''),
+                        });
+                        response = await fetch(legacyUrl, {
+                            credentials: 'include',
+                        });
+                    }
                     if (!response.ok) {
                         pushDfpDataDiag('build:report-followups:fetch-failed', {
                             status: response.status,
@@ -36342,6 +36366,13 @@ const App: React.FC = () => {
                     const page = await response.json();
                     if (!Array.isArray(page) || page.length === 0) break;
                     allAssessments.push(...page);
+                    if (offset === 0) {
+                        pushDfpDataDiag('build:report-followups:fetch-mode', {
+                            mode: useScopedFollowUpFetch ? 'scoped-follow-up-only' : 'legacy-full-table',
+                            buildTrainees: buildTraineeNames.length,
+                            firstPageAssessments: page.length,
+                        });
+                    }
                     if (page.length < pageSize) break;
                     offset += pageSize;
                 }

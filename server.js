@@ -13614,10 +13614,12 @@ async function ensureTraineePerformanceTable(db) {
     `);
     // Create indexes for common query patterns
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_idx" ON "TraineePerformance"("traineeId")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeFullName_idx" ON "TraineePerformance"("traineeFullName")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_idx" ON "TraineePerformance"("instructorName")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_course_idx" ON "TraineePerformance"("course")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_date_idx" ON "TraineePerformance"("date")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_isCompleted_idx" ON "TraineePerformance"("isCompleted")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_elementScores_gin_idx" ON "TraineePerformance" USING GIN ("elementScores")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_date_idx" ON "TraineePerformance"("traineeId", "date")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_completed_idx" ON "TraineePerformance"("instructorName", "isCompleted")`);
     console.log('✅ TraineePerformance table ready');
@@ -13857,19 +13859,40 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function parseQueryStringList(value) {
+  if (Array.isArray(value)) {
+    return uniqueStrings(value.flatMap(item => parseQueryStringList(item)));
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  if (raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return uniqueStrings(parsed.map(item => String(item || '').trim()).filter(Boolean));
+      }
+    } catch {
+      // Fall through to the pipe-delimited parser below.
+    }
+  }
+  return uniqueStrings(raw.split('|').map(item => item.trim()).filter(Boolean));
+}
+
 // GET /api/trainee-performance
-// Query params: traineeId, traineeFullName, instructorName, course, isCompleted, dateFrom, dateTo, limit, offset
+// Query params: traineeId, traineeFullName, traineeFullNames, instructorName, course, isCompleted, dateFrom, dateTo, followUpOnly, limit, offset
 app.get('/api/trainee-performance', async (req, res) => {
   try {
     const db = await getPrisma();
     const {
       traineeId,
       traineeFullName,
+      traineeFullNames,
       instructorName,
       course,
       isCompleted,
       dateFrom,
       dateTo,
+      followUpOnly,
       limit = 500,
       offset = 0
     } = req.query;
@@ -13886,6 +13909,12 @@ app.get('/api/trainee-performance', async (req, res) => {
     if (traineeFullName) {
       conditions.push(`"traineeFullName" = $${paramIdx++}::text`);
       params.push(traineeFullName);
+    }
+    const traineeFullNameList = parseQueryStringList(traineeFullNames);
+    if (traineeFullNameList.length > 0) {
+      const placeholders = traineeFullNameList.map(() => `$${paramIdx++}::text`);
+      conditions.push(`"traineeFullName" IN (${placeholders.join(', ')})`);
+      params.push(...traineeFullNameList);
     }
     if (instructorName) {
       conditions.push(`"instructorName" = $${paramIdx++}::text`);
@@ -13907,6 +13936,9 @@ app.get('/api/trainee-performance', async (req, res) => {
     if (isCompleted !== undefined) {
       conditions.push(`"isCompleted" = $${paramIdx++}::boolean`);
       params.push(isCompleted === 'true');
+    }
+    if (followUpOnly === 'true') {
+      conditions.push(`"elementScores" @> '[{"element":"__pt051FollowUp"}]'::jsonb`);
     }
     if (dateFrom) {
       conditions.push(`"date" >= $${paramIdx++}::text`);
