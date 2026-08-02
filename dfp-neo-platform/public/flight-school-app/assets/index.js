@@ -69517,6 +69517,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const platformActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  const aircraftResourceMiniButtonClass = "h-[38px] min-w-[76px] rounded-md border border-gray-500 bg-gray-300 px-3 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50";
   const rewriteUnitCodesInSettings = (settings = {}, oldCode, nextCode) => {
     const normalise = (value) => String(value || "").trim();
     const replaceUnitList = (units) => {
@@ -73204,7 +73205,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                               type: "button",
                               disabled: !canEditResourcePools,
                               onClick: () => addAircraftNumberPrefix(index),
-                              className: "rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                              className: aircraftResourceMiniButtonClass,
                               children: "Add Prefix"
                             }
                           ) : null,
@@ -73268,7 +73269,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                             type: "button",
                             disabled: !canEditResourcePools,
                             onClick: () => addAircraftConfiguration(index),
-                            className: "rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                            className: aircraftResourceMiniButtonClass,
                             children: "Add Config"
                           }
                         )
@@ -75755,13 +75756,20 @@ const NumberField = ({
   const [draftValue, setDraftValue] = reactExports.useState(() => normaliseNumberDraft(value ?? 0));
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const displayedValue = isEditing ? draftValue : normaliseNumberDraft(value ?? 0);
+  const clampValue = (nextValue) => {
+    let safeNumber = Number.isFinite(nextValue) ? nextValue : 0;
+    if (typeof min === "number") safeNumber = Math.max(min, safeNumber);
+    if (typeof max === "number") safeNumber = Math.min(max, safeNumber);
+    if (step !== "any") safeNumber = Number(safeNumber.toFixed(6));
+    return safeNumber;
+  };
   reactExports.useEffect(() => {
     if (!isEditing) setDraftValue(normaliseNumberDraft(value ?? 0));
   }, [isEditing, value]);
   const commitDraftValue = () => {
     setIsEditing(false);
     const nextNumber = Number(draftValue);
-    const safeNumber = Number.isFinite(nextNumber) ? nextNumber : 0;
+    const safeNumber = clampValue(nextNumber);
     if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
     setDraftValue(normaliseNumberDraft(safeNumber));
   };
@@ -75789,7 +75797,9 @@ const NumberField = ({
           setDraftValue(nextValue);
           if (!commitOnChange || nextValue.trim() === "") return;
           const nextNumber = Number(nextValue);
-          if (Number.isFinite(nextNumber) && nextNumber !== Number(value ?? 0)) onChange(nextNumber);
+          if (!Number.isFinite(nextNumber)) return;
+          const safeNumber = clampValue(nextNumber);
+          if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
         }
       }
     )
