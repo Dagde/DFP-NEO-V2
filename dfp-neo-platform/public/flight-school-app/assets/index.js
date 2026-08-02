@@ -2252,7 +2252,8 @@ const normaliseMasterLmpAccessRules = (config) => {
 };
 const normaliseMasterLmpCatalogue = (config) => {
   const configured = config?.organisations?.[0]?.settings?.masterLmpCatalogue;
-  const configuredEntries = Array.isArray(configured) ? configured : [];
+  const hasExplicitCatalogue = Array.isArray(configured);
+  const configuredEntries = hasExplicitCatalogue ? configured : [];
   const accessRuleCodes = normaliseMasterLmpAccessRules(config).map((rule) => rule.lmpCode);
   const source = configuredEntries;
   const entriesByCode = /* @__PURE__ */ new Map();
@@ -2270,19 +2271,21 @@ const normaliseMasterLmpCatalogue = (config) => {
       status: String(entry?.status || "ACTIVE").toUpperCase()
     });
   });
-  accessRuleCodes.forEach((code) => {
-    const cleanCode = String(code || "").trim();
-    if (!cleanCode) return;
-    const key = normaliseAccessValue(cleanCode);
-    if (entriesByCode.has(key)) return;
-    entriesByCode.set(key, {
-      id: `master-lmp-catalogue-${cleanCode.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      code: cleanCode,
-      name: cleanCode,
-      description: "",
-      status: "ACTIVE"
+  if (!hasExplicitCatalogue) {
+    accessRuleCodes.forEach((code) => {
+      const cleanCode = String(code || "").trim();
+      if (!cleanCode) return;
+      const key = normaliseAccessValue(cleanCode);
+      if (entriesByCode.has(key)) return;
+      entriesByCode.set(key, {
+        id: `master-lmp-catalogue-${cleanCode.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        code: cleanCode,
+        name: cleanCode,
+        description: "",
+        status: "ACTIVE"
+      });
     });
-  });
+  }
   return Array.from(entriesByCode.values());
 };
 const getMasterLmpAccessLevel = (config, lmpCode, context = {}) => {
