@@ -3512,6 +3512,7 @@ const makeCrewPositionId = (genericName, index) => {
   return slug || `crew-position-${index + 1}`;
 };
 const normaliseOperationalModelList = (source, fallback = ALL_OPERATIONAL_MODEL_CODES) => {
+  if (Array.isArray(source) && source.length === 0) return [];
   const rawValues = Array.isArray(source) ? source : [];
   const models = rawValues.map((value) => normaliseOperationalModel(value)).filter((model, index, list) => list.indexOf(model) === index);
   return models.length > 0 ? models : [...fallback];
@@ -3529,8 +3530,9 @@ const normaliseEntry = (entry, index) => {
   if (!genericName.trim()) return null;
   const rawLabel = String(entry.label || entry.displayName || "");
   const label = rawLabel.trim() ? rawLabel : genericName;
+  const operationalModelSource = Object.prototype.hasOwnProperty.call(entry, "operationalModels") ? entry.operationalModels : Object.prototype.hasOwnProperty.call(entry, "models") ? entry.models : entry.modelCodes;
   const operationalModels = normaliseOperationalModelList(
-    entry.operationalModels || entry.models || entry.modelCodes,
+    operationalModelSource,
     fallback?.operationalModels || ALL_OPERATIONAL_MODEL_CODES
   );
   return {
