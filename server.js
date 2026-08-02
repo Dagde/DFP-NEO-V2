@@ -4683,10 +4683,16 @@ const sameStringSetForSync = (left = [], right = []) => {
   return leftValues.every((value, index) => value === rightValues[index]);
 };
 
+const LMP_SYNC_COMPARISON_IGNORED_KEYS = new Set(['createdAt', 'updatedAt']);
+
 const stableStringifyForSync = (value) => {
   if (Array.isArray(value)) return `[${value.map(stableStringifyForSync).join(',')}]`;
   if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringifyForSync(value[key])}`).join(',')}}`;
+    return `{${Object.keys(value)
+      .filter(key => !LMP_SYNC_COMPARISON_IGNORED_KEYS.has(key))
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${stableStringifyForSync(value[key])}`)
+      .join(',')}}`;
   }
   return JSON.stringify(value);
 };
@@ -4724,6 +4730,7 @@ const findFirstLmpEventDifferenceForSync = (left = [], right = []) => {
       ...Object.keys(nextEvent),
     ]);
     keys.forEach(key => {
+      if (LMP_SYNC_COMPARISON_IGNORED_KEYS.has(key)) return;
       if (stableStringifyForSync(existingEvent[key]) !== stableStringifyForSync(nextEvent[key])) {
         changedKeys.push(key);
       }
