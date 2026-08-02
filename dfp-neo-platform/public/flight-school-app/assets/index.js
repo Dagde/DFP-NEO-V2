@@ -4129,7 +4129,8 @@ const getRankOrderFromEquivalency = (config) => {
 };
 const normalisePersonnelDisplaySettings = (input) => {
   const staffRankEquivalency = normaliseRankEquivalencyConfig(input?.staffRankEquivalency, DEFAULT_RANK_EQUIVALENCY_CONFIG);
-  const civilianTitles = normaliseCivilianTitles(input?.civilianTitles || input?.civilianRankTitles);
+  const civilianTitleSource = input?.civilianTitles !== void 0 ? input.civilianTitles : input?.civilianRankTitles;
+  const civilianTitles = normaliseCivilianTitles(civilianTitleSource);
   const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, getRankOrderFromEquivalency({ ...staffRankEquivalency, civilianTitles })));
   const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
   const simIpDisplayLabel = preserveEditableTextSetting(input?.simIpDisplayLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.simIpDisplayLabel);
