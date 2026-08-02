@@ -89970,6 +89970,8 @@ const createNeoBuildTimingReport = (buildDate, counters = {}) => {
     lastMarkMs: now
   };
 };
+const NEO_BUILD_GENERATION_START_DELAY_MS = 100;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 250;
 const saveNeoBuildTimingReport = (report) => {
   if (!report) return;
   try {
@@ -116067,7 +116069,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       // DB-backed ELCE map (undefined = fall back to DFP-scan)
       timingReport
     };
-    markNeoBuildTiming(timingReport, "generate:setTimeout-queued", { delayMs: 500 });
+    markNeoBuildTiming(timingReport, "generate:setTimeout-queued", { delayMs: NEO_BUILD_GENERATION_START_DELAY_MS });
     setTimeout(() => {
       try {
         markNeoBuildTiming(timingReport, "generate:setTimeout-fired");
@@ -116345,16 +116347,16 @@ ${conflictLines.join("\n")}${moreText}`,
         setDfpBuildProgress({ message: "Error during build!", percentage: 100 });
         downloadNeoBuildDiagnosticAfterRun("build-error");
       } finally {
-        markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: 1e3 });
+        markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: NEO_BUILD_NAVIGATION_DELAY_MS });
         setTimeout(() => {
           markNeoBuildTiming(timingReport, "navigation:setTimeout-fired");
           logNeoBuildUiDebug("🚀 [NEO-Build] Build process complete, navigating to NextDayBuild");
           setIsBuildingDfp(false);
           handleNavigation("NextDayBuild");
           markNeoBuildTiming(timingReport, "runBuildAlgorithm:complete");
-        }, 1e3);
+        }, NEO_BUILD_NAVIGATION_DELAY_MS);
       }
-    }, 500);
+    }, NEO_BUILD_GENERATION_START_DELAY_MS);
   };
   const handlePublish = async () => {
     if (!canPublishDfp) {

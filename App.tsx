@@ -5112,6 +5112,9 @@ const createNeoBuildTimingReport = (buildDate: string, counters: Record<string, 
     };
 };
 
+const NEO_BUILD_GENERATION_START_DELAY_MS = 100;
+const NEO_BUILD_NAVIGATION_DELAY_MS = 250;
+
 const saveNeoBuildTimingReport = (report?: NeoBuildTimingReport) => {
     if (!report) return;
     try {
@@ -37142,7 +37145,7 @@ const App: React.FC = () => {
             timingReport,
         };
 
-        markNeoBuildTiming(timingReport, 'generate:setTimeout-queued', { delayMs: 500 });
+        markNeoBuildTiming(timingReport, 'generate:setTimeout-queued', { delayMs: NEO_BUILD_GENERATION_START_DELAY_MS });
         setTimeout(() => {
             try {
                 markNeoBuildTiming(timingReport, 'generate:setTimeout-fired');
@@ -37440,16 +37443,16 @@ const App: React.FC = () => {
                 setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
                 downloadNeoBuildDiagnosticAfterRun('build-error');
             } finally {
-                markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: 1000 });
+                markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: NEO_BUILD_NAVIGATION_DELAY_MS });
                 setTimeout(() => {
                     markNeoBuildTiming(timingReport, 'navigation:setTimeout-fired');
                     logNeoBuildUiDebug('🚀 [NEO-Build] Build process complete, navigating to NextDayBuild');
                     setIsBuildingDfp(false);
                     handleNavigation('NextDayBuild');
                     markNeoBuildTiming(timingReport, 'runBuildAlgorithm:complete');
-                }, 1000);
+                }, NEO_BUILD_NAVIGATION_DELAY_MS);
             }
-        }, 500);
+        }, NEO_BUILD_GENERATION_START_DELAY_MS);
     };
 
     const handlePublish = async () => {
