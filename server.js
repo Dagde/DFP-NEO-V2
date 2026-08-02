@@ -4464,7 +4464,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
       completedEventIds: true,
       updatedAt: true,
     };
-    if (includeEvents && !buildPayload) {
+    if (includeEvents) {
       select.events = true;
     }
 
@@ -4513,6 +4513,12 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         completedAt: item.completedAt,
         isComplete: item.isComplete,
         completed: item.completed,
+        trainingReportNextEventExtensions: item.trainingReportNextEventExtensions,
+        trainingReportExtensionAssessmentIds: item.trainingReportExtensionAssessmentIds,
+        trainingReportLastExtendedByAssessmentId: item.trainingReportLastExtendedByAssessmentId,
+        trainingReportBaseNotes: item.trainingReportBaseNotes,
+        trainingReportForwardedNotes: item.trainingReportForwardedNotes,
+        trainingReportLastForwardedNotesAssessmentId: item.trainingReportLastForwardedNotesAssessmentId,
         isRemedial: item.isRemedial,
         lmpSource: item.lmpSource,
         orderKey: item.orderKey,
@@ -4527,7 +4533,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         const masterSyllabus = getMasterSyllabus(lmp.lmpType);
         const overlayEvents = overlaysByTraineeId.get(lmp.traineeId) || [];
         const events = composeIndividualLmpEvents(
-          [],
+          Array.isArray(lmp.events) ? lmp.events : [],
           masterSyllabus,
           overlayEvents,
           lmp.completedEventIds || []
@@ -4622,9 +4628,11 @@ const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
   'cctOnly',
   'notes',
   'trainingReportNextEventExtensions',
+  'trainingReportExtensionAssessmentIds',
   'trainingReportLastExtendedByAssessmentId',
   'trainingReportBaseNotes',
   'trainingReportForwardedNotes',
+  'trainingReportLastForwardedNotesAssessmentId',
 ];
 
 const getIndividualLmpMasterOverridesForSync = (item) => {
@@ -4662,6 +4670,25 @@ const summariseTrainingReportLmpItemsForSync = (events = []) => {
       trainingReportForwardedNotes: item?.trainingReportForwardedNotes,
     })),
   };
+};
+
+const sameStringSetForSync = (left = [], right = []) => {
+  const normalise = (values) => (Array.isArray(values) ? values : [])
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .sort();
+  const leftValues = normalise(left);
+  const rightValues = normalise(right);
+  if (leftValues.length !== rightValues.length) return false;
+  return leftValues.every((value, index) => value === rightValues[index]);
+};
+
+const sameLmpEventsForSync = (left = [], right = []) => {
+  try {
+    return JSON.stringify(Array.isArray(left) ? left : []) === JSON.stringify(Array.isArray(right) ? right : []);
+  } catch {
+    return false;
+  }
 };
 
 const getLmpResourceNumberForSync = (item) => {
@@ -4760,7 +4787,7 @@ const addPriorGroundCompletionsForSync = (scoreMap, lmpEvents) => {
 
   if (highestCompletedFlyingIndex <= 0) return [];
 
-  const completedAt = new Date().toISOString();
+  const completedAt = getLmpCompletionTimestampForSync(events[highestCompletedFlyingIndex], scoreMap) || new Date().toISOString();
   const backfilled = [];
   for (let i = 0; i < highestCompletedFlyingIndex; i++) {
     const item = events[i];
@@ -4943,6 +4970,9 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     overlaysByTraineeId.forEach(events => { activeOverlayCount += events.length; });
 
     const results = [];
+    let createdLmpCount = 0;
+    let updatedLmpCount = 0;
+    let skippedUnchangedLmpCount = 0;
 
     for (const trainee of trainees) {
       const lmpType = String(trainee.lmpType || trainee.course || '').trim();
@@ -4999,27 +5029,36 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
       const existingCompleted = existing ? (existing.completedEventIds || []) : [];
       const newlyMarked = completedEventIds.filter(id => !existingCompleted.includes(id));
+      const lmpPayloadUnchanged = Boolean(existing) &&
+        sameStringSetForSync(existingCompleted, completedEventIds) &&
+        sameLmpEventsForSync(existingEvents, lmpEvents);
 
-      // Upsert the IndividualLMP
-      await db.individualLMP.upsert({
-        where: { traineeId: trainee.id },
-        update: {
-          traineeFullName: trainee.fullName,
-          lmpType,
-          events: lmpEvents,
-          completedEventIds,
-          updatedAt: new Date(),
-        },
-        create: {
-          traineeId: trainee.id,
-          traineeFullName: trainee.fullName,
-          lmpType,
-          events: lmpEvents,
-          completedEventIds,
-        },
-      });
+      if (lmpPayloadUnchanged) {
+        skippedUnchangedLmpCount += 1;
+      } else {
+        // Upsert the IndividualLMP only when the composed payload has changed.
+        await db.individualLMP.upsert({
+          where: { traineeId: trainee.id },
+          update: {
+            traineeFullName: trainee.fullName,
+            lmpType,
+            events: lmpEvents,
+            completedEventIds,
+            updatedAt: new Date(),
+          },
+          create: {
+            traineeId: trainee.id,
+            traineeFullName: trainee.fullName,
+            lmpType,
+            events: lmpEvents,
+            completedEventIds,
+          },
+        });
+        if (existing) updatedLmpCount += 1;
+        else createdLmpCount += 1;
+      }
 
-      const status = !existing ? 'created' : newlyMarked.length > 0 ? 'updated' : 'unchanged';
+      const status = !existing ? 'created' : lmpPayloadUnchanged ? 'unchanged' : 'updated';
       results.push({
         traineeFullName: trainee.fullName,
         lmpType,
@@ -5029,10 +5068,12 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         status,
       });
 
-      console.log(
-        `[LMP Sync] ${trainee.fullName} (${lmpType}): ${completedEventIds.length}/${masterSyllabus.length} events complete` +
-        (newlyMarked.length > 0 ? ` — newly marked: ${newlyMarked.join(', ')}` : '')
-      );
+      if (!lmpPayloadUnchanged || newlyMarked.length > 0) {
+        console.log(
+          `[LMP Sync] ${trainee.fullName} (${lmpType}): ${completedEventIds.length}/${masterSyllabus.length} events complete` +
+          (newlyMarked.length > 0 ? ` — newly marked: ${newlyMarked.join(', ')}` : '')
+        );
+      }
     }
 
     const created = results.filter(r => r.status === 'created').length;
@@ -5040,7 +5081,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     const unchanged = results.filter(r => r.status === 'unchanged').length;
     const noSyllabus = results.filter(r => r.status === 'no_syllabus').length;
 
-    console.log(`[LMP Sync] ✅ Done — ${created} created, ${updated} updated, ${unchanged} unchanged, ${noSyllabus} skipped; ${activeOverlayCount} active overlay event(s) loaded in ${overlayLookupMs}ms`);
+    console.log(`[LMP Sync] ✅ Done — ${created} created, ${updated} updated, ${unchanged} unchanged, ${noSyllabus} skipped; DB writes: ${createdLmpCount} created, ${updatedLmpCount} updated, ${skippedUnchangedLmpCount} unchanged skipped; ${activeOverlayCount} active overlay event(s) loaded in ${overlayLookupMs}ms`);
 
     res.json({
       success: true,
@@ -5050,6 +5091,11 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         unchanged,
         noSyllabus,
         total: trainees.length,
+        dbWrites: {
+          created: createdLmpCount,
+          updated: updatedLmpCount,
+          skippedUnchanged: skippedUnchangedLmpCount,
+        },
         activeOverlayCount,
         overlayTraineeCount: overlaysByTraineeId.size,
         overlayLookupMs,
