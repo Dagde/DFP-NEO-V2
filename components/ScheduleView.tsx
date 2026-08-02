@@ -8,7 +8,7 @@ import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { DEFAULT_PLATFORM_PERMISSION_PROFILES, getOperationalModelLabel, getUnitOperationalModel, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
+import { getOperationalModelLabel, getPlatformPermissionProfiles, getUnitOperationalModel, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
 import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -1637,9 +1637,7 @@ const OrganisationMyUnitSettings: React.FC<{
     const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
     const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
     const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
-    const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles)
-        ? organisationSettings.permissionProfiles
-        : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+    const permissionProfiles = getPlatformPermissionProfiles(platformConfig || null);
     const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile: any) => [String(profile.id || '').trim(), profile.name || profile.id]));
     const platformUsers = platformConfig?.platformUsers || [];
     const staffQualificationCatalogue = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);

@@ -11153,7 +11153,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   getCrewPositionLabelMap(crewPositionTerminology);
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(organisationSettings.personnelDisplaySettings || organisationSettings.personnelSettings || null);
-  const permissionProfiles = Array.isArray(organisationSettings.permissionProfiles) ? organisationSettings.permissionProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+  const permissionProfiles = getPlatformPermissionProfiles(platformConfig || null);
   const permissionProfileNameMap = Object.fromEntries(permissionProfiles.map((profile) => [String(profile.id || "").trim(), profile.name || profile.id]));
   const platformUsers = platformConfig?.platformUsers || [];
   const staffQualificationCatalogue2 = normaliseStaffQualificationCatalogue(organisationSettings.staffQualificationCatalogue || null);
