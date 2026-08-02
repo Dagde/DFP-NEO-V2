@@ -140,7 +140,7 @@ const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
 
 const normaliseAssessedElements = (elements?: string[], availableElements: string[] = []): string[] => {
     const available = new Set(availableElements.map(item => item.toLowerCase()));
-    const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS;
+    const source = Array.isArray(elements) ? elements : availableElements;
     const selected = source
         .map(item => String(item || '').trim())
         .filter(Boolean)

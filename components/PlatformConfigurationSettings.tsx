@@ -192,6 +192,19 @@ type AirfieldCatalogueLookup = {
 
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
+const TRAINING_REPORT_ELEMENT_LIST_KEY = '__scoringMatrixElements';
+const DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
+
+const getTrainingReportElementPreviewList = (bank?: Record<string, any>): string[] => {
+  const configuredElements = bank?.[TRAINING_REPORT_ELEMENT_LIST_KEY];
+  const source = Array.isArray(configuredElements) ? configuredElements : DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS;
+  return source
+    .map((element) => String(element || '').trim())
+    .filter(Boolean)
+    .filter((element, index, all) => (
+      all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index
+    ));
+};
 
 const emptyConfig: PlatformConfig = {
   organisations: [],
@@ -2369,6 +2382,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     config as any,
     activeTrainingReportUnit?.code || activeTrainingReportUnitCode,
     phraseBank,
+  );
+  const trainingReportPreviewElements = useMemo(
+    () => getTrainingReportElementPreviewList(trainingReportPhraseBank),
+    [trainingReportPhraseBank],
   );
   const trainingReportSyncOptions = config.units
     .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
@@ -9222,14 +9239,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.assessmentMatrix.title}>
                   <div className="space-y-3">
                     <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
-                      <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Core Dimensions</div>
-                      <div className="mt-2 grid gap-2 md:grid-cols-3">
-                        {['Airmanship', 'Preparation', 'Technique'].map((dimension) => (
-                          <div key={dimension} className="rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100">
-                            {dimension}
-                          </div>
-                        ))}
-                      </div>
+                      <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Configured Elements</div>
+                      {trainingReportPreviewElements.length > 0 ? (
+                        <div className="mt-2 grid gap-2 md:grid-cols-3">
+                          {trainingReportPreviewElements.map((dimension) => (
+                            <div key={dimension} className="rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100">
+                              {dimension}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-2 rounded border border-gray-800 bg-gray-950/70 px-3 py-2 text-sm italic text-gray-500">
+                          No assessment elements configured.
+                        </div>
+                      )}
                     </div>
                     <div className="text-xs leading-relaxed text-gray-400">
                       Descriptors and phrases are edited in Settings - Training & Standards - Scoring Matrix.

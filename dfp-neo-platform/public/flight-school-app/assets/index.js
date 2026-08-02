@@ -55095,7 +55095,7 @@ const getScoringMatrixElementOptions = (phraseBank) => {
 };
 const normaliseAssessedElements = (elements, availableElements = []) => {
   const available = new Set(availableElements.map((item) => item.toLowerCase()));
-  const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS;
+  const source = Array.isArray(elements) ? elements : availableElements;
   const selected = source.map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index).filter((item) => available.size === 0 || available.has(item.toLowerCase()));
   return selected;
 };
@@ -66145,6 +66145,13 @@ const FormationCallsignsSection = ({
 const DFP_RESOURCE_ROW_KEYS = ["aircraft", "ftd", "cpt", "standby", "ground"];
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
+const TRAINING_REPORT_ELEMENT_LIST_KEY = "__scoringMatrixElements";
+const DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
+const getTrainingReportElementPreviewList = (bank) => {
+  const configuredElements = bank?.[TRAINING_REPORT_ELEMENT_LIST_KEY];
+  const source = Array.isArray(configuredElements) ? configuredElements : DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS;
+  return source.map((element) => String(element || "").trim()).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
+};
 const emptyConfig = {
   organisations: [],
   locations: [],
@@ -67847,6 +67854,10 @@ const PlatformConfigurationSettings = ({
     config,
     activeTrainingReportUnit?.code || activeTrainingReportUnitCode,
     phraseBank
+  );
+  const trainingReportPreviewElements = reactExports.useMemo(
+    () => getTrainingReportElementPreviewList(trainingReportPhraseBank),
+    [trainingReportPhraseBank]
   );
   const trainingReportSyncOptions = config.units.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
     code: String(unit.code || "").trim(),
@@ -73794,8 +73805,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.assessmentMatrix.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Core Dimensions" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 md:grid-cols-3", children: ["Airmanship", "Preparation", "Technique"].map((dimension) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100", children: dimension }, dimension)) })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Configured Elements" }),
+                  trainingReportPreviewElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 md:grid-cols-3", children: trainingReportPreviewElements.map((dimension) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100", children: dimension }, dimension)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-gray-800 bg-gray-950/70 px-3 py-2 text-sm italic text-gray-500", children: "No assessment elements configured." })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs leading-relaxed text-gray-400", children: "Descriptors and phrases are edited in Settings - Training & Standards - Scoring Matrix." })
               ] }) })
