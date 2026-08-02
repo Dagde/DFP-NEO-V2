@@ -11323,35 +11323,12 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
       }
     });
   };
-  const updateResourcePool = (pool, patch) => {
-    if (!onUpdatePlatformConfig) return;
-    onUpdatePlatformConfig((current) => ({
-      ...current,
-      resourcePools: (current?.resourcePools || []).map((candidate) => candidate === pool || String(candidate?.id || candidate?.code || "") === String(pool?.id || pool?.code || "") ? { ...candidate, ...patch } : candidate)
-    }));
-  };
   const updateLocation = (targetLocation, patch) => {
     if (!onUpdatePlatformConfig || !targetLocation) return;
     onUpdatePlatformConfig((current) => ({
       ...current,
       locations: (current?.locations || []).map((candidate) => candidate === targetLocation || String(candidate?.id || candidate?.code || "") === String(targetLocation?.id || targetLocation?.code || "") ? { ...candidate, ...patch } : candidate)
     }));
-  };
-  const updateAircraftType = (aircraft, patch) => {
-    if (!onUpdatePlatformConfig) return;
-    onUpdatePlatformConfig((current) => ({
-      ...current,
-      aircraftTypes: (current?.aircraftTypes || []).map((candidate) => candidate === aircraft || String(candidate?.id || candidate?.code || "") === String(aircraft?.id || aircraft?.code || "") ? { ...candidate, ...patch } : candidate)
-    }));
-  };
-  const updateAircraftCrewComposition = (aircraft, patch) => {
-    const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-    updateAircraftType(aircraft, {
-      crewComposition: {
-        ...composition,
-        ...patch
-      }
-    });
   };
   const updateCrewCompositionSettings = (patch) => {
     updateOrganisationSettings({
@@ -11425,33 +11402,33 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           UnitSettingsGroup,
           {
             title: "Aircraft Types & DFP Resource Rows",
-            description: "Live resource row counts assigned to this unit or its home location.",
+            description: "DFP row sets assigned to this unit or its home location. Edit them from the dedicated aircraft and row page so row changes use the correct effective date.",
             action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
                 resourcePools.length,
                 " row sets"
               ] }),
-              settingsLink("platform-resource-pools", "Open DFP Resource Rows", { resourcePoolCode: primaryResourcePoolFocusKey })
+              settingsLink("platform-resource-pools", "Open Aircraft Types & DFP Resource Rows", { resourcePoolCode: primaryResourcePoolFocusKey })
             ] }),
             children: resourcePools.length > 0 ? resourcePools.map((pool) => {
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Pool name", value: pool.name || pool.code || "", onChange: (value) => updateResourcePool(pool, { name: value }), disabled: true }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft type", value: pool.aircraftTypeCode || "", onChange: (value) => updateResourcePool(pool, { aircraftTypeCode: value }), disabled: true }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Pool type", value: pool.poolType || "Dedicated", options: ["Dedicated", "Shared", "Combined"], onChange: (value) => updateResourcePool(pool, { poolType: value }), disabled: true }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsSelect, { label: "Location", value: pool.locationCode || unit.locationCode || "", options: locations.map((item) => item.code), onChange: (value) => updateResourcePool(pool, { locationCode: value }), disabled: true }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300", children: "DFP Resource Rows are managed from the main Aircraft Types & DFP Resource Rows page so row changes can be applied from the next day forward without altering today or previous days." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pool name", value: pool.name || pool.code || "Not named", muted: !pool.name && !pool.code }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft type", value: pool.aircraftTypeCode || "Not linked", muted: !pool.aircraftTypeCode }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Pool type", value: pool.poolType || "Dedicated" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Location", value: pool.locationCode || unit.locationCode || "Not set", muted: !pool.locationCode && !unit.locationCode }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300", children: "Aircraft type and DFP row changes are managed from the main Aircraft Types & DFP Resource Rows page. Saved row changes apply from tomorrow forward, leave today and previous days unchanged, and clear future built schedules that rely on the old rows." })
               ] }, pool.id || pool.code);
             }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "DFP resource row sets", value: "No DFP resource row sets are assigned to this unit or location.", muted: true })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's DFP resource row sets.", action: settingsLink("platform-resource-pools", "Open Aircraft Types", { focusSubsectionId: "platform-aircraft-type-settings" }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's DFP resource row sets.", action: settingsLink("platform-resource-pools", "Open Aircraft Types & DFP Resource Rows", { focusSubsectionId: "platform-aircraft-type-settings" }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft code", value: aircraft.code || "", onChange: (value) => updateAircraftType(aircraft, { code: value }), disabled: true }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Aircraft name", value: aircraft.name || aircraft.code || "", onChange: (value) => updateAircraftType(aircraft, { name: value }), disabled: true }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: "Standard crew seats", value: composition.crewCount, onChange: (value) => updateAircraftCrewComposition(aircraft, { crewCount: value }), disabled: true }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsField, { label: "Configurations", value: configurations.length ? configurations.map((item) => item.label || item.name || item.id).join(", ") : "Default / ANY", onChange: (value) => updateAircraftType(aircraft, { settings: { ...aircraft.settings || {}, aircraftConfigurations: value.split(",").map((label) => label.trim()).filter(Boolean).map((label) => ({ id: label, label })) } }), disabled: true })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft code", value: aircraft.code || "Not set", muted: !aircraft.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft name", value: aircraft.name || aircraft.code || "Not set", muted: !aircraft.name && !aircraft.code }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Standard crew seats", value: composition.crewCount }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Configurations", value: configurations.length ? configurations.map((item) => item.label || item.name || item.id).join(", ") : "Default / ANY" })
           ] }, aircraft.code);
         }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Aircraft", value: "No aircraft types are linked to this unit yet.", muted: true }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Resource Sharing", description: "Whether this unit shares aircraft or DFP resource rows with another unit.", action: settingsLink("organisation", "Open Organisation"), children: resourceSharingForUnit.length > 0 ? resourceSharingForUnit.map((group, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
@@ -11496,14 +11473,12 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
         /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Standard Crew Composition", description: "Minimum seats and role eligibility by aircraft and resource type.", action: settingsLink("crew-composition", "Open Crew Composition", { aircraftTypeCode: primaryAircraftTypeCode }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsNumberField, { label: `${aircraft.code || "Aircraft"} standard seats`, value: composition.crewCount, onChange: (value) => updateAircraftCrewComposition(aircraft, { crewCount: value }), disabled: true }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: `${aircraft.code || "Aircraft"} standard seats`, value: composition.crewCount }),
             AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, label }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              UnitSettingsNumberField,
+              UnitSettingsReadRow,
               {
                 label,
-                value: composition.resourceSeatCounts?.[kind] ?? 0,
-                onChange: (value) => updateAircraftCrewComposition(aircraft, { resourceSeatCounts: { ...composition.resourceSeatCounts || {}, [kind]: value } }),
-                disabled: true
+                value: composition.resourceSeatCounts?.[kind] ?? 0
               },
               `${aircraft.code}-${kind}`
             ))

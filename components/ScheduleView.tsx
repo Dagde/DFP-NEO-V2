@@ -1861,17 +1861,6 @@ const OrganisationMyUnitSettings: React.FC<{
             },
         });
     };
-    const updateResourcePool = (pool: any, patch: Record<string, any>) => {
-        if (!onUpdatePlatformConfig) return;
-        onUpdatePlatformConfig((current) => ({
-            ...current,
-            resourcePools: (current?.resourcePools || []).map((candidate: any) => (
-                candidate === pool || String(candidate?.id || candidate?.code || '') === String(pool?.id || pool?.code || '')
-                    ? { ...candidate, ...patch }
-                    : candidate
-            )),
-        }));
-    };
     const updateLocation = (targetLocation: any, patch: Record<string, any>) => {
         if (!onUpdatePlatformConfig || !targetLocation) return;
         onUpdatePlatformConfig((current) => ({
@@ -1882,26 +1871,6 @@ const OrganisationMyUnitSettings: React.FC<{
                     : candidate
             )),
         }));
-    };
-    const updateAircraftType = (aircraft: any, patch: Record<string, any>) => {
-        if (!onUpdatePlatformConfig) return;
-        onUpdatePlatformConfig((current) => ({
-            ...current,
-            aircraftTypes: (current?.aircraftTypes || []).map((candidate: any) => (
-                candidate === aircraft || String(candidate?.id || candidate?.code || '') === String(aircraft?.id || aircraft?.code || '')
-                    ? { ...candidate, ...patch }
-                    : candidate
-            )),
-        }));
-    };
-    const updateAircraftCrewComposition = (aircraft: any, patch: Record<string, any>) => {
-        const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
-        updateAircraftType(aircraft, {
-            crewComposition: {
-                ...composition,
-                ...patch,
-            },
-        });
     };
     const updateCrewCompositionSettings = (patch: Record<string, any>) => {
         updateOrganisationSettings({
@@ -2044,33 +2013,33 @@ const OrganisationMyUnitSettings: React.FC<{
                 <div className="space-y-4">
                     <UnitSettingsGroup
                         title="Aircraft Types & DFP Resource Rows"
-                        description="Live resource row counts assigned to this unit or its home location."
-                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} row sets</span>{settingsLink('platform-resource-pools', 'Open DFP Resource Rows', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
+                        description="DFP row sets assigned to this unit or its home location. Edit them from the dedicated aircraft and row page so row changes use the correct effective date."
+                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} row sets</span>{settingsLink('platform-resource-pools', 'Open Aircraft Types & DFP Resource Rows', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
                     >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
                             return (
                                 <div key={pool.id || pool.code} className="border-t border-white/10 first:border-t-0">
-                                    <UnitSettingsField label="Pool name" value={pool.name || pool.code || ''} onChange={(value) => updateResourcePool(pool, { name: value })} disabled={!canEdit} />
-                                    <UnitSettingsField label="Aircraft type" value={pool.aircraftTypeCode || ''} onChange={(value) => updateResourcePool(pool, { aircraftTypeCode: value })} disabled={!canEdit} />
-                                    <UnitSettingsSelect label="Pool type" value={pool.poolType || 'Dedicated'} options={['Dedicated', 'Shared', 'Combined']} onChange={(value) => updateResourcePool(pool, { poolType: value })} disabled={!canEdit} />
-                                    <UnitSettingsSelect label="Location" value={pool.locationCode || unit.locationCode || ''} options={locations.map((item: any) => item.code)} onChange={(value) => updateResourcePool(pool, { locationCode: value })} disabled={!canEdit} />
+                                    <UnitSettingsReadRow label="Pool name" value={pool.name || pool.code || 'Not named'} muted={!pool.name && !pool.code} />
+                                    <UnitSettingsReadRow label="Aircraft type" value={pool.aircraftTypeCode || 'Not linked'} muted={!pool.aircraftTypeCode} />
+                                    <UnitSettingsReadRow label="Pool type" value={pool.poolType || 'Dedicated'} />
+                                    <UnitSettingsReadRow label="Location" value={pool.locationCode || unit.locationCode || 'Not set'} muted={!pool.locationCode && !unit.locationCode} />
                                     <div className="border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300">
-                                        DFP Resource Rows are managed from the main Aircraft Types & DFP Resource Rows page so row changes can be applied from the next day forward without altering today or previous days.
+                                        Aircraft type and DFP row changes are managed from the main Aircraft Types & DFP Resource Rows page. Saved row changes apply from tomorrow forward, leave today and previous days unchanged, and clear future built schedules that rely on the old rows.
                                     </div>
                                 </div>
                             );
                         }) : <UnitSettingsReadRow label="DFP resource row sets" value="No DFP resource row sets are assigned to this unit or location." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP resource row sets." action={settingsLink('platform-resource-pools', 'Open Aircraft Types', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
+                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP resource row sets." action={settingsLink('platform-resource-pools', 'Open Aircraft Types & DFP Resource Rows', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
                         {aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft: any) => {
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
                             return (
                                 <div key={aircraft.code} className="border-t border-white/10 first:border-t-0">
-                                    <UnitSettingsField label="Aircraft code" value={aircraft.code || ''} onChange={(value) => updateAircraftType(aircraft, { code: value })} disabled={!canEdit} />
-                                    <UnitSettingsField label="Aircraft name" value={aircraft.name || aircraft.code || ''} onChange={(value) => updateAircraftType(aircraft, { name: value })} disabled={!canEdit} />
-                                    <UnitSettingsNumberField label="Standard crew seats" value={composition.crewCount} onChange={(value) => updateAircraftCrewComposition(aircraft, { crewCount: value })} disabled={!canEdit} />
-                                    <UnitSettingsField label="Configurations" value={configurations.length ? configurations.map((item: any) => item.label || item.name || item.id).join(', ') : 'Default / ANY'} onChange={(value) => updateAircraftType(aircraft, { settings: { ...(aircraft.settings || {}), aircraftConfigurations: value.split(',').map((label) => label.trim()).filter(Boolean).map((label) => ({ id: label, label })) } })} disabled={!canEdit} />
+                                    <UnitSettingsReadRow label="Aircraft code" value={aircraft.code || 'Not set'} muted={!aircraft.code} />
+                                    <UnitSettingsReadRow label="Aircraft name" value={aircraft.name || aircraft.code || 'Not set'} muted={!aircraft.name && !aircraft.code} />
+                                    <UnitSettingsReadRow label="Standard crew seats" value={composition.crewCount} />
+                                    <UnitSettingsReadRow label="Configurations" value={configurations.length ? configurations.map((item: any) => item.label || item.name || item.id).join(', ') : 'Default / ANY'} />
                                 </div>
                             );
                         }) : <UnitSettingsReadRow label="Aircraft" value="No aircraft types are linked to this unit yet." muted />}
@@ -2123,14 +2092,12 @@ const OrganisationMyUnitSettings: React.FC<{
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             return (
                                 <div key={aircraft.code || aircraft.name} className="border-t border-white/10 first:border-t-0">
-                                    <UnitSettingsNumberField label={`${aircraft.code || 'Aircraft'} standard seats`} value={composition.crewCount} onChange={(value) => updateAircraftCrewComposition(aircraft, { crewCount: value })} disabled={!canEdit} />
+                                    <UnitSettingsReadRow label={`${aircraft.code || 'Aircraft'} standard seats`} value={composition.crewCount} />
                                     {AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, label }) => (
-                                        <UnitSettingsNumberField
+                                        <UnitSettingsReadRow
                                             key={`${aircraft.code}-${kind}`}
                                             label={label}
                                             value={composition.resourceSeatCounts?.[kind] ?? 0}
-                                            onChange={(value) => updateAircraftCrewComposition(aircraft, { resourceSeatCounts: { ...(composition.resourceSeatCounts || {}), [kind]: value } })}
-                                            disabled={!canEdit}
                                         />
                                     ))}
                                 </div>
