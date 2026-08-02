@@ -36367,9 +36367,14 @@ const App: React.FC = () => {
                         unchanged: syncData?.summary?.unchanged,
                         noSyllabus: syncData?.summary?.noSyllabus,
                         total: syncData?.summary?.total,
+                        dbWrites: syncData?.summary?.dbWrites,
+                        activeOverlayCount: syncData?.summary?.activeOverlayCount,
+                        overlayTraineeCount: syncData?.summary?.overlayTraineeCount,
                         totalElapsedMs: syncData?.summary?.totalElapsedMs,
                         overlayWrites: syncData?.summary?.overlayWrites,
                         lmpWriteMs: syncData?.summary?.lmpWriteMs,
+                        buildSync: syncData?.summary?.buildSync,
+                        lmpChangedSamples: syncData?.summary?.lmpChangedSamples,
                         serverTiming: syncData?.summary?.timing,
                     });
                 } catch (syncJsonErr) {
