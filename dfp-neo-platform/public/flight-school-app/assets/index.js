@@ -95843,6 +95843,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       blockedPrimaryMissing: 0,
       noSearchWindow: 0,
       rejectionReasons: {},
+      rejectionPatterns: {},
       rejectionSamples: [],
       attemptSamples: [],
       passSummaries: [],
@@ -95984,6 +95985,60 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                   diagnosticTrace: (traceEntry) => {
                     if (traceEntry?.outcome !== "rejected") return;
                     const reason = traceEntry.reason || "UNKNOWN_REJECTION";
+                    const details = traceEntry.details || {};
+                    const resourcePrefix = typeof details.resourcePrefix === "string" ? details.resourcePrefix : null;
+                    const rawResourceCount = Number(details.resourceCount);
+                    const resourceCount = Number.isFinite(rawResourceCount) ? rawResourceCount : null;
+                    const eventKey = String(traceEntry.event || "").trim() || "(no event)";
+                    const patternKey = [
+                      reason,
+                      traceEntry.type || type,
+                      eventKey,
+                      resourcePrefix || "-",
+                      resourceCount ?? "-",
+                      traceEntry.dayNight || "-",
+                      traceEntry.primaryPreferOnly ? "priority-only" : "any-instructor",
+                      traceEntry.requirePreferredNightAircraft ? "preferred-night-aircraft" : "any-aircraft"
+                    ].join("|");
+                    if (!listDiag.rejectionPatterns[patternKey]) {
+                      listDiag.rejectionPatterns[patternKey] = {
+                        count: 0,
+                        reason,
+                        event: eventKey === "(no event)" ? null : eventKey,
+                        eventType: traceEntry.eventType || null,
+                        type: traceEntry.type || type,
+                        dayNight: traceEntry.dayNight || null,
+                        resourcePrefix,
+                        resourceCount,
+                        primaryPreferOnly: typeof traceEntry.primaryPreferOnly === "boolean" ? traceEntry.primaryPreferOnly : null,
+                        requirePreferredNightAircraft: typeof traceEntry.requirePreferredNightAircraft === "boolean" ? traceEntry.requirePreferredNightAircraft : null,
+                        firstDisplayTime: traceEntry.displayTime || null,
+                        lastDisplayTime: traceEntry.displayTime || null,
+                        firstTrainee: traceEntry.trainee || null,
+                        sampleTrainees: [],
+                        sampleDetails: []
+                      };
+                    }
+                    const pattern = listDiag.rejectionPatterns[patternKey];
+                    pattern.count++;
+                    pattern.lastDisplayTime = traceEntry.displayTime || pattern.lastDisplayTime;
+                    if (traceEntry.trainee && pattern.sampleTrainees.length < 8 && !pattern.sampleTrainees.includes(traceEntry.trainee)) {
+                      pattern.sampleTrainees.push(traceEntry.trainee);
+                    }
+                    if (pattern.sampleDetails.length < 5) {
+                      pattern.sampleDetails.push({
+                        startTime: traceEntry.startTime,
+                        displayTime: traceEntry.displayTime,
+                        resourcePrefix,
+                        resourceCount,
+                        earlyResourceCheck: details.earlyResourceCheck === true,
+                        compatibleResourceCandidateCount: details.compatibleResourceCandidateCount ?? null,
+                        aircraftConfigMismatchCount: details.aircraftConfigMismatchCount ?? null,
+                        count: details.count ?? null,
+                        limit: details.limit ?? null,
+                        proposed: details.proposed ?? null
+                      });
+                    }
                     listDiag.rejectionReasons[reason] = (listDiag.rejectionReasons[reason] || 0) + 1;
                     if (listDiag.rejectionSamples.length < 80) {
                       listDiag.rejectionSamples.push({
@@ -96178,6 +96233,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       blockedPrimaryMissing: listDiag.blockedPrimaryMissing,
       passSummaries: listDiag.passSummaries.slice(-12),
       topRejectionReasons: Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]).slice(0, 8),
+      topRejectionPatterns: Object.values(listDiag.rejectionPatterns).sort((a, b) => b.count - a.count).slice(0, 12),
       firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
       firstRejectionSample: listDiag.rejectionSamples[0] || null,
       placedSample: listDiag.placed.slice(0, 12),
@@ -96191,7 +96247,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       candidateSlots: listDiag.candidateSlots,
       successes: listDiag.successes,
       generatedDelta: listDiag.generatedDelta,
-      topRejectionReasons: Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]).slice(0, 5)
+      topRejectionReasons: Object.entries(listDiag.rejectionReasons).sort((a, b) => b[1] - a[1]).slice(0, 5),
+      topRejectionPatterns: Object.values(listDiag.rejectionPatterns).sort((a, b) => b.count - a.count).slice(0, 5)
     });
     saveNeoBuildDiag(`schedule-list-end:${listName}`);
   };

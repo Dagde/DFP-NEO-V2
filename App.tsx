@@ -12640,6 +12640,23 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             blockedPrimaryMissing: 0,
             noSearchWindow: 0,
             rejectionReasons: {} as Record<string, number>,
+            rejectionPatterns: {} as Record<string, {
+                count: number;
+                reason: string;
+                event: string | null;
+                eventType: string | null;
+                type: string | null;
+                dayNight: string | null;
+                resourcePrefix: string | null;
+                resourceCount: number | null;
+                primaryPreferOnly: boolean | null;
+                requirePreferredNightAircraft: boolean | null;
+                firstDisplayTime: string | null;
+                lastDisplayTime: string | null;
+                firstTrainee: string | null;
+                sampleTrainees: string[];
+                sampleDetails: any[];
+            }>,
             rejectionSamples: [] as any[],
             attemptSamples: [] as any[],
             passSummaries: [] as any[],
@@ -12845,6 +12862,64 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                     diagnosticTrace: (traceEntry) => {
                                         if (traceEntry?.outcome !== 'rejected') return;
                                         const reason = traceEntry.reason || 'UNKNOWN_REJECTION';
+                                        const details = traceEntry.details || {};
+                                        const resourcePrefix = typeof details.resourcePrefix === 'string' ? details.resourcePrefix : null;
+                                        const rawResourceCount = Number(details.resourceCount);
+                                        const resourceCount = Number.isFinite(rawResourceCount) ? rawResourceCount : null;
+                                        const eventKey = String(traceEntry.event || '').trim() || '(no event)';
+                                        const patternKey = [
+                                            reason,
+                                            traceEntry.type || type,
+                                            eventKey,
+                                            resourcePrefix || '-',
+                                            resourceCount ?? '-',
+                                            traceEntry.dayNight || '-',
+                                            traceEntry.primaryPreferOnly ? 'priority-only' : 'any-instructor',
+                                            traceEntry.requirePreferredNightAircraft ? 'preferred-night-aircraft' : 'any-aircraft',
+                                        ].join('|');
+                                        if (!listDiag.rejectionPatterns[patternKey]) {
+                                            listDiag.rejectionPatterns[patternKey] = {
+                                                count: 0,
+                                                reason,
+                                                event: eventKey === '(no event)' ? null : eventKey,
+                                                eventType: traceEntry.eventType || null,
+                                                type: traceEntry.type || type,
+                                                dayNight: traceEntry.dayNight || null,
+                                                resourcePrefix,
+                                                resourceCount,
+                                                primaryPreferOnly: typeof traceEntry.primaryPreferOnly === 'boolean' ? traceEntry.primaryPreferOnly : null,
+                                                requirePreferredNightAircraft: typeof traceEntry.requirePreferredNightAircraft === 'boolean' ? traceEntry.requirePreferredNightAircraft : null,
+                                                firstDisplayTime: traceEntry.displayTime || null,
+                                                lastDisplayTime: traceEntry.displayTime || null,
+                                                firstTrainee: traceEntry.trainee || null,
+                                                sampleTrainees: [],
+                                                sampleDetails: [],
+                                            };
+                                        }
+                                        const pattern = listDiag.rejectionPatterns[patternKey];
+                                        pattern.count++;
+                                        pattern.lastDisplayTime = traceEntry.displayTime || pattern.lastDisplayTime;
+                                        if (
+                                            traceEntry.trainee &&
+                                            pattern.sampleTrainees.length < 8 &&
+                                            !pattern.sampleTrainees.includes(traceEntry.trainee)
+                                        ) {
+                                            pattern.sampleTrainees.push(traceEntry.trainee);
+                                        }
+                                        if (pattern.sampleDetails.length < 5) {
+                                            pattern.sampleDetails.push({
+                                                startTime: traceEntry.startTime,
+                                                displayTime: traceEntry.displayTime,
+                                                resourcePrefix,
+                                                resourceCount,
+                                                earlyResourceCheck: details.earlyResourceCheck === true,
+                                                compatibleResourceCandidateCount: details.compatibleResourceCandidateCount ?? null,
+                                                aircraftConfigMismatchCount: details.aircraftConfigMismatchCount ?? null,
+                                                count: details.count ?? null,
+                                                limit: details.limit ?? null,
+                                                proposed: details.proposed ?? null,
+                                            });
+                                        }
                                         listDiag.rejectionReasons[reason] = (listDiag.rejectionReasons[reason] || 0) + 1;
                                         if (listDiag.rejectionSamples.length < 80) {
                                             listDiag.rejectionSamples.push({
@@ -13050,6 +13125,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             topRejectionReasons: Object.entries(listDiag.rejectionReasons)
                 .sort((a: any, b: any) => b[1] - a[1])
                 .slice(0, 8),
+            topRejectionPatterns: Object.values(listDiag.rejectionPatterns)
+                .sort((a: any, b: any) => b.count - a.count)
+                .slice(0, 12),
             firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
             firstRejectionSample: listDiag.rejectionSamples[0] || null,
             placedSample: listDiag.placed.slice(0, 12),
@@ -13065,6 +13143,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             generatedDelta: listDiag.generatedDelta,
             topRejectionReasons: Object.entries(listDiag.rejectionReasons)
                 .sort((a: any, b: any) => b[1] - a[1])
+                .slice(0, 5),
+            topRejectionPatterns: Object.values(listDiag.rejectionPatterns)
+                .sort((a: any, b: any) => b.count - a.count)
                 .slice(0, 5),
         });
         saveNeoBuildDiag(`schedule-list-end:${listName}`);
