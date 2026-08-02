@@ -647,7 +647,12 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
   const hasActiveOrganisations = hasActivePlatformRecords(Array.isArray(config.organisations) ? config.organisations : []);
   const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
+  const incompleteAircraftType = (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).find((aircraftType) => (
+    String(aircraftType?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
+    (!String(aircraftType?.code || '').trim() || !String(aircraftType?.name || '').trim())
+  ));
   const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
+  if (incompleteAircraftType) return 'Platform configuration save blocked: every active aircraft type needs a code and name before saving.';
   if (isDeliberatelyEmptyStructure) return '';
   if (!hasActiveOrganisations) return 'Platform configuration save blocked: at least one active organisation is required while locations or units still exist.';
   if (!hasActiveLocations) return 'Platform configuration save blocked: at least one active location is required while units still exist.';
@@ -4559,22 +4564,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setNewAircraftTypeVisibleIds((current) => new Set([...Array.from(current), id]));
     setConfig((prev) => {
       const previousAircraftTypes = Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : [];
-      const existingCodes = new Set(previousAircraftTypes.map((aircraft: any) => String(aircraft.code || '').trim().toUpperCase()));
-      let suffix = previousAircraftTypes.length + 1;
-      let code = `AIRCRAFT-${suffix}`;
-      while (existingCodes.has(code.toUpperCase())) {
-        suffix += 1;
-        code = `AIRCRAFT-${suffix}`;
-      }
-
       return {
         ...prev,
         aircraftTypes: [
           ...previousAircraftTypes,
           {
             id,
-            code,
-            name: 'New Aircraft Type',
+            code: '',
+            name: '',
             category: 'Other',
             defaultTasKtas: null,
             defaultCruiseAltitudeFl: null,
