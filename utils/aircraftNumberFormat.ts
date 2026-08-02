@@ -19,11 +19,17 @@ const uniqueNonEmpty = (values: unknown[]): string[] => (
 );
 
 export const normaliseAircraftNumberSettings = (settings?: Record<string, any> | null): AircraftNumberSettings => {
-  const prefixes = uniqueNonEmpty(Array.isArray(settings?.aircraftNumberPrefixes)
+  const hasExplicitPrefixes = Array.isArray(settings?.aircraftNumberPrefixes);
+  const prefixes = uniqueNonEmpty(hasExplicitPrefixes
     ? settings?.aircraftNumberPrefixes
     : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
-  const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
-  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
+  const savedDefaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix);
+  const defaultPrefix = hasExplicitPrefixes && prefixes.length === 0
+    ? ''
+    : savedDefaultPrefix || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
+  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) || (hasExplicitPrefixes && prefixes.length === 0)
+    ? prefixes
+    : [defaultPrefix, ...prefixes];
 
   return {
     usePrefix: settings?.aircraftNumberUsePrefix === undefined

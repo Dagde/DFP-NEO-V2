@@ -3282,9 +3282,11 @@ const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
 const cleanToken = (value) => typeof value === "string" ? value.trim() : "";
 const uniqueNonEmpty = (values) => Array.from(new Set(values.map(cleanToken).filter(Boolean)));
 const normaliseAircraftNumberSettings = (settings) => {
-  const prefixes = uniqueNonEmpty(Array.isArray(settings?.aircraftNumberPrefixes) ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
-  const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
-  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
+  const hasExplicitPrefixes = Array.isArray(settings?.aircraftNumberPrefixes);
+  const prefixes = uniqueNonEmpty(hasExplicitPrefixes ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
+  const savedDefaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix);
+  const defaultPrefix = hasExplicitPrefixes && prefixes.length === 0 ? "" : savedDefaultPrefix || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
+  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) || hasExplicitPrefixes && prefixes.length === 0 ? prefixes : [defaultPrefix, ...prefixes];
   return {
     usePrefix: settings?.aircraftNumberUsePrefix === void 0 ? DEFAULT_AIRCRAFT_NUMBER_SETTINGS.usePrefix : settings.aircraftNumberUsePrefix !== false,
     prefixes: nextPrefixes,
