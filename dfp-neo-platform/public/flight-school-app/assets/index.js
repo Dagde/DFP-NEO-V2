@@ -68504,9 +68504,10 @@ This permanently removes the organisation record from platform configuration and
     updateCrewCompositionSettings(crewCompositionSettings.alternateCompositions, currencyProfiles);
   };
   const addAlternateCrewComposition = (aircraftTypeCode) => {
+    const role = crewCompositionRoleOptions[0] || "";
+    if (!role) return;
     const aircraftProfiles = getVisibleAlternateCrewCompositions().filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === aircraftTypeCode.trim().toUpperCase());
     const name = `Alternate Crew ${aircraftProfiles.length + 1}`;
-    const role = crewPositionTerminology.positions[0]?.genericName || DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats[0]?.role || "Crew";
     const baseId = createClientRecordId("alternate-crew");
     const targetUnitCodes = getActiveScopedUnitCodes();
     const combinedContext = targetUnitCodes.length > 1;
@@ -68561,8 +68562,7 @@ This permanently removes the organisation record from platform configuration and
   const getNextAlternateCrewRole = (profile) => {
     const usedRoles = new Set(profile.roleRequirements.map((requirement) => String(requirement.role || "").trim().toUpperCase()));
     const configuredRoles = crewPositionTerminology.positions.map((position) => String(position.genericName || "").trim()).filter(Boolean);
-    const fallbackRoles = DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats.map((seat) => String(seat.role || "").trim()).filter(Boolean);
-    const candidateRoles = Array.from(/* @__PURE__ */ new Set([...configuredRoles, ...fallbackRoles]));
+    const candidateRoles = Array.from(new Set(configuredRoles));
     return candidateRoles.find((role) => !usedRoles.has(role.toUpperCase())) || null;
   };
   const addAlternateCrewRole = (profileId) => {
@@ -70322,8 +70322,9 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
   };
   const addStandardMissionProfile = () => {
     const missionIndex = standardMissionProfiles.length + 1;
-    const firstRole = crewCompositionRoleOptions[0] || "Crew";
-    const aircraftTypeCode = activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || String(config.aircraftTypes[0]?.code || "AIRCRAFT").trim().toUpperCase();
+    const firstRole = crewCompositionRoleOptions[0] || "";
+    const aircraftTypeCode = String(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code || "").trim().toUpperCase();
+    if (!firstRole || !aircraftTypeCode) return;
     const crewOptions = getStandardMissionCrewOptions(aircraftTypeCode);
     const selectedCrewCompositionId = crewOptions.find((option) => option.mode === "STANDARD")?.id || crewOptions[0]?.id || "";
     const baseId = createClientRecordId("standard-mission");
@@ -70394,7 +70395,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
   };
   const addStandardMissionRoleRequirement = (profile) => {
     const usedRoles = new Set(profile.roleRequirements.map((requirement) => requirement.role.toUpperCase()));
-    const nextRole = crewCompositionRoleOptions.find((role) => !usedRoles.has(role.toUpperCase())) || crewCompositionRoleOptions[0] || "Crew";
+    const nextRole = crewCompositionRoleOptions.find((role) => !usedRoles.has(role.toUpperCase())) || crewCompositionRoleOptions[0] || "";
+    if (!nextRole) return;
     updateStandardMissionProfile(profile.id, {
       roleRequirements: [...profile.roleRequirements, { role: nextRole, count: 1 }]
     });
@@ -71816,7 +71818,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           subtitle: "Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions"), className: platformActionButtonClass, children: "Add Directed Task Setup" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code), className: platformActionButtonClass, children: "Add Directed Task Setup" })
           ] }) : null
         }
       ),
@@ -71964,7 +71966,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Required Roles" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: crewMode === "CUSTOM" ? "Set the crew positions this template must include when scheduled." : "Only used when Custom Crew is selected." })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", className: platformActionButtonClass, children: "Add Role" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addStandardMissionRoleRequirement(profile), disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM" || crewCompositionRoleOptions.length === 0, className: platformActionButtonClass, children: "Add Role" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-dashed border-gray-700 bg-gray-950/70 p-3 text-xs text-gray-400", children: "No manual role requirements configured." }) : profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 md:grid-cols-[1fr_110px_auto]", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEditSection("platform-standard-missions") || crewMode !== "CUSTOM", options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateStandardMissionRoleRequirement(profile, roleIndex, { role: value }) }),
@@ -72221,7 +72223,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   "."
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(displayCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(displayCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode || crewCompositionRoleOptions.length === 0, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                 "Add Alt",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                 "Crew"

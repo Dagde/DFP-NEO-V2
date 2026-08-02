@@ -3191,11 +3191,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addAlternateCrewComposition = (aircraftTypeCode: string) => {
+    const role = crewCompositionRoleOptions[0] || '';
+    if (!role) return;
     const aircraftProfiles = getVisibleAlternateCrewCompositions().filter((profile) => (
       String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftTypeCode.trim().toUpperCase()
     ));
     const name = `Alternate Crew ${aircraftProfiles.length + 1}`;
-    const role = crewPositionTerminology.positions[0]?.genericName || DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats[0]?.role || 'Crew';
     const baseId = createClientRecordId('alternate-crew');
     const targetUnitCodes = getActiveScopedUnitCodes();
     const combinedContext = targetUnitCodes.length > 1;
@@ -3270,10 +3271,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const configuredRoles = crewPositionTerminology.positions
       .map((position) => String(position.genericName || '').trim())
       .filter(Boolean);
-    const fallbackRoles = DEFAULT_AIRCRAFT_CREW_COMPOSITION.seats
-      .map((seat) => String(seat.role || '').trim())
-      .filter(Boolean);
-    const candidateRoles = Array.from(new Set([...configuredRoles, ...fallbackRoles]));
+    const candidateRoles = Array.from(new Set(configuredRoles));
     return candidateRoles.find((role) => !usedRoles.has(role.toUpperCase())) || null;
   };
 
@@ -5472,8 +5470,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addStandardMissionProfile = () => {
     const missionIndex = standardMissionProfiles.length + 1;
-    const firstRole = crewCompositionRoleOptions[0] || 'Crew';
-    const aircraftTypeCode = activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || String(config.aircraftTypes[0]?.code || 'AIRCRAFT').trim().toUpperCase();
+    const firstRole = crewCompositionRoleOptions[0] || '';
+    const aircraftTypeCode = String(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code || '').trim().toUpperCase();
+    if (!firstRole || !aircraftTypeCode) return;
     const crewOptions = getStandardMissionCrewOptions(aircraftTypeCode);
     const selectedCrewCompositionId = crewOptions.find((option) => option.mode === 'STANDARD')?.id || crewOptions[0]?.id || '';
     const baseId = createClientRecordId('standard-mission');
@@ -5558,7 +5557,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addStandardMissionRoleRequirement = (profile: StandardMissionProfile) => {
     const usedRoles = new Set(profile.roleRequirements.map((requirement) => requirement.role.toUpperCase()));
-    const nextRole = crewCompositionRoleOptions.find((role) => !usedRoles.has(role.toUpperCase())) || crewCompositionRoleOptions[0] || 'Crew';
+    const nextRole = crewCompositionRoleOptions.find((role) => !usedRoles.has(role.toUpperCase())) || crewCompositionRoleOptions[0] || '';
+    if (!nextRole) return;
     updateStandardMissionProfile(profile.id, {
       roleRequirements: [...profile.roleRequirements, { role: nextRole, count: 1 }],
     });
@@ -7174,7 +7174,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions')} className={platformActionButtonClass}>Add Directed Task Setup</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code)} className={platformActionButtonClass}>Add Directed Task Setup</button>
             </div>
           ) : null}
         />
@@ -7357,7 +7357,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 <div className={resourceSectionPanelTitleClass}>Required Roles</div>
                                 <div className={resourceSectionPanelHintClass}>{crewMode === 'CUSTOM' ? 'Set the crew positions this template must include when scheduled.' : 'Only used when Custom Crew is selected.'}</div>
                               </div>
-                              <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM'} className={platformActionButtonClass}>Add Role</button>
+                              <button type="button" onClick={() => addStandardMissionRoleRequirement(profile)} disabled={!canEditSection('platform-standard-missions') || crewMode !== 'CUSTOM' || crewCompositionRoleOptions.length === 0} className={platformActionButtonClass}>Add Role</button>
                             </div>
                             <div className="space-y-2">
                               {profile.roleRequirements.length === 0 ? (
@@ -7626,7 +7626,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <p className={resourceSectionPanelHintClass}>Alternate crew setups shown here are only for {displayCrewCompositionAircraftCode}.</p>
                   </div>
                   <div className="flex flex-wrap justify-end gap-[1px]">
-                    <button type="button" onClick={() => addAlternateCrewComposition(displayCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode} className={platformActionButtonClass}>
+                    <button type="button" onClick={() => addAlternateCrewComposition(displayCrewCompositionAircraftCode)} disabled={!canEditCrewComposition || !displayCrewCompositionAircraftCode || crewCompositionRoleOptions.length === 0} className={platformActionButtonClass}>
                       <span className="text-[9px] leading-tight">Add Alt<br />Crew</span>
                     </button>
                   </div>
