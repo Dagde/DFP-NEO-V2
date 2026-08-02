@@ -67446,7 +67446,7 @@ const PlatformConfigurationSettings = ({
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
-  const crewCompositionAircraftTypes = config.aircraftTypes.length > 0 ? config.aircraftTypes : [{ code: "AIRCRAFT", name: "Aircraft", crewComposition: DEFAULT_AIRCRAFT_CREW_COMPOSITION }];
+  const crewCompositionAircraftTypes = config.aircraftTypes;
   const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
     aircraftTypes: config.aircraftTypes,
     resourcePools: config.resourcePools
@@ -72003,23 +72003,38 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: visibleCrewCompositionAircraftTypes.map((aircraft) => {
-          const code = String(aircraft.code || "").trim().toUpperCase();
-          const isActive = code === displayCrewCompositionAircraftCode;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => setCrewCompositionAircraftCode(code),
-              className: `rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${isActive ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: code || "Aircraft" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500", children: aircraft.name || "Unnamed aircraft type" })
-              ]
-            },
-            `crew-composition-aircraft-tab-${code || aircraft.name}`
-          );
-        }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: [
+          visibleCrewCompositionAircraftTypes.map((aircraft) => {
+            const code = String(aircraft.code || "").trim().toUpperCase();
+            const isActive = code === displayCrewCompositionAircraftCode;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => setCrewCompositionAircraftCode(code),
+                className: `rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${isActive ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: code || "Aircraft" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500", children: aircraft.name || "Unnamed aircraft type" })
+                ]
+              },
+              `crew-composition-aircraft-tab-${code || aircraft.name}`
+            );
+          }),
+          visibleCrewCompositionAircraftTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full rounded-md border border-dashed border-gray-700 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-gray-200", children: "No aircraft types configured." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs leading-relaxed", children: "Add an aircraft type in Settings > Platform & Deployment > Aircraft Types & DFP Resource Rows before setting aircraft crew composition." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setResourcePoolActiveTab("aircraftTypes"),
+                className: `${platformActionButtonClass} mt-3`,
+                children: "Open Aircraft Types"
+              }
+            )
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Crew Positions" }),
@@ -72084,179 +72099,181 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             ] }, `crew-role-${entry.id}`);
           }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: standardCrewCompositionRef, className: resourceSectionPanelClass, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-              "This standard composition applies to ",
-              displayCrewCompositionAircraftCode || "the selected aircraft type",
-              "."
-            ] })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-white", children: displayCrewCompositionAircraftCode || "AIRCRAFT" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
-                  displayCrewCompositionAircraft?.category || "Training",
-                  " aircraft"
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[360px] gap-2 sm:grid-cols-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Seats", value: displayCrewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(displayCrewCompositionAircraftIndex, value) }),
-                AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, shortLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  NumberField,
-                  {
-                    label: shortLabel === "Procedural Trainer" ? "Proc Trainer" : `${shortLabel} Seats`,
-                    value: displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount,
-                    disabled: !canEditCrewComposition,
-                    onChange: (value) => updateAircraftCrewResourceSeatCount(displayCrewCompositionAircraftIndex, kind, value)
-                  },
-                  `crew-resource-count-${kind}`
-                )),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100", children: "Crew Summary" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90", children: getStandardCrewSummary(displayCrewComposition).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
-                    index + 1,
-                    ". ",
-                    roleLabel
-                  ] }, `standard-crew-summary-${index}`)) })
-                ] })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: displayCrewComposition.seats.map((seat, seatIndex) => {
-              const eligibleRoles = getAircraftSeatEligibleRoles(seat);
-              const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
-              const visibleResourceKinds = AIRCRAFT_CREW_RESOURCE_KINDS.filter(({ kind }) => seatIndex < (displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount));
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-950/70 p-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: [
-                      "Seat ",
-                      seatIndex + 1
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Role eligibility by resource type." })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(displayCrewCompositionAircraftIndex, seatIndex, value) }) })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-md border border-gray-800", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "grid bg-gray-900/80 text-[9px] font-black uppercase tracking-wide text-gray-500",
-                      style: { gridTemplateColumns: `minmax(130px,1fr) repeat(${Math.max(visibleResourceKinds.length, 1)}, minmax(58px,72px))` },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1.5", children: "Role" }),
-                        visibleResourceKinds.map(({ kind, shortLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1.5 text-center", children: shortLabel }, `seat-${seatIndex}-${kind}-header`)),
-                        visibleResourceKinds.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1.5 text-center", children: "No seats" })
-                      ]
-                    }
-                  ),
-                  crewPositionOptions.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "div",
-                    {
-                      className: "grid border-t border-gray-800 text-xs font-semibold",
-                      style: { gridTemplateColumns: `minmax(130px,1fr) repeat(${Math.max(visibleResourceKinds.length, 1)}, minmax(58px,72px))` },
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "button",
-                          {
-                            type: "button",
-                            disabled: !canEditCrewComposition || eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) && eligibleRoles.length <= 1,
-                            onClick: () => {
-                              const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                              updateAircraftSeatEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, role, !checked);
-                            },
-                            className: `px-2 py-1.5 text-left ${eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) ? "text-orange-100" : "text-gray-400"} disabled:cursor-not-allowed disabled:opacity-50`,
-                            children: crewPositionLabelMap[role] || role
-                          }
-                        ),
-                        visibleResourceKinds.map(({ kind }) => {
-                          const resourceRoles = getAircraftSeatEligibleRolesForResource(seat, kind);
-                          const checked = resourceRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
-                          return /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex items-center justify-center border-l border-gray-800 px-1 py-1.5 ${checked ? "bg-orange-500/10" : "bg-gray-950/40"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            "input",
-                            {
-                              type: "checkbox",
-                              className: "h-4 w-4 rounded border-gray-500 accent-orange-400",
-                              checked,
-                              disabled: !canEditCrewComposition || checked && resourceRoles.length <= 1,
-                              onChange: (event) => updateAircraftSeatResourceEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)
-                            }
-                          ) }, `seat-${seatIndex}-${role}-${kind}`);
-                        }),
-                        visibleResourceKinds.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-l border-gray-800 px-1 py-1.5 text-center text-gray-600", children: "-" })
-                      ]
-                    },
-                    role
-                  ))
-                ] })
-              ] }, seat.id || `standard-crew-seat-${seatIndex}`);
-            }) })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-alternate-crew-composition", className: resourceSectionPanelClass, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Alternate Crew Composition" }),
+        displayCrewCompositionAircraftCode && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { ref: standardCrewCompositionRef, className: resourceSectionPanelClass, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Standard Crew Composition" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
-                "Alternate crew setups shown here are only for ",
-                displayCrewCompositionAircraftCode || "the selected aircraft",
+                "This standard composition applies to ",
+                displayCrewCompositionAircraftCode,
                 "."
               ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(displayCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-              "Add Alt",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Crew"
-            ] }) }) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : displayAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  DraftField,
-                  {
-                    label: "Short Code (3 letters)",
-                    value: profile.code,
-                    disabled: !canEditCrewComposition,
-                    maxLength: 3,
-                    onCommit: (value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3) }),
-                    info: "This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start pt-[31px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 py-3 pl-3 pr-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-gray-300", children: "Role Requirements" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Counts are grouped by generic scheduler role." })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-start", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition || !getNextAlternateCrewRole(profile), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
-                    "Add",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                    "Role"
-                  ] }) }) })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-black text-white", children: displayCrewCompositionAircraftCode }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
+                    displayCrewCompositionAircraft?.category || "Training",
+                    " aircraft"
+                  ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEditCrewComposition, options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { role: value }) }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Count", value: requirement.count, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { count: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-start", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewRole(profile.id, roleIndex), disabled: !canEditCrewComposition || profile.roleRequirements.length <= 1, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight", children: "Remove" }) }) })
-                ] }, `${profile.id}-role-${roleIndex}`)) })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-fit w-[110px] justify-self-end rounded-md border border-cyan-300/20 bg-cyan-500/10 px-2 py-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-cyan-100", children: "Crew Summary" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-cyan-50/90", children: getAlternateCrewSummary(profile).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
-                index + 1,
-                ". ",
-                roleLabel
-              ] }, `${profile.id}-summary-${index}`)) })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[360px] gap-2 sm:grid-cols-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Seats", value: displayCrewComposition.crewCount, disabled: !canEditCrewComposition, onChange: (value) => updateAircraftCrewCount(displayCrewCompositionAircraftIndex, value) }),
+                  AIRCRAFT_CREW_RESOURCE_KINDS.map(({ kind, shortLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    NumberField,
+                    {
+                      label: shortLabel === "Procedural Trainer" ? "Proc Trainer" : `${shortLabel} Seats`,
+                      value: displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount,
+                      disabled: !canEditCrewComposition,
+                      onChange: (value) => updateAircraftCrewResourceSeatCount(displayCrewCompositionAircraftIndex, kind, value)
+                    },
+                    `crew-resource-count-${kind}`
+                  )),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 h-fit rounded-md border border-orange-300/20 bg-orange-500/10 px-2 py-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-orange-100", children: "Crew Summary" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-orange-50/90", children: getStandardCrewSummary(displayCrewComposition).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                      index + 1,
+                      ". ",
+                      roleLabel
+                    ] }, `standard-crew-summary-${index}`)) })
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 lg:grid-cols-2", children: displayCrewComposition.seats.map((seat, seatIndex) => {
+                const eligibleRoles = getAircraftSeatEligibleRoles(seat);
+                const crewPositionOptions = getCrewPositionOptions(crewPositionTerminology, eligibleRoles);
+                const visibleResourceKinds = AIRCRAFT_CREW_RESOURCE_KINDS.filter(({ kind }) => seatIndex < (displayCrewComposition.resourceSeatCounts?.[kind] ?? displayCrewComposition.crewCount));
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-950/70 p-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-start justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: [
+                        "Seat ",
+                        seatIndex + 1
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Role eligibility by resource type." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Default", value: seat.role, disabled: !canEditCrewComposition, options: eligibleRoles, optionLabels: crewPositionLabelMap, onChange: (value) => updateAircraftSeatRole(displayCrewCompositionAircraftIndex, seatIndex, value) }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-md border border-gray-800", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "div",
+                      {
+                        className: "grid bg-gray-900/80 text-[9px] font-black uppercase tracking-wide text-gray-500",
+                        style: { gridTemplateColumns: `minmax(130px,1fr) repeat(${Math.max(visibleResourceKinds.length, 1)}, minmax(58px,72px))` },
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-2 py-1.5", children: "Role" }),
+                          visibleResourceKinds.map(({ kind, shortLabel }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1.5 text-center", children: shortLabel }, `seat-${seatIndex}-${kind}-header`)),
+                          visibleResourceKinds.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-1 py-1.5 text-center", children: "No seats" })
+                        ]
+                      }
+                    ),
+                    crewPositionOptions.map((role) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "div",
+                      {
+                        className: "grid border-t border-gray-800 text-xs font-semibold",
+                        style: { gridTemplateColumns: `minmax(130px,1fr) repeat(${Math.max(visibleResourceKinds.length, 1)}, minmax(58px,72px))` },
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              disabled: !canEditCrewComposition || eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) && eligibleRoles.length <= 1,
+                              onClick: () => {
+                                const checked = eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                                updateAircraftSeatEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, role, !checked);
+                              },
+                              className: `px-2 py-1.5 text-left ${eligibleRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase()) ? "text-orange-100" : "text-gray-400"} disabled:cursor-not-allowed disabled:opacity-50`,
+                              children: crewPositionLabelMap[role] || role
+                            }
+                          ),
+                          visibleResourceKinds.map(({ kind }) => {
+                            const resourceRoles = getAircraftSeatEligibleRolesForResource(seat, kind);
+                            const checked = resourceRoles.some((candidate) => candidate.toUpperCase() === role.toUpperCase());
+                            return /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: `flex items-center justify-center border-l border-gray-800 px-1 py-1.5 ${checked ? "bg-orange-500/10" : "bg-gray-950/40"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "input",
+                              {
+                                type: "checkbox",
+                                className: "h-4 w-4 rounded border-gray-500 accent-orange-400",
+                                checked,
+                                disabled: !canEditCrewComposition || checked && resourceRoles.length <= 1,
+                                onChange: (event) => updateAircraftSeatResourceEligibleRole(displayCrewCompositionAircraftIndex, seatIndex, kind, role, event.target.checked)
+                              }
+                            ) }, `seat-${seatIndex}-${role}-${kind}`);
+                          }),
+                          visibleResourceKinds.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-l border-gray-800 px-1 py-1.5 text-center text-gray-600", children: "-" })
+                        ]
+                      },
+                      role
+                    ))
+                  ] })
+                ] }, seat.id || `standard-crew-seat-${seatIndex}`);
+              }) })
             ] })
-          ] }) }, profile.id)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-alternate-crew-composition", className: resourceSectionPanelClass, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "Alternate Crew Composition" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: resourceSectionPanelHintClass, children: [
+                  "Alternate crew setups shown here are only for ",
+                  displayCrewCompositionAircraftCode,
+                  "."
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewComposition(displayCrewCompositionAircraftCode), disabled: !canEditCrewComposition || !displayCrewCompositionAircraftCode, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                "Add Alt",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Crew"
+              ] }) }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: displayAircraftAlternateCompositions.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-4 text-sm text-gray-400", children: "No alternate crew compositions configured." }) : displayAircraftAlternateCompositions.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900/80 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    DraftField,
+                    {
+                      label: "Short Code (3 letters)",
+                      value: profile.code,
+                      disabled: !canEditCrewComposition,
+                      maxLength: 3,
+                      onCommit: (value) => updateAlternateCrewComposition(profile.id, { code: value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3) }),
+                      info: "This is the three-letter code the app can use to recognise this alternate crew. The display name can change, but keep this short code the same once the crew type is being used."
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Display Name", value: profile.name, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { name: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(OffsetField, { label: "Description", value: profile.description || "", disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewComposition(profile.id, { description: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start pt-[31px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewComposition(profile.id), disabled: !canEditCrewComposition, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight text-red-600", children: "Delete" }) }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded-lg border border-gray-800 bg-gray-950/70 py-3 pl-3 pr-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "lg:col-span-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-gray-300", children: "Role Requirements" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-gray-500", children: "Counts are grouped by generic scheduler role." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-start", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => addAlternateCrewRole(profile.id), disabled: !canEditCrewComposition || !getNextAlternateCrewRole(profile), className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
+                      "Add",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                      "Role"
+                    ] }) }) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: profile.roleRequirements.map((requirement, roleIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.8fr_1.2fr_1.6fr_auto]", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: requirement.role, disabled: !canEditCrewComposition, options: crewCompositionRoleOptions, optionLabels: crewPositionLabelMap, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { role: value }) }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Count", value: requirement.count, disabled: !canEditCrewComposition, onChange: (value) => updateAlternateCrewRole(profile.id, roleIndex, { count: value }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-start", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: () => removeAlternateCrewRole(profile.id, roleIndex), disabled: !canEditCrewComposition || profile.roleRequirements.length <= 1, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] leading-tight", children: "Remove" }) }) })
+                  ] }, `${profile.id}-role-${roleIndex}`)) })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "h-fit w-[110px] justify-self-end rounded-md border border-cyan-300/20 bg-cyan-500/10 px-2 py-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 text-[9px] font-black uppercase leading-tight tracking-wide text-cyan-100", children: "Crew Summary" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("ol", { className: "space-y-0.5 text-[11px] font-semibold leading-tight text-cyan-50/90", children: getAlternateCrewSummary(profile).map((roleLabel, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+                  index + 1,
+                  ". ",
+                  roleLabel
+                ] }, `${profile.id}-summary-${index}`)) })
+              ] })
+            ] }) }, profile.id)) })
+          ] })
         ] })
       ] })
     ] }),
@@ -72285,24 +72302,43 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: visibleCrewCompositionAircraftTypes.map((aircraft) => {
-          const code = String(aircraft.code || "").trim().toUpperCase();
-          const isActive = code === displayCrewCompositionAircraftCode;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              onClick: () => setCrewCompositionAircraftCode(code),
-              className: `rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${isActive ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: code || "Aircraft" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500", children: aircraft.name || "Unnamed aircraft type" })
-              ]
-            },
-            `currency-profile-aircraft-tab-${code || aircraft.name}`
-          );
-        }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2 rounded-lg border border-gray-700 bg-gray-950 p-2", children: [
+          visibleCrewCompositionAircraftTypes.map((aircraft) => {
+            const code = String(aircraft.code || "").trim().toUpperCase();
+            const isActive = code === displayCrewCompositionAircraftCode;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => setCrewCompositionAircraftCode(code),
+                className: `rounded-md border px-3 py-2 text-left text-xs font-black uppercase tracking-wide transition-colors ${isActive ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-gray-800 bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: code || "Aircraft" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block max-w-[180px] truncate text-[10px] font-semibold normal-case tracking-normal text-gray-500", children: aircraft.name || "Unnamed aircraft type" })
+                ]
+              },
+              `currency-profile-aircraft-tab-${code || aircraft.name}`
+            );
+          }),
+          visibleCrewCompositionAircraftTypes.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full rounded-md border border-dashed border-gray-700 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-gray-200", children: "No aircraft types configured." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs leading-relaxed", children: [
+              "Add an aircraft type in Settings > Platform & Deployment > Aircraft Types & DFP Resource Rows before setting ",
+              continuationCurrencyEventsLabel,
+              "."
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setResourcePoolActiveTab("aircraftTypes"),
+                className: `${platformActionButtonClass} mt-3`,
+                children: "Open Aircraft Types"
+              }
+            )
+          ] })
+        ] }),
+        displayCrewCompositionAircraftCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-currency-profile-records", className: resourceSectionPanelClass, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: continuationCurrencyEventsLabel }),
@@ -72310,7 +72346,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                 "These events prefill ",
                 continuationCurrencyShortLabel,
                 " and currency requests with crew, aircraft CONFIG and currency for ",
-                displayCrewCompositionAircraftCode || "the selected aircraft",
+                displayCrewCompositionAircraftCode,
                 "."
               ] })
             ] }),
