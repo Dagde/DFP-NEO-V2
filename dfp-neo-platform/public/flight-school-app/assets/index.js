@@ -67441,6 +67441,8 @@ const PlatformConfigurationSettings = ({
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
   const [newAircraftTypeVisibleIds, setNewAircraftTypeVisibleIds] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [showAircraftTypeDeletePanel, setShowAircraftTypeDeletePanel] = reactExports.useState(false);
+  const [selectedAircraftTypeDeleteKey, setSelectedAircraftTypeDeleteKey] = reactExports.useState("");
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = reactExports.useState("");
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
@@ -67474,6 +67476,14 @@ const PlatformConfigurationSettings = ({
     const name = String(pool.name || "").trim() || "Unnamed DFP Resource Row Set";
     return { key, name };
   }), [config.resourcePools]);
+  const aircraftTypeDeleteOptions = reactExports.useMemo(() => config.aircraftTypes.map((aircraft, index) => {
+    const key = String(aircraft.id || aircraft.code || `aircraft-type-${index}`);
+    const code = String(aircraft.code || "").trim();
+    const name = String(aircraft.name || "").trim();
+    const label = [code, name && name !== code ? name : ""].filter(Boolean).join(" - ") || "Unnamed Aircraft Type";
+    return { key, code, name: label };
+  }), [config.aircraftTypes]);
+  const selectedAircraftTypeDeleteOption = aircraftTypeDeleteOptions.find((option) => option.key === selectedAircraftTypeDeleteKey);
   const selectedResourcePoolDeleteOption = resourcePoolDeleteOptions.find((option) => option.key === selectedResourcePoolDeleteKey);
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return false;
@@ -69546,6 +69556,98 @@ This permanently removes the organisation record from platform configuration and
       };
     });
   };
+  const deleteSelectedAircraftType = async () => {
+    if (!canEditResourcePools) return;
+    if (!selectedAircraftTypeDeleteOption) {
+      await showDarkAlert("Select an aircraft type to delete.", "Delete Aircraft Type", "warning");
+      return;
+    }
+    const targetKey = selectedAircraftTypeDeleteOption.key;
+    const targetAircraft = config.aircraftTypes.find((aircraft, index) => String(aircraft.id || aircraft.code || `aircraft-type-${index}`) === targetKey);
+    const removedCode = normaliseUnitCode2(targetAircraft?.code);
+    const affectedRows = removedCode ? config.resourcePools.filter((pool) => normaliseUnitCode2(pool.aircraftTypeCode) === removedCode).length : 0;
+    const affectedUnits = removedCode ? config.units.filter((unit) => normaliseUnitCode2(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType) === removedCode).length : 0;
+    const affectedText = [
+      affectedRows ? `${affectedRows} DFP resource row set${affectedRows === 1 ? "" : "s"}` : "",
+      affectedUnits ? `${affectedUnits} unit aircraft assignment${affectedUnits === 1 ? "" : "s"}` : ""
+    ].filter(Boolean).join(" and ");
+    const confirmed = await showDarkConfirm(
+      `Delete aircraft type "${selectedAircraftTypeDeleteOption.name}"?
+
+This removes the aircraft type from Settings${affectedText ? ` and clears it from ${affectedText}` : ""}. Historical schedule records are not deleted. Press Save in this section to apply the deletion.`,
+      "Delete Aircraft Type?",
+      "warning"
+    );
+    if (!confirmed) return;
+    const password = await showDarkPrompt({
+      title: "Confirm Aircraft Type Deletion",
+      message: `Enter your password to delete "${selectedAircraftTypeDeleteOption.name}".`,
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+    if (!password) return;
+    try {
+      const isValid = await verifyCurrentUserPassword(password);
+      if (!isValid) {
+        await showDarkAlert("The password was not accepted. The aircraft type was not deleted.", "Password Required", "warning");
+        return;
+      }
+    } catch {
+      await showDarkAlert("The app could not verify your password. The aircraft type was not deleted.", "Password Check Failed", "error");
+      return;
+    }
+    const clearDeletedAircraftSettings = (settings = {}) => {
+      if (!removedCode) return settings;
+      const crewCompositionSettings2 = settings.crewCompositionSettings && typeof settings.crewCompositionSettings === "object" ? settings.crewCompositionSettings : null;
+      const standardMissionProfiles2 = settings.standardMissionProfiles && typeof settings.standardMissionProfiles === "object" ? settings.standardMissionProfiles : null;
+      return {
+        ...settings,
+        ...crewCompositionSettings2 ? {
+          crewCompositionSettings: {
+            ...crewCompositionSettings2,
+            alternateCompositions: Array.isArray(crewCompositionSettings2.alternateCompositions) ? crewCompositionSettings2.alternateCompositions.filter((profile) => normaliseUnitCode2(profile.aircraftTypeCode) !== removedCode) : crewCompositionSettings2.alternateCompositions,
+            currencyProfiles: Array.isArray(crewCompositionSettings2.currencyProfiles) ? crewCompositionSettings2.currencyProfiles.filter((profile) => normaliseUnitCode2(profile.aircraftTypeCode) !== removedCode) : crewCompositionSettings2.currencyProfiles
+          }
+        } : {},
+        ...standardMissionProfiles2 ? {
+          standardMissionProfiles: {
+            ...standardMissionProfiles2,
+            profiles: Array.isArray(standardMissionProfiles2.profiles) ? standardMissionProfiles2.profiles.filter((profile) => normaliseUnitCode2(profile.aircraftTypeCode) !== removedCode) : standardMissionProfiles2.profiles
+          }
+        } : {}
+      };
+    };
+    setConfig((prev) => ({
+      ...prev,
+      aircraftTypes: prev.aircraftTypes.filter((aircraft, index) => String(aircraft.id || aircraft.code || `aircraft-type-${index}`) !== targetKey),
+      units: prev.units.map((unit) => {
+        const unitAircraftCode = normaliseUnitCode2(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType);
+        if (!removedCode || unitAircraftCode !== removedCode) return unit;
+        const nextSettings = { ...unit.settings || {} };
+        delete nextSettings.aircraftTypeCode;
+        delete nextSettings.aircraftType;
+        return { ...unit, settings: nextSettings };
+      }),
+      resourcePools: prev.resourcePools.map((pool) => removedCode && normaliseUnitCode2(pool.aircraftTypeCode) === removedCode ? { ...pool, aircraftTypeCode: null } : pool),
+      masterLmpAccessRules: prev.masterLmpAccessRules.map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule),
+      schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => removedCode && normaliseUnitCode2(ruleSet.aircraftTypeCode) === removedCode ? { ...ruleSet, aircraftTypeCode: null } : ruleSet),
+      organisations: prev.organisations.map((organisation) => ({
+        ...organisation,
+        settings: clearDeletedAircraftSettings(organisation.settings || {})
+      }))
+    }));
+    setNewAircraftTypeVisibleIds((current) => {
+      const next = new Set(Array.from(current));
+      if (targetAircraft?.id) next.delete(String(targetAircraft.id));
+      return next;
+    });
+    setSelectedAircraftTypeDeleteKey("");
+    onShowSuccess(`Aircraft type "${selectedAircraftTypeDeleteOption.name}" removed. Press Save to apply the deletion.`);
+  };
   const addResourcePool = () => {
     const selectedUnit = config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))];
     const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || "";
@@ -70806,6 +70908,14 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     return { key, name };
   });
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled ? visibleResourcePoolDeleteOptions : resourcePoolDeleteOptions;
+  const visibleAircraftTypeDeleteOptions = visibleAircraftTypeRows.map(({ aircraft, index }) => {
+    const key = String(aircraft.id || aircraft.code || `aircraft-type-${index}`);
+    const code = String(aircraft.code || "").trim();
+    const name = String(aircraft.name || "").trim();
+    const label = [code, name && name !== code ? name : ""].filter(Boolean).join(" - ") || "Unnamed Aircraft Type";
+    return { key, name: label };
+  });
+  const activeAircraftTypeDeleteOptions = settingsVisibilityEnabled ? visibleAircraftTypeDeleteOptions : aircraftTypeDeleteOptions;
   const visibleMasterLmpAccessRuleRows = masterLmpAccessRules.map((rule, index) => ({ rule, index })).filter(({ rule }) => isRecordVisibleForSettingsPolicy({
     unitCode: rule.unitCode,
     locationCode: rule.locationCode,
@@ -72507,6 +72617,25 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               "button",
               {
                 type: "button",
+                onClick: () => {
+                  setShowAircraftTypeDeletePanel((current) => !current);
+                  setResourcePoolActiveTab("aircraftTypes");
+                },
+                className: platformActionButtonClass,
+                title: "Show or hide aircraft type deletion controls",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[8px] leading-[0.7rem]", children: [
+                  "Delete",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Aircraft",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Type"
+                ] })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
                 onClick: addAircraftType,
                 className: platformActionButtonClass,
                 title: "Add aircraft type",
@@ -72617,6 +72746,36 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
+          ] }),
+          showAircraftTypeDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-red-100", children: "Delete Aircraft Type Entered In Error" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-red-100/70", children: "Select by aircraft type name only. Deletion requires your password and is applied only when this section is saved." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectField,
+                {
+                  label: "Aircraft Type",
+                  value: selectedAircraftTypeDeleteKey,
+                  disabled: !canEditResourcePools || activeAircraftTypeDeleteOptions.length === 0,
+                  options: ["", ...activeAircraftTypeDeleteOptions.map((option) => option.key)],
+                  optionLabels: Object.fromEntries(activeAircraftTypeDeleteOptions.map((option) => [option.key, option.name])),
+                  emptyLabel: "Select aircraft type",
+                  onChange: setSelectedAircraftTypeDeleteKey
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  disabled: !canEditResourcePools || !selectedAircraftTypeDeleteKey,
+                  onClick: deleteSelectedAircraftType,
+                  className: "h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: "Delete Aircraft Type"
+                }
+              )
+            ] })
           ] }),
           visibleAircraftTypeRows.map(({ aircraft, index }) => {
             const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
