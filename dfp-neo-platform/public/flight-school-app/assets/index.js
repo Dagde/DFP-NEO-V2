@@ -25229,7 +25229,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                         ] })
                       ] }, idx))
                     ] }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[70px]", "aria-hidden": "true" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[50px]", "aria-hidden": "true" })
                   ] });
                 })()
               ] }),
@@ -51876,8 +51876,7 @@ const InstructorProfileFlyout = ({
             ] }),
             logbookLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-xs py-4 text-center animate-pulse", children: "Loading logbook…" }),
             logbookError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-red-400 text-xs py-4 text-center", children: logbookError }),
-            !logbookLoading && !logbookError && logbookEntries.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-xs py-4 text-center", children: "No flight log entries found." }),
-            !logbookLoading && !logbookError && logbookEntries.length > 0 && (() => {
+            !logbookLoading && !logbookError && (() => {
               const filteredEntries = logbookEntries.filter((e) => (e.eventDate || "").slice(0, 7) === logbookMonth);
               const rows = filteredEntries.map((entry) => {
                 const snap2 = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
@@ -51895,91 +51894,95 @@ const InstructorProfileFlyout = ({
                 const dutyVal = snap2.duty || entry.duty || "";
                 return { ...snap2, year: yr, date: dt, total, captTime, instTime, nightP1: nightP1raw, simActual, simIf, type: typeVal, tail: tailVal, duty: dutyVal, _role: role2, _eventCode: entry.eventCode || "" };
               });
+              const displayRows = rows.length > 0 ? rows : [{}];
               const C = ({ v, w, bg = "bg-gray-800" }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex items-center justify-center ${w} flex-shrink-0 border-r border-gray-700 last:border-r-0 ${bg} h-6`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[10px] font-mono truncate px-0.5", children: v || "" }) });
               const H = ({ l, w, sub = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-col items-center justify-end ${w} flex-shrink-0 border-r border-gray-600 last:border-r-0 bg-gray-900/60 py-0.5`, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-gray-400 uppercase leading-tight text-center", children: l }),
                 sub && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] text-gray-500 leading-tight", children: sub })
               ] });
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 min-w-max", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Year", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Date", w: "w-14" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Type", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Tail", w: "w-14" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Captain", w: "w-20" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Co-Pilot", sub: "Crew", w: "w-20" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Duty", w: "w-40" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Day" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" })
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 min-w-max", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Year", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Date", w: "w-14" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Type", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Tail", w: "w-14" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Captain", w: "w-20" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Co-Pilot", sub: "Crew", w: "w-20" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Duty", w: "w-40" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Day" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Night" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "TOTAL", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Capt", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Inst", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "SimIF", w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "ActIF", w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "2D", w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "3D", w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Sim" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Tot", w: "w-8" })
+                      ] })
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Night" }),
+                  displayRows.map((row, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-nowrap border-t border-gray-700/50 ${idx % 2 === 0 ? "bg-gray-800/30" : "bg-gray-800/10"} hover:bg-sky-900/20`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start justify-center w-14 flex-shrink-0 border-r border-gray-600 px-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-sky-400 truncate w-full", children: row._role || "" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] text-gray-500 truncate w-full", children: row._eventCode || "" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.year, w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.date, w: "w-14" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.type, w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.tail, w: "w-14" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.captain, w: "w-20" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.crew, w: "w-20" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.duty, w: "w-40" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex border-r border-gray-600", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayP1 ?? "", w: "w-8" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayP2 ?? "", w: "w-8" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayDual ?? "", w: "w-8" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex border-r border-gray-600", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightP1 ?? "", w: "w-8" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightP2 ?? "", w: "w-8" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightDual ?? "", w: "w-8" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.total ?? "", w: "w-10", bg: "bg-gray-700/30" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.captTime ?? "", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.instTime ?? "", w: "w-10" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simIf ?? "", w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simActual ?? "", w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: String(row.app2D ?? ""), w: "w-8" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: String(row.app3D ?? ""), w: "w-8" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simP1 ?? "", w: "w-8", bg: "bg-gray-800/50" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simP2 ?? "", w: "w-8", bg: "bg-gray-800/50" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simDual ?? "", w: "w-8", bg: "bg-gray-800/50" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simTotal ?? "", w: "w-8", bg: "bg-gray-800/50" })
                     ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "TOTAL", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Capt", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Inst", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "SimIF", w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "ActIF", w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "2D", w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "3D", w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Sim" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Tot", w: "w-8" })
-                    ] })
-                  ] })
-                ] }),
-                rows.map((row, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-nowrap border-t border-gray-700/50 ${idx % 2 === 0 ? "bg-gray-800/30" : "bg-gray-800/10"} hover:bg-sky-900/20`, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start justify-center w-14 flex-shrink-0 border-r border-gray-600 px-1", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-sky-400 truncate w-full", children: row._role }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] text-gray-500 truncate w-full", children: row._eventCode })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.year, w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.date, w: "w-14" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.type, w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.tail, w: "w-14" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.captain, w: "w-20" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.crew, w: "w-20" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.duty, w: "w-40" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex border-r border-gray-600", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayP1 ?? "", w: "w-8" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayP2 ?? "", w: "w-8" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayDual ?? "", w: "w-8" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex border-r border-gray-600", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightP1 ?? "", w: "w-8" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightP2 ?? "", w: "w-8" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightDual ?? "", w: "w-8" })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.total ?? "", w: "w-10", bg: "bg-gray-700/30" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.captTime ?? "", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.instTime ?? "", w: "w-10" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simIf ?? "", w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simActual ?? "", w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: String(row.app2D ?? ""), w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: String(row.app3D ?? ""), w: "w-8" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simP1 ?? "", w: "w-8", bg: "bg-gray-800/50" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simP2 ?? "", w: "w-8", bg: "bg-gray-800/50" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simDual ?? "", w: "w-8", bg: "bg-gray-800/50" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simTotal ?? "", w: "w-8", bg: "bg-gray-800/50" })
-                  ] })
-                ] }, idx))
-              ] }) });
+                  ] }, idx))
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[50px]", "aria-hidden": "true" })
+              ] });
             })()
           ] }),
           activeTab === "unavailable" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-4", style: card3dStyle, children: [

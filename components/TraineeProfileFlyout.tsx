@@ -2439,7 +2439,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   ))}
                                 </div>
                               </div>
-                              <div className="h-[70px]" aria-hidden="true" />
+                              <div className="h-[50px]" aria-hidden="true" />
                             </>
                           );
                         })()}

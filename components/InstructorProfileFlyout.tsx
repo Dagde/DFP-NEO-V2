@@ -1215,10 +1215,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   </div>
                   {logbookLoading && <div className="text-gray-400 text-xs py-4 text-center animate-pulse">Loading logbook…</div>}
                   {logbookError && <div className="text-red-400 text-xs py-4 text-center">{logbookError}</div>}
-                  {!logbookLoading && !logbookError && logbookEntries.length === 0 && (
-                    <div className="text-gray-500 text-xs py-4 text-center">No flight log entries found.</div>
-                  )}
-                  {!logbookLoading && !logbookError && logbookEntries.length > 0 && (() => {
+                  {!logbookLoading && !logbookError && (() => {
                     // Filter entries by selected month
                     const filteredEntries = logbookEntries.filter((e: any) => (e.eventDate || '').slice(0, 7) === logbookMonth);
                     const rows: any[] = filteredEntries.map((entry: any) => {
@@ -1238,7 +1235,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       const dutyVal = snap.duty || entry.duty || '';
                       return { ...snap, year: yr, date: dt, total, captTime, instTime, nightP1: nightP1raw, simActual, simIf, type: typeVal, tail: tailVal, duty: dutyVal, _role: role, _eventCode: entry.eventCode || '' };
                     });
-                    const C = ({ v, w, bg = 'bg-gray-800' }: { v: string; w: string; bg?: string }) => (
+                    const displayRows = rows.length > 0 ? rows : [{}];
+                    const C = ({ v, w, bg = 'bg-gray-800' }: { v?: string; w: string; bg?: string }) => (
                       <div className={`flex items-center justify-center ${w} flex-shrink-0 border-r border-gray-700 last:border-r-0 ${bg} h-6`}>
                         <span className="text-white text-[10px] font-mono truncate px-0.5">{v || ''}</span>
                       </div>
@@ -1250,55 +1248,58 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     );
                     return (
-                      <div className="overflow-x-auto rounded border border-gray-600">
-                        <div className="inline-flex flex-col bg-gray-900 min-w-max">
-                          <div className="flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900">
-                            <div className="w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" />
-                            <H l="Year" w="w-10" /><H l="Date" w="w-14" /><H l="Type" w="w-10" /><H l="Tail" w="w-14" />
-                            <H l="Captain" w="w-20" /><H l="Co-Pilot" sub="Crew" w="w-20" /><H l="Duty" w="w-40" />
-                            <div className="flex flex-col border-r border-gray-600">
-                              <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Day</div>
-                              <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /></div>
+                      <>
+                        <div className="overflow-x-auto rounded border border-gray-600">
+                          <div className="inline-flex flex-col bg-gray-900 min-w-max">
+                            <div className="flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900">
+                              <div className="w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" />
+                              <H l="Year" w="w-10" /><H l="Date" w="w-14" /><H l="Type" w="w-10" /><H l="Tail" w="w-14" />
+                              <H l="Captain" w="w-20" /><H l="Co-Pilot" sub="Crew" w="w-20" /><H l="Duty" w="w-40" />
+                              <div className="flex flex-col border-r border-gray-600">
+                                <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Day</div>
+                                <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /></div>
+                              </div>
+                              <div className="flex flex-col border-r border-gray-600">
+                                <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Night</div>
+                                <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /></div>
+                              </div>
+                              <H l="TOTAL" w="w-10" /><H l="Capt" w="w-10" /><H l="Inst" w="w-10" />
+                              <H l="SimIF" w="w-8" /><H l="ActIF" w="w-8" /><H l="2D" w="w-8" /><H l="3D" w="w-8" />
+                              <div className="flex flex-col">
+                                <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Sim</div>
+                                <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /><H l="Tot" w="w-8" /></div>
+                              </div>
                             </div>
-                            <div className="flex flex-col border-r border-gray-600">
-                              <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Night</div>
-                              <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /></div>
-                            </div>
-                            <H l="TOTAL" w="w-10" /><H l="Capt" w="w-10" /><H l="Inst" w="w-10" />
-                            <H l="SimIF" w="w-8" /><H l="ActIF" w="w-8" /><H l="2D" w="w-8" /><H l="3D" w="w-8" />
-                            <div className="flex flex-col">
-                              <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Sim</div>
-                              <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /><H l="Tot" w="w-8" /></div>
-                            </div>
+                            {displayRows.map((row: any, idx: number) => (
+                              <div key={idx} className={`flex flex-nowrap border-t border-gray-700/50 ${idx % 2 === 0 ? 'bg-gray-800/30' : 'bg-gray-800/10'} hover:bg-sky-900/20`}>
+                                <div className="flex flex-col items-start justify-center w-14 flex-shrink-0 border-r border-gray-600 px-1">
+                                  <span className="text-[8px] font-bold text-sky-400 truncate w-full">{row._role || ''}</span>
+                                  <span className="text-[7px] text-gray-500 truncate w-full">{row._eventCode || ''}</span>
+                                </div>
+                                <C v={row.year} w="w-10" /><C v={row.date} w="w-14" /><C v={row.type} w="w-10" /><C v={row.tail} w="w-14" />
+                                <C v={row.captain} w="w-20" /><C v={row.crew} w="w-20" /><C v={row.duty} w="w-40" />
+                                <div className="flex border-r border-gray-600">
+                                  <C v={row.dayP1 ?? ''} w="w-8" /><C v={row.dayP2 ?? ''} w="w-8" /><C v={row.dayDual ?? ''} w="w-8" />
+                                </div>
+                                <div className="flex border-r border-gray-600">
+                                  <C v={row.nightP1 ?? ''} w="w-8" /><C v={row.nightP2 ?? ''} w="w-8" /><C v={row.nightDual ?? ''} w="w-8" />
+                                </div>
+                                <C v={row.total ?? ''} w="w-10" bg="bg-gray-700/30" />
+                                <C v={row.captTime ?? ''} w="w-10" /><C v={row.instTime ?? ''} w="w-10" />
+                                <C v={row.simIf ?? ''} w="w-8" /><C v={row.simActual ?? ''} w="w-8" />
+                                <C v={String(row.app2D ?? '')} w="w-8" /><C v={String(row.app3D ?? '')} w="w-8" />
+                                <div className="flex">
+                                  <C v={row.simP1 ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                  <C v={row.simP2 ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                  <C v={row.simDual ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                  <C v={row.simTotal ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                          {rows.map((row: any, idx: number) => (
-                            <div key={idx} className={`flex flex-nowrap border-t border-gray-700/50 ${idx % 2 === 0 ? 'bg-gray-800/30' : 'bg-gray-800/10'} hover:bg-sky-900/20`}>
-                              <div className="flex flex-col items-start justify-center w-14 flex-shrink-0 border-r border-gray-600 px-1">
-                                <span className="text-[8px] font-bold text-sky-400 truncate w-full">{row._role}</span>
-                                <span className="text-[7px] text-gray-500 truncate w-full">{row._eventCode}</span>
-                              </div>
-                              <C v={row.year} w="w-10" /><C v={row.date} w="w-14" /><C v={row.type} w="w-10" /><C v={row.tail} w="w-14" />
-                              <C v={row.captain} w="w-20" /><C v={row.crew} w="w-20" /><C v={row.duty} w="w-40" />
-                              <div className="flex border-r border-gray-600">
-                                <C v={row.dayP1 ?? ''} w="w-8" /><C v={row.dayP2 ?? ''} w="w-8" /><C v={row.dayDual ?? ''} w="w-8" />
-                              </div>
-                              <div className="flex border-r border-gray-600">
-                                <C v={row.nightP1 ?? ''} w="w-8" /><C v={row.nightP2 ?? ''} w="w-8" /><C v={row.nightDual ?? ''} w="w-8" />
-                              </div>
-                              <C v={row.total ?? ''} w="w-10" bg="bg-gray-700/30" />
-                              <C v={row.captTime ?? ''} w="w-10" /><C v={row.instTime ?? ''} w="w-10" />
-                              <C v={row.simIf ?? ''} w="w-8" /><C v={row.simActual ?? ''} w="w-8" />
-                              <C v={String(row.app2D ?? '')} w="w-8" /><C v={String(row.app3D ?? '')} w="w-8" />
-                              <div className="flex">
-                                <C v={row.simP1 ?? ''} w="w-8" bg="bg-gray-800/50" />
-                                <C v={row.simP2 ?? ''} w="w-8" bg="bg-gray-800/50" />
-                                <C v={row.simDual ?? ''} w="w-8" bg="bg-gray-800/50" />
-                                <C v={row.simTotal ?? ''} w="w-8" bg="bg-gray-800/50" />
-                              </div>
-                            </div>
-                          ))}
                         </div>
-                      </div>
+                        <div className="h-[50px]" aria-hidden="true" />
+                      </>
                     );
                   })()}
                 </div>
