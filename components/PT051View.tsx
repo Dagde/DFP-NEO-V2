@@ -259,6 +259,18 @@ const getConfiguredReportElements = (phraseBank?: PhraseBank): string[] | undefi
     return Array.isArray(configured) ? configured : undefined;
 };
 
+const getConfiguredReportElementGroups = (phraseBank?: PhraseBank): {
+    groups: Record<string, string>;
+    hasExplicitGroups: boolean;
+} => {
+    const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY];
+    const hasExplicitGroups = !!configured && typeof configured === 'object' && !Array.isArray(configured);
+    return {
+        groups: hasExplicitGroups ? configured as Record<string, string> : {},
+        hasExplicitGroups,
+    };
+};
+
 const normaliseAssessedElements = (elements?: string[], phraseBank?: PhraseBank): string[] => {
     const configuredReportElements = getConfiguredReportElements(phraseBank);
     const source = Array.isArray(elements)
@@ -285,13 +297,13 @@ const getDefaultElementGroup = (element: string): string => (
 
 const buildAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
     const selectedElements = normaliseAssessedElements(elements, phraseBank);
-    const configuredGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
-    const categoryOrder = PT051_STRUCTURE.map(category => category.category);
+    const { groups: configuredGroups, hasExplicitGroups } = getConfiguredReportElementGroups(phraseBank);
+    const categoryOrder = hasExplicitGroups ? [] : PT051_STRUCTURE.map(category => category.category);
     const grouped = new Map<string, string[]>();
 
     selectedElements.forEach(element => {
         const configuredGroup = String(configuredGroups[element] || '').trim();
-        const category = configuredGroup || getDefaultElementGroup(element);
+        const category = configuredGroup || (hasExplicitGroups ? 'Additional Elements' : getDefaultElementGroup(element));
         if (!categoryOrder.includes(category)) categoryOrder.push(category);
         grouped.set(category, [...(grouped.get(category) || []), element]);
     });
