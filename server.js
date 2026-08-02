@@ -4683,13 +4683,46 @@ const sameStringSetForSync = (left = [], right = []) => {
   return leftValues.every((value, index) => value === rightValues[index]);
 };
 
+const stableStringifyForSync = (value) => {
+  if (Array.isArray(value)) return `[${value.map(stableStringifyForSync).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringifyForSync(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
+
 const sameLmpEventsForSync = (left = [], right = []) => {
   try {
-    return JSON.stringify(Array.isArray(left) ? left : []) === JSON.stringify(Array.isArray(right) ? right : []);
+    return stableStringifyForSync(Array.isArray(left) ? left : []) === stableStringifyForSync(Array.isArray(right) ? right : []);
   } catch {
     return false;
   }
 };
+
+const normaliseOverlayEventForSync = (item) => {
+  if (!item) return null;
+  const overlayId = item.id || item.code;
+  if (!overlayId) return null;
+  const payload = {
+    ...item,
+    id: overlayId,
+    code: item.code || overlayId,
+    lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
+    isRemedial: item.isRemedial === true || item.lmpSource === 'remedial',
+  };
+  const normalizedResourceNumber = getLmpResourceNumberForSync(payload);
+  payload.resourceNumber = normalizedResourceNumber;
+  payload.resourceCount = normalizedResourceNumber;
+  payload.resourcesPhysical = alignPhysicalResourcesForSync(payload.resourcesPhysical, normalizedResourceNumber);
+  return payload;
+};
+
+const normaliseOverlayEventsForComparison = (events = []) =>
+  (Array.isArray(events) ? events : [])
+    .filter(isLmpOverlayItemForSync)
+    .map(normaliseOverlayEventForSync)
+    .filter(Boolean)
+    .sort((a, b) => String(a.id || a.code || '').localeCompare(String(b.id || b.code || '')));
 
 const getLmpResourceNumberForSync = (item) => {
   const parsed = Number(item?.resourceNumber ?? item?.resourceCount);
@@ -4910,8 +4943,18 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
 // Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
+    const syncStartedAt = Date.now();
+    const timing = [];
+    const markSyncTiming = (label, details = {}) => {
+      timing.push({
+        label,
+        elapsedMs: Date.now() - syncStartedAt,
+        details,
+      });
+    };
     const db = await getPrisma();
-    const { syllabusData: clientSyllabusData } = req.body;
+    const { syllabusData: clientSyllabusData, build: buildSync = false } = req.body || {};
+    markSyncTiming('db:ready');
 
     // --- ALWAYS load syllabus from DB so the server has authoritative data ---
     // The client may send mockData syllabus (missing FIC GND1/2/3) which would
@@ -4933,6 +4976,10 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
 
     // Use DB syllabus if available; fall back to client-provided syllabusData
     const syllabusData = (Object.keys(dbSyllabusData).length > 0) ? dbSyllabusData : (clientSyllabusData || {});
+    markSyncTiming('syllabus:loaded', {
+      source: Object.keys(dbSyllabusData).length > 0 ? 'database' : 'request',
+      groups: Object.keys(syllabusData || {}).length,
+    });
 
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
       return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
@@ -4948,6 +4995,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         individualLMP: true,
       },
     });
+    markSyncTiming('trainees:loaded', { count: trainees.length });
 
     console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
 
@@ -4957,6 +5005,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       WHERE "isCompleted" = true OR UPPER(COALESCE("dcoResult", '')) = 'DCO'
       ORDER BY "date" ASC, "updatedAt" ASC
     `);
+    markSyncTiming('performance:loaded', { count: (traineePerformanceRows || []).length });
     const performanceByTraineeId = new Map();
     (traineePerformanceRows || []).forEach(row => {
       if (!row.traineeId) return;
@@ -4968,11 +5017,20 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     const overlayLookupMs = Date.now() - overlayLookupStartedAt;
     let activeOverlayCount = 0;
     overlaysByTraineeId.forEach(events => { activeOverlayCount += events.length; });
+    markSyncTiming('overlays:loaded', {
+      activeOverlayCount,
+      overlayTraineeCount: overlaysByTraineeId.size,
+      overlayLookupMs,
+    });
 
     const results = [];
     let createdLmpCount = 0;
     let updatedLmpCount = 0;
     let skippedUnchangedLmpCount = 0;
+    let overlayUpsertCount = 0;
+    let skippedUnchangedOverlayCount = 0;
+    let overlayWriteMs = 0;
+    let lmpWriteMs = 0;
 
     for (const trainee of trainees) {
       const lmpType = String(trainee.lmpType || trainee.course || '').trim();
@@ -5026,17 +5084,30 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       const overlayEvents = existing ? (overlaysByTraineeId.get(trainee.id) || []) : [];
       const existingMasterEvents = existingEvents.filter(item => !isLmpOverlayItemForSync(item));
       const lmpEvents = mergeIndividualLmpWithMasterForSync([...existingMasterEvents, ...overlayEvents], masterSyllabus, scoreMap);
-      await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
       const existingCompleted = existing ? (existing.completedEventIds || []) : [];
       const newlyMarked = completedEventIds.filter(id => !existingCompleted.includes(id));
       const lmpPayloadUnchanged = Boolean(existing) &&
         sameStringSetForSync(existingCompleted, completedEventIds) &&
         sameLmpEventsForSync(existingEvents, lmpEvents);
+      const overlayPayloadUnchanged = Boolean(existing) &&
+        sameLmpEventsForSync(
+          normaliseOverlayEventsForComparison(overlayEvents),
+          normaliseOverlayEventsForComparison(lmpEvents)
+        );
+
+      if (buildSync && lmpPayloadUnchanged && overlayPayloadUnchanged) {
+        skippedUnchangedOverlayCount += 1;
+      } else {
+        const overlayWriteStartedAt = Date.now();
+        overlayUpsertCount += await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
+        overlayWriteMs += Date.now() - overlayWriteStartedAt;
+      }
 
       if (lmpPayloadUnchanged) {
         skippedUnchangedLmpCount += 1;
       } else {
         // Upsert the IndividualLMP only when the composed payload has changed.
+        const lmpWriteStartedAt = Date.now();
         await db.individualLMP.upsert({
           where: { traineeId: trainee.id },
           update: {
@@ -5054,6 +5125,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
             completedEventIds,
           },
         });
+        lmpWriteMs += Date.now() - lmpWriteStartedAt;
         if (existing) updatedLmpCount += 1;
         else createdLmpCount += 1;
       }
@@ -5075,6 +5147,14 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         );
       }
     }
+    markSyncTiming('trainees:processed', {
+      total: trainees.length,
+      overlayUpsertCount,
+      skippedUnchangedOverlayCount,
+      overlayWriteMs,
+      lmpWriteMs,
+      buildSync,
+    });
 
     const created = results.filter(r => r.status === 'created').length;
     const updated = results.filter(r => r.status === 'updated').length;
@@ -5082,6 +5162,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     const noSyllabus = results.filter(r => r.status === 'no_syllabus').length;
 
     console.log(`[LMP Sync] ✅ Done — ${created} created, ${updated} updated, ${unchanged} unchanged, ${noSyllabus} skipped; DB writes: ${createdLmpCount} created, ${updatedLmpCount} updated, ${skippedUnchangedLmpCount} unchanged skipped; ${activeOverlayCount} active overlay event(s) loaded in ${overlayLookupMs}ms`);
+    markSyncTiming('complete', { created, updated, unchanged, noSyllabus });
 
     res.json({
       success: true,
@@ -5099,6 +5180,15 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         activeOverlayCount,
         overlayTraineeCount: overlaysByTraineeId.size,
         overlayLookupMs,
+        overlayWrites: {
+          upserted: overlayUpsertCount,
+          skippedUnchanged: skippedUnchangedOverlayCount,
+          writeMs: overlayWriteMs,
+        },
+        lmpWriteMs,
+        buildSync,
+        totalElapsedMs: Date.now() - syncStartedAt,
+        timing,
       },
       results,
     });

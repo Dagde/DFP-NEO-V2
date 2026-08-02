@@ -36353,11 +36353,30 @@ const App: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ syllabusData }),
+                body: JSON.stringify({ syllabusData, build: true }),
             });
             markNeoBuildTiming(timingReport, 'lmp-sync:response-received', { status: syncRes.status });
             if (!syncRes.ok) {
                 console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
+            } else {
+                try {
+                    const syncData = await syncRes.json();
+                    markNeoBuildTiming(timingReport, 'lmp-sync:json-parsed', {
+                        created: syncData?.summary?.created,
+                        updated: syncData?.summary?.updated,
+                        unchanged: syncData?.summary?.unchanged,
+                        noSyllabus: syncData?.summary?.noSyllabus,
+                        total: syncData?.summary?.total,
+                        totalElapsedMs: syncData?.summary?.totalElapsedMs,
+                        overlayWrites: syncData?.summary?.overlayWrites,
+                        lmpWriteMs: syncData?.summary?.lmpWriteMs,
+                        serverTiming: syncData?.summary?.timing,
+                    });
+                } catch (syncJsonErr) {
+                    markNeoBuildTiming(timingReport, 'lmp-sync:json-parse-failed', {
+                        message: syncJsonErr instanceof Error ? syncJsonErr.message : String(syncJsonErr),
+                    });
+                }
             }
 
             markNeoBuildTiming(timingReport, 'lmp-fetch:request-start', { buildPayload: true });
