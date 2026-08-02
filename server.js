@@ -4521,25 +4521,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         anchorBeforeMasterEventId: item.anchorBeforeMasterEventId,
         anchorPolicy: item.anchorPolicy,
       });
-      const overlayRows = await db.$queryRawUnsafe(
-        `SELECT * FROM "TraineeLmpOverlay" WHERE "isActive" = true ORDER BY "orderKey" ASC NULLS LAST, "createdAt" ASC`
-      );
-      const overlaysByTraineeId = new Map();
-      (overlayRows || []).forEach(row => {
-        const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-        const overlay = {
-          ...payload,
-          id: payload.id || row.overlayId,
-          code: payload.code || row.overlayId,
-          lmpSource: payload.lmpSource || row.overlayType || 'remedial',
-          anchorAfterMasterEventId: payload.anchorAfterMasterEventId || row.anchorAfterMasterEventId || undefined,
-          anchorBeforeMasterEventId: payload.anchorBeforeMasterEventId || row.anchorBeforeMasterEventId || undefined,
-          anchorPolicy: payload.anchorPolicy || row.anchorPolicy || 'between',
-          orderKey: payload.orderKey || row.orderKey || undefined,
-        };
-        if (!overlaysByTraineeId.has(row.traineeId)) overlaysByTraineeId.set(row.traineeId, []);
-        overlaysByTraineeId.get(row.traineeId).push(overlay);
-      });
+      const overlaysByTraineeId = await loadActiveTraineeLmpOverlaysByTraineeId(db);
 
       const composedLmps = lmps.map(lmp => {
         const masterSyllabus = getMasterSyllabus(lmp.lmpType);
@@ -4954,6 +4936,11 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       if (!performanceByTraineeId.has(row.traineeId)) performanceByTraineeId.set(row.traineeId, []);
       performanceByTraineeId.get(row.traineeId).push(row);
     });
+    const overlayLookupStartedAt = Date.now();
+    const overlaysByTraineeId = await loadActiveTraineeLmpOverlaysByTraineeId(db);
+    const overlayLookupMs = Date.now() - overlayLookupStartedAt;
+    let activeOverlayCount = 0;
+    overlaysByTraineeId.forEach(events => { activeOverlayCount += events.length; });
 
     const results = [];
 
@@ -5006,7 +4993,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       // Check what was previously marked
       const existing = trainee.individualLMP;
       const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
-      const overlayEvents = existing ? await loadTraineeLmpOverlays(db, trainee.id) : [];
+      const overlayEvents = existing ? (overlaysByTraineeId.get(trainee.id) || []) : [];
       const existingMasterEvents = existingEvents.filter(item => !isLmpOverlayItemForSync(item));
       const lmpEvents = mergeIndividualLmpWithMasterForSync([...existingMasterEvents, ...overlayEvents], masterSyllabus, scoreMap);
       await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
@@ -5053,11 +5040,20 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     const unchanged = results.filter(r => r.status === 'unchanged').length;
     const noSyllabus = results.filter(r => r.status === 'no_syllabus').length;
 
-    console.log(`[LMP Sync] ✅ Done — ${created} created, ${updated} updated, ${unchanged} unchanged, ${noSyllabus} skipped`);
+    console.log(`[LMP Sync] ✅ Done — ${created} created, ${updated} updated, ${unchanged} unchanged, ${noSyllabus} skipped; ${activeOverlayCount} active overlay event(s) loaded in ${overlayLookupMs}ms`);
 
     res.json({
       success: true,
-      summary: { created, updated, unchanged, noSyllabus, total: trainees.length },
+      summary: {
+        created,
+        updated,
+        unchanged,
+        noSyllabus,
+        total: trainees.length,
+        activeOverlayCount,
+        overlayTraineeCount: overlaysByTraineeId.size,
+        overlayLookupMs,
+      },
       results,
     });
   } catch (error) {
@@ -10039,19 +10035,38 @@ async function loadTraineeLmpOverlays(db, traineeId) {
     `SELECT * FROM "TraineeLmpOverlay" WHERE "traineeId" = $1::text AND "isActive" = true ORDER BY "orderKey" ASC NULLS LAST, "createdAt" ASC`,
     traineeId
   );
-  return (rows || []).map(row => {
-    const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-    return {
-      ...payload,
-      id: payload.id || row.overlayId,
-      code: payload.code || row.overlayId,
-      lmpSource: payload.lmpSource || row.overlayType || 'remedial',
-      anchorAfterMasterEventId: payload.anchorAfterMasterEventId || row.anchorAfterMasterEventId || undefined,
-      anchorBeforeMasterEventId: payload.anchorBeforeMasterEventId || row.anchorBeforeMasterEventId || undefined,
-      anchorPolicy: payload.anchorPolicy || row.anchorPolicy || 'between',
-      orderKey: payload.orderKey || row.orderKey || undefined,
-    };
+  return (rows || []).map(parseTraineeLmpOverlayRow).filter(Boolean);
+}
+
+async function loadActiveTraineeLmpOverlaysByTraineeId(db) {
+  const rows = await db.$queryRawUnsafe(
+    `SELECT * FROM "TraineeLmpOverlay" WHERE "isActive" = true ORDER BY "orderKey" ASC NULLS LAST, "createdAt" ASC`
+  );
+  const overlaysByTraineeId = new Map();
+  (rows || []).forEach(row => {
+    if (!row?.traineeId) return;
+    const overlay = parseTraineeLmpOverlayRow(row);
+    if (!overlay) return;
+    if (!overlaysByTraineeId.has(row.traineeId)) overlaysByTraineeId.set(row.traineeId, []);
+    overlaysByTraineeId.get(row.traineeId).push(overlay);
   });
+  return overlaysByTraineeId;
+}
+
+function parseTraineeLmpOverlayRow(row) {
+  if (!row) return null;
+  const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+  if (!payload || typeof payload !== 'object') return null;
+  return {
+    ...payload,
+    id: payload.id || row.overlayId,
+    code: payload.code || row.overlayId,
+    lmpSource: payload.lmpSource || row.overlayType || 'remedial',
+    anchorAfterMasterEventId: payload.anchorAfterMasterEventId || row.anchorAfterMasterEventId || undefined,
+    anchorBeforeMasterEventId: payload.anchorBeforeMasterEventId || row.anchorBeforeMasterEventId || undefined,
+    anchorPolicy: payload.anchorPolicy || row.anchorPolicy || 'between',
+    orderKey: payload.orderKey || row.orderKey || undefined,
+  };
 }
 
 async function loadMasterSyllabusForLmpType(db, lmpType) {
