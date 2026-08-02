@@ -115251,26 +115251,26 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           const extensionLedger = {
             ...updatedTarget.trainingReportNextEventExtensions || {}
           };
-          const previousAssessmentKey = String(updatedTarget.trainingReportLastExtendedByAssessmentId || "").trim();
-          const previousExtension = Number(
-            extensionLedger[assessmentKey] || (previousAssessmentKey && previousAssessmentKey !== assessmentKey ? extensionLedger[previousAssessmentKey] : 0) || 0
-          );
+          const preservedExtensionKeys = Object.keys(extensionLedger).filter((key) => key !== assessmentKey);
+          const previousExtension = Number(extensionLedger[assessmentKey] || 0);
           const delta = requestedExtension - previousExtension;
           if (Math.abs(delta) >= 1e-4) {
             const existingFlightOrSimHours = Number(updatedTarget.flightOrSimHours || updatedTarget.duration || 0);
             const existingDuration = Number(updatedTarget.duration || updatedTarget.flightOrSimHours || 0);
             const existingTotalEventHours = Number(updatedTarget.totalEventHours || existingDuration || existingFlightOrSimHours || 0);
-            if (previousAssessmentKey && previousAssessmentKey !== assessmentKey && Object.prototype.hasOwnProperty.call(extensionLedger, previousAssessmentKey)) {
-              delete extensionLedger[previousAssessmentKey];
-            }
             extensionLedger[assessmentKey] = requestedExtension;
+            const totalTrackedExtension = Object.values(extensionLedger).reduce((sum, value) => {
+              const numericValue = Number(value);
+              return sum + (Number.isFinite(numericValue) ? numericValue : 0);
+            }, 0);
             updatedTarget = {
               ...updatedTarget,
               flightOrSimHours: Math.max(0, Number((existingFlightOrSimHours + delta).toFixed(2))),
               duration: Math.max(0, Number((existingDuration + delta).toFixed(2))),
               totalEventHours: Math.max(0, Number((existingTotalEventHours + delta).toFixed(2))),
               trainingReportNextEventExtensions: extensionLedger,
-              trainingReportLastExtendedByAssessmentId: assessmentKey
+              trainingReportLastExtendedByAssessmentId: assessmentKey,
+              trainingReportExtensionAssessmentIds: Object.keys(extensionLedger)
             };
             changed = true;
             updates.push({
@@ -115282,7 +115282,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               requestedExtensionSource: requestedExtensionInfo.source,
               requestedTargetCode: requestedTargetCode || null,
               previousExtension,
+              preservedExtensionKeys,
               delta,
+              totalTrackedExtension: Number(totalTrackedExtension.toFixed(2)),
               before: {
                 flightOrSimHours: existingFlightOrSimHours,
                 duration: existingDuration,
@@ -115303,7 +115305,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               requestedExtension,
               requestedExtensionSource: requestedExtensionInfo.source,
               requestedTargetCode: requestedTargetCode || null,
-              previousExtension
+              previousExtension,
+              preservedExtensionKeys
             });
           }
         }
