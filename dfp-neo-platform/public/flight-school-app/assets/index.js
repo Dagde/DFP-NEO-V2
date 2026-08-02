@@ -23404,21 +23404,6 @@ const Dropdown$1 = ({ label, value, onChange, children }) => /* @__PURE__ */ jsx
     }
   )
 ] });
-const ExperienceInput$1 = ({ label, value, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-xs text-gray-400 mb-1", children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "input",
-    {
-      type: "number",
-      min: "0",
-      step: "0.1",
-      value,
-      onFocus: (e) => e.target.select(),
-      onChange: (e) => onChange(parseFloat(e.target.value) || 0),
-      className: "w-20 bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-    }
-  )
-] });
 const pushTrainingReportNotesDiag = (stage, payload = {}) => {
   try {
     const existing = JSON.parse(window.localStorage.getItem("neo_training_report_notes_diag") || "[]");
@@ -23440,6 +23425,12 @@ const formatDate$4 = (dateString) => {
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = date.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
   return `${day} ${month}`;
+};
+const getLogbookEntryRoleLabel$1 = (personRole) => {
+  if (personRole === "instructor" || personRole === "fixed_crew_pic") return "Captain";
+  if (personRole === "fixed_crew_p2") return "P2";
+  if (personRole === "trainee") return "Trainee";
+  return "Crew";
 };
 const initialExperience$1 = {
   day: { p1: 0, p2: 0, dual: 0 },
@@ -23573,6 +23564,10 @@ const TraineeProfileFlyout = ({
   const [reviewLogbookEntries, setReviewLogbookEntries] = reactExports.useState([]);
   const [reviewLogbookLoading, setReviewLogbookLoading] = reactExports.useState(false);
   const [reviewLogbookError, setReviewLogbookError] = reactExports.useState(null);
+  const [logbookEntries, setLogbookEntries] = reactExports.useState([]);
+  const [logbookLoading, setLogbookLoading] = reactExports.useState(false);
+  const [logbookError, setLogbookError] = reactExports.useState(null);
+  const [logbookMonth, setLogbookMonth] = reactExports.useState((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
   const formatResourceDisplayLabel = reactExports.useMemo(
     () => (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
     [resourceDisplayNames]
@@ -23611,6 +23606,27 @@ const TraineeProfileFlyout = ({
       setReviewLogbookEntries([]);
       setReviewLogbookError("Could not load post-flight logbook entries.");
       setReviewLogbookLoading(false);
+    });
+  }, [activeTab, trainee.fullName]);
+  reactExports.useEffect(() => {
+    if (activeTab !== "logbook") return;
+    setLogbookLoading(true);
+    setLogbookError(null);
+    setLogbookMonth((/* @__PURE__ */ new Date()).toISOString().slice(0, 7));
+    fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: "include" }).then((response) => response.ok ? response.json() : Promise.reject(new Error("Failed to load logbook rows"))).then((json) => {
+      const entries = Array.isArray(json?.entries) ? json.entries : [];
+      entries.sort((a, b) => {
+        const dateA = String(a.eventDate || "");
+        const dateB = String(b.eventDate || "");
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return String(a.eventCode || "").localeCompare(String(b.eventCode || ""));
+      });
+      setLogbookEntries(entries);
+      setLogbookLoading(false);
+    }).catch(() => {
+      setLogbookEntries([]);
+      setLogbookError("Could not load logbook data.");
+      setLogbookLoading(false);
     });
   }, [activeTab, trainee.fullName]);
   const reviewData = reactExports.useMemo(() => {
@@ -24551,24 +24567,6 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
       contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     }, 50);
   };
-  const handleExperienceChange = (section, field, value) => {
-    setPriorExperience((prev) => {
-      if (field) {
-        return {
-          ...prev,
-          [section]: {
-            ...prev[section],
-            [field]: value
-          }
-        };
-      } else {
-        return {
-          ...prev,
-          [section]: value
-        };
-      }
-    });
-  };
   const handleAddTodayOnlyUnavailability = () => {
     const today = /* @__PURE__ */ new Date();
     const formatForInput = (date) => date.toISOString().split("T")[0];
@@ -25053,60 +25051,187 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   setActiveTab(null);
                 }, className: "mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded", children: "+ Add Unavailability" })
               ] }),
-              activeTab === "logbook" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
-                    "Logbook — ",
-                    trainee.name
+              activeTab === "logbook" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2 flex-wrap gap-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-sm font-bold text-white", children: [
+                      "Logbook — ",
+                      trainee.name
+                    ] }),
+                    (() => {
+                      const monthLabels = { "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec" };
+                      const shiftMonth = (ym, delta) => {
+                        const [year, month] = ym.split("-").map(Number);
+                        let nextMonth = month + delta;
+                        let nextYear = year;
+                        if (nextMonth > 12) {
+                          nextMonth = 1;
+                          nextYear++;
+                        }
+                        if (nextMonth < 1) {
+                          nextMonth = 12;
+                          nextYear--;
+                        }
+                        return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+                      };
+                      const label = `${monthLabels[logbookMonth.slice(5, 7)] || ""} ${logbookMonth.slice(2, 4)}`;
+                      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-0.5", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, -1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "‹" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-[50px] text-center text-[10px] font-mono text-sky-300 bg-gray-800/60 border border-gray-600 rounded px-1 py-0.5", children: label }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setLogbookMonth(shiftMonth(logbookMonth, 1)), className: "w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none", children: "›" })
+                      ] });
+                    })()
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Day Flying" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P1", value: exp.day.p1, onChange: (v) => handleExperienceChange("day", "p1", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P2", value: exp.day.p2, onChange: (v) => handleExperienceChange("day", "p2", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Dual", value: exp.day.dual, onChange: (v) => handleExperienceChange("day", "dual", v) })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Night Flying" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P1", value: exp.night.p1, onChange: (v) => handleExperienceChange("night", "p1", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P2", value: exp.night.p2, onChange: (v) => handleExperienceChange("night", "p2", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Dual", value: exp.night.dual, onChange: (v) => handleExperienceChange("night", "dual", v) })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Totals" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "TOTAL", value: exp.total, onChange: (v) => handleExperienceChange("total", null, v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Captain", value: exp.captain, onChange: (v) => handleExperienceChange("captain", null, v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Instructor", value: exp.instructor, onChange: (v) => handleExperienceChange("instructor", null, v) })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Instrument" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Sim", value: exp.instrument.sim, onChange: (v) => handleExperienceChange("instrument", "sim", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Actual", value: exp.instrument.actual, onChange: (v) => handleExperienceChange("instrument", "actual", v) })
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames.ftd }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Dual", value: exp.simulator.dual, onChange: (v) => handleExperienceChange("simulator", "dual", v) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "Total", value: exp.simulator.total, onChange: (v) => handleExperienceChange("simulator", "total", v) })
-                    ] })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        onClick: () => {
+                          const monthLabels = { "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec" };
+                          const printLabel = `${monthLabels[logbookMonth.slice(5, 7)] || ""} ${logbookMonth.slice(2, 4)}`;
+                          const filtered = logbookEntries.filter((entry) => (entry.eventDate || "").slice(0, 7) === logbookMonth);
+                          const rows = filtered.map((entry) => {
+                            const snap2 = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+                            const year = snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : "");
+                            const date = snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "");
+                            const role2 = getLogbookEntryRoleLabel$1(entry.personRole);
+                            return `<tr><td>${role2}</td><td>${entry.eventCode || ""}</td><td>${year}</td><td>${date}</td><td>${snap2.type || entry.eventType || ""}</td><td>${snap2.tail || entry.aircraftNumber || ""}</td><td>${snap2.captain || ""}</td><td>${snap2.crew || ""}</td><td style="min-width:120px">${snap2.duty || entry.duty || ""}</td><td>${snap2.dayP1 || ""}</td><td>${snap2.dayP2 || ""}</td><td>${snap2.dayDual || ""}</td><td>${snap2.nightP1 || ""}</td><td>${snap2.nightP2 || ""}</td><td>${snap2.nightDual || ""}</td><td>${snap2.total || entry.totalTime || ""}</td><td>${snap2.captTime || entry.captainTime || ""}</td><td>${snap2.instTime || entry.instructorTime || ""}</td><td>${snap2.simIf || ""}</td><td>${snap2.simActual || entry.ifActualTime || ""}</td><td>${snap2.app2D || ""}</td><td>${snap2.app3D || ""}</td><td>${snap2.simP1 || ""}</td><td>${snap2.simP2 || ""}</td><td>${snap2.simDual || ""}</td><td>${snap2.simTotal || ""}</td></tr>`;
+                          }).join("");
+                          const printWindow = window.open("", "_blank", "width=1400,height=800");
+                          if (!printWindow) return;
+                          printWindow.document.write(`<!DOCTYPE html><html><head><title>Logbook - ${trainee.name} - ${printLabel}</title><style>body{font-family:monospace;font-size:8px;margin:10px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:2px 3px;text-align:center;white-space:nowrap}th{background:#ddd;font-weight:bold}tr:nth-child(even){background:#f5f5f5}h2{font-size:11px;margin-bottom:6px}@page{size:landscape;margin:6mm}</style></head><body><h2>Logbook — ${trainee.name} — ${printLabel}</h2><table><thead><tr><th>Role</th><th>Event</th><th>Year</th><th>Date</th><th>Type</th><th>Tail</th><th>Captain</th><th>Co-Pilot/Crew</th><th>Duty</th><th>Day P1</th><th>Day P2</th><th>Day Dual</th><th>Nt P1</th><th>Nt P2</th><th>Nt Dual</th><th>Total</th><th>Capt</th><th>Inst</th><th>SimIF</th><th>ActIF</th><th>2D</th><th>3D</th><th>Sim P1</th><th>Sim P2</th><th>Sim Dual</th><th>Sim Tot</th></tr></thead><tbody>${rows || '<tr><td colspan="26">&nbsp;</td></tr>'}</tbody></table></body></html>`);
+                          printWindow.document.close();
+                          printWindow.focus();
+                          printWindow.print();
+                        },
+                        className: "text-[10px] text-gray-400 hover:text-white border border-gray-600/50 hover:border-gray-400 rounded px-2 py-0.5 bg-transparent",
+                        children: "Print"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-gray-400", children: [
+                      logbookEntries.length,
+                      " entr",
+                      logbookEntries.length === 1 ? "y" : "ies"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "× Close" })
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 pt-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "Save Logbook" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded", children: "Cancel" })
-                ] })
+                logbookLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-xs py-4 text-center animate-pulse", children: "Loading logbook…" }),
+                logbookError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-red-400 text-xs py-4 text-center", children: logbookError }),
+                !logbookLoading && !logbookError && (() => {
+                  const filteredEntries = logbookEntries.filter((entry) => (entry.eventDate || "").slice(0, 7) === logbookMonth);
+                  const rows = filteredEntries.map((entry) => {
+                    const snap2 = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+                    const role2 = getLogbookEntryRoleLabel$1(entry.personRole);
+                    const year = snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : "");
+                    const date = snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "");
+                    return {
+                      ...snap2,
+                      year,
+                      date,
+                      total: snap2.total || (entry.totalTime != null ? String(entry.totalTime) : ""),
+                      captTime: snap2.captTime || (entry.captainTime != null ? String(entry.captainTime) : ""),
+                      instTime: snap2.instTime || (entry.instructorTime != null ? String(entry.instructorTime) : ""),
+                      nightP1: snap2.nightP1 || (entry.nightTime != null ? String(entry.nightTime) : ""),
+                      simActual: snap2.simActual || (entry.ifActualTime != null ? String(entry.ifActualTime) : ""),
+                      simIf: snap2.simIf || (entry.ifSimTime != null ? String(entry.ifSimTime) : ""),
+                      type: snap2.type || entry.eventType || "",
+                      tail: snap2.tail || entry.aircraftNumber || "",
+                      duty: snap2.duty || entry.duty || "",
+                      _role: role2,
+                      _eventCode: entry.eventCode || ""
+                    };
+                  });
+                  const displayRows = rows.length > 0 ? rows : [{}];
+                  const C = ({ v, w, bg = "bg-gray-800" }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex items-center justify-center ${w} flex-shrink-0 border-r border-gray-700 last:border-r-0 ${bg} h-6`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[10px] font-mono truncate px-0.5", children: v || "" }) });
+                  const H = ({ l, w, sub = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-col items-center justify-end ${w} flex-shrink-0 border-r border-gray-600 last:border-r-0 bg-gray-900/60 py-0.5`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-gray-400 uppercase leading-tight text-center", children: l }),
+                    sub && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] text-gray-500 leading-tight", children: sub })
+                  ] });
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 min-w-max", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Year", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Date", w: "w-14" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Type", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Tail", w: "w-14" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Captain", w: "w-20" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Co-Pilot", sub: "Crew", w: "w-20" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Duty", w: "w-40" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Day" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" })
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col border-r border-gray-600", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Night" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" })
+                          ] })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "TOTAL", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Capt", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Inst", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "SimIF", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "ActIF", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "2D", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "3D", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight", children: "Sim" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P1", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "P2", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Dual", w: "w-8" }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Tot", w: "w-8" })
+                          ] })
+                        ] })
+                      ] }),
+                      displayRows.map((row, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `flex flex-nowrap border-t border-gray-700/50 ${idx % 2 === 0 ? "bg-gray-800/30" : "bg-gray-800/10"} hover:bg-sky-900/20`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-start justify-center w-14 flex-shrink-0 border-r border-gray-600 px-1", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-sky-400 truncate w-full", children: row._role || "" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] text-gray-500 truncate w-full", children: row._eventCode || "" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.year, w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.date, w: "w-14" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.type, w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.tail, w: "w-14" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.captain, w: "w-20" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.crew, w: "w-20" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.duty, w: "w-40" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex border-r border-gray-600", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayP1 ?? "", w: "w-8" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayP2 ?? "", w: "w-8" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.dayDual ?? "", w: "w-8" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex border-r border-gray-600", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightP1 ?? "", w: "w-8" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightP2 ?? "", w: "w-8" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.nightDual ?? "", w: "w-8" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.total ?? "", w: "w-10", bg: "bg-gray-700/30" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.captTime ?? "", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.instTime ?? "", w: "w-10" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simIf ?? "", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simActual ?? "", w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: String(row.app2D ?? ""), w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: String(row.app3D ?? ""), w: "w-8" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simP1 ?? "", w: "w-8", bg: "bg-gray-800/50" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simP2 ?? "", w: "w-8", bg: "bg-gray-800/50" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simDual ?? "", w: "w-8", bg: "bg-gray-800/50" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(C, { v: row.simTotal ?? "", w: "w-8", bg: "bg-gray-800/50" })
+                        ] })
+                      ] }, idx))
+                    ] }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[70px]", "aria-hidden": "true" })
+                  ] });
+                })()
               ] }),
               activeTab === "hatesheet" && (() => {
                 const traineeAssessments = pt051Assessments ? Array.from(pt051Assessments.values()).filter((a) => a.traineeFullName === trainee.fullName) : [];

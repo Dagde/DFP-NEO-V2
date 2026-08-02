@@ -289,6 +289,13 @@ const formatDate = (dateString: string): string => {
     return `${day} ${month}`;
 };
 
+const getLogbookEntryRoleLabel = (personRole?: string): string => {
+    if (personRole === 'instructor' || personRole === 'fixed_crew_pic') return 'Captain';
+    if (personRole === 'fixed_crew_p2') return 'P2';
+    if (personRole === 'trainee') return 'Trainee';
+    return 'Crew';
+};
+
 const LastEventCard: React.FC<{
   title: string;
   date: string | undefined;
@@ -500,6 +507,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [reviewLogbookEntries, setReviewLogbookEntries] = useState<any[]>([]);
     const [reviewLogbookLoading, setReviewLogbookLoading] = useState(false);
     const [reviewLogbookError, setReviewLogbookError] = useState<string | null>(null);
+    const [logbookEntries, setLogbookEntries] = useState<any[]>([]);
+    const [logbookLoading, setLogbookLoading] = useState(false);
+    const [logbookError, setLogbookError] = useState<string | null>(null);
+    const [logbookMonth, setLogbookMonth] = useState<string>(new Date().toISOString().slice(0, 7));
     const formatResourceDisplayLabel = useMemo(
       () => (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
       [resourceDisplayNames]
@@ -547,6 +558,31 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 setReviewLogbookEntries([]);
                 setReviewLogbookError('Could not load post-flight logbook entries.');
                 setReviewLogbookLoading(false);
+            });
+    }, [activeTab, trainee.fullName]);
+
+    useEffect(() => {
+        if (activeTab !== 'logbook') return;
+        setLogbookLoading(true);
+        setLogbookError(null);
+        setLogbookMonth(new Date().toISOString().slice(0, 7));
+        fetch(`/api/flight-log?personName=${encodeURIComponent(trainee.fullName)}`, { credentials: 'include' })
+            .then(response => response.ok ? response.json() : Promise.reject(new Error('Failed to load logbook rows')))
+            .then((json: any) => {
+                const entries = Array.isArray(json?.entries) ? json.entries : [];
+                entries.sort((a: any, b: any) => {
+                    const dateA = String(a.eventDate || '');
+                    const dateB = String(b.eventDate || '');
+                    if (dateA !== dateB) return dateA.localeCompare(dateB);
+                    return String(a.eventCode || '').localeCompare(String(b.eventCode || ''));
+                });
+                setLogbookEntries(entries);
+                setLogbookLoading(false);
+            })
+            .catch(() => {
+                setLogbookEntries([]);
+                setLogbookError('Could not load logbook data.');
+                setLogbookLoading(false);
             });
     }, [activeTab, trainee.fullName]);
 
@@ -2262,52 +2298,151 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     )}
 
                     {activeTab === 'logbook' && (
-                      <div className={card3d + " p-4"} style={card3dStyle}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-bold text-white">Logbook — {trainee.name}</h4>
-                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                      <div className={card3d + " p-3"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-white">Logbook — {trainee.name}</h4>
+                            {(() => {
+                              const monthLabels: Record<string, string> = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+                              const shiftMonth = (ym: string, delta: 1 | -1): string => {
+                                const [year, month] = ym.split('-').map(Number);
+                                let nextMonth = month + delta;
+                                let nextYear = year;
+                                if (nextMonth > 12) { nextMonth = 1; nextYear++; }
+                                if (nextMonth < 1) { nextMonth = 12; nextYear--; }
+                                return `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+                              };
+                              const label = `${monthLabels[logbookMonth.slice(5, 7)] || ''} ${logbookMonth.slice(2, 4)}`;
+                              return (
+                                <div className="flex items-center gap-0.5">
+                                  <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, -1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">‹</button>
+                                  <span className="min-w-[50px] text-center text-[10px] font-mono text-sky-300 bg-gray-800/60 border border-gray-600 rounded px-1 py-0.5">{label}</span>
+                                  <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, 1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">›</button>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                const monthLabels: Record<string, string> = {'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+                                const printLabel = `${monthLabels[logbookMonth.slice(5, 7)] || ''} ${logbookMonth.slice(2, 4)}`;
+                                const filtered = logbookEntries.filter((entry: any) => (entry.eventDate || '').slice(0, 7) === logbookMonth);
+                                const rows = filtered.map((entry: any) => {
+                                  const snap: any = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+                                  const year = snap.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : '');
+                                  const date = snap.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '');
+                                  const role = getLogbookEntryRoleLabel(entry.personRole);
+                                  return `<tr><td>${role}</td><td>${entry.eventCode || ''}</td><td>${year}</td><td>${date}</td><td>${snap.type || entry.eventType || ''}</td><td>${snap.tail || entry.aircraftNumber || ''}</td><td>${snap.captain || ''}</td><td>${snap.crew || ''}</td><td style="min-width:120px">${snap.duty || entry.duty || ''}</td><td>${snap.dayP1 || ''}</td><td>${snap.dayP2 || ''}</td><td>${snap.dayDual || ''}</td><td>${snap.nightP1 || ''}</td><td>${snap.nightP2 || ''}</td><td>${snap.nightDual || ''}</td><td>${snap.total || entry.totalTime || ''}</td><td>${snap.captTime || entry.captainTime || ''}</td><td>${snap.instTime || entry.instructorTime || ''}</td><td>${snap.simIf || ''}</td><td>${snap.simActual || entry.ifActualTime || ''}</td><td>${snap.app2D || ''}</td><td>${snap.app3D || ''}</td><td>${snap.simP1 || ''}</td><td>${snap.simP2 || ''}</td><td>${snap.simDual || ''}</td><td>${snap.simTotal || ''}</td></tr>`;
+                                }).join('');
+                                const printWindow = window.open('', '_blank', 'width=1400,height=800');
+                                if (!printWindow) return;
+                                printWindow.document.write(`<!DOCTYPE html><html><head><title>Logbook - ${trainee.name} - ${printLabel}</title><style>body{font-family:monospace;font-size:8px;margin:10px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #aaa;padding:2px 3px;text-align:center;white-space:nowrap}th{background:#ddd;font-weight:bold}tr:nth-child(even){background:#f5f5f5}h2{font-size:11px;margin-bottom:6px}@page{size:landscape;margin:6mm}</style></head><body><h2>Logbook — ${trainee.name} — ${printLabel}</h2><table><thead><tr><th>Role</th><th>Event</th><th>Year</th><th>Date</th><th>Type</th><th>Tail</th><th>Captain</th><th>Co-Pilot/Crew</th><th>Duty</th><th>Day P1</th><th>Day P2</th><th>Day Dual</th><th>Nt P1</th><th>Nt P2</th><th>Nt Dual</th><th>Total</th><th>Capt</th><th>Inst</th><th>SimIF</th><th>ActIF</th><th>2D</th><th>3D</th><th>Sim P1</th><th>Sim P2</th><th>Sim Dual</th><th>Sim Tot</th></tr></thead><tbody>${rows || '<tr><td colspan="26">&nbsp;</td></tr>'}</tbody></table></body></html>`);
+                                printWindow.document.close();
+                                printWindow.focus();
+                                printWindow.print();
+                              }}
+                              className="text-[10px] text-gray-400 hover:text-white border border-gray-600/50 hover:border-gray-400 rounded px-2 py-0.5 bg-transparent"
+                            >
+                              Print
+                            </button>
+                            <span className="text-[10px] text-gray-400">{logbookEntries.length} entr{logbookEntries.length === 1 ? 'y' : 'ies'}</span>
+                            <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">× Close</button>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Day Flying</span>
-                            <div className="flex justify-center space-x-2">
-                              <ExperienceInput label="P1" value={exp.day.p1} onChange={v => handleExperienceChange('day', 'p1', v)} />
-                              <ExperienceInput label="P2" value={exp.day.p2} onChange={v => handleExperienceChange('day', 'p2', v)} />
-                              <ExperienceInput label="Dual" value={exp.day.dual} onChange={v => handleExperienceChange('day', 'dual', v)} />
+                        {logbookLoading && <div className="text-gray-400 text-xs py-4 text-center animate-pulse">Loading logbook…</div>}
+                        {logbookError && <div className="text-red-400 text-xs py-4 text-center">{logbookError}</div>}
+                        {!logbookLoading && !logbookError && (() => {
+                          const filteredEntries = logbookEntries.filter((entry: any) => (entry.eventDate || '').slice(0, 7) === logbookMonth);
+                          const rows: any[] = filteredEntries.map((entry: any) => {
+                            const snap: any = entry.captainLogSnapshot || entry.crewLogSnapshot || {};
+                            const role = getLogbookEntryRoleLabel(entry.personRole);
+                            const year = snap.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : '');
+                            const date = snap.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '');
+                            return {
+                              ...snap,
+                              year,
+                              date,
+                              total: snap.total || (entry.totalTime != null ? String(entry.totalTime) : ''),
+                              captTime: snap.captTime || (entry.captainTime != null ? String(entry.captainTime) : ''),
+                              instTime: snap.instTime || (entry.instructorTime != null ? String(entry.instructorTime) : ''),
+                              nightP1: snap.nightP1 || (entry.nightTime != null ? String(entry.nightTime) : ''),
+                              simActual: snap.simActual || (entry.ifActualTime != null ? String(entry.ifActualTime) : ''),
+                              simIf: snap.simIf || (entry.ifSimTime != null ? String(entry.ifSimTime) : ''),
+                              type: snap.type || entry.eventType || '',
+                              tail: snap.tail || entry.aircraftNumber || '',
+                              duty: snap.duty || entry.duty || '',
+                              _role: role,
+                              _eventCode: entry.eventCode || '',
+                            };
+                          });
+                          const displayRows = rows.length > 0 ? rows : [{}];
+                          const C = ({ v, w, bg = 'bg-gray-800' }: { v?: string; w: string; bg?: string }) => (
+                            <div className={`flex items-center justify-center ${w} flex-shrink-0 border-r border-gray-700 last:border-r-0 ${bg} h-6`}>
+                              <span className="text-white text-[10px] font-mono truncate px-0.5">{v || ''}</span>
                             </div>
-                          </div>
-                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Night Flying</span>
-                            <div className="flex justify-center space-x-2">
-                              <ExperienceInput label="P1" value={exp.night.p1} onChange={v => handleExperienceChange('night', 'p1', v)} />
-                              <ExperienceInput label="P2" value={exp.night.p2} onChange={v => handleExperienceChange('night', 'p2', v)} />
-                              <ExperienceInput label="Dual" value={exp.night.dual} onChange={v => handleExperienceChange('night', 'dual', v)} />
+                          );
+                          const H = ({ l, w, sub = '' }: { l: string; w: string; sub?: string }) => (
+                            <div className={`flex flex-col items-center justify-end ${w} flex-shrink-0 border-r border-gray-600 last:border-r-0 bg-gray-900/60 py-0.5`}>
+                              <span className="text-[8px] font-bold text-gray-400 uppercase leading-tight text-center">{l}</span>
+                              {sub && <span className="text-[7px] text-gray-500 leading-tight">{sub}</span>}
                             </div>
-                          </div>
-                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Totals</span>
-                            <div className="flex justify-center space-x-2">
-                              <ExperienceInput label="TOTAL" value={exp.total} onChange={v => handleExperienceChange('total', null, v)} />
-                              <ExperienceInput label="Captain" value={exp.captain} onChange={v => handleExperienceChange('captain', null, v)} />
-                              <ExperienceInput label="Instructor" value={exp.instructor} onChange={v => handleExperienceChange('instructor', null, v)} />
-                            </div>
-                          </div>
-                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Instrument</span>
-                            <div className="flex justify-center space-x-2">
-                              <ExperienceInput label="Sim" value={exp.instrument.sim} onChange={v => handleExperienceChange('instrument', 'sim', v)} />
-                              <ExperienceInput label="Actual" value={exp.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} />
-                            </div>
-                          </div>
-                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">{resourceDisplayNames.ftd}</span>
-                            <div className="flex justify-center space-x-2">
-                              <ExperienceInput label="P1" value={exp.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} />
-                              <ExperienceInput label="P2" value={exp.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} />
-                              <ExperienceInput label="Dual" value={exp.simulator.dual} onChange={v => handleExperienceChange('simulator', 'dual', v)} />
-                              <ExperienceInput label="Total" value={exp.simulator.total} onChange={v => handleExperienceChange('simulator', 'total', v)} />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4">
-                          <button onClick={handleSave} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Save Logbook</button>
-                          <button onClick={() => setActiveTab(null)} className="px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded">Cancel</button>
-                        </div>
+                          );
+                          return (
+                            <>
+                              <div className="overflow-x-auto rounded border border-gray-600">
+                                <div className="inline-flex flex-col bg-gray-900 min-w-max">
+                                  <div className="flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900">
+                                    <div className="w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" />
+                                    <H l="Year" w="w-10" /><H l="Date" w="w-14" /><H l="Type" w="w-10" /><H l="Tail" w="w-14" />
+                                    <H l="Captain" w="w-20" /><H l="Co-Pilot" sub="Crew" w="w-20" /><H l="Duty" w="w-40" />
+                                    <div className="flex flex-col border-r border-gray-600">
+                                      <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Day</div>
+                                      <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /></div>
+                                    </div>
+                                    <div className="flex flex-col border-r border-gray-600">
+                                      <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Night</div>
+                                      <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /></div>
+                                    </div>
+                                    <H l="TOTAL" w="w-10" /><H l="Capt" w="w-10" /><H l="Inst" w="w-10" />
+                                    <H l="SimIF" w="w-8" /><H l="ActIF" w="w-8" /><H l="2D" w="w-8" /><H l="3D" w="w-8" />
+                                    <div className="flex flex-col">
+                                      <div className="text-[8px] font-bold text-gray-400 uppercase text-center bg-gray-900/60 border-b border-gray-700 px-1 leading-tight">Sim</div>
+                                      <div className="flex"><H l="P1" w="w-8" /><H l="P2" w="w-8" /><H l="Dual" w="w-8" /><H l="Tot" w="w-8" /></div>
+                                    </div>
+                                  </div>
+                                  {displayRows.map((row: any, idx: number) => (
+                                    <div key={idx} className={`flex flex-nowrap border-t border-gray-700/50 ${idx % 2 === 0 ? 'bg-gray-800/30' : 'bg-gray-800/10'} hover:bg-sky-900/20`}>
+                                      <div className="flex flex-col items-start justify-center w-14 flex-shrink-0 border-r border-gray-600 px-1">
+                                        <span className="text-[8px] font-bold text-sky-400 truncate w-full">{row._role || ''}</span>
+                                        <span className="text-[7px] text-gray-500 truncate w-full">{row._eventCode || ''}</span>
+                                      </div>
+                                      <C v={row.year} w="w-10" /><C v={row.date} w="w-14" /><C v={row.type} w="w-10" /><C v={row.tail} w="w-14" />
+                                      <C v={row.captain} w="w-20" /><C v={row.crew} w="w-20" /><C v={row.duty} w="w-40" />
+                                      <div className="flex border-r border-gray-600">
+                                        <C v={row.dayP1 ?? ''} w="w-8" /><C v={row.dayP2 ?? ''} w="w-8" /><C v={row.dayDual ?? ''} w="w-8" />
+                                      </div>
+                                      <div className="flex border-r border-gray-600">
+                                        <C v={row.nightP1 ?? ''} w="w-8" /><C v={row.nightP2 ?? ''} w="w-8" /><C v={row.nightDual ?? ''} w="w-8" />
+                                      </div>
+                                      <C v={row.total ?? ''} w="w-10" bg="bg-gray-700/30" />
+                                      <C v={row.captTime ?? ''} w="w-10" /><C v={row.instTime ?? ''} w="w-10" />
+                                      <C v={row.simIf ?? ''} w="w-8" /><C v={row.simActual ?? ''} w="w-8" />
+                                      <C v={String(row.app2D ?? '')} w="w-8" /><C v={String(row.app3D ?? '')} w="w-8" />
+                                      <div className="flex">
+                                        <C v={row.simP1 ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                        <C v={row.simP2 ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                        <C v={row.simDual ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                        <C v={row.simTotal ?? ''} w="w-8" bg="bg-gray-800/50" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="h-[70px]" aria-hidden="true" />
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
 
