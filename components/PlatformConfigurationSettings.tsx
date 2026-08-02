@@ -643,10 +643,44 @@ const hasActivePlatformRecords = (records: Array<{ status?: string }>): boolean 
   records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
 );
 
+const getActiveAircraftTypeRecords = (config: PlatformConfig) => (
+  (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [])
+    .filter((aircraftType) => String(aircraftType?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+    .filter((aircraftType) => String(aircraftType?.code || '').trim())
+);
+
+const getActiveAircraftTypeCodeSet = (config: PlatformConfig): Set<string> => (
+  new Set(getActiveAircraftTypeRecords(config).map((aircraftType) => String(aircraftType.code || '').trim().toUpperCase()))
+);
+
+const fillSingleAircraftTypeForResourceRows = (config: PlatformConfig): PlatformConfig => {
+  const activeAircraftTypes = getActiveAircraftTypeRecords(config);
+  if (activeAircraftTypes.length !== 1) return config;
+  const aircraftType = activeAircraftTypes[0];
+  const aircraftTypeCode = String(aircraftType.code || '').trim().toUpperCase();
+  const aircraftTypeLabel = String(aircraftType.name || aircraftType.code || '').trim();
+  let changed = false;
+  const resourcePools = (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool) => {
+    if (String(pool?.status || 'ACTIVE').toUpperCase() === 'INACTIVE') return pool;
+    if (String(pool?.aircraftTypeCode || '').trim()) return pool;
+    changed = true;
+    return {
+      ...pool,
+      aircraftTypeCode,
+      settings: {
+        ...(pool.settings || {}),
+        aircraftLabel: String(pool.settings?.aircraftLabel || '').trim() || aircraftTypeLabel || aircraftTypeCode,
+      },
+    };
+  });
+  return changed ? { ...config, resourcePools } : config;
+};
+
 const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
   const hasActiveOrganisations = hasActivePlatformRecords(Array.isArray(config.organisations) ? config.organisations : []);
   const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
+  const activeAircraftTypeCodes = getActiveAircraftTypeCodeSet(config);
   const incompleteAircraftType = (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).find((aircraftType) => (
     String(aircraftType?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
     (!String(aircraftType?.code || '').trim() || !String(aircraftType?.name || '').trim())
@@ -655,9 +689,25 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
     String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
     (!String(pool?.code || '').trim() || !String(pool?.name || '').trim())
   ));
+  const missingResourcePoolAircraftType = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => (
+    String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
+    activeAircraftTypeCodes.size > 0 &&
+    !String(pool?.aircraftTypeCode || '').trim()
+  ));
+  const invalidResourcePoolAircraftType = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => {
+    const aircraftTypeCode = String(pool?.aircraftTypeCode || '').trim().toUpperCase();
+    return (
+      String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
+      !!aircraftTypeCode &&
+      activeAircraftTypeCodes.size > 0 &&
+      !activeAircraftTypeCodes.has(aircraftTypeCode)
+    );
+  });
   const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
   if (incompleteAircraftType) return 'Platform configuration save blocked: every active aircraft type needs a code and name before saving.';
   if (incompleteResourcePool) return 'Platform configuration save blocked: every active DFP resource row set needs a code and name before saving.';
+  if (missingResourcePoolAircraftType) return 'Platform configuration save blocked: every active DFP resource row set needs an Aircraft Type before saving.';
+  if (invalidResourcePoolAircraftType) return 'Platform configuration save blocked: a DFP resource row set points to an Aircraft Type that is not active.';
   if (isDeliberatelyEmptyStructure) return '';
   if (!hasActiveOrganisations) return 'Platform configuration save blocked: at least one active organisation is required while locations or units still exist.';
   if (!hasActiveLocations) return 'Platform configuration save blocked: at least one active location is required while units still exist.';
@@ -5428,9 +5478,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     restoreSection?: string,
     options?: { reloadPage?: boolean; successMessage?: string; skipResourceRowProtection?: boolean },
   ) => {
-    const candidateConfig = configOverride && Array.isArray(configOverride.locations)
-      ? configOverride
-      : config;
+    const candidateConfig = fillSingleAircraftTypeForResourceRows(
+      configOverride && Array.isArray(configOverride.locations)
+        ? configOverride
+        : config
+    );
     const rowSavePlan = options?.skipResourceRowProtection
       ? null
       : buildResourceRowSavePlan(candidateConfig);
@@ -8377,6 +8429,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             value={crewComposition.crewCount}
                             disabled={!canEditResourcePools}
                             commitOnChange
+                            min={1}
+                            max={12}
+                            step={1}
                             onChange={(value) => updateAircraftCrewCount(index, value)}
                           />
                         </div>
@@ -8486,6 +8541,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               const editableDfpRows = getEditableDfpResourceRows(pool);
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
+              const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0
+                ? visibleAircraftTypeOptions
+                : configAircraftTypes.map((aircraft) => aircraft.code)
+              ).filter(Boolean);
+              const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || (aircraftTypeOptions.length === 1 ? aircraftTypeOptions[0] : '');
               return (
                 <div
                   key={pool.id || `platform-resource-pool-${index}`}
@@ -8528,7 +8588,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <DraftField label="Pool Name" value={pool.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { name: value })} />
                         <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code))]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
                         <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code))]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
-                        <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
+                        <SelectField label="Aircraft Type" value={displayedResourcePoolAircraftTypeCode} disabled={!canEditResourcePools} options={['', ...aircraftTypeOptions]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
                         <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEditResourcePools} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
                       </div>
                     </div>
@@ -8541,7 +8601,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
-                        <DraftField label="Aircraft" value={pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(pool.aircraftTypeCode)} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
+                        <DraftField label="Aircraft" value={pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode)} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
                         <DraftField label="Simulator" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
                         <DraftField label="Procedural Trainer" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                       </div>
@@ -8666,11 +8726,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        <NumberField label="Aircraft" value={editableDfpRows.aircraft} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
-                        <NumberField label="Simulator" value={editableDfpRows.ftd} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
-                        <NumberField label="Trainer" value={editableDfpRows.cpt} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
-                        <NumberField label="STBY" value={editableDfpRows.standby} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
-                        <NumberField label="Ground" value={editableDfpRows.ground} disabled={!canEditResourcePools} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                        <NumberField label="Aircraft" value={editableDfpRows.aircraft} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                        <NumberField label="Simulator" value={editableDfpRows.ftd} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                        <NumberField label="Trainer" value={editableDfpRows.cpt} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                        <NumberField label="STBY" value={editableDfpRows.standby} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
+                        <NumberField label="Ground" value={editableDfpRows.ground} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                       </div>
                     </div>
                   </div>
@@ -11224,6 +11284,9 @@ const NumberField = ({
   onChange,
   info,
   commitOnChange = false,
+  min,
+  max,
+  step,
 }: {
   label: string;
   value: number;
@@ -11231,6 +11294,9 @@ const NumberField = ({
   onChange: (value: number) => void;
   info?: string;
   commitOnChange?: boolean;
+  min?: number;
+  max?: number;
+  step?: number | 'any';
 }) => {
   const normaliseNumberDraft = (nextValue: unknown) => String(nextValue ?? '');
   const [draftValue, setDraftValue] = useState(() => normaliseNumberDraft(value ?? 0));
@@ -11257,6 +11323,9 @@ const NumberField = ({
         type="number"
         value={displayedValue}
         disabled={disabled}
+        min={min}
+        max={max}
+        step={step}
         onKeyDownCapture={stopEditableKeyPropagation}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {
