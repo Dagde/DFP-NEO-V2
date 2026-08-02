@@ -140,10 +140,10 @@ const normaliseCourseAward = (award: Partial<CourseAward>, index: number): Cours
 };
 
 const loadStoredCourseAwards = (): CourseAward[] => {
-    if (typeof window === 'undefined') return createDefaultCourseAwards();
+    if (typeof window === 'undefined') return [];
     try {
         const raw = window.localStorage.getItem(COURSE_AWARD_SETTINGS_STORAGE_KEY);
-        if (!raw) return createDefaultCourseAwards();
+        if (!raw) return [];
         const parsed = JSON.parse(raw);
         const awards = Array.isArray(parsed)
             ? parsed
@@ -151,9 +151,9 @@ const loadStoredCourseAwards = (): CourseAward[] => {
                 .filter((award): award is CourseAward => Boolean(award))
                 .map(removeLegacyCourseAwardCriteria)
             : [];
-        return awards.length > 0 ? awards : createDefaultCourseAwards();
+        return awards;
     } catch {
-        return createDefaultCourseAwards();
+        return [];
     }
 };
 
@@ -172,7 +172,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [showFullGraph, setShowFullGraph] = useState(false);
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
     const [scoreCourse, setScoreCourse] = useState<string>('');
-    const [activeAwardId, setActiveAwardId] = useState('dux');
+    const [activeAwardId, setActiveAwardId] = useState('');
     const [isEditingAward, setIsEditingAward] = useState(false);
     const [showDeleteAwardConfirm, setShowDeleteAwardConfirm] = useState(false);
     const [showRiskSettings, setShowRiskSettings] = useState(false);
@@ -204,6 +204,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             // Course rankings should continue to work even if browser storage is unavailable.
         }
     }, [awards]);
+
+    useEffect(() => {
+        if (awards.length === 0) {
+            if (activeAwardId) setActiveAwardId('');
+            if (isEditingAward) setIsEditingAward(false);
+            if (showDeleteAwardConfirm) setShowDeleteAwardConfirm(false);
+            return;
+        }
+
+        if (!awards.some(award => award.id === activeAwardId)) {
+            setActiveAwardId(awards[0].id);
+        }
+    }, [activeAwardId, awards, isEditingAward, showDeleteAwardConfirm]);
 
     const activeCourses = useMemo(() => {
         const representedCourseNames = new Set(
@@ -255,6 +268,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, [activeCourses, defaultCourseByProgress, scoreCourse]);
 
     const activeAward = awards.find(award => award.id === activeAwardId) || awards[0];
+    const activeAwardCourse = activeAward?.course || '';
     const getCourseMasterLmp = (courseName: string): string => (
         activeCourses.find(course => course.name === courseName)?.lmpType || ''
     );
@@ -633,10 +647,12 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, [activeTrainees, activeAward, pt051ScoreRecords, filteredAwardEventOptions, activeAwardScoreMethod]);
 
     const updateActiveAward = (updates: Partial<CourseAward>) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, ...updates } : award));
     };
 
     const updateActiveAwardCourse = (courseName: string) => {
+        if (!activeAward) return;
         const nextCourseLmp = activeCourses.find(course => course.name === courseName)?.lmpType;
         updateActiveAward({
             course: courseName,
@@ -646,6 +662,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const updateAwardCriterion = (id: string, updates: Partial<{ event: string; weight: number; enabled: boolean }>) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => {
             if (award.id !== activeAward.id) return award;
             return {
@@ -656,6 +673,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const addAwardCriterion = () => {
+        if (!activeAward) return;
         const id = `criterion-${Date.now()}`;
         setAwards(prev => prev.map(award => award.id === activeAward.id
             ? { ...award, criteria: [...award.criteria, { id, event: '', weight: 2, enabled: true }] }
@@ -664,6 +682,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const removeAwardCriterion = (id: string) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => award.id === activeAward.id
             ? { ...award, criteria: award.criteria.filter(criterion => criterion.id !== id) }
             : award
@@ -671,14 +690,17 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const getCriterionForEvent = (eventCode: string) => {
+        if (!activeAward) return undefined;
         return activeAward.criteria.find(criterion => criterion.event.toUpperCase() === eventCode.toUpperCase());
     };
 
     const isAwardEventSelected = (eventCode: string) => {
+        if (!activeAward) return false;
         return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode)?.enabled;
     };
 
     const selectedAwardEventRows = useMemo(() => {
+        if (!activeAward) return [];
         const selectedRows = activeAward.includeAllScoredEvents
             ? filteredAwardEventOptions
             : filteredAwardEventOptions.filter(option => !!getCriterionForEvent(option.value)?.enabled);
@@ -690,6 +712,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     }, [activeAward, filteredAwardEventOptions]);
 
     const toggleAwardEvent = (eventCode: string, selected: boolean) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => {
             if (award.id !== activeAward.id) return award;
             const currentCriteria = award.includeAllScoredEvents
@@ -722,6 +745,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const setAwardEventWeight = (eventCode: string, weight: number) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => {
             if (award.id !== activeAward.id) return award;
             const existingCriterion = award.criteria.find(criterion => criterion.event.toUpperCase() === eventCode.toUpperCase());
@@ -739,6 +763,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const toggleAllAwardEvents = (selected: boolean) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => award.id === activeAward.id
             ? { ...award, includeAllScoredEvents: selected, criteria: selected ? award.criteria : award.criteria.map(criterion => ({ ...criterion, enabled: false })) }
             : award
@@ -746,6 +771,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const toggleAwardEventType = (key: CourseScoreEventTypeKey, selected: boolean) => {
+        if (!activeAward) return;
         setAwards(prev => prev.map(award => {
             if (award.id !== activeAward.id) return award;
             const current = award.eventTypes === null || award.eventTypes === undefined
@@ -832,14 +858,15 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     };
 
     const removeAward = () => {
-        if (awards.length <= 1) return;
+        if (!activeAward) return;
         setShowDeleteAwardConfirm(true);
     };
 
     const confirmRemoveAward = () => {
+        if (!activeAward) return;
         const nextAwards = awards.filter(award => award.id !== activeAward.id);
         setAwards(nextAwards);
-        setActiveAwardId(nextAwards[0].id);
+        setActiveAwardId(nextAwards[0]?.id || '');
         setIsEditingAward(false);
         setShowDeleteAwardConfirm(false);
     };
@@ -1133,13 +1160,13 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                 </div>
 
                                 <div
-                                    className={`bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAward.course)}`}
-                                    style={getCourseBorderStyle(activeAward.course)}
+                                    className={`bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAwardCourse)}`}
+                                    style={getCourseBorderStyle(activeAwardCourse)}
                                 >
                                     <div
                                         data-course-color="true"
-                                        className={`px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`}
-                                        style={getCourseHeaderStyle(activeAward.course)}
+                                        className={`px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAwardCourse)}`}
+                                        style={getCourseHeaderStyle(activeAwardCourse)}
                                     >
                                         <h3 className="text-lg font-semibold text-white">Course Rankings</h3>
                                         <p className="text-xs text-white/75">Create named awards and define how each ranking is calculated.</p>
@@ -1150,8 +1177,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 <label className="block text-sm text-gray-300">
                                                     Course
                                                     <select
-                                                        value={activeAward.course}
+                                                        value={activeAward?.course || ''}
                                                         onChange={event => updateActiveAwardCourse(event.target.value)}
+                                                        disabled={!activeAward}
                                                         className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                     >
                                                         <option value="all">All active courses</option>
@@ -1161,8 +1189,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 <label className="block text-sm text-gray-300">
                                                     Award
                                                     <select
-                                                        value={activeAward.id}
+                                                        value={activeAward?.id || ''}
                                                         onChange={event => setActiveAwardId(event.target.value)}
+                                                        disabled={!activeAward}
                                                         className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                     >
                                                         {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
@@ -1173,7 +1202,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsEditingAward(prev => !prev)}
-                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                                    disabled={!activeAward}
+                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
                                                 >
                                                     {isEditingAward ? 'Done' : 'Edit'}
                                                 </button>
@@ -1187,7 +1217,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={removeAward}
-                                                    disabled={awards.length <= 1}
+                                                    disabled={!activeAward}
                                                     className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
                                                 >
                                                     Delete
@@ -1218,6 +1248,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                             </button>
                                         </div>
 
+                                        {activeAward ? (
+                                        <>
                                         {!isEditingAward && (
                                             <div className="rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3">
                                                 <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
@@ -1403,6 +1435,13 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 </tbody>
                                             </table>
                                         </div>
+                                        </>
+                                        ) : (
+                                            <div className="rounded-md border border-gray-700 bg-gray-900/35 px-3 py-8 text-center">
+                                                <div className="text-sm font-semibold text-gray-200">No course ranking awards configured.</div>
+                                                <div className="mt-1 text-xs text-gray-400">Use Add Award if this unit needs course award ranking rules.</div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1538,7 +1577,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                             </div>
                         </div>
                     )}
-                    {showDeleteAwardConfirm && (
+                    {showDeleteAwardConfirm && activeAward && (
                         <div className="fixed inset-0 bg-black/75 z-[90] flex items-center justify-center animate-fade-in" onClick={() => setShowDeleteAwardConfirm(false)}>
                             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-red-500/50 overflow-hidden" onClick={event => event.stopPropagation()}>
                                 <div className="p-4 border-b border-gray-700 bg-red-950/35">
