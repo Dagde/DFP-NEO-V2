@@ -459,6 +459,12 @@ export const getUnitTrainingReportPhraseBank = (
   const organisations = Array.isArray(config?.organisations) ? config!.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0];
   const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
-  const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
-  return JSON.parse(JSON.stringify(source));
+  const hasUnitPhraseBank = !!unit?.settings && Object.prototype.hasOwnProperty.call(unit.settings, 'trainingReportPhraseBank');
+  const hasOrganisationPhraseBank = !!activeOrganisation?.settings && Object.prototype.hasOwnProperty.call(activeOrganisation.settings, 'trainingReportPhraseBank');
+  const source = hasUnitPhraseBank
+    ? unit?.settings?.trainingReportPhraseBank
+    : hasOrganisationPhraseBank
+      ? organisationPhraseBank
+      : fallbackPhraseBank || DEFAULT_PHRASE_BANK;
+  return JSON.parse(JSON.stringify(source || {}));
 };

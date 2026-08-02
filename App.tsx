@@ -28158,7 +28158,13 @@ const App: React.FC = () => {
                 if ((saved as any).fixedCrewTileColourModeByUnit) {
                     setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit((saved as any).fixedCrewTileColourModeByUnit));
                 }
-                if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
+                if (Object.prototype.hasOwnProperty.call(saved, 'phraseBank')) {
+                    setPhraseBank(
+                        saved.phraseBank && typeof saved.phraseBank === 'object'
+                            ? saved.phraseBank
+                            : {}
+                    );
+                }
                 if (Array.isArray(saved.cancellationCodes)) setCancellationCodes(saved.cancellationCodes);
                 // Normalise saved currencies without restoring deleted starter/default currency records.
                 {

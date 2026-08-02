@@ -4752,8 +4752,10 @@ const getUnitTrainingReportPhraseBank = (config, unitCode, fallbackPhraseBank) =
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   const organisationPhraseBank = activeOrganisation?.settings?.trainingReportPhraseBank;
-  const source = unit?.settings?.trainingReportPhraseBank || organisationPhraseBank || fallbackPhraseBank || DEFAULT_PHRASE_BANK;
-  return JSON.parse(JSON.stringify(source));
+  const hasUnitPhraseBank = !!unit?.settings && Object.prototype.hasOwnProperty.call(unit.settings, "trainingReportPhraseBank");
+  const hasOrganisationPhraseBank = !!activeOrganisation?.settings && Object.prototype.hasOwnProperty.call(activeOrganisation.settings, "trainingReportPhraseBank");
+  const source = hasUnitPhraseBank ? unit?.settings?.trainingReportPhraseBank : hasOrganisationPhraseBank ? organisationPhraseBank : fallbackPhraseBank || DEFAULT_PHRASE_BANK;
+  return JSON.parse(JSON.stringify(source || {}));
 };
 const DEFAULT_SCT_TERMINOLOGY$1 = {
   shortLabel: "ContT",
@@ -108774,7 +108776,11 @@ ${"=".repeat(60)}`);
         if (saved2.fixedCrewTileColourModeByUnit) {
           setFixedCrewTileColourModeByUnit(normaliseFixedCrewTileColourModeByUnit(saved2.fixedCrewTileColourModeByUnit));
         }
-        if (saved2.phraseBank && Object.keys(saved2.phraseBank).length) setPhraseBank(saved2.phraseBank);
+        if (Object.prototype.hasOwnProperty.call(saved2, "phraseBank")) {
+          setPhraseBank(
+            saved2.phraseBank && typeof saved2.phraseBank === "object" ? saved2.phraseBank : {}
+          );
+        }
         if (Array.isArray(saved2.cancellationCodes)) setCancellationCodes(saved2.cancellationCodes);
         {
           const dbReqs = saved2.currencyRequirements ?? [];
