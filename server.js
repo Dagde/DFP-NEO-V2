@@ -444,7 +444,7 @@ async function runPrismaRuntimeMaintenance(db) {
     await migrateLegacyPerformanceIntoTraineePerformance(db);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(db);
-    // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
+    // Ensure commercial platform configuration tables exist without restoring deleted customer setup.
     await ensureCommercialConfigTables(db);
     await migrateLegacyQfiPersonnelRoles(db);
     await migrateLegacyContractorPersonnelRoles(db);
@@ -8992,6 +8992,11 @@ async function seedCommercialConfigIfEmpty(db) {
         units: unitCount,
       });
     }
+    return;
+  }
+
+  if (process.env.DFP_SEED_STARTER_COMMERCIAL_CONFIG !== 'true') {
+    console.log('ℹ️  Commercial platform configuration tables are empty - starter commercial setup seed disabled');
     return;
   }
 
