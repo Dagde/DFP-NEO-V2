@@ -7903,6 +7903,15 @@ function generateDfpInternal(
             finalEvents: [] as any[],
             conclusions: [] as string[],
         },
+        reportFollowUps: {
+            purpose: 'Tracks training report follow-up changes applied to Individual LMPs before Flight School NEO Build sequencing starts.',
+            fetchedAssessments: 0,
+            followUpAssessments: 0,
+            orderedAssessments: [] as any[],
+            skippedAssessments: [] as any[],
+            changedTrainees: [] as any[],
+            samples: [] as any[],
+        },
         final: null,
     };
 
@@ -36394,42 +36403,135 @@ const App: React.FC = () => {
                     offset += pageSize;
                 }
 
-                const followUpAssessments = allAssessments.filter((assessment: Pt051Assessment) => (
-                    buildTraineeNameSet.has(String(assessment.traineeFullName || '').trim()) &&
-                    (
-                        Boolean(getAssessmentRequestedExtension(assessment)) ||
-                        (
-                            assessment.passNotesToNextEvent === true &&
-                            String(assessment.trainingReportNotes || '').trim().length > 0
-                        )
-                    )
-                ));
                 const reconciledLMPs = new Map(buildTraineeLMPs);
+                const normaliseFollowUpNameKey = (name: any): string => String(name || '').trim().toUpperCase();
+                const buildTraineeLookup = new Map<string, any>();
+                traineesForBuildScope.forEach((candidate: any) => {
+                    [candidate.fullName, candidate.name].forEach(name => {
+                        const key = normaliseFollowUpNameKey(name);
+                        if (key && !buildTraineeLookup.has(key)) buildTraineeLookup.set(key, candidate);
+                    });
+                });
+                const buildLmpKeyLookup = new Map<string, string>();
+                Array.from(buildTraineeLMPs.keys()).forEach(lmpKey => {
+                    const normalisedKey = normaliseFollowUpNameKey(lmpKey);
+                    if (normalisedKey && !buildLmpKeyLookup.has(normalisedKey)) buildLmpKeyLookup.set(normalisedKey, lmpKey);
+                });
+                const findTraineeForFollowUp = (assessment: Pt051Assessment): any | null => {
+                    const candidateNames = [
+                        assessment.traineeFullName,
+                        (assessment as any).traineeName,
+                        (assessment as any).studentName,
+                    ];
+                    for (const candidateName of candidateNames) {
+                        const trainee = buildTraineeLookup.get(normaliseFollowUpNameKey(candidateName));
+                        if (trainee) return trainee;
+                    }
+                    return null;
+                };
+                const findLmpKeyForFollowUp = (assessment: Pt051Assessment, trainee: any): string | null => {
+                    const candidateNames = [
+                        assessment.traineeFullName,
+                        (assessment as any).traineeName,
+                        (assessment as any).studentName,
+                        trainee?.fullName,
+                        trainee?.name,
+                    ];
+                    for (const candidateName of candidateNames) {
+                        const lmpKey = buildLmpKeyLookup.get(normaliseFollowUpNameKey(candidateName));
+                        if (lmpKey) return lmpKey;
+                    }
+                    return null;
+                };
+                const hasActionableReportFollowUp = (assessment: Pt051Assessment): boolean => (
+                    Boolean(getAssessmentRequestedExtension(assessment)) ||
+                    (
+                        assessment.passNotesToNextEvent === true &&
+                        String(assessment.trainingReportNotes || '').trim().length > 0
+                    )
+                );
+                const followUpAssessmentContexts = allAssessments
+                    .map((assessment: Pt051Assessment, inputIndex: number) => {
+                        const trainee = findTraineeForFollowUp(assessment);
+                        const lmpKey = trainee ? findLmpKeyForFollowUp(assessment, trainee) : null;
+                        const lmp = lmpKey ? buildTraineeLMPs.get(lmpKey) : null;
+                        const sourceIndex = trainee && Array.isArray(lmp)
+                            ? findReportSourceLmpIndex(lmp, trainee, assessment)
+                            : -1;
+                        return {
+                            assessment,
+                            inputIndex,
+                            trainee,
+                            lmpKey,
+                            sourceIndex,
+                            reportDateMs: Date.parse(String((assessment as any).date || '')) || 0,
+                            actionable: hasActionableReportFollowUp(assessment),
+                        };
+                    })
+                    .filter(context => {
+                        if (!context.actionable) return false;
+                        if (!context.trainee || !context.lmpKey) {
+                            if (neoBuildDiag.reportFollowUps.skippedAssessments.length < 30) {
+                                neoBuildDiag.reportFollowUps.skippedAssessments.push({
+                                    traineeFullName: context.assessment.traineeFullName,
+                                    flightNumber: context.assessment.flightNumber,
+                                    reason: context.trainee ? 'no-lmp-match' : 'no-trainee-match',
+                                });
+                            }
+                            return false;
+                        }
+                        return true;
+                    })
+                    .sort((a, b) => {
+                        const traineeCompare = String(a.lmpKey || '').localeCompare(String(b.lmpKey || ''));
+                        if (traineeCompare !== 0) return traineeCompare;
+                        const sourceA = a.sourceIndex >= 0 ? a.sourceIndex : Number.MAX_SAFE_INTEGER;
+                        const sourceB = b.sourceIndex >= 0 ? b.sourceIndex : Number.MAX_SAFE_INTEGER;
+                        if (sourceA !== sourceB) return sourceA - sourceB;
+                        if (a.reportDateMs !== b.reportDateMs) return a.reportDateMs - b.reportDateMs;
+                        return a.inputIndex - b.inputIndex;
+                    });
+                const followUpAssessments = followUpAssessmentContexts.map(context => context.assessment);
+                const followUpTraineeByLmpKey = new Map<string, any>();
+                followUpAssessmentContexts.forEach(context => {
+                    if (context.lmpKey && context.trainee && !followUpTraineeByLmpKey.has(context.lmpKey)) {
+                        followUpTraineeByLmpKey.set(context.lmpKey, context.trainee);
+                    }
+                });
                 const changedTrainees: { trainee: Trainee | any; lmp: SyllabusItemDetail[]; updates: Record<string, any>[] }[] = [];
                 const updatesByTrainee = new Map<string, Record<string, any>[]>();
 
-                followUpAssessments.forEach((assessment: Pt051Assessment) => {
-                    const trainee = traineesForBuildScope.find((candidate: any) =>
-                        candidate.fullName === assessment.traineeFullName ||
-                        candidate.name === assessment.traineeFullName
-                    );
-                    const currentLmp = reconciledLMPs.get(assessment.traineeFullName);
-                    if (!trainee || !Array.isArray(currentLmp) || currentLmp.length === 0) return;
+                neoBuildDiag.reportFollowUps.fetchedAssessments = allAssessments.length;
+                neoBuildDiag.reportFollowUps.followUpAssessments = followUpAssessments.length;
+                neoBuildDiag.reportFollowUps.orderedAssessments = followUpAssessmentContexts.slice(0, 60).map(context => ({
+                    traineeFullName: context.lmpKey,
+                    sourceIndex: context.sourceIndex,
+                    flightNumber: context.assessment.flightNumber,
+                    eventId: context.assessment.eventId,
+                    date: (context.assessment as any).date || null,
+                    extension: getAssessmentRequestedExtension(context.assessment),
+                    passesNotes: context.assessment.passNotesToNextEvent === true,
+                }));
+
+                followUpAssessmentContexts.forEach(context => {
+                    const assessment = context.assessment;
+                    const trainee = context.trainee;
+                    const traineeLmpKey = context.lmpKey;
+                    if (!traineeLmpKey) return;
+                    const currentLmp = reconciledLMPs.get(traineeLmpKey);
+                    if (!Array.isArray(currentLmp) || currentLmp.length === 0) return;
                     const result = applyAssessmentFollowUpToLmp(trainee, currentLmp, assessment);
-                    const previousUpdates = updatesByTrainee.get(assessment.traineeFullName) || [];
-                    updatesByTrainee.set(assessment.traineeFullName, [...previousUpdates, ...result.updates]);
+                    const previousUpdates = updatesByTrainee.get(traineeLmpKey) || [];
+                    updatesByTrainee.set(traineeLmpKey, [...previousUpdates, ...result.updates]);
                     if (result.changed) {
-                        reconciledLMPs.set(assessment.traineeFullName, result.lmp);
+                        reconciledLMPs.set(traineeLmpKey, result.lmp);
                     }
                 });
 
                 Array.from(updatesByTrainee.entries()).forEach(([traineeFullName, updates]) => {
                     const changed = updates.some(update => update.outcome === 'extended-next-event' || update.outcome === 'forwarded-notes');
                     if (!changed) return;
-                    const trainee = traineesForBuildScope.find((candidate: any) =>
-                        candidate.fullName === traineeFullName ||
-                        candidate.name === traineeFullName
-                    );
+                    const trainee = followUpTraineeByLmpKey.get(traineeFullName) || buildTraineeLookup.get(normaliseFollowUpNameKey(traineeFullName));
                     const lmp = reconciledLMPs.get(traineeFullName);
                     if (trainee && lmp) changedTrainees.push({ trainee, lmp, updates });
                 });
@@ -36469,10 +36571,20 @@ const App: React.FC = () => {
                         updates: updates.slice(0, 12),
                     })),
                 });
+                neoBuildDiag.reportFollowUps.changedTrainees = changedTrainees.slice(0, 60).map(changed => ({
+                    traineeFullName: changed.trainee.fullName || changed.trainee.name,
+                    updates: changed.updates.slice(0, 12),
+                }));
+                neoBuildDiag.reportFollowUps.samples = Array.from(updatesByTrainee.entries()).slice(0, 40).map(([traineeFullName, updates]) => ({
+                    traineeFullName,
+                    updates: updates.slice(0, 12),
+                }));
                 markNeoBuildTiming(timingReport, 'report-followups:complete', {
                     fetchedAssessments: allAssessments.length,
                     followUpAssessments: followUpAssessments.length,
                     changedTrainees: changedTrainees.length,
+                    orderedFollowUps: followUpAssessmentContexts.length,
+                    skippedFollowUps: neoBuildDiag.reportFollowUps.skippedAssessments.length,
                 });
             } catch (followUpError) {
                 pushDfpDataDiag('build:report-followups:error', {
