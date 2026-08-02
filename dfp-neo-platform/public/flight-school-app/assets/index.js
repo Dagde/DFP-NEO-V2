@@ -66526,8 +66526,10 @@ const getPlatformConfigSaveBlocker = (config) => {
   const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
   const incompleteAircraftType = (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).find((aircraftType) => String(aircraftType?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!String(aircraftType?.code || "").trim() || !String(aircraftType?.name || "").trim()));
+  const incompleteResourcePool = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!String(pool?.code || "").trim() || !String(pool?.name || "").trim()));
   const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
   if (incompleteAircraftType) return "Platform configuration save blocked: every active aircraft type needs a code and name before saving.";
+  if (incompleteResourcePool) return "Platform configuration save blocked: every active DFP resource row set needs a code and name before saving.";
   if (isDeliberatelyEmptyStructure) return "";
   if (!hasActiveOrganisations) return "Platform configuration save blocked: at least one active organisation is required while locations or units still exist.";
   if (!hasActiveLocations) return "Platform configuration save blocked: at least one active location is required while units still exist.";
@@ -69818,8 +69820,8 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
           ...previousResourcePools,
           {
             id: newPoolId,
-            code: `POOL-${previousResourcePools.length + 1}`,
-            name: "New DFP Resource Row Set",
+            code: "",
+            name: "",
             organisationCode: previousOrganisations[0]?.code || "DEFAULT",
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,

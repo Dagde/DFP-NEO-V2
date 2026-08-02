@@ -2882,6 +2882,16 @@ app.post('/api/platform-config', async (req, res) => {
         details: 'Every active aircraft type needs a code and name before saving.',
       });
     }
+    const incompleteResourcePool = resourcePools.find((pool) => (
+      String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
+      (!String(pool?.code || '').trim() || !String(pool?.name || '').trim())
+    ));
+    if (incompleteResourcePool) {
+      return res.status(400).json({
+        error: 'Unsafe platform configuration save blocked',
+        details: 'Every active DFP resource row set needs a code and name before saving.',
+      });
+    }
     const hasActiveRecords = (records) => records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
     const hasActiveOrganisations = hasActiveRecords(organisations);
     const hasActiveLocations = hasActiveRecords(locations);
