@@ -6887,6 +6887,56 @@ function generateDfpInternal(
     const getNeoBuildTraceLimit = (normalLimit: number, detailedLimit: number): number => (
         isDetailedNeoBuildDiagnosticsEnabled ? detailedLimit : normalLimit
     );
+    const buildDeterministicSeed = [
+        'neo-build',
+        config.buildDate || '',
+        config.school || '',
+        buildOperationalModel,
+        buildActiveUnitCode,
+        buildActiveContextUnitCodes.join('+'),
+    ].join('|');
+    const getBuildDeterministicScore = (...parts: Array<string | number | null | undefined>): number => {
+        const value = [buildDeterministicSeed, ...parts.map(part => String(part ?? ''))].join('|');
+        let hash = 2166136261;
+        for (let index = 0; index < value.length; index++) {
+            hash ^= value.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+        hash ^= hash >>> 16;
+        hash = Math.imul(hash, 2246822507);
+        hash ^= hash >>> 13;
+        hash = Math.imul(hash, 3266489909);
+        hash ^= hash >>> 16;
+        return (hash >>> 0) / 4294967296;
+    };
+    const orderBuildDeterministically = <T,>(
+        items: T[],
+        scope: string,
+        getIdentity: (item: T, index: number) => string | number | null | undefined
+    ): T[] => (
+        items
+            .map((item, index) => ({
+                item,
+                index,
+                score: getBuildDeterministicScore(scope, getIdentity(item, index), index),
+            }))
+            .sort((left, right) => left.score - right.score || left.index - right.index)
+            .map(entry => entry.item)
+    );
+    const getEventDeterministicIdentity = (
+        event: Partial<Omit<ScheduleEvent, 'date'>> | null | undefined,
+        index = 0
+    ): string => [
+        event?.id || '',
+        event?.resourceId || '',
+        event?.flightNumber || '',
+        event?.startTime ?? '',
+        event?.duration ?? '',
+        event?.pilot || '',
+        event?.instructor || '',
+        event?.student || '',
+        index,
+    ].join('|');
 
     // ── OVERLAP REJECTION DIAGNOSTIC ─────────────────────────────────────────
     // Tracks the first 10 instructor rejections caused by booking-window overlap.
@@ -12274,7 +12324,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
         buildDebugLog(`🌙 Eligible pool: ${nightEligiblePool.length} instructors`);
 
-        const nightFlyingInstructors = [...nightEligiblePool].sort(() => 0.5 - Math.random()).slice(0, instructorsNeeded);
+        const nightFlyingInstructors = orderBuildDeterministically(
+            nightEligiblePool,
+            'night-flying-instructors',
+            instructor => instructor.idNumber || instructor.name
+        ).slice(0, instructorsNeeded);
         buildDebugLog(`🌙 Selected instructors: ${nightFlyingInstructors.map(i => i.name).join(', ')}`);
         const bnfTrainees = nextEventLists.bnf;
 
@@ -13943,7 +13997,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 candidates = [...sameUnit, ...otherUnit];
             }
             if (options.randomizeInstructorCandidates) {
-                candidates = [...candidates].sort(() => Math.random() - 0.5);
+                candidates = orderBuildDeterministically(
+                    candidates,
+                    `instructor-candidates|${type}|${syllabusItemForCheck.code || syllabusItemForCheck.id}|${traineeForCheck.fullName}|${startTime}`,
+                    instructor => instructor.idNumber || instructor.name
+                );
             }
 
             // ── DIAGNOSTIC: track candidates entering the loop ──
@@ -14813,8 +14871,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     const tmuffSupervisors = dutySupEligible.filter(i => i.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate));
     const normalSupervisors = dutySupEligible.filter(i => !tmuffSupervisors.find(t => t.idNumber === i.idNumber));
 
-    // NEW ALGORITHM: Randomize supervisor selection instead of alphabetical/order-based
-    const shuffledNormalSupervisors = [...normalSupervisors].sort(() => 0.5 - Math.random());
+    // Deterministic workload spread: vary the order per build without changing between identical runs.
+    const shuffledNormalSupervisors = orderBuildDeterministically(
+        normalSupervisors,
+        'normal-duty-supervisors',
+        supervisor => supervisor.idNumber || supervisor.name
+    );
     const sortedSupervisors = [...tmuffSupervisors, ...shuffledNormalSupervisors];
 
     let currentSupTime = dutySupStartTime;
@@ -15057,7 +15119,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     };
     const airCombatRandomTieBreaks = new Map<string, number>();
     const getAirCombatTieBreak = (name: string): number => {
-        if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
+        if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, getBuildDeterministicScore('air-combat-tie-break', name));
         return airCombatRandomTieBreaks.get(name)!;
     };
     const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat() as ScheduleEvent[];
@@ -15639,23 +15701,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             });
         }
 
-        const randomIndex = (maxExclusive: number): number => {
-            if (maxExclusive <= 1) return 0;
-            const cryptoApi = globalThis.crypto;
-            if (cryptoApi?.getRandomValues) {
-                const values = new Uint32Array(1);
-                cryptoApi.getRandomValues(values);
-                return values[0] % maxExclusive;
-            }
-            return Math.floor(Math.random() * maxExclusive);
-        };
         const shuffleRandom = <T,>(items: T[]): T[] => {
-            const shuffled = [...items];
-            for (let index = shuffled.length - 1; index > 0; index--) {
-                const swapIndex = randomIndex(index + 1);
-                [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-            }
-            return shuffled;
+            return orderBuildDeterministically(
+                items,
+                'air-combat-tasking-staff',
+                (item: any, index) => item?.idNumber || item?.name || index
+            );
         };
         const staffPool = instructors.filter(staff => (
             Boolean(staff.name) && !staff.isAdminStaff
@@ -16909,7 +16960,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                         ...callsign,
                         code: normalizeFormationCallsignCode(callsign.code),
                     }));
-                const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+                const shuffledCandidates = orderBuildDeterministically(
+                    configuredCandidates,
+                    `air-combat-formation-callsigns|${startTime}|${duration}`,
+                    callsign => callsign.code || callsign.name || callsign.id
+                );
                 const available = shuffledCandidates.find(callsign =>
                     isAirCombatFormationCallsignAvailable(callsign.code, startTime, duration)
                 );
@@ -18681,7 +18736,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 ...callsign,
                 code: normalizeFormationCallsignCode(callsign.code),
             }));
-        const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+        const shuffledCandidates = orderBuildDeterministically(
+            configuredCandidates,
+            `formation-callsigns|${formationUnit}|${locationCode}|${startTime}|${duration}`,
+            callsign => callsign.code || callsign.name || callsign.id
+        );
         const available = shuffledCandidates.find(callsign =>
             isFormationCallsignBaseAvailable(callsign.code, startTime, duration)
         );
@@ -19829,8 +19888,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // Get all instructors with minimum count
         const withMinCount = instructorEventCounts.filter(ic => ic.count === minCount);
 
-        // Random selection among tied instructors
-        const selected = withMinCount[Math.floor(Math.random() * withMinCount.length)];
+        const selected = orderBuildDeterministically(
+            withMinCount,
+            `stby-instructor|${type}|${syllabusItem.code || syllabusItem.id}|${trainee.fullName}|${startTime}`,
+            entry => entry.instructor.idNumber || entry.instructor.name
+        )[0];
         return selected.instructor.name;
     };
 
@@ -20725,15 +20787,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     recordProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
 
-    // Helper: Shuffle array randomly (Fisher-Yates algorithm)
-    const shuffleArray = <T,>(array: T[]): T[] => {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    };
+    const shuffleArray = <T,>(array: T[], scope: string, getIdentity: (item: T, index: number) => string): T[] => (
+        orderBuildDeterministically(array, scope, getIdentity)
+    );
 
     // Shuffle events within each resource to prevent clustering
     // This ensures high-priority courses don't all cluster at the beginning of the day
@@ -20757,7 +20813,14 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             if (resourceId === 'Duty Sup') {
                 shuffledByResource.set(resourceId, resourceEvents);
             } else {
-                shuffledByResource.set(resourceId, shuffleArray(resourceEvents));
+                shuffledByResource.set(
+                    resourceId,
+                    shuffleArray(
+                        resourceEvents,
+                        `final-resource-distribution|${resourceId}`,
+                        (event, index) => getEventDeterministicIdentity(event, index)
+                    )
+                );
             }
         });
 

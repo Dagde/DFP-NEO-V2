@@ -91018,6 +91018,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const isDetailedNeoBuildDiagnosticsEnabled = neoBuildVerboseDiagnostics || neoBuildLiveDiagnostics;
   const getNeoBuildTraceLimit = (normalLimit, detailedLimit) => isDetailedNeoBuildDiagnosticsEnabled ? detailedLimit : normalLimit;
+  const buildDeterministicSeed = [
+    "neo-build",
+    config.buildDate || "",
+    config.school || "",
+    buildOperationalModel,
+    buildActiveUnitCode,
+    buildActiveContextUnitCodes.join("+")
+  ].join("|");
+  const getBuildDeterministicScore = (...parts) => {
+    const value = [buildDeterministicSeed, ...parts.map((part) => String(part ?? ""))].join("|");
+    let hash = 2166136261;
+    for (let index = 0; index < value.length; index++) {
+      hash ^= value.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    hash ^= hash >>> 16;
+    hash = Math.imul(hash, 2246822507);
+    hash ^= hash >>> 13;
+    hash = Math.imul(hash, 3266489909);
+    hash ^= hash >>> 16;
+    return (hash >>> 0) / 4294967296;
+  };
+  const orderBuildDeterministically = (items, scope, getIdentity) => items.map((item, index) => ({
+    item,
+    index,
+    score: getBuildDeterministicScore(scope, getIdentity(item, index), index)
+  })).sort((left, right) => left.score - right.score || left.index - right.index).map((entry) => entry.item);
   let _overlapRejCount = 0;
   const _traineeTotal = config.trainees.length;
   const _traineeDb = config.trainees.filter((t) => t._dataSource === "database").length;
@@ -95531,7 +95558,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return true;
     });
     buildDebugLog(`🌙 Eligible pool: ${nightEligiblePool.length} instructors`);
-    const nightFlyingInstructors = [...nightEligiblePool].sort(() => 0.5 - Math.random()).slice(0, instructorsNeeded);
+    const nightFlyingInstructors = orderBuildDeterministically(
+      nightEligiblePool,
+      "night-flying-instructors",
+      (instructor) => instructor.idNumber || instructor.name
+    ).slice(0, instructorsNeeded);
     buildDebugLog(`🌙 Selected instructors: ${nightFlyingInstructors.map((i) => i.name).join(", ")}`);
     const bnfTrainees = nextEventLists.bnf;
     nightFlyingInstructors.forEach((nfi, index) => {
@@ -96849,7 +96880,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         candidates = [...sameUnit, ...otherUnit];
       }
       if (options.randomizeInstructorCandidates) {
-        candidates = [...candidates].sort(() => Math.random() - 0.5);
+        candidates = orderBuildDeterministically(
+          candidates,
+          `instructor-candidates|${type}|${syllabusItemForCheck.code || syllabusItemForCheck.id}|${traineeForCheck.fullName}|${startTime}`,
+          (instructor2) => instructor2.idNumber || instructor2.name
+        );
       }
       const _candidatesEnteringLoop = candidates.length;
       if (isTracedRemedialAttempt) {
@@ -97569,7 +97604,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   const tmuffSupervisors = dutySupEligible.filter((i) => i.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate));
   const normalSupervisors = dutySupEligible.filter((i) => !tmuffSupervisors.find((t) => t.idNumber === i.idNumber));
-  const shuffledNormalSupervisors = [...normalSupervisors].sort(() => 0.5 - Math.random());
+  const shuffledNormalSupervisors = orderBuildDeterministically(
+    normalSupervisors,
+    "normal-duty-supervisors",
+    (supervisor) => supervisor.idNumber || supervisor.name
+  );
   const sortedSupervisors = [...tmuffSupervisors, ...shuffledNormalSupervisors];
   let currentSupTime = dutySupStartTime;
   buildDebugLog(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
@@ -97763,7 +97802,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const airCombatRandomTieBreaks = /* @__PURE__ */ new Map();
   const getAirCombatTieBreak = (name) => {
-    if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, Math.random());
+    if (!airCombatRandomTieBreaks.has(name)) airCombatRandomTieBreaks.set(name, getBuildDeterministicScore("air-combat-tie-break", name));
     return airCombatRandomTieBreaks.get(name);
   };
   const publishedHistoryEvents = Object.values(publishedSchedules || {}).flat();
@@ -98313,23 +98352,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         mandatoryQueueSize: orderedTaskingEvents.filter((event) => event.isMandatoryTasking !== false).length
       });
     }
-    const randomIndex = (maxExclusive) => {
-      if (maxExclusive <= 1) return 0;
-      const cryptoApi = globalThis.crypto;
-      if (cryptoApi?.getRandomValues) {
-        const values = new Uint32Array(1);
-        cryptoApi.getRandomValues(values);
-        return values[0] % maxExclusive;
-      }
-      return Math.floor(Math.random() * maxExclusive);
-    };
     const shuffleRandom = (items) => {
-      const shuffled = [...items];
-      for (let index = shuffled.length - 1; index > 0; index--) {
-        const swapIndex = randomIndex(index + 1);
-        [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-      }
-      return shuffled;
+      return orderBuildDeterministically(
+        items,
+        "air-combat-tasking-staff",
+        (item, index) => item?.idNumber || item?.name || index
+      );
     };
     const staffPool = instructors.filter((staff) => Boolean(staff.name) && !staff.isAdminStaff);
     const getTaskingResourceOptionsForFlow = (priorityEvent, startTime) => {
@@ -99399,7 +99427,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           ...callsign,
           code: normalizeFormationCallsignCode(callsign.code)
         }));
-        const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+        const shuffledCandidates = orderBuildDeterministically(
+          configuredCandidates,
+          `air-combat-formation-callsigns|${startTime}|${duration}`,
+          (callsign) => callsign.code || callsign.name || callsign.id
+        );
         const available = shuffledCandidates.find(
           (callsign) => isAirCombatFormationCallsignAvailable(callsign.code, startTime, duration)
         );
@@ -101044,7 +101076,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ...callsign,
       code: normalizeFormationCallsignCode(callsign.code)
     }));
-    const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+    const shuffledCandidates = orderBuildDeterministically(
+      configuredCandidates,
+      `formation-callsigns|${formationUnit}|${locationCode}|${startTime}|${duration}`,
+      (callsign) => callsign.code || callsign.name || callsign.id
+    );
     const available = shuffledCandidates.find(
       (callsign) => isFormationCallsignBaseAvailable(callsign.code, startTime, duration)
     );
@@ -101966,7 +102002,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }));
       const minCount = Math.min(...instructorEventCounts.map((ic) => ic.count));
       const withMinCount = instructorEventCounts.filter((ic) => ic.count === minCount);
-      const selected = withMinCount[Math.floor(Math.random() * withMinCount.length)];
+      const selected = orderBuildDeterministically(
+        withMinCount,
+        `stby-instructor|${type}|${syllabusItem.code || syllabusItem.id}|${trainee.fullName}|${startTime}`,
+        (entry) => entry.instructor.idNumber || entry.instructor.name
+      )[0];
       return selected.instructor.name;
     };
     const findAvailableStbyLine = (startTime, duration, stbyEvents, prefix) => {
