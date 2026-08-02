@@ -70915,7 +70915,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       unit?.locationCode || activePlatformUnit?.locationCode || config.locations[0]?.code || "",
       normalisedUnitCode
     )?.aircraftTypeCode || "").trim().toUpperCase();
-    return unitPoolAircraft || unitSettingAircraft || activeCrewCompositionAircraftCode || String(config.aircraftTypes[0]?.code || "").trim().toUpperCase();
+    return unitPoolAircraft || unitSettingAircraft;
   };
   const getUnitOwnedAircraftTypeCode = (unit) => {
     const unitCode = String(unit?.code || "").trim().toUpperCase();
