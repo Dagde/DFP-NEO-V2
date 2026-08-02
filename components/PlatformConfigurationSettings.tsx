@@ -6439,7 +6439,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       aircraftTypeCode: ruleSet.aircraftTypeCode,
       organisationCode: ruleSet.organisationCode,
     }));
-  const fixedCrewContext = isFixedCrewLikeOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel);
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
     standardMissionProfiles.filter(isProfileInActiveUnitContext),
@@ -7481,7 +7480,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Directed Task Setups"
           subtitle="Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings."
-          action={canEdit && fixedCrewContext ? (
+          action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
               <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode} className={platformActionButtonClass}>Add Directed Task Setup</button>
@@ -7489,24 +7488,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="space-y-4 p-4">
-          {!fixedCrewContext ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              Directed Task Setups are available when the selected unit model supports recurring directed tasks with full aircraft, crew, timing, callsign and formation settings.
+          <>
+            <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
+              <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
+              <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
+                New Directed Task Setups start with the unit home location and unit callsign. Use these when a recurring task needs aircraft, crew, timing or callsign details, not just a name in the Directed Task box.
+              </p>
             </div>
-          ) : (
-            <>
-              <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3">
-                <div className="text-sm font-bold text-cyan-100">Active unit context: {activeStandardMissionUnitLabel || 'No unit selected'}</div>
-                <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
-                  New Directed Task Setups start with the unit home location and unit callsign. Use these when a recurring task needs aircraft, crew, timing or callsign details, not just a name in the Directed Task box.
-                </p>
+            {standardMissionProfilesForContext.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
+                {activeMissionAircraftTypeCode ? 'No full directed task setups are configured for this unit.' : 'Add an aircraft type and DFP resource row set for this unit before creating Directed Task Setups.'}
               </div>
-              {standardMissionProfilesForContext.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  {activeMissionAircraftTypeCode ? 'No full directed task setups are configured for this unit.' : 'Add an aircraft type and DFP resource row set for this unit before creating Directed Task Setups.'}
-                </div>
-              ) : (
-                <div id="platform-standard-mission-records" className="space-y-4">
+            ) : (
+              <div id="platform-standard-mission-records" className="space-y-4">
                   {standardMissionProfilesForContext.map((profile) => {
                     const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || '').trim().toUpperCase();
                     const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
@@ -7712,7 +7706,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               )}
             </>
-          )}
         </div>
       </section>
 

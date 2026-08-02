@@ -71135,7 +71135,6 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     aircraftTypeCode: ruleSet.aircraftTypeCode,
     organisationCode: ruleSet.organisationCode
   }));
-  const fixedCrewContext = isFixedCrewLikeOperationalModel(activeOperationalModel || activePlatformUnit?.operationalModel);
   const standardMissionProfiles = normaliseStandardMissionProfiles(primaryOrganisationSettings.standardMissionProfiles || null);
   const standardMissionProfilesForContext = uniqueProfilesByCompositeGroup(
     standardMissionProfiles.filter(isProfileInActiveUnitContext)
@@ -72125,13 +72124,13 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         {
           title: "Directed Task Setups",
           subtitle: "Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings.",
-          action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode, className: platformActionButtonClass, children: "Add Directed Task Setup" })
           ] }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: !fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100", children: "Directed Task Setups are available when the selected unit model supports recurring directed tasks with full aircraft, crew, timing, callsign and formation settings." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-4 py-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
             "Active unit context: ",
