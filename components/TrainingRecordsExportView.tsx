@@ -136,6 +136,7 @@ const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
 ];
 const DEFAULT_EXPORT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
+const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 
 const getDefaultAssessmentCategory = (element: string): string => (
     DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.find(category => (
@@ -143,10 +144,18 @@ const getDefaultAssessmentCategory = (element: string): string => (
     ))?.category || 'Additional Elements'
 );
 
+const getConfiguredExportElements = (phraseBank?: PhraseBank): string[] | undefined => {
+    const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+    return Array.isArray(configured) ? configured : undefined;
+};
+
 const buildExportAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
     const seen = new Set<string>();
-    const hasConfiguredElements = Array.isArray(elements);
-    const selectedElements = (hasConfiguredElements ? elements : DEFAULT_EXPORT_ASSESSED_ELEMENTS)
+    const configuredReportElements = getConfiguredExportElements(phraseBank);
+    const sourceElements = Array.isArray(elements)
+        ? elements
+        : (configuredReportElements || DEFAULT_EXPORT_ASSESSED_ELEMENTS);
+    const selectedElements = sourceElements
         .map(element => String(element || '').trim())
         .filter(Boolean)
         .filter(element => {
@@ -172,7 +181,7 @@ const buildExportAssessmentStructure = (elements?: string[], phraseBank?: Phrase
 
     return structure.length > 0
         ? structure
-        : (hasConfiguredElements ? [] : [{ category: 'Core Dimensions', elements: DEFAULT_EXPORT_ASSESSED_ELEMENTS }]);
+        : [];
 };
 
 interface ExportTemplate {

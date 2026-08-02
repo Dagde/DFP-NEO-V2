@@ -175,6 +175,7 @@ const PT051_STRUCTURE = [
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
+const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
 type CommentSectionKey = typeof COMMENT_SECTIONS[number];
 type DpcoFollowUpAction = 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
@@ -253,8 +254,16 @@ const pushTrainingReportNotesDiag = (stage: string, payload: Record<string, any>
     }
 };
 
-const normaliseAssessedElements = (elements?: string[]): string[] => {
-    const source = Array.isArray(elements) ? elements : DEFAULT_ASSESSED_ELEMENTS;
+const getConfiguredReportElements = (phraseBank?: PhraseBank): string[] | undefined => {
+    const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
+    return Array.isArray(configured) ? configured : undefined;
+};
+
+const normaliseAssessedElements = (elements?: string[], phraseBank?: PhraseBank): string[] => {
+    const configuredReportElements = getConfiguredReportElements(phraseBank);
+    const source = Array.isArray(elements)
+        ? elements
+        : (configuredReportElements || DEFAULT_ASSESSED_ELEMENTS);
     const seen = new Set<string>();
     const selected = source
         .map(element => String(element || '').trim())
@@ -275,7 +284,7 @@ const getDefaultElementGroup = (element: string): string => (
 );
 
 const buildAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) => {
-    const selectedElements = normaliseAssessedElements(elements);
+    const selectedElements = normaliseAssessedElements(elements, phraseBank);
     const configuredGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {};
     const categoryOrder = PT051_STRUCTURE.map(category => category.category);
     const grouped = new Map<string, string[]>();
@@ -293,7 +302,7 @@ const buildAssessmentStructure = (elements?: string[], phraseBank?: PhraseBank) 
 
     return categories.length > 0
         ? categories
-        : (Array.isArray(elements) ? [] : [{ category: 'Core Dimensions', elements: DEFAULT_ASSESSED_ELEMENTS }]);
+        : [];
 };
 
 const InfoField: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (

@@ -721,12 +721,10 @@ const formatLmpSortieLabel = (item: SyllabusItemDetail, resourceDisplayNames: Re
 const formatLmpDurationLabel = (item: SyllabusItemDetail): string =>
     `${formatHours(item.duration)}h`;
 
-const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
-
 const getAssessedElements = (item: SyllabusItemDetail): string[] => (
     Array.isArray(item.assessedElements)
         ? item.assessedElements
-        : DEFAULT_ASSESSED_ELEMENTS
+        : []
 );
 
 const DetailView: React.FC<{
