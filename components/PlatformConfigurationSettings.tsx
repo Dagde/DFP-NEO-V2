@@ -1914,25 +1914,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
-  const crewCompositionAircraftTypes = config.aircraftTypes;
+  const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePoolsDirty = useMemo(() => (
     JSON.stringify({
-      aircraftTypes: config.aircraftTypes,
-      resourcePools: config.resourcePools,
+      aircraftTypes: Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [],
+      resourcePools: Array.isArray(config.resourcePools) ? config.resourcePools : [],
     }) !== JSON.stringify({
-      aircraftTypes: loadedConfigRef.current.aircraftTypes,
-      resourcePools: loadedConfigRef.current.resourcePools,
+      aircraftTypes: Array.isArray(loadedConfigRef.current.aircraftTypes) ? loadedConfigRef.current.aircraftTypes : [],
+      resourcePools: Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : [],
     })
   ), [config.aircraftTypes, config.resourcePools]);
   const resourcePoolDeleteOptions = useMemo(() => (
-    config.resourcePools.map((pool, index) => {
+    (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
       const key = String(pool.id || pool.code || `resource-pool-${index}`);
       const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Row Set';
       return { key, name };
     })
   ), [config.resourcePools]);
   const aircraftTypeDeleteOptions = useMemo(() => (
-    config.aircraftTypes.map((aircraft, index) => {
+    (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).map((aircraft, index) => {
       const key = String(aircraft.id || aircraft.code || `aircraft-type-${index}`);
       const code = String(aircraft.code || '').trim();
       const name = String(aircraft.name || '').trim();
@@ -4511,15 +4511,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
 
     const targetKey = selectedAircraftTypeDeleteOption.key;
-    const targetAircraft = config.aircraftTypes.find((aircraft, index) => (
+    const aircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
+    const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+    const units = Array.isArray(config.units) ? config.units : [];
+    const targetAircraft = aircraftTypes.find((aircraft, index) => (
       String(aircraft.id || aircraft.code || `aircraft-type-${index}`) === targetKey
     ));
     const removedCode = normaliseUnitCode(targetAircraft?.code);
     const affectedRows = removedCode
-      ? config.resourcePools.filter((pool) => normaliseUnitCode(pool.aircraftTypeCode) === removedCode).length
+      ? resourcePools.filter((pool) => normaliseUnitCode(pool.aircraftTypeCode) === removedCode).length
       : 0;
     const affectedUnits = removedCode
-      ? config.units.filter((unit) => (
+      ? units.filter((unit) => (
         normaliseUnitCode(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType) === removedCode
       )).length
       : 0;
@@ -4592,10 +4595,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     setConfig((prev) => ({
       ...prev,
-      aircraftTypes: prev.aircraftTypes.filter((aircraft, index) => (
+      aircraftTypes: (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).filter((aircraft, index) => (
         String(aircraft.id || aircraft.code || `aircraft-type-${index}`) !== targetKey
       )),
-      units: prev.units.map((unit) => {
+      units: (Array.isArray(prev.units) ? prev.units : []).map((unit) => {
         const unitAircraftCode = normaliseUnitCode(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType);
         if (!removedCode || unitAircraftCode !== removedCode) return unit;
         const nextSettings = { ...(unit.settings || {}) };
@@ -4603,22 +4606,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         delete nextSettings.aircraftType;
         return { ...unit, settings: nextSettings };
       }),
-      resourcePools: prev.resourcePools.map((pool) => (
+      resourcePools: (Array.isArray(prev.resourcePools) ? prev.resourcePools : []).map((pool) => (
         removedCode && normaliseUnitCode(pool.aircraftTypeCode) === removedCode
           ? { ...pool, aircraftTypeCode: null }
           : pool
       )),
-      masterLmpAccessRules: prev.masterLmpAccessRules.map((rule) => (
+      masterLmpAccessRules: (Array.isArray(prev.masterLmpAccessRules) ? prev.masterLmpAccessRules : []).map((rule) => (
         removedCode && normaliseUnitCode(rule.aircraftTypeCode) === removedCode
           ? { ...rule, aircraftTypeCode: null }
           : rule
       )),
-      schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => (
+      schedulingRuleSets: (Array.isArray(prev.schedulingRuleSets) ? prev.schedulingRuleSets : []).map((ruleSet) => (
         removedCode && normaliseUnitCode(ruleSet.aircraftTypeCode) === removedCode
           ? { ...ruleSet, aircraftTypeCode: null }
           : ruleSet
       )),
-      organisations: prev.organisations.map((organisation) => ({
+      organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => ({
         ...organisation,
         settings: clearDeletedAircraftSettings(organisation.settings || {}),
       })),

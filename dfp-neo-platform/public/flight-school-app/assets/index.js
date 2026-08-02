@@ -67463,20 +67463,20 @@ const PlatformConfigurationSettings = ({
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
-  const crewCompositionAircraftTypes = config.aircraftTypes;
+  const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
-    aircraftTypes: config.aircraftTypes,
-    resourcePools: config.resourcePools
+    aircraftTypes: Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [],
+    resourcePools: Array.isArray(config.resourcePools) ? config.resourcePools : []
   }) !== JSON.stringify({
-    aircraftTypes: loadedConfigRef.current.aircraftTypes,
-    resourcePools: loadedConfigRef.current.resourcePools
+    aircraftTypes: Array.isArray(loadedConfigRef.current.aircraftTypes) ? loadedConfigRef.current.aircraftTypes : [],
+    resourcePools: Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : []
   }), [config.aircraftTypes, config.resourcePools]);
-  const resourcePoolDeleteOptions = reactExports.useMemo(() => config.resourcePools.map((pool, index) => {
+  const resourcePoolDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || "").trim() || "Unnamed DFP Resource Row Set";
     return { key, name };
   }), [config.resourcePools]);
-  const aircraftTypeDeleteOptions = reactExports.useMemo(() => config.aircraftTypes.map((aircraft, index) => {
+  const aircraftTypeDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).map((aircraft, index) => {
     const key = String(aircraft.id || aircraft.code || `aircraft-type-${index}`);
     const code = String(aircraft.code || "").trim();
     const name = String(aircraft.name || "").trim();
@@ -69563,10 +69563,13 @@ This permanently removes the organisation record from platform configuration and
       return;
     }
     const targetKey = selectedAircraftTypeDeleteOption.key;
-    const targetAircraft = config.aircraftTypes.find((aircraft, index) => String(aircraft.id || aircraft.code || `aircraft-type-${index}`) === targetKey);
+    const aircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
+    const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+    const units = Array.isArray(config.units) ? config.units : [];
+    const targetAircraft = aircraftTypes.find((aircraft, index) => String(aircraft.id || aircraft.code || `aircraft-type-${index}`) === targetKey);
     const removedCode = normaliseUnitCode2(targetAircraft?.code);
-    const affectedRows = removedCode ? config.resourcePools.filter((pool) => normaliseUnitCode2(pool.aircraftTypeCode) === removedCode).length : 0;
-    const affectedUnits = removedCode ? config.units.filter((unit) => normaliseUnitCode2(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType) === removedCode).length : 0;
+    const affectedRows = removedCode ? resourcePools.filter((pool) => normaliseUnitCode2(pool.aircraftTypeCode) === removedCode).length : 0;
+    const affectedUnits = removedCode ? units.filter((unit) => normaliseUnitCode2(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType) === removedCode).length : 0;
     const affectedText = [
       affectedRows ? `${affectedRows} DFP resource row set${affectedRows === 1 ? "" : "s"}` : "",
       affectedUnits ? `${affectedUnits} unit aircraft assignment${affectedUnits === 1 ? "" : "s"}` : ""
@@ -69623,8 +69626,8 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     };
     setConfig((prev) => ({
       ...prev,
-      aircraftTypes: prev.aircraftTypes.filter((aircraft, index) => String(aircraft.id || aircraft.code || `aircraft-type-${index}`) !== targetKey),
-      units: prev.units.map((unit) => {
+      aircraftTypes: (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).filter((aircraft, index) => String(aircraft.id || aircraft.code || `aircraft-type-${index}`) !== targetKey),
+      units: (Array.isArray(prev.units) ? prev.units : []).map((unit) => {
         const unitAircraftCode = normaliseUnitCode2(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType);
         if (!removedCode || unitAircraftCode !== removedCode) return unit;
         const nextSettings = { ...unit.settings || {} };
@@ -69632,10 +69635,10 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
         delete nextSettings.aircraftType;
         return { ...unit, settings: nextSettings };
       }),
-      resourcePools: prev.resourcePools.map((pool) => removedCode && normaliseUnitCode2(pool.aircraftTypeCode) === removedCode ? { ...pool, aircraftTypeCode: null } : pool),
-      masterLmpAccessRules: prev.masterLmpAccessRules.map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule),
-      schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => removedCode && normaliseUnitCode2(ruleSet.aircraftTypeCode) === removedCode ? { ...ruleSet, aircraftTypeCode: null } : ruleSet),
-      organisations: prev.organisations.map((organisation) => ({
+      resourcePools: (Array.isArray(prev.resourcePools) ? prev.resourcePools : []).map((pool) => removedCode && normaliseUnitCode2(pool.aircraftTypeCode) === removedCode ? { ...pool, aircraftTypeCode: null } : pool),
+      masterLmpAccessRules: (Array.isArray(prev.masterLmpAccessRules) ? prev.masterLmpAccessRules : []).map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule),
+      schedulingRuleSets: (Array.isArray(prev.schedulingRuleSets) ? prev.schedulingRuleSets : []).map((ruleSet) => removedCode && normaliseUnitCode2(ruleSet.aircraftTypeCode) === removedCode ? { ...ruleSet, aircraftTypeCode: null } : ruleSet),
+      organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => ({
         ...organisation,
         settings: clearDeletedAircraftSettings(organisation.settings || {})
       }))
