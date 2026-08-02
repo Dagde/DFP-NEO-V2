@@ -105069,34 +105069,40 @@ const App = () => {
       if (unitCode && activeCodes.length > 0) return activeCodes.includes(unitCode);
       if (compositeUnitCode) return activeCompositeCodes.has(compositeUnitCode);
       return true;
-    }).map((row, index) => ({
-      id: String(row?.id || `standard-mission-${index + 1}`),
-      status: String(row?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE",
-      unitCode: String(row?.unitCode || "").trim().toUpperCase(),
-      compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
-      compositeProfileId: String(row?.compositeProfileId || "").trim(),
-      aircraftTypeCode: String(row?.aircraftTypeCode || "").trim().toUpperCase(),
-      missionName: String(row?.missionName || row?.name || `Directed Task Setup ${index + 1}`).trim(),
-      shortTitle: String(row?.shortTitle || "").trim().slice(0, 8),
-      description: String(row?.description || "").trim(),
-      resourceType: ["Flight", "FTD", "CPT", "Ground"].includes(String(row?.resourceType || row?.type || "Flight")) ? String(row?.resourceType || row?.type || "Flight") : "Flight",
-      departureLocationCode: String(row?.departureLocationCode || row?.dep || school || "").trim().toUpperCase(),
-      arrivalLocationCode: String(row?.arrivalLocationCode || row?.arr || school || "").trim().toUpperCase(),
-      durationMinutes: Math.max(0, Math.floor(Number(row?.durationMinutes ?? row?.duration ?? 240) || 0)),
-      preFlightMinutes: Math.max(0, Math.floor(Number(row?.preFlightMinutes ?? row?.preFlight ?? 90) || 0)),
-      postFlightMinutes: Math.max(0, Math.floor(Number(row?.postFlightMinutes ?? row?.postFlight ?? 60) || 0)),
-      isFormation: Boolean(row?.isFormation),
-      formationAircraft: Math.max(1, Math.floor(Number(row?.formationAircraft ?? row?.aircraftCount ?? 1) || 1)),
-      config: String(row?.config || "ANY").trim() || "ANY",
-      crewCompositionMode: ["STANDARD", "ALTERNATE", "CUSTOM"].includes(String(row?.crewCompositionMode || "").toUpperCase()) ? String(row?.crewCompositionMode || "").toUpperCase() : "STANDARD",
-      selectedCrewCompositionId: String(row?.selectedCrewCompositionId || "").trim(),
-      acceptableCrewCompositionIds: Array.isArray(row?.acceptableCrewCompositionIds) ? row.acceptableCrewCompositionIds.map((value) => String(value || "").trim()).filter(Boolean) : [],
-      roleRequirements: Array.isArray(row?.roleRequirements) ? row.roleRequirements.map((roleRow) => ({
+    }).map((row, index) => {
+      const acceptableCrewCompositionIds = Array.isArray(row?.acceptableCrewCompositionIds) ? row.acceptableCrewCompositionIds.map((value) => String(value || "").trim()).filter(Boolean) : [];
+      const roleRequirements = Array.isArray(row?.roleRequirements) ? row.roleRequirements.map((roleRow) => ({
         role: String(roleRow?.role || "").trim(),
         count: Math.max(1, Math.floor(Number(roleRow?.count) || 1))
-      })).filter((roleRow) => roleRow.role) : [],
-      defaultCallsignPrefix: String(row?.defaultCallsignPrefix || "").trim()
-    })).filter((profile) => {
+      })).filter((roleRow) => roleRow.role) : [];
+      const explicitCrewCompositionMode = String(row?.crewCompositionMode || "").toUpperCase();
+      const crewCompositionMode = ["STANDARD", "ALTERNATE", "CUSTOM"].includes(explicitCrewCompositionMode) ? explicitCrewCompositionMode : acceptableCrewCompositionIds[0]?.startsWith("alternate:") ? "ALTERNATE" : acceptableCrewCompositionIds.length > 0 ? "STANDARD" : "CUSTOM";
+      return {
+        id: String(row?.id || `standard-mission-${index + 1}`),
+        status: String(row?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+        unitCode: String(row?.unitCode || "").trim().toUpperCase(),
+        compositeUnitCode: String(row?.compositeUnitCode || "").trim().toUpperCase(),
+        compositeProfileId: String(row?.compositeProfileId || "").trim(),
+        aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || "").trim().toUpperCase(),
+        missionName: String(row?.missionName || row?.name || `Directed Task Setup ${index + 1}`).trim(),
+        shortTitle: String(row?.shortTitle || row?.code || "").trim().slice(0, 8),
+        description: String(row?.description || "").trim(),
+        resourceType: ["Flight", "FTD", "CPT", "Ground"].includes(String(row?.resourceType || row?.type || "Flight")) ? String(row?.resourceType || row?.type || "Flight") : "Flight",
+        departureLocationCode: String(row?.departureLocationCode || row?.departure || row?.dep || school || "").trim().toUpperCase(),
+        arrivalLocationCode: String(row?.arrivalLocationCode || row?.arrival || row?.arr || school || "").trim().toUpperCase(),
+        durationMinutes: Math.max(0, Math.floor(Number(row?.durationMinutes ?? row?.duration ?? 240) || 0)),
+        preFlightMinutes: Math.max(0, Math.floor(Number(row?.preFlightMinutes ?? row?.preFlight ?? 90) || 0)),
+        postFlightMinutes: Math.max(0, Math.floor(Number(row?.postFlightMinutes ?? row?.postFlight ?? 60) || 0)),
+        isFormation: Boolean(row?.isFormation),
+        formationAircraft: Math.max(1, Math.floor(Number(row?.formationAircraft ?? row?.aircraftCount ?? 1) || 1)),
+        config: String(row?.config || "ANY").trim() || "ANY",
+        crewCompositionMode,
+        selectedCrewCompositionId: String(row?.selectedCrewCompositionId || acceptableCrewCompositionIds[0] || "").trim(),
+        acceptableCrewCompositionIds,
+        roleRequirements,
+        defaultCallsignPrefix: String(row?.defaultCallsignPrefix || "").trim()
+      };
+    }).filter((profile) => {
       const key = profile.compositeProfileId || profile.id;
       if (seen.has(key)) return false;
       seen.add(key);
