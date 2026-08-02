@@ -1249,14 +1249,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         })),
       }));
 
-    return [
-      ...activeGroupLabels.map((unitCode, index): CrewRequirementPreset => ({
+    const standardPresets = activeAircraftTypeCode
+      ? activeGroupLabels.map((unitCode, index): CrewRequirementPreset => ({
         id: index === 0 ? 'standard-aircraft-crew' : `standard-aircraft-crew:${unitCode}`,
-        label: `Standard ${activeAircraftTypeCode || 'Aircraft'} Crew`,
+        label: `Standard ${activeAircraftTypeCode} Crew`,
         description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
         kind: 'standard',
         groupLabel: unitCode,
-      })),
+      }))
+      : [];
+
+    return [
+      ...standardPresets,
       ...alternatePresets,
     ];
   }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
@@ -3853,7 +3857,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     {renderStandardMissionTile('Unit / Aircraft', (
                       <div>
                         <span className="block">{unitLabel}</span>
-                        <span className="mt-1 block text-xs text-slate-400">{profile.aircraftTypeCode || aircraftTypeCode || 'Aircraft'}</span>
+                        <span className="mt-1 block text-xs text-slate-400">{profile.aircraftTypeCode || aircraftTypeCode || 'No aircraft type configured'}</span>
                       </div>
                     ))}
                     {renderStandardMissionTile('Type / CONFIG', isEditing ? (

@@ -4798,17 +4798,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         || '',
       ).trim().toUpperCase();
       const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || '').trim().toUpperCase();
-      const defaultAircraftTypeCode = unitAircraftCode
-        || visibleAircraftCode
-        || String(previousAircraftTypes[0]?.code || '').trim().toUpperCase();
+      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode;
       const defaultAircraftType = previousAircraftTypes.find((aircraft) => (
         String(aircraft.code || '').trim().toUpperCase() === defaultAircraftTypeCode
       ));
       const defaultAircraftLabel = String(
         defaultAircraftType?.name
         || defaultAircraftType?.code
-        || defaultAircraftTypeCode
-        || 'Aircraft',
+        || defaultAircraftTypeCode,
       ).trim();
 
       return {
@@ -6480,9 +6477,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .filter(Boolean),
   ]));
   const currencyProfileCrewOptions = Array.from(new Set([
-    ...activeUnitAircraftTypeCodes.map((aircraftCode) => {
-      return `Standard ${aircraftCode || 'Aircraft'} Crew`;
-    }),
+    ...activeUnitAircraftTypeCodes.map((aircraftCode) => `Standard ${aircraftCode} Crew`),
     ...uniqueProfilesByCompositeGroup(
       crewCompositionSettings.alternateCompositions.filter((profile) => (
         isProfileInActiveUnitContext(profile)

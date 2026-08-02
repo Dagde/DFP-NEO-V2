@@ -39217,14 +39217,15 @@ const PrioritiesView = ({
         eligibleRoles: [role.role]
       }))
     }));
+    const standardPresets = activeAircraftTypeCode ? activeGroupLabels.map((unitCode, index) => ({
+      id: index === 0 ? "standard-aircraft-crew" : `standard-aircraft-crew:${unitCode}`,
+      label: `Standard ${activeAircraftTypeCode} Crew`,
+      description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
+      kind: "standard",
+      groupLabel: unitCode
+    })) : [];
     return [
-      ...activeGroupLabels.map((unitCode, index) => ({
-        id: index === 0 ? "standard-aircraft-crew" : `standard-aircraft-crew:${unitCode}`,
-        label: `Standard ${activeAircraftTypeCode || "Aircraft"} Crew`,
-        description: formatCrewRequirementSummary(null, aircraftCrewComposition, crewPositionTerminology),
-        kind: "standard",
-        groupLabel: unitCode
-      })),
+      ...standardPresets,
       ...alternatePresets
     ];
   }, [activeUnitCode, activeUnitCodeSet, aircraftCrewComposition, aircraftTypeCode, crewCompositionSettings, crewPositionTerminology, operationalModel, school]);
@@ -41285,7 +41286,7 @@ const PrioritiesView = ({
             ] })),
             renderStandardMissionTile("Unit / Aircraft", /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block", children: unitLabel }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-slate-400", children: profile.aircraftTypeCode || aircraftTypeCode || "Aircraft" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-slate-400", children: profile.aircraftTypeCode || aircraftTypeCode || "No aircraft type configured" })
             ] })),
             renderStandardMissionTile("Type / CONFIG", isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -69832,10 +69833,10 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
         selectedUnitRecord?.settings?.aircraftTypeCode || selectedUnitRecord?.settings?.aircraftType || ""
       ).trim().toUpperCase();
       const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || "").trim().toUpperCase();
-      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode || String(previousAircraftTypes[0]?.code || "").trim().toUpperCase();
+      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode;
       const defaultAircraftType = previousAircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === defaultAircraftTypeCode);
       const defaultAircraftLabel = String(
-        defaultAircraftType?.name || defaultAircraftType?.code || defaultAircraftTypeCode || "Aircraft"
+        defaultAircraftType?.name || defaultAircraftType?.code || defaultAircraftTypeCode
       ).trim();
       return {
         ...prev,
@@ -71165,9 +71166,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     ...configResourcePools.filter((pool) => !aircraftTypeCode || String(pool.aircraftTypeCode || "").trim().toUpperCase() === String(aircraftTypeCode || "").trim().toUpperCase()).flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : []).map((item) => String(item.label || item.definition || item.id || "").trim()).filter(Boolean)
   ]));
   const currencyProfileCrewOptions = Array.from(new Set([
-    ...activeUnitAircraftTypeCodes.map((aircraftCode) => {
-      return `Standard ${aircraftCode || "Aircraft"} Crew`;
-    }),
+    ...activeUnitAircraftTypeCodes.map((aircraftCode) => `Standard ${aircraftCode} Crew`),
     ...uniqueProfilesByCompositeGroup(
       crewCompositionSettings.alternateCompositions.filter((profile) => isProfileInActiveUnitContext(profile) && activeUnitAircraftTypeCodes.includes(String(profile.aircraftTypeCode || "").trim().toUpperCase()))
     ).map((profile) => {
