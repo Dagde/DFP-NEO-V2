@@ -422,15 +422,18 @@ export const normaliseRankEquivalencyConfig = (
     ? input.preset
     : fallback.preset;
   const fallbackConfig = preset === 'CUSTOM' ? fallback : RANK_EQUIVALENCY_PRESETS[preset];
-  const rawServices = Array.isArray(input?.services) ? input!.services : fallbackConfig.services;
+  const hasExplicitServices = Array.isArray(input?.services);
+  const rawServices = hasExplicitServices ? input!.services : fallbackConfig.services;
   const services = [0, 1, 2, 3].map((index) => ({
     name: rawServices[index]?.name !== undefined && rawServices[index]?.name !== null
       ? String(rawServices[index]?.name)
-      : String(fallbackConfig.services[index]?.name || `Service ${index + 1}`),
+      : String(hasExplicitServices ? '' : (fallbackConfig.services[index]?.name || `Service ${index + 1}`)),
   }));
-  const rawRows = Array.isArray(input?.rows) ? input!.rows : fallbackConfig.rows;
+  const hasExplicitRows = Array.isArray(input?.rows);
+  const rawRows = hasExplicitRows ? input!.rows : fallbackConfig.rows;
   const rows = RANK_EQUIVALENCY_GRADES.map((grade) => {
-    const sourceRow = rawRows.find((row) => String(row?.grade || '').trim().toUpperCase() === grade) || fallbackConfig.rows.find((row) => row.grade === grade);
+    const sourceRow = rawRows.find((row) => String(row?.grade || '').trim().toUpperCase() === grade)
+      || (hasExplicitRows ? undefined : fallbackConfig.rows.find((row) => row.grade === grade));
     return {
       grade,
       ranks: [0, 1, 2, 3].map((index) => normaliseRankEquivalencyCell(sourceRow?.ranks?.[index])),
