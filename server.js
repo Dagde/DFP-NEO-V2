@@ -8998,9 +8998,17 @@ async function seedCommercialConfigIfEmpty(db) {
   const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
   const settings = settingsRows?.[0]?.data || {};
   const now = new Date().toISOString();
-  const locationNames = Array.isArray(settings.locations) && settings.locations.length > 0 ? settings.locations : ['Base'];
+  const locationNames = Array.isArray(settings.locations)
+    ? settings.locations.map((location) => String(location || '').trim()).filter(Boolean)
+    : [];
+  const units = Array.isArray(settings.units)
+    ? settings.units.map((unit) => String(unit || '').trim()).filter(Boolean)
+    : [];
+  if (locationNames.length === 0 || units.length === 0) {
+    console.log('ℹ️  Commercial platform configuration tables are empty - starter organisation seed skipped because no legacy locations/units were found.');
+    return;
+  }
   const abbreviations = settings.locationAbbreviations || {};
-  const units = Array.isArray(settings.units) && settings.units.length > 0 ? settings.units : ['Training Unit'];
   const unitLocations = settings.unitLocations || {};
   const locationOpAreas = settings.locationOpAreas || {};
   const timezoneOffset = Number(settings.timezoneOffset ?? 10);
