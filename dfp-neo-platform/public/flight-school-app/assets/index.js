@@ -66464,9 +66464,14 @@ const applyDefaultUnitTraineeAvailability$1 = (config) => {
 const normaliseSettingsPlatformConfig = (source) => applyDefaultUnitTraineeAvailability$1(normalisePlatformConfig(source));
 const hasActivePlatformRecords = (records) => records.some((record) => String(record?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
 const getPlatformConfigSaveBlocker = (config) => {
-  if (!hasActivePlatformRecords(config.organisations)) return "Platform configuration save blocked: at least one active organisation is required.";
-  if (!hasActivePlatformRecords(config.locations)) return "Platform configuration save blocked: at least one active location is required.";
-  if (!hasActivePlatformRecords(config.units)) return "Platform configuration save blocked: at least one active unit is required.";
+  const hasActiveOrganisations = hasActivePlatformRecords(Array.isArray(config.organisations) ? config.organisations : []);
+  const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
+  const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
+  const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
+  if (isDeliberatelyEmptyStructure) return "";
+  if (!hasActiveOrganisations) return "Platform configuration save blocked: at least one active organisation is required while locations or units still exist.";
+  if (!hasActiveLocations) return "Platform configuration save blocked: at least one active location is required while units still exist.";
+  if (!hasActiveUnits) return "Platform configuration save blocked: at least one active unit is required while organisations or locations still exist.";
   return "";
 };
 const notifyPlatformConfigUpdated = (config) => {
