@@ -7077,6 +7077,40 @@ function generateDfpInternal(
     ).trim() || 'Aircraft';
     const buildAircraftResourceIdPrefix = `${buildAircraftResourcePrefix} `;
     const buildAircraftResourceCount = Math.max(0, Math.floor(Number(availableAircraftCount) || 0));
+    const buildConfiguredUnits = Array.isArray(config.platformConfig?.units) ? config.platformConfig.units : [];
+    const buildConfiguredLocations = Array.isArray(config.platformConfig?.locations) ? config.platformConfig.locations : [];
+    const buildActiveContextUnitSet = new Set(buildActiveContextUnitCodes);
+    const buildActiveUnitRecords = buildConfiguredUnits
+        .filter((unit: any) => buildActiveContextUnitSet.has(String(unit?.code || unit?.name || '').trim().toUpperCase()))
+        .map((unit: any) => ({
+            code: String(unit?.code || '').trim(),
+            name: String(unit?.name || '').trim(),
+            location: String(unit?.location || unit?.locationCode || '').trim(),
+            unitType: String(unit?.type || unit?.unitType || '').trim(),
+            operationalModel: normaliseOperationalModel(unit?.operationalModel || unit?.model || buildOperationalModel),
+            traineesEnabled: unit?.traineesEnabled === true || unit?.hasTrainees === true,
+        }));
+    const buildActiveLocationAliases = getConfiguredLocationAliasesForValue(config.platformConfig, school);
+    const buildActiveLocationRecords = buildConfiguredLocations
+        .filter((location: any) => {
+            const candidates = [
+                location?.code,
+                location?.name,
+                location?.icao,
+                location?.label,
+                location?.settings?.legacyCode,
+                location?.settings?.runtimeCode,
+                ...(Array.isArray(location?.aliases) ? location.aliases : []),
+                ...(Array.isArray(location?.settings?.aliases) ? location.settings.aliases : []),
+            ].map(normaliseLocationMatchToken).filter(Boolean);
+            return candidates.some(candidate => buildActiveLocationAliases.includes(candidate));
+        })
+        .map((location: any) => ({
+            code: String(location?.code || '').trim(),
+            name: String(location?.name || '').trim(),
+            icao: String(location?.icao || '').trim(),
+            aliases: Array.isArray(location?.aliases) ? location.aliases.map((alias: any) => String(alias || '').trim()).filter(Boolean) : [],
+        }));
     const buildResources = [
         ...Array.from({ length: buildAircraftResourceCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`),
         'Duty Sup',
@@ -7618,6 +7652,42 @@ function generateDfpInternal(
                 aircraftConfigIdsByResource,
                 aircraftConfigurationDefinitions: aircraftConfigDefinitionsForBuild,
                 runtimeResourceContext: config.runtimeResourceContext || null,
+            },
+            commercialSchedulerContext: {
+                step: 'CCH 4.1',
+                purpose: 'Read-only scheduler handoff audit. This records the configured unit, location and resource context that reached NEO Build before scheduling starts.',
+                operationalModel: buildOperationalModel,
+                activeUnitCode: buildActiveUnitCode,
+                activeContextUnitCodes: buildActiveContextUnitCodes,
+                activeLocationCode: school,
+                activeLocationAliases: buildActiveLocationAliases,
+                activeUnitRecords: buildActiveUnitRecords,
+                activeLocationRecords: buildActiveLocationRecords,
+                resourceLabels: buildResourceDisplayNames,
+                aircraftResourcePrefix: buildAircraftResourcePrefix,
+                resourceCounts: {
+                    aircraft: availableAircraftCount,
+                    ftd: ftdCount,
+                    cpt: cptCount,
+                    ground: 6,
+                },
+                runtimeResourceContext: config.runtimeResourceContext || null,
+                staffSharing: {
+                    enabled: Boolean(staffSharingEnabled),
+                    units: Array.isArray(staffSharingUnits) ? staffSharingUnits : [],
+                    groups: Array.isArray(staffSharingGroups) ? staffSharingGroups.length : 0,
+                },
+                inputScope: {
+                    instructors: originalInstructors.length,
+                    trainees: trainees.length,
+                    syllabus: syllabusDetails.length,
+                    traineeLmps: traineeLMPs.size,
+                    activeDfpEvents: activeDfpEventsWithoutDate.length,
+                    highestPriorityEvents: highestPriorityEvents.length,
+                    remedialRequests: remedialRequests.length,
+                    continuationRequests: sctFlights.length + sctFtds.length,
+                    configuredContinuationEvents: sctEvents.length,
+                },
             },
             crewConfiguration: {
                 operationalModel: buildOperationalModel,
