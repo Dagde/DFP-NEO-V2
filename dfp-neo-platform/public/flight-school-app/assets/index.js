@@ -12137,7 +12137,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const [resourceDraft, setResourceDraft] = reactExports.useState({
     aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
     aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-    poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
+    poolName: String(primaryResourcePool?.name || ""),
     poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
     poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
     aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ""),
@@ -12458,7 +12458,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     setResourceDraft({
       aircraftCode: String(primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
       aircraftName: String(primaryAircraftType?.name || primaryAircraftType?.code || primaryResourcePool?.aircraftTypeCode || ""),
-      poolName: String(primaryResourcePool?.name || `${currentLocation?.name || currentLocation?.code || "Home"} ${primaryAircraftType?.code || "Resource"} Pool`),
+      poolName: String(primaryResourcePool?.name || ""),
       poolUnitCode: String(primaryResourcePool?.unitCode || currentUnit?.code || ""),
       poolLocationCode: String(primaryResourcePool?.locationCode || currentUnit?.locationCode || currentLocation?.code || ""),
       aircraft: String(primaryResourcePool?.settings?.aircraft ?? primaryResourcePool?.aircraft ?? ""),
@@ -12677,6 +12677,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       setSaveMessage("Enter an aircraft type code before saving.");
       return;
     }
+    const poolName = String(resourceDraft.poolName || "").trim();
+    if (!poolName) {
+      setSaveMessage("Enter a DFP resource row set name before saving.");
+      return;
+    }
     saveWizardConfig("Aircraft type and DFP resource rows saved into Settings.", (baseConfig) => {
       const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
       const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
@@ -12686,7 +12691,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       const nextPool = {
         id: primaryResourcePool?.id || createWizardRecordId("pool"),
         code: primaryResourcePool?.code || generatedPoolCode,
-        name: resourceDraft.poolName || `${aircraftCode} DFP Row Set`,
+        name: poolName,
         organisationCode: activeOrganisation?.code || organisationDraft.code || "DEFAULT",
         locationCode: resourceDraft.poolLocationCode,
         unitCode: resourceDraft.poolUnitCode,
@@ -14412,7 +14417,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       activeOrganisation: summariseActiveOrganisation()
     });
     const primaryLocationCode = cleanLocations[0]?.icao || locationDraft.code || "";
-    const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || "Aircraft").trim().toUpperCase();
+    const primaryAircraftCode = String(resourceDraft.aircraftCode || crewDraft.aircraftCode || "").trim().toUpperCase();
+    const primaryAircraftName = String(resourceDraft.aircraftName || "").trim();
+    const primaryResourcePoolName = String(resourceDraft.poolName || "").trim();
+    const hasDeliberateResourceSetup = Boolean(primaryAircraftCode && primaryResourcePoolName);
     const crewSeats = parseRoleRequirementsText(crewDraft.standardSeats);
     const alternateCrewRows = parseWizardLineItems(alternateCrewDraft).map((line, index) => {
       const [namePart, requirementsPart] = line.split("=").map((part) => part.trim());
@@ -14474,6 +14482,8 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }), {});
     const setupPersonnel = buildSetupTestPersonnel(cleanUnits, overrides);
     onUpdatePlatformConfig((baseConfig) => {
+      const existingAircraftTypes = Array.isArray(baseConfig?.aircraftTypes) ? baseConfig.aircraftTypes : [];
+      const existingResourcePools = Array.isArray(baseConfig?.resourcePools) ? baseConfig.resourcePools : [];
       const existingOrganisation = Array.isArray(baseConfig?.organisations) ? baseConfig.organisations[0] : null;
       const existingOrganisationSettings = existingOrganisation?.settings || {};
       pushWizardOrgDiag("setup-sync:updater-entered", {
@@ -14638,21 +14648,21 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         organisations: [organisation],
         locations: nextLocations,
         units: nextUnits,
-        aircraftTypes: [{
+        aircraftTypes: hasDeliberateResourceSetup ? [{
           id: createSetupTestRecordId("aircraft-type", primaryAircraftCode),
           code: primaryAircraftCode,
-          name: resourceDraft.aircraftName || primaryAircraftCode,
+          name: primaryAircraftName || primaryAircraftCode,
           category: "Other",
           status: "ACTIVE",
           crewComposition: {
             ...normaliseAircraftCrewComposition(null),
             standardSeats: crewSeats
           }
-        }],
-        resourcePools: [{
+        }] : existingAircraftTypes,
+        resourcePools: hasDeliberateResourceSetup ? [{
           id: createSetupTestRecordId("resource-pool", `${primaryAircraftCode}-${resourceDraft.poolLocationCode || primaryLocationCode}-${resourceDraft.poolUnitCode || cleanUnits[0]?.code || ""}`),
           code: makeWizardResourcePoolCode(resourceDraft.poolLocationCode || primaryLocationCode, resourceDraft.poolUnitCode || cleanUnits[0]?.code || "", primaryAircraftCode),
-          name: resourceDraft.poolName || `${primaryAircraftCode} DFP Resource Row Set`,
+          name: primaryResourcePoolName,
           organisationCode: organisation.code,
           locationCode: resourceDraft.poolLocationCode || primaryLocationCode,
           unitCode: resourceDraft.poolUnitCode || cleanUnits[0]?.code || "",
@@ -14666,7 +14676,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
             standby: parseNumberDraft(resourceDraft.standby),
             ground: parseNumberDraft(resourceDraft.ground)
           }
-        }],
+        }] : existingResourcePools,
         modules,
         unitModules,
         licenses: [],

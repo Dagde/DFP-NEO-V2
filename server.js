@@ -9091,11 +9091,13 @@ async function seedCommercialConfigIfEmpty(db) {
   }
 
   const legacyAircraftLabel = String(settings.aircraftLabel || settings.aircraftType || '').trim();
-  const seedAircraftName = legacyAircraftLabel || 'Aircraft';
-  const seedAircraftCode = String(settings.aircraftTypeCode || seedAircraftName || 'AIRCRAFT')
+  const legacyAircraftCode = String(settings.aircraftTypeCode || '').trim();
+  const hasLegacyAircraftSettings = Boolean(legacyAircraftLabel || legacyAircraftCode);
+  const seedAircraftName = legacyAircraftLabel || legacyAircraftCode;
+  const seedAircraftCode = String(legacyAircraftCode || seedAircraftName)
     .replace(/[^A-Za-z0-9]/g, '')
     .slice(0, 12)
-    .toUpperCase() || 'AIRCRAFT';
+    .toUpperCase();
   const seedAircraftPrefixes = Array.isArray(settings.aircraftNumberPrefixes)
     ? settings.aircraftNumberPrefixes.map((prefix) => String(prefix || '').trim()).filter(Boolean)
     : [];
@@ -9103,32 +9105,36 @@ async function seedCommercialConfigIfEmpty(db) {
     ? String(settings.aircraftNumberDefaultPrefix || '').trim()
     : (seedAircraftPrefixes[0] || '');
 
-  await db.$executeRawUnsafe(`
-    INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
-    VALUES (gen_random_uuid()::text, $1, $2, 'Training', 'ACTIVE', $3::jsonb, $4::timestamp, $4::timestamp)
-    ON CONFLICT ("code") DO NOTHING
-  `, seedAircraftCode, seedAircraftName, JSON.stringify({ source: legacyAircraftLabel ? 'Legacy app settings aircraft type' : 'Commercial setup aircraft type' }), now);
-
-  for (const locationName of locationNames) {
-    const locationCode = locationIdentityFor(locationName).code;
+  if (hasLegacyAircraftSettings && seedAircraftCode) {
     await db.$executeRawUnsafe(`
-      INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, $2, $3, $4, 'Shared', 'ACTIVE', $5::jsonb, $6::timestamp, $6::timestamp)
+      INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, $1, $2, 'Training', 'ACTIVE', $3::jsonb, $4::timestamp, $4::timestamp)
       ON CONFLICT ("code") DO NOTHING
-    `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} DFP Resource Row Set`, JSON.stringify({
-      applyToV2Runtime: true,
-      aircraftLabel: seedAircraftName,
-      aircraftNumberUsePrefix: seedAircraftPrefixes.length > 0,
-      aircraftNumberPrefixes: seedAircraftPrefixes,
-      aircraftNumberDefaultPrefix: seedAircraftDefaultPrefix,
-      ftdLabel: 'FTD',
-      cptLabel: 'CPT',
-      aircraft: Number(settings.availableAircraftCount ?? 24),
-      ftd: Number(settings.availableFtdCount ?? 5),
-      cpt: Number(settings.availableCptCount ?? 5),
-      standby: 4,
-      ground: 6,
-    }), now);
+    `, seedAircraftCode, seedAircraftName, JSON.stringify({ source: 'Legacy app settings aircraft type' }), now);
+
+    for (const locationName of locationNames) {
+      const locationCode = locationIdentityFor(locationName).code;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, $2, $3, $4, 'Shared', 'ACTIVE', $5::jsonb, $6::timestamp, $6::timestamp)
+        ON CONFLICT ("code") DO NOTHING
+      `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} DFP Resource Row Set`, JSON.stringify({
+        applyToV2Runtime: true,
+        aircraftLabel: seedAircraftName,
+        aircraftNumberUsePrefix: seedAircraftPrefixes.length > 0,
+        aircraftNumberPrefixes: seedAircraftPrefixes,
+        aircraftNumberDefaultPrefix: seedAircraftDefaultPrefix,
+        ftdLabel: 'FTD',
+        cptLabel: 'CPT',
+        aircraft: Number(settings.availableAircraftCount ?? 24),
+        ftd: Number(settings.availableFtdCount ?? 5),
+        cpt: Number(settings.availableCptCount ?? 5),
+        standby: 4,
+        ground: 6,
+      }), now);
+    }
+  } else {
+    console.log('ℹ️  Commercial platform aircraft/resource row seed skipped because no legacy aircraft type was configured.');
   }
 
   const modules = [
@@ -9159,7 +9165,7 @@ async function seedCommercialConfigIfEmpty(db) {
     await db.$executeRawUnsafe(`
       INSERT INTO "CommercialSchedulingRuleSet" ("id", "organisationCode", "unitCode", "aircraftTypeCode", "name", "scope", "rules", "isActive", "createdAt", "updatedAt")
       VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, 'Unit', $4::jsonb, true, $5::timestamp, $5::timestamp)
-    `, unit.code, seedAircraftCode, `${unit.code} Default Scheduling Rules`, JSON.stringify({
+    `, unit.code, seedAircraftCode || null, `${unit.code} Default Scheduling Rules`, JSON.stringify({
       preferredDutyPeriod: settings.preferredDutyPeriod ?? 10,
       maxCrewDutyPeriod: settings.maxCrewDutyPeriod ?? 12,
       maxDispatchPerHour: settings.maxDispatchPerHour ?? 4,
