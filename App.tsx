@@ -36700,6 +36700,10 @@ const App: React.FC = () => {
                 const allAssessments: Pt051Assessment[] = [];
                 const pageSize = 2000;
                 let offset = 0;
+                const followUpFetchStartedAt = performance.now();
+                let followUpFetchMs = 0;
+                let followUpReconcileMs = 0;
+                let followUpPersistMs = 0;
                 markNeoBuildTiming(timingReport, 'report-followups:request-start', {
                     buildTrainees: buildTraineeNameSet.size,
                     lmpCount: buildTraineeLMPs.size,
@@ -36753,7 +36757,9 @@ const App: React.FC = () => {
                     if (page.length < pageSize) break;
                     offset += pageSize;
                 }
+                followUpFetchMs = Math.round(performance.now() - followUpFetchStartedAt);
 
+                const followUpReconcileStartedAt = performance.now();
                 const reconciledLMPs = new Map(buildTraineeLMPs);
                 const normaliseFollowUpNameKey = (name: any): string => String(name || '').trim().toUpperCase();
                 const buildTraineeLookup = new Map<string, any>();
@@ -36886,6 +36892,7 @@ const App: React.FC = () => {
                     const lmp = reconciledLMPs.get(traineeFullName);
                     if (trainee && lmp) changedTrainees.push({ trainee, lmp, updates });
                 });
+                followUpReconcileMs = Math.round(performance.now() - followUpReconcileStartedAt);
 
                 if (changedTrainees.length > 0) {
                     buildTraineeLMPs = reconciledLMPs;
@@ -36906,10 +36913,11 @@ const App: React.FC = () => {
                             });
                         }
                     }
+                    followUpPersistMs = Math.round(performance.now() - persistStart);
                     pushDfpDataDiag('build:report-followups:persist-complete', {
                         changedTrainees: changedTrainees.length,
                         persistedFollowUpLmps,
-                        durationMs: Math.round(performance.now() - persistStart),
+                        durationMs: followUpPersistMs,
                     });
                 }
 
@@ -36936,6 +36944,9 @@ const App: React.FC = () => {
                     changedTrainees: changedTrainees.length,
                     orderedFollowUps: followUpAssessmentContexts.length,
                     skippedFollowUps: reportFollowUpDiag.skippedAssessments.length,
+                    fetchMs: followUpFetchMs,
+                    reconcileMs: followUpReconcileMs,
+                    persistMs: followUpPersistMs,
                 });
             } catch (followUpError) {
                 reportFollowUpDiag.error = followUpError instanceof Error ? followUpError.message : String(followUpError);

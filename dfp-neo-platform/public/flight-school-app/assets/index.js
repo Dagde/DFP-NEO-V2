@@ -115668,6 +115668,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         const allAssessments = [];
         const pageSize = 2e3;
         let offset = 0;
+        const followUpFetchStartedAt = performance.now();
+        let followUpFetchMs = 0;
+        let followUpReconcileMs = 0;
+        let followUpPersistMs = 0;
         markNeoBuildTiming(timingReport, "report-followups:request-start", {
           buildTrainees: buildTraineeNameSet.size,
           lmpCount: buildTraineeLMPs.size
@@ -115721,6 +115725,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           if (page.length < pageSize) break;
           offset += pageSize;
         }
+        followUpFetchMs = Math.round(performance.now() - followUpFetchStartedAt);
+        const followUpReconcileStartedAt = performance.now();
         const reconciledLMPs = new Map(buildTraineeLMPs);
         const normaliseFollowUpNameKey = (name) => String(name || "").trim().toUpperCase();
         const buildTraineeLookup = /* @__PURE__ */ new Map();
@@ -115839,6 +115845,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           const lmp = reconciledLMPs.get(traineeFullName);
           if (trainee && lmp) changedTrainees.push({ trainee, lmp, updates });
         });
+        followUpReconcileMs = Math.round(performance.now() - followUpReconcileStartedAt);
         if (changedTrainees.length > 0) {
           buildTraineeLMPs = reconciledLMPs;
           setTraineeLMPs(reconciledLMPs);
@@ -115858,10 +115865,11 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
               });
             }
           }
+          followUpPersistMs = Math.round(performance.now() - persistStart);
           pushDfpDataDiag("build:report-followups:persist-complete", {
             changedTrainees: changedTrainees.length,
             persistedFollowUpLmps,
-            durationMs: Math.round(performance.now() - persistStart)
+            durationMs: followUpPersistMs
           });
         }
         pushDfpDataDiag("build:report-followups:reconciled", {
@@ -115886,7 +115894,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           followUpAssessments: followUpAssessments.length,
           changedTrainees: changedTrainees.length,
           orderedFollowUps: followUpAssessmentContexts.length,
-          skippedFollowUps: reportFollowUpDiag.skippedAssessments.length
+          skippedFollowUps: reportFollowUpDiag.skippedAssessments.length,
+          fetchMs: followUpFetchMs,
+          reconcileMs: followUpReconcileMs,
+          persistMs: followUpPersistMs
         });
       } catch (followUpError) {
         reportFollowUpDiag.error = followUpError instanceof Error ? followUpError.message : String(followUpError);
