@@ -8894,6 +8894,11 @@ async function seedCommercialLicenseIfEmpty(db) {
     return;
   }
 
+  if (process.env.DFP_SEED_STARTER_COMMERCIAL_LICENSE !== 'true') {
+    console.log('ℹ️  CommercialLicense table is empty - starter licence seed disabled');
+    return;
+  }
+
   const now = new Date().toISOString();
   const organisations = await db.$queryRawUnsafe(`
     SELECT "code", "name"
@@ -8969,11 +8974,19 @@ async function seedCommercialConfigIfEmpty(db) {
     db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLocation"`),
     db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialUnit"`),
   ]);
-  if (
-    existingOrganisations?.[0]?.count > 0
-    && existingLocations?.[0]?.count > 0
-    && existingUnits?.[0]?.count > 0
-  ) return;
+  const organisationCount = Number(existingOrganisations?.[0]?.count || 0);
+  const locationCount = Number(existingLocations?.[0]?.count || 0);
+  const unitCount = Number(existingUnits?.[0]?.count || 0);
+  if (organisationCount > 0 || locationCount > 0 || unitCount > 0) {
+    if (organisationCount === 0 || locationCount === 0 || unitCount === 0) {
+      console.warn('⚠️ Commercial platform configuration is partially empty; starter structure seed skipped to avoid restoring deleted customer setup.', {
+        organisations: organisationCount,
+        locations: locationCount,
+        units: unitCount,
+      });
+    }
+    return;
+  }
 
   const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
   const settings = settingsRows?.[0]?.data || {};
