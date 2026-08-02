@@ -108998,18 +108998,18 @@ ${"=".repeat(60)}`);
           setSettingsLoaded(true);
           return;
         }
-        if (saved2.locations?.length) setLocations(saved2.locations);
-        if (saved2.locationAbbreviations && Object.keys(saved2.locationAbbreviations).length) setLocationAbbreviations(saved2.locationAbbreviations);
-        if (saved2.serviceDefinitions?.length) setServiceDefinitions(saved2.serviceDefinitions);
-        if (saved2.units?.length) setUnits(saved2.units);
+        if (Array.isArray(saved2.locations)) setLocations(saved2.locations);
+        if (saved2.locationAbbreviations && typeof saved2.locationAbbreviations === "object") setLocationAbbreviations(saved2.locationAbbreviations);
+        if (Array.isArray(saved2.serviceDefinitions)) setServiceDefinitions(saved2.serviceDefinitions);
+        if (Array.isArray(saved2.units)) setUnits(saved2.units);
         if (saved2.unitLocations) setUnitLocations(saved2.unitLocations);
         if (saved2.locationOpAreas) setLocationOpAreas(saved2.locationOpAreas);
-        const savedLocations = saved2.locations?.length ? saved2.locations : locations;
+        const savedLocations = Array.isArray(saved2.locations) ? saved2.locations : locations;
         const savedLocationAbbreviations = {
           ...locationAbbreviations,
           ...saved2.locationAbbreviations || {}
         };
-        const savedUnits = saved2.units?.length ? saved2.units : units;
+        const savedUnits = Array.isArray(saved2.units) ? saved2.units : units;
         const savedUnitLocations = saved2.unitLocations || unitLocations;
         const savedLocationOpAreas = saved2.locationOpAreas || locationOpAreas;
         const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes) ? platformConfig.unitTypes : [];
@@ -109147,11 +109147,11 @@ ${"=".repeat(60)}`);
         }
         if (Array.isArray(saved2.sctEvents)) setSctEvents(saved2.sctEvents);
         if (Array.isArray(saved2.formationCallsigns)) setFormationCallsigns(saved2.formationCallsigns);
-        if (saved2.courseColors && Object.keys(saved2.courseColors).length) setCourseColors(saved2.courseColors);
-        if (saved2.coursePercentages && Object.keys(saved2.coursePercentages).length) {
+        if (saved2.courseColors && typeof saved2.courseColors === "object") setCourseColors(saved2.courseColors);
+        if (saved2.coursePercentages && typeof saved2.coursePercentages === "object") {
           setCoursePercentages(new Map(Object.entries(saved2.coursePercentages).map(([k, v]) => [k, v])));
         }
-        if (saved2.coursePriorities && saved2.coursePriorities.length) {
+        if (Array.isArray(saved2.coursePriorities)) {
           const localityCourses = saved2.coursePriorities.filter((course) => {
             const courseTrainees = allTraineesData.filter((t) => t.course === course);
             return courseTrainees.some((t) => personMatchesConfiguredLocation(loadedPlatformConfigForLocation, t, school));

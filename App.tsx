@@ -27976,18 +27976,18 @@ const App: React.FC = () => {
                 }
 
                 // Apply all saved settings to state
-                if (saved.locations?.length) setLocations(saved.locations);
-                if (saved.locationAbbreviations && Object.keys(saved.locationAbbreviations).length) setLocationAbbreviations(saved.locationAbbreviations);
-                if (saved.serviceDefinitions?.length) setServiceDefinitions(saved.serviceDefinitions);
-                if (saved.units?.length) setUnits(saved.units);
+                if (Array.isArray(saved.locations)) setLocations(saved.locations);
+                if (saved.locationAbbreviations && typeof saved.locationAbbreviations === 'object') setLocationAbbreviations(saved.locationAbbreviations);
+                if (Array.isArray(saved.serviceDefinitions)) setServiceDefinitions(saved.serviceDefinitions);
+                if (Array.isArray(saved.units)) setUnits(saved.units);
                 if (saved.unitLocations) setUnitLocations(saved.unitLocations);
                 if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
-                const savedLocations = saved.locations?.length ? saved.locations : locations;
+                const savedLocations = Array.isArray(saved.locations) ? saved.locations : locations;
                 const savedLocationAbbreviations = {
                     ...locationAbbreviations,
                     ...(saved.locationAbbreviations || {}),
                 };
-                const savedUnits = saved.units?.length ? saved.units : units;
+                const savedUnits = Array.isArray(saved.units) ? saved.units : units;
                 const savedUnitLocations = saved.unitLocations || unitLocations;
                 const savedLocationOpAreas = saved.locationOpAreas || locationOpAreas;
                 const configuredUnitTypes = Array.isArray(platformConfig?.unitTypes)
@@ -28150,11 +28150,11 @@ const App: React.FC = () => {
                 }
                 if (Array.isArray(saved.sctEvents)) setSctEvents(saved.sctEvents);
                 if (Array.isArray(saved.formationCallsigns)) setFormationCallsigns(saved.formationCallsigns);
-                if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
-                if (saved.coursePercentages && Object.keys(saved.coursePercentages).length) {
+                if (saved.courseColors && typeof saved.courseColors === 'object') setCourseColors(saved.courseColors);
+                if (saved.coursePercentages && typeof saved.coursePercentages === 'object') {
                     setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v as number])));
                 }
-                if (saved.coursePriorities && saved.coursePriorities.length) {
+                if (Array.isArray(saved.coursePriorities)) {
                     // Filter course priorities by the active location using saved person/unit location settings.
                     const localityCourses = saved.coursePriorities.filter(course => {
                         const courseTrainees = allTraineesData.filter(t => t.course === course);
