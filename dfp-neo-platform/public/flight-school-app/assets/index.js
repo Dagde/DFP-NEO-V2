@@ -3276,7 +3276,7 @@ const uniqueNonEmpty = (values) => Array.from(new Set(values.map(cleanToken).fil
 const normaliseAircraftNumberSettings = (settings) => {
   const prefixes = uniqueNonEmpty(Array.isArray(settings?.aircraftNumberPrefixes) ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
   const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
-  const nextPrefixes = prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
+  const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
   return {
     usePrefix: settings?.aircraftNumberUsePrefix !== false,
     prefixes: nextPrefixes,
