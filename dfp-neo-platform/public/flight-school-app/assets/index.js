@@ -10762,6 +10762,10 @@ const validateWizardTemplateFile = async (template, file) => {
   };
 };
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
+const makeWizardResourcePoolCode = (locationCode, unitCode, aircraftCode) => {
+  const parts = [locationCode, unitCode, aircraftCode].map((part) => normaliseUnitSettingsIdentifier(part).replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "")).filter(Boolean);
+  return [...parts, "ROWS"].join("-") || "";
+};
 const getOrganisationMasterLmpAccessRules = (settings) => normaliseMasterLmpAccessRules({ organisations: [{ settings: settings || {} }] });
 const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
@@ -12678,9 +12682,10 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
       const aircraftExists = aircraftTypes.some((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
       const poolKey = primaryResourcePool?.id || primaryResourcePool?.code || "";
+      const generatedPoolCode = makeWizardResourcePoolCode(resourceDraft.poolLocationCode, resourceDraft.poolUnitCode, aircraftCode);
       const nextPool = {
         id: primaryResourcePool?.id || createWizardRecordId("pool"),
-        code: primaryResourcePool?.code || `POOL-${resourcePools.length + 1}`,
+        code: primaryResourcePool?.code || generatedPoolCode,
         name: resourceDraft.poolName || `${aircraftCode} DFP Row Set`,
         organisationCode: activeOrganisation?.code || organisationDraft.code || "DEFAULT",
         locationCode: resourceDraft.poolLocationCode,
@@ -14646,7 +14651,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         }],
         resourcePools: [{
           id: createSetupTestRecordId("resource-pool", `${primaryAircraftCode}-${resourceDraft.poolLocationCode || primaryLocationCode}-${resourceDraft.poolUnitCode || cleanUnits[0]?.code || ""}`),
-          code: "RESOURCE-POOL-1",
+          code: makeWizardResourcePoolCode(resourceDraft.poolLocationCode || primaryLocationCode, resourceDraft.poolUnitCode || cleanUnits[0]?.code || "", primaryAircraftCode),
           name: resourceDraft.poolName || `${primaryAircraftCode} DFP Resource Row Set`,
           organisationCode: organisation.code,
           locationCode: resourceDraft.poolLocationCode || primaryLocationCode,
