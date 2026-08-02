@@ -4699,30 +4699,47 @@ const sameLmpEventsForSync = (left = [], right = []) => {
   }
 };
 
-const normaliseOverlayEventForSync = (item) => {
-  if (!item) return null;
-  const overlayId = item.id || item.code;
-  if (!overlayId) return null;
-  const payload = {
-    ...item,
-    id: overlayId,
-    code: item.code || overlayId,
-    lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
-    isRemedial: item.isRemedial === true || item.lmpSource === 'remedial',
-  };
-  const normalizedResourceNumber = getLmpResourceNumberForSync(payload);
-  payload.resourceNumber = normalizedResourceNumber;
-  payload.resourceCount = normalizedResourceNumber;
-  payload.resourcesPhysical = alignPhysicalResourcesForSync(payload.resourcesPhysical, normalizedResourceNumber);
-  return payload;
-};
+const getLmpEventDebugLabelForSync = (item) =>
+  item?.code || item?.id || item?.masterEventId || item?.title || item?.eventTitle || item?.eventDescription || '';
 
-const normaliseOverlayEventsForComparison = (events = []) =>
-  (Array.isArray(events) ? events : [])
-    .filter(isLmpOverlayItemForSync)
-    .map(normaliseOverlayEventForSync)
-    .filter(Boolean)
-    .sort((a, b) => String(a.id || a.code || '').localeCompare(String(b.id || b.code || '')));
+const findFirstLmpEventDifferenceForSync = (left = [], right = []) => {
+  const leftEvents = Array.isArray(left) ? left : [];
+  const rightEvents = Array.isArray(right) ? right : [];
+  if (leftEvents.length !== rightEvents.length) {
+    return {
+      reason: 'event-count',
+      existingEvents: leftEvents.length,
+      nextEvents: rightEvents.length,
+    };
+  }
+
+  for (let index = 0; index < leftEvents.length; index += 1) {
+    const existingEvent = leftEvents[index] || {};
+    const nextEvent = rightEvents[index] || {};
+    if (stableStringifyForSync(existingEvent) === stableStringifyForSync(nextEvent)) continue;
+
+    const changedKeys = [];
+    const keys = new Set([
+      ...Object.keys(existingEvent),
+      ...Object.keys(nextEvent),
+    ]);
+    keys.forEach(key => {
+      if (stableStringifyForSync(existingEvent[key]) !== stableStringifyForSync(nextEvent[key])) {
+        changedKeys.push(key);
+      }
+    });
+
+    return {
+      reason: 'event-payload',
+      index,
+      existingEvent: getLmpEventDebugLabelForSync(existingEvent),
+      nextEvent: getLmpEventDebugLabelForSync(nextEvent),
+      changedKeys: changedKeys.slice(0, 16),
+    };
+  }
+
+  return null;
+};
 
 const getLmpResourceNumberForSync = (item) => {
   const parsed = Number(item?.resourceNumber ?? item?.resourceCount);
@@ -5031,6 +5048,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     let skippedUnchangedOverlayCount = 0;
     let overlayWriteMs = 0;
     let lmpWriteMs = 0;
+    const lmpChangedSamples = [];
 
     for (const trainee of trainees) {
       const lmpType = String(trainee.lmpType || trainee.course || '').trim();
@@ -5089,19 +5107,24 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       const lmpPayloadUnchanged = Boolean(existing) &&
         sameStringSetForSync(existingCompleted, completedEventIds) &&
         sameLmpEventsForSync(existingEvents, lmpEvents);
-      const overlayPayloadUnchanged = Boolean(existing) &&
-        sameLmpEventsForSync(
-          normaliseOverlayEventsForComparison(overlayEvents),
-          normaliseOverlayEventsForComparison(lmpEvents)
-        );
 
-      if (buildSync && lmpPayloadUnchanged && overlayPayloadUnchanged) {
-        skippedUnchangedOverlayCount += 1;
-      } else {
-        const overlayWriteStartedAt = Date.now();
-        overlayUpsertCount += await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
-        overlayWriteMs += Date.now() - overlayWriteStartedAt;
+      if (buildSync && !lmpPayloadUnchanged && lmpChangedSamples.length < 8) {
+        const completedEqual = sameStringSetForSync(existingCompleted, completedEventIds);
+        const eventsEqual = sameLmpEventsForSync(existingEvents, lmpEvents);
+        lmpChangedSamples.push({
+          traineeFullName: trainee.fullName,
+          lmpType,
+          existingEvents: existingEvents.length,
+          nextEvents: lmpEvents.length,
+          completedEqual,
+          eventsEqual,
+          firstEventDifference: eventsEqual ? null : findFirstLmpEventDifferenceForSync(existingEvents, lmpEvents),
+        });
       }
+
+      const overlayWriteStartedAt = Date.now();
+      overlayUpsertCount += await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
+      overlayWriteMs += Date.now() - overlayWriteStartedAt;
 
       if (lmpPayloadUnchanged) {
         skippedUnchangedLmpCount += 1;
@@ -5154,6 +5177,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       overlayWriteMs,
       lmpWriteMs,
       buildSync,
+      lmpChangedSampleCount: lmpChangedSamples.length,
     });
 
     const created = results.filter(r => r.status === 'created').length;
@@ -5187,6 +5211,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         },
         lmpWriteMs,
         buildSync,
+        lmpChangedSamples,
         totalElapsedMs: Date.now() - syncStartedAt,
         timing,
       },
