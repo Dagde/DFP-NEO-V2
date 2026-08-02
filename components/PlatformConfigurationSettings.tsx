@@ -2392,7 +2392,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     trainingReportTemplate.repeatRules.rollingWindow.grades,
   );
   const insertEventTypes = normaliseInsertEventTypes(
-    primaryOrganisationSettings.insertEventTypes || null,
+    primaryOrganisationSettings.insertEventTypes,
+    false,
   );
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null,

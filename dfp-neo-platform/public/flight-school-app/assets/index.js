@@ -5009,8 +5009,8 @@ const cleanSyllabusType = (value, fallback) => {
 const cleanDayNight = (value, fallback) => {
   return value === "Day" || value === "Night" || value === "Day/Night" ? value : fallback;
 };
-const normaliseInsertEventTypes = (input) => {
-  const source = Array.isArray(input) ? input : DEFAULT_INSERT_EVENT_TYPES;
+const normaliseInsertEventTypes = (input, useStarterDefaults = true) => {
+  const source = Array.isArray(input) ? input : useStarterDefaults ? DEFAULT_INSERT_EVENT_TYPES : [];
   return source.map((item, index) => {
     const fallback = DEFAULT_INSERT_EVENT_TYPES[index] || DEFAULT_INSERT_EVENT_TYPES[0];
     const syllabusType = cleanSyllabusType(item?.syllabusType || item?.type, fallback.syllabusType);
@@ -5032,7 +5032,7 @@ const normaliseInsertEventTypes = (input) => {
 const getInsertEventTypes = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
-  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes);
+  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes, false);
 };
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
   permanent: "Permanent",
@@ -67857,7 +67857,8 @@ const PlatformConfigurationSettings = ({
     trainingReportTemplate.repeatRules.rollingWindow.grades
   );
   const insertEventTypes = normaliseInsertEventTypes(
-    primaryOrganisationSettings.insertEventTypes || null
+    primaryOrganisationSettings.insertEventTypes,
+    false
   );
   const taskProfiles = normaliseTaskProfileConfig(
     primaryOrganisationSettings.taskProfiles || null
