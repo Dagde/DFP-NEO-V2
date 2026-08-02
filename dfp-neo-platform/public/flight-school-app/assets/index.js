@@ -72959,6 +72959,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                         label: "Crew Seats",
                         value: crewComposition.crewCount,
                         disabled: !canEditResourcePools,
+                        commitOnChange: true,
                         onChange: (value) => updateAircraftCrewCount(index, value)
                       }
                     ) })
@@ -73120,15 +73121,27 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                           ] }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Controls how tail numbers are saved to completion records and logbooks." })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          ToggleField,
-                          {
-                            label: "Use prefix",
-                            checked: aircraftNumberSettings.usePrefix,
-                            disabled: !canEditResourcePools,
-                            onChange: (checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })
-                          }
-                        )
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end gap-2", children: [
+                          aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "button",
+                            {
+                              type: "button",
+                              disabled: !canEditResourcePools,
+                              onClick: () => addAircraftNumberPrefix(index),
+                              className: "rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                              children: "Add Prefix"
+                            }
+                          ) : null,
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            ToggleField,
+                            {
+                              label: "Use prefix",
+                              checked: aircraftNumberSettings.usePrefix,
+                              disabled: !canEditResourcePools,
+                              onChange: (checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })
+                            }
+                          )
+                        ] })
                       ] }),
                       aircraftNumberSettings.usePrefix ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -73141,39 +73154,27 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                             onChange: (value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })
                           }
                         ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2", children: [
-                          aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              DraftField,
-                              {
-                                label: `Prefix ${prefixIndex + 1}`,
-                                value: prefix,
-                                disabled: !canEditResourcePools,
-                                onCommit: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
-                              }
-                            ),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx(
-                              "button",
-                              {
-                                type: "button",
-                                disabled: !canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1,
-                                onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
-                                className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
-                                children: "Delete"
-                              }
-                            )
-                          ] }, `aircraft-number-prefix-${prefixIndex}`)),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2", children: aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_auto]", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            DraftField,
+                            {
+                              label: `Prefix ${prefixIndex + 1}`,
+                              value: prefix,
+                              disabled: !canEditResourcePools,
+                              onCommit: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
+                            }
+                          ),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "button",
                             {
                               type: "button",
-                              disabled: !canEditResourcePools,
-                              onClick: () => addAircraftNumberPrefix(index),
-                              className: "w-fit rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-                              children: "Add Prefix"
+                              disabled: !canEditResourcePools || aircraftNumberSettings.prefixes.length <= 1,
+                              onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
+                              className: "h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                              children: "Delete"
                             }
                           )
-                        ] })
+                        ] }, `aircraft-number-prefix-${prefixIndex}`)) })
                       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400", children: "Prefixes are off. Aircraft numbers will be entered as plain numbers." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
@@ -75663,7 +75664,14 @@ const AirfieldLookupField = ({
     )) }) : null
   ] });
 };
-const NumberField = ({ label, value, disabled, onChange, info }) => {
+const NumberField = ({
+  label,
+  value,
+  disabled,
+  onChange,
+  info,
+  commitOnChange = false
+}) => {
   const normaliseNumberDraft = (nextValue) => String(nextValue ?? "");
   const [draftValue, setDraftValue] = reactExports.useState(() => normaliseNumberDraft(value ?? 0));
   const [isEditing, setIsEditing] = reactExports.useState(false);
@@ -75694,7 +75702,13 @@ const NumberField = ({ label, value, disabled, onChange, info }) => {
           setDraftValue(normaliseNumberDraft(value ?? 0));
         },
         onBlur: commitDraftValue,
-        onChange: (event) => setDraftValue(event.target.value)
+        onChange: (event) => {
+          const nextValue = event.target.value;
+          setDraftValue(nextValue);
+          if (!commitOnChange || nextValue.trim() === "") return;
+          const nextNumber = Number(nextValue);
+          if (Number.isFinite(nextNumber) && nextNumber !== Number(value ?? 0)) onChange(nextNumber);
+        }
       }
     )
   ] });

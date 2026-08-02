@@ -8322,6 +8322,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             label="Crew Seats"
                             value={crewComposition.crewCount}
                             disabled={!canEditResourcePools}
+                            commitOnChange
                             onChange={(value) => updateAircraftCrewCount(index, value)}
                           />
                         </div>
@@ -8490,12 +8491,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           <div className={resourceSectionPanelTitleClass}>{pool.settings?.aircraftLabel || 'Aircraft'} Numbering</div>
                           <div className={resourceSectionPanelHintClass}>Controls how tail numbers are saved to completion records and logbooks.</div>
                         </div>
-                        <ToggleField
-                          label="Use prefix"
-                          checked={aircraftNumberSettings.usePrefix}
-                          disabled={!canEditResourcePools}
-                          onChange={(checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })}
-                        />
+                        <div className="flex flex-wrap items-end gap-2">
+                          {aircraftNumberSettings.usePrefix ? (
+                            <button
+                              type="button"
+                              disabled={!canEditResourcePools}
+                              onClick={() => addAircraftNumberPrefix(index)}
+                              className="rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Add Prefix
+                            </button>
+                          ) : null}
+                          <ToggleField
+                            label="Use prefix"
+                            checked={aircraftNumberSettings.usePrefix}
+                            disabled={!canEditResourcePools}
+                            onChange={(checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })}
+                          />
+                        </div>
                       </div>
                       {aircraftNumberSettings.usePrefix ? (
                         <div className="grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
@@ -8525,14 +8538,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 </button>
                               </div>
                             ))}
-                            <button
-                              type="button"
-                              disabled={!canEditResourcePools}
-                              onClick={() => addAircraftNumberPrefix(index)}
-                              className="w-fit rounded-md border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Add Prefix
-                            </button>
                           </div>
                         </div>
                       ) : (
@@ -11150,7 +11155,21 @@ const AirfieldLookupField = ({
   );
 };
 
-const NumberField = ({ label, value, disabled, onChange, info }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void; info?: string }) => {
+const NumberField = ({
+  label,
+  value,
+  disabled,
+  onChange,
+  info,
+  commitOnChange = false,
+}: {
+  label: string;
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+  info?: string;
+  commitOnChange?: boolean;
+}) => {
   const normaliseNumberDraft = (nextValue: unknown) => String(nextValue ?? '');
   const [draftValue, setDraftValue] = useState(() => normaliseNumberDraft(value ?? 0));
   const [isEditing, setIsEditing] = useState(false);
@@ -11183,7 +11202,13 @@ const NumberField = ({ label, value, disabled, onChange, info }: { label: string
           setDraftValue(normaliseNumberDraft(value ?? 0));
         }}
         onBlur={commitDraftValue}
-        onChange={(event) => setDraftValue(event.target.value)}
+        onChange={(event) => {
+          const nextValue = event.target.value;
+          setDraftValue(nextValue);
+          if (!commitOnChange || nextValue.trim() === '') return;
+          const nextNumber = Number(nextValue);
+          if (Number.isFinite(nextNumber) && nextNumber !== Number(value ?? 0)) onChange(nextNumber);
+        }}
       />
     </label>
   );
