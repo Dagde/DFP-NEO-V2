@@ -2731,7 +2731,9 @@ const normaliseQualification = (entry, index) => {
     id,
     name: displayName,
     code: code || displayName,
-    operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
+    operationalModels: normaliseOperationalModels(
+      Object.prototype.hasOwnProperty.call(entry || {}, "operationalModels") ? entry?.operationalModels : entry?.models
+    ),
     roleRestrictions: normaliseStringList$1(entry?.roleRestrictions || entry?.roles),
     status: String(entry?.status || "ACTIVE").toUpperCase() === "INACTIVE" ? "INACTIVE" : "ACTIVE"
   };

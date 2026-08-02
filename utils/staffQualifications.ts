@@ -177,7 +177,11 @@ const normaliseQualification = (entry: any, index: number): StaffQualificationDe
     id,
     name: displayName,
     code: code || displayName,
-    operationalModels: normaliseOperationalModels(entry?.operationalModels || entry?.models),
+    operationalModels: normaliseOperationalModels(
+      Object.prototype.hasOwnProperty.call(entry || {}, 'operationalModels')
+        ? entry?.operationalModels
+        : entry?.models,
+    ),
     roleRestrictions: normaliseStringList(entry?.roleRestrictions || entry?.roles),
     status: String(entry?.status || 'ACTIVE').toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
   };
