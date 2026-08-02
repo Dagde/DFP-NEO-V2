@@ -23933,8 +23933,9 @@ const App: React.FC = () => {
         currentUserName,
     ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
 
+    const hasAuthenticatedAdminRole = ['ADMIN', 'SUPER_ADMIN'].includes(String(authUser?.role || '').toUpperCase());
     const hasRuntimePlatformWideAccess = (
-        ['ADMIN', 'SUPER_ADMIN'].includes(String(authUser?.role || '').toUpperCase())
+        hasAuthenticatedAdminRole
         || platformAccessContext.isSuperAdmin
         || platformAccessContext.isPlatformAdmin
     );
@@ -30505,11 +30506,12 @@ const App: React.FC = () => {
     }, [platformAccessContext, platformConfig, normalisePermissionId]);
 
     const canUsePlatformPermission = useCallback((permissionId: string): boolean => {
+        if (hasAuthenticatedAdminRole) return true;
         if (platformAccessContext.isSuperAdmin) return true;
         if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
         if (assignedPlatformProfilePermissions.has(normalisePermissionId('settings.superAdmin'))) return true;
         return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
-    }, [platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
+    }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
 
     const denyPlatformAction = useCallback((actionLabel: string) => {
         setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);

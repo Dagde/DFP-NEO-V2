@@ -758,12 +758,12 @@ export const getPlatformAccessContext = (
   if (rows.length === 0) {
     return {
       rows: [],
-      isConfigured: false,
-      isPlatformAdmin: true,
-      isSuperAdmin: true,
-      accessibleLocations: configuredLocations,
-      permissionProfileIds: DEFAULT_PLATFORM_PERMISSION_PROFILES.map((profile) => profile.id),
-      permissions: ALL_PLATFORM_PERMISSION_IDS,
+      isConfigured: true,
+      isPlatformAdmin: false,
+      isSuperAdmin: false,
+      accessibleLocations: [],
+      permissionProfileIds: [],
+      permissions: [],
     };
   }
 

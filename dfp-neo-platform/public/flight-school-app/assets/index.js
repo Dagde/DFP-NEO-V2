@@ -2419,12 +2419,12 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = []) 
   if (rows.length === 0) {
     return {
       rows: [],
-      isConfigured: false,
-      isPlatformAdmin: true,
-      isSuperAdmin: true,
-      accessibleLocations: configuredLocations,
-      permissionProfileIds: DEFAULT_PLATFORM_PERMISSION_PROFILES.map((profile) => profile.id),
-      permissions: ALL_PLATFORM_PERMISSION_IDS
+      isConfigured: true,
+      isPlatformAdmin: false,
+      isSuperAdmin: false,
+      accessibleLocations: [],
+      permissionProfileIds: [],
+      permissions: []
     };
   }
   const permissionContext = resolvePermissionsForRows(config, rows);
@@ -105209,7 +105209,8 @@ const App = () => {
     sessionUser?.username,
     currentUserName
   ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
-  const hasRuntimePlatformWideAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase()) || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin;
+  const hasAuthenticatedAdminRole = ["ADMIN", "SUPER_ADMIN"].includes(String(authUser?.role || "").toUpperCase());
+  const hasRuntimePlatformWideAccess = hasAuthenticatedAdminRole || platformAccessContext.isSuperAdmin || platformAccessContext.isPlatformAdmin;
   const selectableLocationCodes = reactExports.useMemo(
     () => hasRuntimePlatformWideAccess ? baseSelectableLocationCodes : platformAccessContext.accessibleLocations,
     [baseSelectableLocationCodes, hasRuntimePlatformWideAccess, platformAccessContext]
@@ -110557,11 +110558,12 @@ ${"=".repeat(60)}`);
     return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
   }, [platformAccessContext, platformConfig, normalisePermissionId]);
   const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
+    if (hasAuthenticatedAdminRole) return true;
     if (platformAccessContext.isSuperAdmin) return true;
     if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
     if (assignedPlatformProfilePermissions.has(normalisePermissionId("settings.superAdmin"))) return true;
     return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
-  }, [platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
+  }, [hasAuthenticatedAdminRole, platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
   const denyPlatformAction = reactExports.useCallback((actionLabel) => {
     setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
   }, []);
