@@ -8947,8 +8947,15 @@ async function seedCommercialUserAccessIfEmpty(db) {
   const existing = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialUserAccess"`);
   if (existing?.[0]?.count > 0) return;
 
+  if (process.env.DFP_SEED_STARTER_USER_ACCESS !== 'true') {
+    console.log('ℹ️  CommercialUserAccess table is empty - starter user access seed disabled');
+    return;
+  }
+
   const now = new Date().toISOString();
   const users = await db.$queryRawUnsafe(`SELECT id, "userId", username, "firstName", "lastName", role FROM "User" WHERE "isActive" = true`);
+  const organisations = await db.$queryRawUnsafe(`SELECT "code" FROM "CommercialOrganisation" WHERE "status" = 'ACTIVE' ORDER BY "createdAt" ASC LIMIT 1`);
+  const organisationCode = String(organisations?.[0]?.code || 'DEFAULT').trim() || 'DEFAULT';
   const locations = await db.$queryRawUnsafe(`SELECT "code" FROM "CommercialLocation" WHERE "status" = 'ACTIVE'`);
 
   for (const user of users) {
@@ -8958,12 +8965,12 @@ async function seedCommercialUserAccessIfEmpty(db) {
     const accessLevel = elevated ? 'Admin' : 'Read';
 
     for (const location of locations) {
-      const scopeKey = `${user.userId}|DEFAULT|${location.code}||`;
+      const scopeKey = `${user.userId}|${organisationCode}|${location.code}||`;
       await db.$executeRawUnsafe(`
         INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid()::text, $1, $2, $3, 'DEFAULT', $4, NULL, NULL, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, NULL, NULL, $6, $7, $8, 'ACTIVE', '{}'::jsonb, $9::timestamp, $9::timestamp)
         ON CONFLICT ("scopeKey") DO NOTHING
-      `, user.userId, user.username, displayName, location.code, scopeKey, accessRole, accessLevel, now);
+      `, user.userId, user.username, displayName, organisationCode, location.code, scopeKey, accessRole, accessLevel, now);
     }
   }
 }
