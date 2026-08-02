@@ -1495,6 +1495,9 @@ const buildConfigurationHealth = (
   const activeLocationCodes = new Set(activeLocations.map((location) => toIdentifier(location.code)));
   const activeUnitCodes = new Set(activeUnits.map((unit) => toIdentifier(unit.code)));
   const activeAircraftTypeCodes = new Set(activeAircraftTypes.map((aircraft) => toIdentifier(aircraft.code)));
+  const activeResourcePoolAircraftTypeCodes = new Set(
+    activeResourcePools.map((pool) => toIdentifier(pool.aircraftTypeCode)).filter(Boolean)
+  );
   const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
   const platformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const userIds = new Set(platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
@@ -1592,6 +1595,35 @@ const buildConfigurationHealth = (
     add('OK', 'Units', 'Active units are linked to locations', 'No active unit is pointing at a missing or inactive location.', 'units-linked');
   }
 
+  if (activeAircraftTypes.length === 0) {
+    add(
+      'WARNING',
+      'Aircraft Types & DFP Resource Rows',
+      'No active aircraft type',
+      'Add at least one aircraft type before configuring DFP resource rows or building flight resources.',
+      'aircraft-types-none',
+      undefined,
+      { focusSubsectionId: 'platform-aircraft-types' }
+    );
+  }
+
+  if (activeAircraftTypes.length > 0 && activeResourcePools.length > 0) {
+    activeAircraftTypes.forEach((aircraft) => {
+      const aircraftTypeCode = toIdentifier(aircraft.code);
+      if (!aircraftTypeCode || activeResourcePoolAircraftTypeCodes.has(aircraftTypeCode)) return;
+      const aircraftLabel = String(aircraft.name || aircraft.code || 'Aircraft type').trim();
+      add(
+        'WARNING',
+        'Aircraft Types & DFP Resource Rows',
+        `${aircraftLabel} is not used by any DFP resource row set`,
+        `The aircraft type exists, but no active DFP resource row set points to ${aircraftTypeCode}. It will not drive DFP rows until a row set uses it.`,
+        `aircraft-${aircraftTypeCode}-unused-by-pools`,
+        undefined,
+        { focusAircraftTypeCode: aircraftTypeCode, focusSubsectionId: 'platform-resource-pools' }
+      );
+    });
+  }
+
   activeResourcePools.forEach((pool) => {
     const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || 'DFP resource row set';
     const locationCode = toIdentifier(pool.locationCode);
@@ -1606,6 +1638,18 @@ const buildConfigurationHealth = (
     }
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
       add('WARNING', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+    }
+    const aircraftRows = toNumber(pool.settings?.aircraft);
+    if (aircraftRows > 0 && !aircraftTypeCode) {
+      add(
+        'WARNING',
+        'Aircraft Types & DFP Resource Rows',
+        `${poolName} has no aircraft type`,
+        `${poolName} has ${aircraftRows} aircraft row${aircraftRows === 1 ? '' : 's'}, but is not linked to an active aircraft type.`,
+        `pool-${poolName}-missing-aircraft-type`,
+        undefined,
+        { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
+      );
     }
     const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
