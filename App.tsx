@@ -11538,6 +11538,52 @@ function generateDfpInternal(
 
     const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
     const nextPlusOneLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[] };
+    const normaliseBuildMethodOfDelivery = (methodOfDelivery: unknown): string[] => {
+        if (Array.isArray(methodOfDelivery)) {
+            return methodOfDelivery.map(value => String(value || '').trim()).filter(Boolean);
+        }
+        const value = String(methodOfDelivery || '').trim();
+        if (!value) return [];
+        return value.split(/[,;\n]/).map(part => part.trim()).filter(Boolean);
+    };
+    const isBuildCptTrainingEvent = (item?: Partial<SyllabusItemDetail> | null): boolean => {
+        if (!item) return false;
+        const code = String(item.code || item.id || '').toUpperCase();
+        const type = String(item.type || '').trim().toLowerCase();
+        const deliveryLabels = normaliseBuildMethodOfDelivery((item as any).methodOfDelivery);
+        const deliveryText = deliveryLabels.join(' ').toLowerCase();
+        return type === 'cpt' ||
+            code.includes('CPT') ||
+            deliveryLabels.some(label => label.toUpperCase() === 'CPT') ||
+            deliveryText.includes('procedural trainer');
+    };
+    const classifyBuildTrainingEvent = (item?: Partial<SyllabusItemDetail> | null): {
+        bucket: 'flight' | 'ftd' | 'cpt' | 'ground' | 'none';
+        reason: string;
+    } => {
+        if (!item) return { bucket: 'none', reason: 'NO_EVENT' };
+        const eventType = String(item.type || '').trim();
+        if (eventType === 'Flight') return { bucket: 'flight', reason: 'TYPE_FLIGHT' };
+        if (eventType === 'FTD') return { bucket: 'ftd', reason: 'TYPE_FTD' };
+        if (isBuildCptTrainingEvent(item)) return { bucket: 'cpt', reason: 'CPT_TYPE_CODE_OR_DELIVERY' };
+        if (eventType === 'Ground School') return { bucket: 'ground', reason: 'TYPE_GROUND_SCHOOL' };
+        return { bucket: 'none', reason: 'UNSUPPORTED_EVENT_TYPE' };
+    };
+    const describeBuildTrainingEventForDiag = (item?: Partial<SyllabusItemDetail> | null) => {
+        const classification = classifyBuildTrainingEvent(item);
+        return {
+            event: item?.code || item?.id || null,
+            eventType: item?.type || null,
+            methodOfDelivery: normaliseBuildMethodOfDelivery((item as any)?.methodOfDelivery),
+            dayNight: item?.dayNight || null,
+            sortieType: item?.sortieType || null,
+            duration: typeof item?.duration === 'number' ? item.duration : null,
+            resourceNumber: typeof item?.resourceNumber === 'number' ? item.resourceNumber : null,
+            prerequisites: item?.prerequisites || [],
+            classificationBucket: classification.bucket,
+            classificationReason: classification.reason,
+        };
+    };
 
     activeTrainees.forEach(trainee => {
         const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
@@ -11545,7 +11591,7 @@ function generateDfpInternal(
             let classifiedList: 'flight' | 'ftd' | 'cpt' | 'ground' | 'bnf' | 'none' = 'none';
             let classificationReason = '';
 
-            if (next.code.startsWith('BNF') && next.type === 'Flight') {
+            if ((next.code || '').startsWith('BNF') && next.type === 'Flight') {
                 // CRITICAL: Check if trainee already has day events (including Active DFP)
                 if (isPersonScheduledForDayEvents(trainee.fullName)) {
                     buildDebugLog(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
@@ -11558,25 +11604,15 @@ function generateDfpInternal(
                     classifiedList = 'bnf';
                     classificationReason = 'BNF_NIGHT_FLIGHT';
                 }
-            } else if (next.type === 'Flight') {
-                nextEventLists.flight.push(trainee);
-                classifiedList = 'flight';
-                classificationReason = 'TYPE_FLIGHT';
-            } else if (next.type === 'FTD') {
-                nextEventLists.ftd.push(trainee);
-                classifiedList = 'ftd';
-                classificationReason = 'TYPE_FTD';
-            } else if (next.type === 'Ground School' && next.methodOfDelivery.includes('CPT')) {
-                nextEventLists.cpt.push(trainee);
-                classifiedList = 'cpt';
-                classificationReason = 'GROUND_SCHOOL_METHOD_CPT';
-            } else if (next.type === 'Ground School') {
-                   nextEventLists.ground.push(trainee);
-                   classifiedList = 'ground';
-                   classificationReason = 'TYPE_GROUND_SCHOOL';
-               } else {
-                   classificationReason = 'UNSUPPORTED_NEXT_EVENT_TYPE';
-               }
+            } else {
+                const classification = classifyBuildTrainingEvent(next);
+                classifiedList = classification.bucket;
+                classificationReason = classification.reason;
+                if (classification.bucket === 'flight') nextEventLists.flight.push(trainee);
+                else if (classification.bucket === 'ftd') nextEventLists.ftd.push(trainee);
+                else if (classification.bucket === 'cpt') nextEventLists.cpt.push(trainee);
+                else if (classification.bucket === 'ground') nextEventLists.ground.push(trainee);
+            }
 
                if (isRemedialSyllabusItem(next) || (next.code || '').includes('-R') || (next.id || '').includes('-R')) {
                    traceMandatoryRemedial('nextEventClassificationTrace', {
@@ -11600,10 +11636,11 @@ function generateDfpInternal(
 
                // Handle plusOne separately
                if (plusOne) {
-                   if (plusOne.type === 'Flight') nextPlusOneLists.flight.push(trainee);
-                   else if (plusOne.type === 'FTD') nextPlusOneLists.ftd.push(trainee);
-                   else if (plusOne.type === 'Ground School' && plusOne.methodOfDelivery.includes('CPT')) nextPlusOneLists.cpt.push(trainee);
-                   else if (plusOne.type === 'Ground School') nextPlusOneLists.ground.push(trainee);
+                   const plusOneClassification = classifyBuildTrainingEvent(plusOne);
+                   if (plusOneClassification.bucket === 'flight') nextPlusOneLists.flight.push(trainee);
+                   else if (plusOneClassification.bucket === 'ftd') nextPlusOneLists.ftd.push(trainee);
+                   else if (plusOneClassification.bucket === 'cpt') nextPlusOneLists.cpt.push(trainee);
+                   else if (plusOneClassification.bucket === 'ground') nextPlusOneLists.ground.push(trainee);
                   }
         }
     });
@@ -11807,14 +11844,22 @@ function generateDfpInternal(
     neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter(t => !traineeNextEventMap.get(t.fullName)?.next));
     neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
         const trainee = activeTrainees.find(candidate => candidate.fullName === name);
+        const nextDiag = describeBuildTrainingEventForDiag(ev.next);
+        const plusOneDiag = describeBuildTrainingEventForDiag(ev.plusOne);
         return ({
         name,
         course: trainee?.course || null,
         nextCode: ev.next?.code || null,
         nextType: ev.next?.type || null,
+        nextMethodOfDelivery: nextDiag.methodOfDelivery,
+        nextClassificationBucket: nextDiag.classificationBucket,
+        nextClassificationReason: nextDiag.classificationReason,
         nextPrerequisites: ev.next?.prerequisites || [],
         plusOneCode: ev.plusOne?.code || null,
         plusOneType: ev.plusOne?.type || null,
+        plusOneMethodOfDelivery: plusOneDiag.methodOfDelivery,
+        plusOneClassificationBucket: plusOneDiag.classificationBucket,
+        plusOneClassificationReason: plusOneDiag.classificationReason,
         });
     });
     neoBuildDiag.zeroTileInvestigation.checkpoints.push({
@@ -12606,17 +12651,21 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
                 return {
                     trainee: trainee.fullName,
-                    event: item?.code || null,
-                    eventType: item?.type || null,
-                    prerequisites: item?.prerequisites || [],
+                    course: trainee.course || null,
+                    unit: trainee.unit || null,
+                    ...describeBuildTrainingEventForDiag(item),
                 };
             }),
+            placed: [] as any[],
             unplaced: [] as {
                 trainee: string;
                 course?: string | null;
                 unit?: string | null;
                 event: string | null;
                 eventType: string | null;
+                methodOfDelivery?: string[];
+                classificationBucket?: string;
+                classificationReason?: string;
                 dayNight?: string | null;
                 sortieType?: string | null;
                 duration?: number | null;
@@ -12826,6 +12875,24 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                                 }
                                 if (result && typeof result === 'object' && 'id' in result) {
                                     pushGeneratedEvent({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                    if (listDiag.placed.length < 80) {
+                                        listDiag.placed.push({
+                                            trainee: trainee.fullName,
+                                            course: trainee.course || null,
+                                            unit: trainee.unit || null,
+                                            ...describeBuildTrainingEventForDiag(syllabusItem),
+                                            type,
+                                            isPlusOne,
+                                            isNightPass,
+                                            startTime: result.startTime,
+                                            displayTime: _fmtT(result.startTime),
+                                            duration: result.duration,
+                                            durationSource: scheduledDurationSource,
+                                            resourceId: result.resourceId,
+                                            instructor: result.instructor || null,
+                                            generatedEventsCount: generatedEvents.length,
+                                        });
+                                    }
                                     if (isPlusOne && next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
                                         traceFormation('laterScheduledEvents', {
                                             phase: 'plus-one-scheduled-after-unscheduled-formation-next',
@@ -12942,12 +13009,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     trainee: trainee.fullName,
                     course: trainee.course || null,
                     unit: trainee.unit || null,
-                    event: item?.code || null,
-                    eventType: item?.type || null,
-                    dayNight: item?.dayNight || null,
-                    sortieType: item?.sortieType || null,
-                    duration: typeof item?.duration === 'number' ? item.duration : null,
-                    resourceNumber: typeof item?.resourceNumber === 'number' ? item.resourceNumber : null,
+                    ...describeBuildTrainingEventForDiag(item),
                 };
             });
             listDiag.passSummaries.push({
@@ -12990,6 +13052,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 .slice(0, 8),
             firstSearchWindowSample: listDiag.searchWindowSamples[0] || null,
             firstRejectionSample: listDiag.rejectionSamples[0] || null,
+            placedSample: listDiag.placed.slice(0, 12),
             unplacedSample: listDiag.unplaced.slice(0, 12),
         });
         markBuildTiming(`schedule-list:${listName}`, {
@@ -33348,13 +33411,21 @@ const App: React.FC = () => {
                     resourcePrefix = 'FTD ';
                     break;
                 case 'Ground School':
-                    if (syllabusItem.methodOfDelivery.includes('CPT')) {
+                    {
+                    const methodLabels = Array.isArray(syllabusItem.methodOfDelivery)
+                        ? syllabusItem.methodOfDelivery.map(value => String(value || '').trim()).filter(Boolean)
+                        : String((syllabusItem as any).methodOfDelivery || '').split(/[,;\n]/).map(value => value.trim()).filter(Boolean);
+                    const methodText = methodLabels.join(' ').toLowerCase();
+                    if ((syllabusItem.code || '').toUpperCase().includes('CPT') ||
+                        methodLabels.some(label => label.toUpperCase() === 'CPT') ||
+                        methodText.includes('procedural trainer')) {
                         resourcePrefix = 'CPT ';
                     } else {
                         // This explicitly handles MB, TUT, QUIZ, and any other Ground School event.
                         resourcePrefix = 'Ground ';
                     }
                     break;
+                    }
                 default:
                     // This case should be unreachable due to TypeScript types,
                     // but as a fallback, we'll assume Ground to be safer than Flight.
