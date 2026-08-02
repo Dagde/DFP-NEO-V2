@@ -619,7 +619,7 @@ const unitTypeListsEqual = (left: string[] = [], right: string[] = []): boolean 
 const applyDefaultUnitTraineeAvailability = (config: PlatformConfig): PlatformConfig => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;
-  const units = config.units.map((unit) => {
+  const units = (Array.isArray(config.units) ? config.units : []).map((unit) => {
     const settings = unit.settings || {};
     if (Object.prototype.hasOwnProperty.call(settings, 'hasTrainees')) return unit;
     changed = true;
@@ -742,7 +742,7 @@ const applyOrganisationStructureRenamesToUnits = (
   const renameMaps = buildOrganisationOptionRenameMaps(previousStructure, nextStructure);
   if (renameMaps.size === 0) return config;
   let changed = false;
-  const units = config.units.map((unit) => {
+  const units = (Array.isArray(config.units) ? config.units : []).map((unit) => {
     const sourcePath = Array.isArray(unit?.settings?.parentOrganisationPath)
       ? unit.settings.parentOrganisationPath
       : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || '').split('-');
@@ -1931,6 +1931,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const configResourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
   const configSchedulingRuleSets = Array.isArray(config.schedulingRuleSets) ? config.schedulingRuleSets : [];
   const configUserAccess = Array.isArray(config.userAccess) ? config.userAccess : [];
+  const configModules = Array.isArray(config.modules) ? config.modules : [];
+  const configLicenses = Array.isArray(config.licenses) ? config.licenses : [];
+  const configPlatformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePoolsDirty = useMemo(() => (
     JSON.stringify({
@@ -2232,7 +2235,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   useEffect(() => {
     const cleanFocusUserId = String(focusUserId || '').trim();
     if (loading || scrollTarget !== 'platform-user-access' || !cleanFocusUserId) return;
-    const matchingUser = config.platformUsers.find((user) => (
+    const matchingUser = configPlatformUsers.find((user) => (
       [user.userId, user.username]
         .map((value) => String(value || '').trim())
         .some((value) => value === cleanFocusUserId)
@@ -2244,16 +2247,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       }, 120);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [config.platformUsers, focusUserId, loading, scrollTarget]);
+  }, [configPlatformUsers, focusUserId, loading, scrollTarget]);
 
   useEffect(() => {
     const cleanLocationCode = String(focusLocationCode || '').trim().toUpperCase();
     if (loading || scrollTarget !== 'platform-user-access' || !cleanLocationCode) return;
-    const matchingAccess = config.userAccess.find((access) => {
+    const matchingAccess = configUserAccess.find((access) => {
       const accessLocationCode = String(access.locationCode || '').trim().toUpperCase();
       const accessUnitCode = String(access.unitCode || '').trim().toUpperCase();
       const accessUnit = accessUnitCode
-        ? config.units.find((unit) => String(unit.code || '').trim().toUpperCase() === accessUnitCode)
+        ? configUnits.find((unit) => String(unit.code || '').trim().toUpperCase() === accessUnitCode)
         : null;
       const unitHomeLocationCode = String(accessUnit?.locationCode || '').trim().toUpperCase();
       return accessLocationCode === cleanLocationCode || unitHomeLocationCode === cleanLocationCode;
@@ -2261,7 +2264,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (matchingAccess?.userId) {
       setSelectedAccessUserId(matchingAccess.userId);
     }
-  }, [config.units, config.userAccess, focusLocationCode, loading, scrollTarget]);
+  }, [configUnits, configUserAccess, focusLocationCode, loading, scrollTarget]);
 
   useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || '').trim();
@@ -2313,16 +2316,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   const activeModules = useMemo(
-    () => config.modules.filter((module) => String(module.status || 'ACTIVE').toUpperCase() === 'ACTIVE'),
-    [config.modules],
+    () => configModules.filter((module) => String(module.status || 'ACTIVE').toUpperCase() === 'ACTIVE'),
+    [configModules],
   );
 
   const primaryOrganisationIndex = useMemo(() => {
-    const activeIndex = config.organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
+    const activeIndex = configOrganisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
     return activeIndex >= 0 ? activeIndex : 0;
-  }, [config.organisations]);
+  }, [configOrganisations]);
 
-  const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
+  const primaryOrganisation = configOrganisations[primaryOrganisationIndex] || null;
   const primaryOrganisationSettings = primaryOrganisation?.settings || {};
   const organisationStructure = useMemo(
     () => normaliseOrganisationStructure(primaryOrganisationSettings.organisationStructure || null, primaryOrganisation?.name || ''),
@@ -2392,11 +2395,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const activeTrainingReportUnitCode = String(activeUnitCode || '').includes('+')
     ? String(activeUnitCode || '').split('+')[0]?.trim()
     : String(activeUnitCode || '').trim();
-  const activeTrainingReportUnit = config.units.find((unit) => (
+  const activeTrainingReportUnit = configUnits.find((unit) => (
     String(unit.code || '').trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()
-  )) || config.units.find(isActiveRecord) || config.units[0] || null;
+  )) || configUnits.find(isActiveRecord) || configUnits[0] || null;
   const activeTrainingReportUnitIndex = activeTrainingReportUnit
-    ? config.units.findIndex((unit) => unit === activeTrainingReportUnit)
+    ? configUnits.findIndex((unit) => unit === activeTrainingReportUnit)
     : -1;
   const activeTrainingReportUnitLabel = activeTrainingReportUnit
     ? `${activeTrainingReportUnit.code}${activeTrainingReportUnit.name && activeTrainingReportUnit.name !== activeTrainingReportUnit.code ? ` - ${activeTrainingReportUnit.name}` : ''}`
@@ -2414,7 +2417,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     () => getTrainingReportElementPreviewList(trainingReportPhraseBank),
     [trainingReportPhraseBank],
   );
-  const trainingReportSyncOptions = config.units
+  const trainingReportSyncOptions = configUnits
     .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
     .map((unit) => ({
       code: String(unit.code || '').trim(),
@@ -2550,8 +2553,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const updateOrganisationStructure = (nextStructure: OrganisationStructureSettings) => {
     setConfig((prev) => {
-      if (prev.organisations.length === 0) return prev;
-      const organisations = [...prev.organisations];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      if (previousOrganisations.length === 0) return prev;
+      const organisations = [...previousOrganisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
@@ -2988,8 +2992,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
-      if (prev.organisations.length === 0) return prev;
-      const organisations = [...prev.organisations];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      if (previousOrganisations.length === 0) return prev;
+      const organisations = [...previousOrganisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
@@ -3009,7 +3014,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...prev,
         organisations,
         aircraftTypes: shouldRenameSeats
-          ? prev.aircraftTypes.map((aircraft) => {
+          ? (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).map((aircraft) => {
               const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
               const seats = crewComposition.seats.map((seat) => ({
                 ...seat,
@@ -3023,7 +3028,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats }),
               };
             })
-          : prev.aircraftTypes,
+          : (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []),
       };
     });
   };
@@ -3394,9 +3399,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ) => {
     if (activeTrainingReportUnitIndex < 0) return;
     setConfig((prev) => {
-      const targetUnit = prev.units[activeTrainingReportUnitIndex];
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetUnit = previousUnits[activeTrainingReportUnitIndex];
       if (!targetUnit) return prev;
-      const orgSettings = prev.organisations[0]?.settings || {};
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const orgSettings = previousOrganisations[0]?.settings || {};
       const currentTemplate = normaliseTrainingReportTemplate(
         targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
         targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null,
@@ -3408,7 +3415,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       });
       return {
         ...prev,
-        units: prev.units.map((unit, index) => index === activeTrainingReportUnitIndex
+        units: previousUnits.map((unit, index) => index === activeTrainingReportUnitIndex
           ? {
               ...unit,
               settings: {
@@ -3775,7 +3782,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const sourcePhraseBank = getUnitTrainingReportPhraseBank(config as any, sourceUnit.code, phraseBank);
     const nextConfig = {
       ...config,
-      units: config.units.map((unit, index) => index === activeTrainingReportUnitIndex
+      units: configUnits.map((unit, index) => index === activeTrainingReportUnitIndex
         ? {
             ...unit,
             settings: {
@@ -3839,7 +3846,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ]),
     ));
     setTaskProfileAbbreviationDrafts(Object.fromEntries(
-      config.units.map((unit, unitIndex) => [
+      configUnits.map((unit, unitIndex) => [
         getTaskProfileUnitDraftKey(unit, unitIndex),
         formatTaskProfileAbbreviationText(unit.settings?.taskProfileAbbreviations || {}),
       ]),
@@ -3936,7 +3943,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addMasterLmpAccessRule = () => {
-    const defaultUnit = activePlatformUnit || config.units.filter(isActiveRecord)[0];
+    const defaultUnit = activePlatformUnit || configUnits.filter(isActiveRecord)[0];
     updateMasterLmpAccessRules([
       ...masterLmpAccessRules,
       {
@@ -4018,7 +4025,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateLicenseFeatures = (licenseIndex: number, changes: Record<string, any>) => {
-    const currentFeatures = config.licenses[licenseIndex]?.features || {};
+    const currentFeatures = configLicenses[licenseIndex]?.features || {};
     updateRow('licenses', licenseIndex, {
       features: {
         ...currentFeatures,
@@ -4031,7 +4038,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setConfig((prev) => {
       const nextConfig = {
         ...prev,
-        [collection]: prev[collection].map((item, itemIndex) => (
+        [collection]: (Array.isArray(prev[collection]) ? prev[collection] : []).map((item, itemIndex) => (
           itemIndex === index ? { ...item, ...changes } : item
         )),
       };
@@ -4063,7 +4070,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setConfig((prev) => {
       const nextConfig = {
         ...prev,
-        userAccess: prev.userAccess.filter((_, itemIndex) => itemIndex !== index),
+        userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).filter((_, itemIndex) => itemIndex !== index),
       };
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
@@ -4377,16 +4384,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addUnit = () => {
     if (!canEdit) return;
-    const contextUnit = activePlatformUnit || config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))] || null;
+    const contextUnit = activePlatformUnit || configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))] || null;
     const contextUnitSettings = contextUnit?.settings || {};
-    const defaultLocation = contextUnit?.locationCode || config.locations[0]?.code || '';
+    const defaultLocation = contextUnit?.locationCode || configLocations[0]?.code || '';
     const newUnitId = createClientRecordId('unit');
-    const nextUnitIndex = config.units.length;
+    const nextUnitIndex = configUnits.length;
     const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
-      config.organisations[0]?.settings?.trainingReportTemplate || null,
-      config.organisations[0]?.settings?.trainingReportTerminology || null,
+      configOrganisations[0]?.settings?.trainingReportTemplate || null,
+      configOrganisations[0]?.settings?.trainingReportTerminology || null,
     );
-    const defaultTrainingReportPhraseBank = config.organisations[0]?.settings?.trainingReportPhraseBank || phraseBank;
+    const defaultTrainingReportPhraseBank = configOrganisations[0]?.settings?.trainingReportPhraseBank || phraseBank;
     pendingUnitScrollIdRef.current = newUnitId;
     setSelectedUnitIndex(nextUnitIndex);
     setEditingUnitIndex(nextUnitIndex);
@@ -4470,18 +4477,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const removedCode = String(unit?.code || '').trim();
     const nextConfig: PlatformConfig = {
       ...config,
-      units: config.units.filter((_, itemIndex) => itemIndex !== unitIndex),
-      unitModules: config.unitModules.filter((item) => String(item.unitCode || '').trim() !== removedCode),
-      resourcePools: config.resourcePools.map((pool) => (
+      units: configUnits.filter((_, itemIndex) => itemIndex !== unitIndex),
+      unitModules: (Array.isArray(config.unitModules) ? config.unitModules : []).filter((item) => String(item.unitCode || '').trim() !== removedCode),
+      resourcePools: configResourcePools.map((pool) => (
         removedCode && String(pool.unitCode || '').trim() === removedCode ? { ...pool, unitCode: null } : pool
       )),
-      userAccess: config.userAccess.map((access) => (
+      userAccess: configUserAccess.map((access) => (
         removedCode && String(access.unitCode || '').trim() === removedCode ? { ...access, unitCode: null } : access
       )),
-      schedulingRuleSets: config.schedulingRuleSets.map((ruleSet) => (
+      schedulingRuleSets: configSchedulingRuleSets.map((ruleSet) => (
         removedCode && String(ruleSet.unitCode || '').trim() === removedCode ? { ...ruleSet, unitCode: null } : ruleSet
       )),
-      organisations: config.organisations.map((organisation) => ({
+      organisations: configOrganisations.map((organisation) => ({
         ...organisation,
         settings: removedCode
           ? rewriteUnitCodesInSettings(organisation.settings || {}, removedCode, null)
@@ -4502,8 +4509,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const id = createClientRecordId('aircraft-type');
     setNewAircraftTypeVisibleIds((current) => new Set([...Array.from(current), id]));
     setConfig((prev) => {
-      const existingCodes = new Set(prev.aircraftTypes.map((aircraft: any) => String(aircraft.code || '').trim().toUpperCase()));
-      let suffix = prev.aircraftTypes.length + 1;
+      const previousAircraftTypes = Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : [];
+      const existingCodes = new Set(previousAircraftTypes.map((aircraft: any) => String(aircraft.code || '').trim().toUpperCase()));
+      let suffix = previousAircraftTypes.length + 1;
       let code = `AIRCRAFT-${suffix}`;
       while (existingCodes.has(code.toUpperCase())) {
         suffix += 1;
@@ -4513,7 +4521,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return {
         ...prev,
         aircraftTypes: [
-          ...prev.aircraftTypes,
+          ...previousAircraftTypes,
           {
             id,
             code,
@@ -4662,14 +4670,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addResourcePool = () => {
-    const selectedUnit = config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))];
-    const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || '';
+    const selectedUnit = configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))];
+    const defaultLocation = selectedUnit?.locationCode || configLocations[0]?.code || '';
     const defaultUnitCode = selectedUnit?.code || '';
     const newPoolId = createClientRecordId('pool');
     pendingResourcePoolScrollIdRef.current = newPoolId;
     setResourcePoolActiveTab('resourcePools');
     setConfig((prev) => {
-      const selectedUnitRecord = prev.units.find((unit) => (
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const previousAircraftTypes = Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : [];
+      const previousResourcePools = Array.isArray(prev.resourcePools) ? prev.resourcePools : [];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const selectedUnitRecord = previousUnits.find((unit) => (
         String(unit.code || '').trim().toUpperCase() === String(defaultUnitCode || '').trim().toUpperCase()
       )) || selectedUnit;
       const unitAircraftCode = String(
@@ -4680,8 +4692,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || '').trim().toUpperCase();
       const defaultAircraftTypeCode = unitAircraftCode
         || visibleAircraftCode
-        || String(prev.aircraftTypes[0]?.code || '').trim().toUpperCase();
-      const defaultAircraftType = prev.aircraftTypes.find((aircraft) => (
+        || String(previousAircraftTypes[0]?.code || '').trim().toUpperCase();
+      const defaultAircraftType = previousAircraftTypes.find((aircraft) => (
         String(aircraft.code || '').trim().toUpperCase() === defaultAircraftTypeCode
       ));
       const defaultAircraftLabel = String(
@@ -4694,12 +4706,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return {
         ...prev,
         resourcePools: [
-          ...prev.resourcePools,
+          ...previousResourcePools,
           {
             id: newPoolId,
-            code: `POOL-${prev.resourcePools.length + 1}`,
+            code: `POOL-${previousResourcePools.length + 1}`,
             name: 'New DFP Resource Row Set',
-            organisationCode: prev.organisations[0]?.code || 'DEFAULT',
+            organisationCode: previousOrganisations[0]?.code || 'DEFAULT',
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
             aircraftTypeCode: defaultAircraftTypeCode || null,
@@ -4728,20 +4740,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addLicense = () => {
     setConfig((prev) => {
-      const organisationCode = prev.organisations[0]?.code || 'DEFAULT';
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const previousModules = Array.isArray(prev.modules) ? prev.modules : [];
+      const previousLicenses = Array.isArray(prev.licenses) ? prev.licenses : [];
+      const organisationCode = previousOrganisations[0]?.code || 'DEFAULT';
       const newLicenseId = createClientRecordId('license');
-      const activeModuleCodes = prev.modules
+      const activeModuleCodes = previousModules
         .filter((module) => String(module.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
         .map((module) => module.code)
         .filter(Boolean);
       return {
         ...prev,
         licenses: [
-          ...prev.licenses,
+          ...previousLicenses,
           {
             id: newLicenseId,
             organisationCode,
-            licenseKey: `${organisationCode}-LIC-${prev.licenses.length + 1}`,
+            licenseKey: `${organisationCode}-LIC-${previousLicenses.length + 1}`,
             licenseName: 'New Licence',
             deploymentMode: 'Online SaaS',
             status: 'ACTIVE',
@@ -4766,8 +4781,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const toggleLicenseModule = (licenseIndex: number, moduleCode: string, checked: boolean) => {
-    const currentCodes = Array.isArray(config.licenses[licenseIndex]?.moduleCodes)
-      ? config.licenses[licenseIndex].moduleCodes
+    const currentCodes = Array.isArray(configLicenses[licenseIndex]?.moduleCodes)
+      ? configLicenses[licenseIndex].moduleCodes
       : [];
     const moduleCodes = checked
       ? Array.from(new Set([...currentCodes, moduleCode]))
@@ -4776,9 +4791,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const permissionProfiles = useMemo<PermissionProfile[]>(() => {
-    const profiles = config.organisations[0]?.settings?.permissionProfiles;
+    const profiles = configOrganisations[0]?.settings?.permissionProfiles;
     return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
-  }, [config.organisations]);
+  }, [configOrganisations]);
 
   const configurationHealth = useMemo(
     () => buildConfigurationHealth(config, permissionProfiles, readinessPercent, operationalReadinessPercent),
@@ -4798,20 +4813,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       generatedAt,
       summary: configurationHealthSummary,
       inventory: {
-        organisations: config.organisations.length,
-        activeOrganisations: config.organisations.filter(isActiveRecord).length,
-        locations: config.locations.length,
-        activeLocations: config.locations.filter(isActiveRecord).length,
-        units: config.units.length,
-        activeUnits: config.units.filter(isActiveRecord).length,
-        resourcePools: config.resourcePools.length,
-        activeResourcePools: config.resourcePools.filter(isActiveRecord).length,
-        modules: config.modules.length,
-        activeModules: config.modules.filter(isActiveRecord).length,
-        licences: config.licenses.length,
-        activeLicences: config.licenses.filter(isActiveRecord).length,
-        platformUsers: config.platformUsers.length,
-        activeUserAccessScopes: config.userAccess.filter(isActiveRecord).length,
+        organisations: configOrganisations.length,
+        activeOrganisations: configOrganisations.filter(isActiveRecord).length,
+        locations: configLocations.length,
+        activeLocations: configLocations.filter(isActiveRecord).length,
+        units: configUnits.length,
+        activeUnits: configUnits.filter(isActiveRecord).length,
+        resourcePools: configResourcePools.length,
+        activeResourcePools: configResourcePools.filter(isActiveRecord).length,
+        modules: configModules.length,
+        activeModules: configModules.filter(isActiveRecord).length,
+        licences: configLicenses.length,
+        activeLicences: configLicenses.filter(isActiveRecord).length,
+        platformUsers: configPlatformUsers.length,
+        activeUserAccessScopes: configUserAccess.filter(isActiveRecord).length,
       },
       readiness: {
         deploymentReadinessPercent: readinessPercent,
@@ -4829,8 +4844,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const updatePermissionProfiles = (profiles: PermissionProfile[]) => {
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0
-        ? prev.organisations
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const organisations = previousOrganisations.length > 0
+        ? previousOrganisations
         : [{ code: 'DEFAULT', name: 'Organisation', status: 'ACTIVE', settings: {} }];
       return {
         ...prev,
@@ -4875,14 +4891,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const userOptions = useMemo(
     () => {
-      const platformOptions = config.platformUsers.map((user) => ({
+      const platformOptions = configPlatformUsers.map((user) => ({
         id: user.userId || user.username,
         name: displayUserName(user),
         username: user.username || user.userId || '',
         email: user.email || '',
       })).filter((user) => user.id);
       const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
-      const orphanOptions = config.userAccess
+      const orphanOptions = configUserAccess
         .filter((access) => {
           const accessUserId = toIdentifier(access.userId);
           const accessUsername = toIdentifier(access.username);
@@ -4897,23 +4913,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         .filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
       return [...platformOptions, ...orphanOptions].sort((a, b) => a.name.localeCompare(b.name));
     },
-    [config.platformUsers, config.userAccess],
+    [configPlatformUsers, configUserAccess],
   );
 
   const selectedAccessUser = useMemo(
-    () => config.platformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
-    [config.platformUsers, selectedAccessUserId],
+    () => configPlatformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
+    [configPlatformUsers, selectedAccessUserId],
   );
 
   const selectedAccessRows = useMemo(
-    () => config.userAccess
+    () => configUserAccess
       .map((access, index) => ({ access, index }))
       .filter(({ access }) => (
         [access.userId, access.username]
           .map((value) => String(value || '').trim())
           .some((value) => value === selectedAccessUserId)
       )),
-    [config.userAccess, selectedAccessUserId],
+    [configUserAccess, selectedAccessUserId],
   );
 
   const selectedAccessDisplayName = selectedAccessUser
@@ -4936,7 +4952,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const setSelectedUserProfileIds = (profileIds: string[]) => {
     setConfig((prev) => ({
       ...prev,
-      userAccess: prev.userAccess.map((access) => (
+      userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => (
         access.userId === selectedAccessUserId
           ? { ...access, settings: { ...(access.settings || {}), permissionProfileIds: profileIds } }
           : access
@@ -4945,7 +4961,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addUserAccess = () => {
-    const defaultUser = selectedAccessUser || config.platformUsers[0];
+    const defaultUser = selectedAccessUser || configPlatformUsers[0];
     const userId = selectedAccessUserId || defaultUser?.userId || defaultUser?.username || '';
     const displayName = defaultUser
       ? `${defaultUser.firstName || ''} ${defaultUser.lastName || ''}`.trim() || defaultUser.username || userId
@@ -4954,13 +4970,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setConfig((prev) => ({
       ...prev,
       userAccess: [
-        ...prev.userAccess,
+        ...(Array.isArray(prev.userAccess) ? prev.userAccess : []),
         {
           userId,
           username: defaultUser?.username || '',
           displayName,
-          organisationCode: prev.organisations[0]?.code || 'DEFAULT',
-          locationCode: prev.locations[0]?.code || '',
+          organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || 'DEFAULT',
+          locationCode: (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || '',
           unitCode: '',
           moduleCode: '',
           role: 'Viewer',
@@ -5334,7 +5350,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     setConfig((prev) => ({
       ...prev,
-      resourcePools: prev.resourcePools.filter((pool, index) => (
+      resourcePools: (Array.isArray(prev.resourcePools) ? prev.resourcePools : []).filter((pool, index) => (
         String(pool.id || pool.code || `resource-pool-${index}`) !== selectedResourcePoolDeleteOption.key
       )),
     }));
@@ -6590,7 +6606,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="space-y-4 p-4">
-          {config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => (
+          {configOrganisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => (
             <div key={org.id || `platform-organisation-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
               <DraftField label="Organisation Code" value={org.code} disabled={!canEdit || !organisationStructureUnlocked} onCommit={(value) => updateRow('organisations', index, { code: value })} />
               <DraftField label="Organisation Name" value={org.name} disabled={!canEdit || !organisationStructureUnlocked} onCommit={(value) => updateRow('organisations', index, { name: value })} />
@@ -7000,7 +7016,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </div>
                 </label>
                 <div>
-                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
+                  <SelectField label="Location" value={unit.locationCode || ''} disabled={!isUnitEditing} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateRow('units', index, { locationCode: value })} />
                 </div>
                 <div>
                   <SelectField label="Unit Type" value={unit.unitType || ''} disabled={!isUnitEditing} options={unitTypeOptions} onChange={(value) => updateRow('units', index, { unitType: value })} />
@@ -7262,7 +7278,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     label="Unit"
                     value={rule.unitCode || ''}
                     disabled={!canEditSection('platform-master-lmp-access')}
-                    options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]}
+                    options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code))]}
                     emptyLabel="All Units"
                     onChange={(value) => updateMasterLmpAccessRule(index, { unitCode: value || null })}
                   />
@@ -7310,7 +7326,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       label="Location"
                       value={rule.locationCode || ''}
                       disabled={!canEditSection('platform-master-lmp-access')}
-                      options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]}
+                      options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code))]}
                       emptyLabel="All Locations"
                       onChange={(value) => updateMasterLmpAccessRule(index, { locationCode: value || null })}
                     />
@@ -7318,7 +7334,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       label="Aircraft Type"
                       value={rule.aircraftTypeCode || ''}
                       disabled={!canEditSection('platform-master-lmp-access')}
-                      options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]}
+                      options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code))]}
                       emptyLabel="Any Type"
                       onChange={(value) => updateMasterLmpAccessRule(index, { aircraftTypeCode: value || null })}
                     />
@@ -7334,7 +7350,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       label="Parent Org"
                       value={rule.parentOrganisationCode || ''}
                       disabled={!canEditSection('platform-master-lmp-access')}
-                      options={['', ...config.organisations.map((organisation) => organisation.code).filter(Boolean)]}
+                      options={['', ...configOrganisations.map((organisation) => organisation.code).filter(Boolean)]}
                       emptyLabel="Any Org"
                       onChange={(value) => updateMasterLmpAccessRule(index, { parentOrganisationCode: value || null })}
                     />
@@ -7438,8 +7454,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               />
                               <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete." />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
-                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
-                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
+                              <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
+                              <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
                               <NumberField label="Duration (min)" value={profile.durationMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) })} />
                               <NumberField label="Pre-Flight (min)" value={profile.preFlightMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) })} />
                               <NumberField label="Post-Flight (min)" value={profile.postFlightMinutes} disabled={!canEditSection('platform-standard-missions')} onChange={(value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) })} />
@@ -8428,9 +8444,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         <DraftField label="Pool Code" value={pool.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { code: value })} />
                         <DraftField label="Pool Name" value={pool.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { name: value })} />
-                        <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
-                        <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
-                        <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
+                        <SelectField label="Location" value={pool.locationCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code))]} onChange={(value) => updateRow('resourcePools', index, { locationCode: value || null })} />
+                        <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code))]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
+                        <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEditResourcePools} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
                         <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEditResourcePools} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
                       </div>
                     </div>
@@ -8591,14 +8607,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <thead className="bg-gray-950 text-xs uppercase tracking-wide text-gray-400">
               <tr>
                 <th className="px-3 py-2">Unit</th>
-                {config.modules.map((module) => <th key={module.code} className="px-3 py-2">{module.name}</th>)}
+                {configModules.map((module) => <th key={module.code} className="px-3 py-2">{module.name}</th>)}
               </tr>
             </thead>
             <tbody>
               {visibleUnitRows.map(({ unit }) => (
                 <tr id={`platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`} key={unit.code} className="border-t border-gray-700">
                   <td className="px-3 py-2 font-semibold text-white">{unit.name}</td>
-                  {config.modules.map((module) => {
+                  {configModules.map((module) => {
                     const unitModuleIndex = config.unitModules.findIndex((item) => item.unitCode === unit.code && item.moduleCode === module.code);
                     const unitModule = config.unitModules[unitModuleIndex];
                     return (
@@ -8975,7 +8991,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <MetricPill label="Mode" value={licenseStatus?.runtimeMode || 'development'} />
                 <MetricPill label="Enforcement" value={licenseStatus?.enforcementMode || deploymentProfile.enforcementMode} />
                 <MetricPill label="Signed" value={String(licenseStatus?.verifiedLicenseCount ?? 0)} />
-                <MetricPill label="Unsigned" value={String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length)} />
+                <MetricPill label="Unsigned" value={String(licenseStatus?.unsignedLicenseCount ?? configLicenses.length)} />
               </div>
               <div className="rounded border border-cyan-400/30 bg-gray-950 px-3 py-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Deployment Fingerprint</div>
@@ -9032,13 +9048,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             )}
           </div>
 
-          {config.licenses.length === 0 && (
+          {configLicenses.length === 0 && (
             <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
               No licence records exist yet. Add one before introducing licence enforcement.
             </div>
           )}
           <div id="platform-license-records" className="space-y-4">
-          {config.licenses.map((license, index) => {
+          {configLicenses.map((license, index) => {
             const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
             const licenceFeatures = license.features || {};
             const licenceStatus = getLicenceStatusSummary(license);
@@ -9086,7 +9102,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="grid gap-3 lg:grid-cols-3">
                   <DraftField label="Licence Name" value={license.licenseName || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { licenseName: value })} />
                   <DraftField label="Licence Key" value={license.licenseKey || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { licenseKey: value })} />
-                  <SelectField label="Organisation" value={license.organisationCode || config.organisations[0]?.code || 'DEFAULT'} disabled={!canEditSection('platform-licensing')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
+                  <SelectField label="Organisation" value={license.organisationCode || configOrganisations[0]?.code || 'DEFAULT'} disabled={!canEditSection('platform-licensing')} options={configOrganisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
                   <SelectField label="Deployment Model" value={normaliseDeploymentMode(license.deploymentMode || 'Online SaaS')} disabled={!canEditSection('platform-licensing')} options={DEPLOYMENT_MODE_OPTIONS} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
                   <SelectField label="Status" value={license.status || 'ACTIVE'} disabled={!canEditSection('platform-licensing')} options={['ACTIVE', 'SUSPENDED', 'EXPIRED', 'INACTIVE']} onChange={(value) => updateRow('licenses', index, { status: value })} />
                   <DraftField label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEditSection('platform-licensing')} onCommit={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
@@ -9140,7 +9156,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <span className="ml-auto text-xs text-gray-400">{moduleCodes.length} selected</span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {config.modules.map((module) => (
+                    {configModules.map((module) => (
                       <label key={module.code} className="flex items-start gap-2 rounded border border-gray-700 bg-gray-900 p-3 text-sm text-gray-200">
                         <input
                           type="checkbox"
@@ -10286,7 +10302,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <FormationCallsignsSection
                 callsigns={formationCallsigns}
                 onUpdateCallsigns={onUpdateFormationCallsigns}
-                units={visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit: any) => unit.code).filter(Boolean)}
+                units={visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit: any) => unit.code).filter(Boolean)}
                 locations={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location: any) => location.name || location.code).filter(Boolean)}
                 locationOptions={(visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations)
                   .map((location: any) => ({ name: location.name || location.code || '', code: location.code || '' }))
@@ -10582,9 +10598,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]">
-                  <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEditSection('platform-user-access')} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
-                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code))]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
-                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
+                  <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEditSection('platform-user-access')} options={configOrganisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
+                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...(visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code))]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
+                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEditSection('platform-user-access')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code))]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
                   <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEditSection('platform-user-access')} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
                   <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEditSection('platform-user-access')} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
                   <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEditSection('platform-user-access')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
@@ -10601,7 +10617,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
                         checked={appliesToAllFeatures}
                         disabled={!canEditSection('platform-user-access')}
-                        onChange={(event) => updateRow('userAccess', index, { moduleCode: event.target.checked ? null : (config.modules[0]?.code || '') })}
+                        onChange={(event) => updateRow('userAccess', index, { moduleCode: event.target.checked ? null : (configModules[0]?.code || '') })}
                       />
                       <span>
                         <span className="block font-bold">Apply to all enabled features for this unit</span>
@@ -10628,7 +10644,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Limit This Scope To One Feature Area</h6>
                         <InfoHint text="Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." />
                       </div>
-                      <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEditSection('platform-user-access') || appliesToAllFeatures} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
+                      <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEditSection('platform-user-access') || appliesToAllFeatures} options={['', ...configModules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
                       <p className="mt-2 text-xs text-gray-400">
                         Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting.
                       </p>
@@ -10724,8 +10740,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               {visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => (
                 <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5">
                   <DraftField label="Name" value={ruleSet.name} disabled={!canEditSection('platform-scheduling-rule-sets')} onCommit={(value) => updateRow('schedulingRuleSets', index, { name: value })} />
-                  <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
-                  <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
+                  <SelectField label="Unit" value={ruleSet.unitCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { unitCode: value || null })} />
+                  <SelectField label="Aircraft Type" value={ruleSet.aircraftTypeCode || ''} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['', ...(visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code))]} onChange={(value) => updateRow('schedulingRuleSets', index, { aircraftTypeCode: value || null })} />
                   <SelectField label="Scope" value={ruleSet.scope || 'Unit'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Organisation', 'Location', 'Unit', 'AircraftType']} onChange={(value) => updateRow('schedulingRuleSets', index, { scope: value })} />
                   <SelectField label="Active" value={ruleSet.isActive === false ? 'No' : 'Yes'} disabled={!canEditSection('platform-scheduling-rule-sets')} options={['Yes', 'No']} onChange={(value) => updateRow('schedulingRuleSets', index, { isActive: value === 'Yes' })} />
                 </div>

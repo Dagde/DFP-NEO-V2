@@ -66446,7 +66446,7 @@ const unitTypeListsEqual = (left = [], right = []) => left.length === right.leng
 const applyDefaultUnitTraineeAvailability$1 = (config) => {
   if (!config || !Array.isArray(config.units)) return config;
   let changed = false;
-  const units = config.units.map((unit) => {
+  const units = (Array.isArray(config.units) ? config.units : []).map((unit) => {
     const settings = unit.settings || {};
     if (Object.prototype.hasOwnProperty.call(settings, "hasTrainees")) return unit;
     changed = true;
@@ -66535,7 +66535,7 @@ const applyOrganisationStructureRenamesToUnits = (config, previousStructure, nex
   const renameMaps = buildOrganisationOptionRenameMaps(previousStructure, nextStructure);
   if (renameMaps.size === 0) return config;
   let changed = false;
-  const units = config.units.map((unit) => {
+  const units = (Array.isArray(config.units) ? config.units : []).map((unit) => {
     const sourcePath = Array.isArray(unit?.settings?.parentOrganisationPath) ? unit.settings.parentOrganisationPath : String(unit?.settings?.parentOrganisationPath || unit?.settings?.parentOrganisation || "").split("-");
     const cleanPath = sourcePath.map((part) => String(part || "").trim()).filter(Boolean);
     const nextPath = cleanPath.map((part, pathIndex) => {
@@ -67472,13 +67472,16 @@ const PlatformConfigurationSettings = ({
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
-  Array.isArray(config.organisations) ? config.organisations : [];
-  Array.isArray(config.locations) ? config.locations : [];
+  const configOrganisations = Array.isArray(config.organisations) ? config.organisations : [];
+  const configLocations = Array.isArray(config.locations) ? config.locations : [];
   const configUnits = Array.isArray(config.units) ? config.units : [];
   const configAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const configResourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
   const configSchedulingRuleSets = Array.isArray(config.schedulingRuleSets) ? config.schedulingRuleSets : [];
   const configUserAccess = Array.isArray(config.userAccess) ? config.userAccess : [];
+  const configModules = Array.isArray(config.modules) ? config.modules : [];
+  const configLicenses = Array.isArray(config.licenses) ? config.licenses : [];
+  const configPlatformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
     aircraftTypes: Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [],
@@ -67747,7 +67750,7 @@ const PlatformConfigurationSettings = ({
   reactExports.useEffect(() => {
     const cleanFocusUserId = String(focusUserId || "").trim();
     if (loading || scrollTarget !== "platform-user-access" || !cleanFocusUserId) return;
-    const matchingUser = config.platformUsers.find((user) => [user.userId, user.username].map((value) => String(value || "").trim()).some((value) => value === cleanFocusUserId));
+    const matchingUser = configPlatformUsers.find((user) => [user.userId, user.username].map((value) => String(value || "").trim()).some((value) => value === cleanFocusUserId));
     setSelectedAccessUserId(matchingUser?.userId || matchingUser?.username || cleanFocusUserId);
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
@@ -67755,21 +67758,21 @@ const PlatformConfigurationSettings = ({
       }, 120);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [config.platformUsers, focusUserId, loading, scrollTarget]);
+  }, [configPlatformUsers, focusUserId, loading, scrollTarget]);
   reactExports.useEffect(() => {
     const cleanLocationCode = String(focusLocationCode || "").trim().toUpperCase();
     if (loading || scrollTarget !== "platform-user-access" || !cleanLocationCode) return;
-    const matchingAccess = config.userAccess.find((access) => {
+    const matchingAccess = configUserAccess.find((access) => {
       const accessLocationCode = String(access.locationCode || "").trim().toUpperCase();
       const accessUnitCode = String(access.unitCode || "").trim().toUpperCase();
-      const accessUnit = accessUnitCode ? config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === accessUnitCode) : null;
+      const accessUnit = accessUnitCode ? configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === accessUnitCode) : null;
       const unitHomeLocationCode = String(accessUnit?.locationCode || "").trim().toUpperCase();
       return accessLocationCode === cleanLocationCode || unitHomeLocationCode === cleanLocationCode;
     });
     if (matchingAccess?.userId) {
       setSelectedAccessUserId(matchingAccess.userId);
     }
-  }, [config.units, config.userAccess, focusLocationCode, loading, scrollTarget]);
+  }, [configUnits, configUserAccess, focusLocationCode, loading, scrollTarget]);
   reactExports.useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || "").trim();
     if (loading || !cleanSubsectionId) return;
@@ -67816,14 +67819,14 @@ const PlatformConfigurationSettings = ({
     [airfieldCatalogue]
   );
   const activeModules = reactExports.useMemo(
-    () => config.modules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE"),
-    [config.modules]
+    () => configModules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE"),
+    [configModules]
   );
   const primaryOrganisationIndex = reactExports.useMemo(() => {
-    const activeIndex = config.organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
+    const activeIndex = configOrganisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
     return activeIndex >= 0 ? activeIndex : 0;
-  }, [config.organisations]);
-  const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
+  }, [configOrganisations]);
+  const primaryOrganisation = configOrganisations[primaryOrganisationIndex] || null;
   const primaryOrganisationSettings = primaryOrganisation?.settings || {};
   const organisationStructure = reactExports.useMemo(
     () => normaliseOrganisationStructure(primaryOrganisationSettings.organisationStructure || null, primaryOrganisation?.name || ""),
@@ -67884,8 +67887,8 @@ const PlatformConfigurationSettings = ({
   const crewPositionLabelMap = getCrewPositionLabelMap(crewPositionTerminology);
   const defaultCrewPositionIds = new Set(DEFAULT_CREW_POSITION_TERMINOLOGY.positions.map((entry) => entry.id));
   const activeTrainingReportUnitCode = String(activeUnitCode || "").includes("+") ? String(activeUnitCode || "").split("+")[0]?.trim() : String(activeUnitCode || "").trim();
-  const activeTrainingReportUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || config.units.find(isActiveRecord) || config.units[0] || null;
-  const activeTrainingReportUnitIndex = activeTrainingReportUnit ? config.units.findIndex((unit) => unit === activeTrainingReportUnit) : -1;
+  const activeTrainingReportUnit = configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === activeTrainingReportUnitCode.toUpperCase()) || configUnits.find(isActiveRecord) || configUnits[0] || null;
+  const activeTrainingReportUnitIndex = activeTrainingReportUnit ? configUnits.findIndex((unit) => unit === activeTrainingReportUnit) : -1;
   const activeTrainingReportUnitLabel = activeTrainingReportUnit ? `${activeTrainingReportUnit.code}${activeTrainingReportUnit.name && activeTrainingReportUnit.name !== activeTrainingReportUnit.code ? ` - ${activeTrainingReportUnit.name}` : ""}` : "No unit selected";
   const trainingReportTemplate = normaliseTrainingReportTemplate(
     activeTrainingReportUnit?.settings?.trainingReportTemplate || primaryOrganisationSettings.trainingReportTemplate || null,
@@ -67900,7 +67903,7 @@ const PlatformConfigurationSettings = ({
     () => getTrainingReportElementPreviewList(trainingReportPhraseBank),
     [trainingReportPhraseBank]
   );
-  const trainingReportSyncOptions = config.units.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
+  const trainingReportSyncOptions = configUnits.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
     code: String(unit.code || "").trim(),
     label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""}`
   }));
@@ -68010,8 +68013,9 @@ const PlatformConfigurationSettings = ({
   };
   const updateOrganisationStructure = (nextStructure) => {
     setConfig((prev) => {
-      if (prev.organisations.length === 0) return prev;
-      const organisations = [...prev.organisations];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      if (previousOrganisations.length === 0) return prev;
+      const organisations = [...previousOrganisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
@@ -68374,8 +68378,9 @@ This permanently removes the organisation record from platform configuration and
   const updateCrewPositionTerminology = (positions, renamedPosition, deletedDefaultIds = crewPositionTerminology.deletedDefaultIds || []) => {
     setRankTerminologyDirty(true);
     setConfig((prev) => {
-      if (prev.organisations.length === 0) return prev;
-      const organisations = [...prev.organisations];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      if (previousOrganisations.length === 0) return prev;
+      const organisations = [...previousOrganisations];
       const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
       const orgIndex = activeIndex >= 0 ? activeIndex : 0;
       const currentOrg = organisations[orgIndex] || organisations[0];
@@ -68393,7 +68398,7 @@ This permanently removes the organisation record from platform configuration and
       return {
         ...prev,
         organisations,
-        aircraftTypes: shouldRenameSeats ? prev.aircraftTypes.map((aircraft) => {
+        aircraftTypes: shouldRenameSeats ? (Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []).map((aircraft) => {
           const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const seats = crewComposition.seats.map((seat) => ({
             ...seat,
@@ -68404,7 +68409,7 @@ This permanently removes the organisation record from platform configuration and
             ...aircraft,
             crewComposition: normaliseAircraftCrewComposition({ ...crewComposition, seats })
           };
-        }) : prev.aircraftTypes
+        }) : Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : []
       };
     });
   };
@@ -68675,9 +68680,11 @@ This permanently removes the organisation record from platform configuration and
   const updateTrainingReportTemplate = (updater) => {
     if (activeTrainingReportUnitIndex < 0) return;
     setConfig((prev) => {
-      const targetUnit = prev.units[activeTrainingReportUnitIndex];
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetUnit = previousUnits[activeTrainingReportUnitIndex];
       if (!targetUnit) return prev;
-      const orgSettings = prev.organisations[0]?.settings || {};
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const orgSettings = previousOrganisations[0]?.settings || {};
       const currentTemplate = normaliseTrainingReportTemplate(
         targetUnit.settings?.trainingReportTemplate || orgSettings.trainingReportTemplate || null,
         targetUnit.settings?.trainingReportTerminology || orgSettings.trainingReportTerminology || null
@@ -68689,7 +68696,7 @@ This permanently removes the organisation record from platform configuration and
       });
       return {
         ...prev,
-        units: prev.units.map((unit, index) => index === activeTrainingReportUnitIndex ? {
+        units: previousUnits.map((unit, index) => index === activeTrainingReportUnitIndex ? {
           ...unit,
           settings: {
             ...unit.settings || {},
@@ -68953,7 +68960,7 @@ This permanently removes the organisation record from platform configuration and
     const sourcePhraseBank = getUnitTrainingReportPhraseBank(config, sourceUnit.code, phraseBank);
     const nextConfig = {
       ...config,
-      units: config.units.map((unit, index) => index === activeTrainingReportUnitIndex ? {
+      units: configUnits.map((unit, index) => index === activeTrainingReportUnitIndex ? {
         ...unit,
         settings: {
           ...unit.settings || {},
@@ -69011,7 +69018,7 @@ This permanently removes the organisation record from platform configuration and
       ])
     ));
     setTaskProfileAbbreviationDrafts(Object.fromEntries(
-      config.units.map((unit, unitIndex) => [
+      configUnits.map((unit, unitIndex) => [
         getTaskProfileUnitDraftKey(unit, unitIndex),
         formatTaskProfileAbbreviationText(unit.settings?.taskProfileAbbreviations || {})
       ])
@@ -69091,7 +69098,7 @@ This permanently removes the organisation record from platform configuration and
     updateMasterLmpAccessRules(masterLmpAccessRules.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, ...changes } : rule));
   };
   const addMasterLmpAccessRule = () => {
-    const defaultUnit = activePlatformUnit || config.units.filter(isActiveRecord)[0];
+    const defaultUnit = activePlatformUnit || configUnits.filter(isActiveRecord)[0];
     updateMasterLmpAccessRules([
       ...masterLmpAccessRules,
       {
@@ -69161,7 +69168,7 @@ This permanently removes the organisation record from platform configuration and
     }));
   };
   const updateLicenseFeatures = (licenseIndex, changes) => {
-    const currentFeatures = config.licenses[licenseIndex]?.features || {};
+    const currentFeatures = configLicenses[licenseIndex]?.features || {};
     updateRow("licenses", licenseIndex, {
       features: {
         ...currentFeatures,
@@ -69173,7 +69180,7 @@ This permanently removes the organisation record from platform configuration and
     setConfig((prev) => {
       const nextConfig = {
         ...prev,
-        [collection]: prev[collection].map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
+        [collection]: (Array.isArray(prev[collection]) ? prev[collection] : []).map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
       };
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
@@ -69200,7 +69207,7 @@ This permanently removes the organisation record from platform configuration and
     setConfig((prev) => {
       const nextConfig = {
         ...prev,
-        userAccess: prev.userAccess.filter((_, itemIndex) => itemIndex !== index)
+        userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).filter((_, itemIndex) => itemIndex !== index)
       };
       notifyPlatformConfigUpdatedSoon(nextConfig);
       return nextConfig;
@@ -69446,16 +69453,16 @@ This permanently removes the organisation record from platform configuration and
   };
   const addUnit = () => {
     if (!canEdit) return;
-    const contextUnit = activePlatformUnit || config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))] || null;
+    const contextUnit = activePlatformUnit || configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))] || null;
     const contextUnitSettings = contextUnit?.settings || {};
-    const defaultLocation = contextUnit?.locationCode || config.locations[0]?.code || "";
+    const defaultLocation = contextUnit?.locationCode || configLocations[0]?.code || "";
     const newUnitId = createClientRecordId("unit");
-    const nextUnitIndex = config.units.length;
+    const nextUnitIndex = configUnits.length;
     const defaultTrainingReportTemplate = normaliseTrainingReportTemplate(
-      config.organisations[0]?.settings?.trainingReportTemplate || null,
-      config.organisations[0]?.settings?.trainingReportTerminology || null
+      configOrganisations[0]?.settings?.trainingReportTemplate || null,
+      configOrganisations[0]?.settings?.trainingReportTerminology || null
     );
-    const defaultTrainingReportPhraseBank = config.organisations[0]?.settings?.trainingReportPhraseBank || phraseBank;
+    const defaultTrainingReportPhraseBank = configOrganisations[0]?.settings?.trainingReportPhraseBank || phraseBank;
     pendingUnitScrollIdRef.current = newUnitId;
     setSelectedUnitIndex(nextUnitIndex);
     setEditingUnitIndex(nextUnitIndex);
@@ -69534,12 +69541,12 @@ This permanently removes the organisation record from platform configuration and
     const removedCode = String(unit?.code || "").trim();
     const nextConfig = {
       ...config,
-      units: config.units.filter((_, itemIndex) => itemIndex !== unitIndex),
-      unitModules: config.unitModules.filter((item) => String(item.unitCode || "").trim() !== removedCode),
-      resourcePools: config.resourcePools.map((pool) => removedCode && String(pool.unitCode || "").trim() === removedCode ? { ...pool, unitCode: null } : pool),
-      userAccess: config.userAccess.map((access) => removedCode && String(access.unitCode || "").trim() === removedCode ? { ...access, unitCode: null } : access),
-      schedulingRuleSets: config.schedulingRuleSets.map((ruleSet) => removedCode && String(ruleSet.unitCode || "").trim() === removedCode ? { ...ruleSet, unitCode: null } : ruleSet),
-      organisations: config.organisations.map((organisation) => ({
+      units: configUnits.filter((_, itemIndex) => itemIndex !== unitIndex),
+      unitModules: (Array.isArray(config.unitModules) ? config.unitModules : []).filter((item) => String(item.unitCode || "").trim() !== removedCode),
+      resourcePools: configResourcePools.map((pool) => removedCode && String(pool.unitCode || "").trim() === removedCode ? { ...pool, unitCode: null } : pool),
+      userAccess: configUserAccess.map((access) => removedCode && String(access.unitCode || "").trim() === removedCode ? { ...access, unitCode: null } : access),
+      schedulingRuleSets: configSchedulingRuleSets.map((ruleSet) => removedCode && String(ruleSet.unitCode || "").trim() === removedCode ? { ...ruleSet, unitCode: null } : ruleSet),
+      organisations: configOrganisations.map((organisation) => ({
         ...organisation,
         settings: removedCode ? rewriteUnitCodesInSettings(organisation.settings || {}, removedCode, null) : organisation.settings
       }))
@@ -69556,8 +69563,9 @@ This permanently removes the organisation record from platform configuration and
     const id = createClientRecordId("aircraft-type");
     setNewAircraftTypeVisibleIds((current) => /* @__PURE__ */ new Set([...Array.from(current), id]));
     setConfig((prev) => {
-      const existingCodes = new Set(prev.aircraftTypes.map((aircraft) => String(aircraft.code || "").trim().toUpperCase()));
-      let suffix = prev.aircraftTypes.length + 1;
+      const previousAircraftTypes = Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : [];
+      const existingCodes = new Set(previousAircraftTypes.map((aircraft) => String(aircraft.code || "").trim().toUpperCase()));
+      let suffix = previousAircraftTypes.length + 1;
       let code = `AIRCRAFT-${suffix}`;
       while (existingCodes.has(code.toUpperCase())) {
         suffix += 1;
@@ -69566,7 +69574,7 @@ This permanently removes the organisation record from platform configuration and
       return {
         ...prev,
         aircraftTypes: [
-          ...prev.aircraftTypes,
+          ...previousAircraftTypes,
           {
             id,
             code,
@@ -69677,32 +69685,36 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     onShowSuccess(`Aircraft type "${selectedAircraftTypeDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const addResourcePool = () => {
-    const selectedUnit = config.units[Math.min(selectedUnitIndex, Math.max(0, config.units.length - 1))];
-    const defaultLocation = selectedUnit?.locationCode || config.locations[0]?.code || "";
+    const selectedUnit = configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))];
+    const defaultLocation = selectedUnit?.locationCode || configLocations[0]?.code || "";
     const defaultUnitCode = selectedUnit?.code || "";
     const newPoolId = createClientRecordId("pool");
     pendingResourcePoolScrollIdRef.current = newPoolId;
     setResourcePoolActiveTab("resourcePools");
     setConfig((prev) => {
-      const selectedUnitRecord = prev.units.find((unit) => String(unit.code || "").trim().toUpperCase() === String(defaultUnitCode || "").trim().toUpperCase()) || selectedUnit;
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const previousAircraftTypes = Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : [];
+      const previousResourcePools = Array.isArray(prev.resourcePools) ? prev.resourcePools : [];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const selectedUnitRecord = previousUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === String(defaultUnitCode || "").trim().toUpperCase()) || selectedUnit;
       const unitAircraftCode = String(
         selectedUnitRecord?.settings?.aircraftTypeCode || selectedUnitRecord?.settings?.aircraftType || ""
       ).trim().toUpperCase();
       const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || "").trim().toUpperCase();
-      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode || String(prev.aircraftTypes[0]?.code || "").trim().toUpperCase();
-      const defaultAircraftType = prev.aircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === defaultAircraftTypeCode);
+      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode || String(previousAircraftTypes[0]?.code || "").trim().toUpperCase();
+      const defaultAircraftType = previousAircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === defaultAircraftTypeCode);
       const defaultAircraftLabel = String(
         defaultAircraftType?.name || defaultAircraftType?.code || defaultAircraftTypeCode || "Aircraft"
       ).trim();
       return {
         ...prev,
         resourcePools: [
-          ...prev.resourcePools,
+          ...previousResourcePools,
           {
             id: newPoolId,
-            code: `POOL-${prev.resourcePools.length + 1}`,
+            code: `POOL-${previousResourcePools.length + 1}`,
             name: "New DFP Resource Row Set",
-            organisationCode: prev.organisations[0]?.code || "DEFAULT",
+            organisationCode: previousOrganisations[0]?.code || "DEFAULT",
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
             aircraftTypeCode: defaultAircraftTypeCode || null,
@@ -69730,17 +69742,20 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   };
   const addLicense = () => {
     setConfig((prev) => {
-      const organisationCode = prev.organisations[0]?.code || "DEFAULT";
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const previousModules = Array.isArray(prev.modules) ? prev.modules : [];
+      const previousLicenses = Array.isArray(prev.licenses) ? prev.licenses : [];
+      const organisationCode = previousOrganisations[0]?.code || "DEFAULT";
       const newLicenseId = createClientRecordId("license");
-      const activeModuleCodes = prev.modules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE").map((module) => module.code).filter(Boolean);
+      const activeModuleCodes = previousModules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE").map((module) => module.code).filter(Boolean);
       return {
         ...prev,
         licenses: [
-          ...prev.licenses,
+          ...previousLicenses,
           {
             id: newLicenseId,
             organisationCode,
-            licenseKey: `${organisationCode}-LIC-${prev.licenses.length + 1}`,
+            licenseKey: `${organisationCode}-LIC-${previousLicenses.length + 1}`,
             licenseName: "New Licence",
             deploymentMode: "Online SaaS",
             status: "ACTIVE",
@@ -69764,14 +69779,14 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     });
   };
   const toggleLicenseModule = (licenseIndex, moduleCode, checked) => {
-    const currentCodes = Array.isArray(config.licenses[licenseIndex]?.moduleCodes) ? config.licenses[licenseIndex].moduleCodes : [];
+    const currentCodes = Array.isArray(configLicenses[licenseIndex]?.moduleCodes) ? configLicenses[licenseIndex].moduleCodes : [];
     const moduleCodes = checked ? Array.from(/* @__PURE__ */ new Set([...currentCodes, moduleCode])) : currentCodes.filter((code) => code !== moduleCode);
     updateRow("licenses", licenseIndex, { moduleCodes });
   };
   const permissionProfiles = reactExports.useMemo(() => {
-    const profiles = config.organisations[0]?.settings?.permissionProfiles;
+    const profiles = configOrganisations[0]?.settings?.permissionProfiles;
     return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
-  }, [config.organisations]);
+  }, [configOrganisations]);
   const configurationHealth = reactExports.useMemo(
     () => buildConfigurationHealth(config, permissionProfiles, readinessPercent, operationalReadinessPercent),
     [config, permissionProfiles, readinessPercent, operationalReadinessPercent]
@@ -69786,20 +69801,20 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       generatedAt,
       summary: configurationHealthSummary,
       inventory: {
-        organisations: config.organisations.length,
-        activeOrganisations: config.organisations.filter(isActiveRecord).length,
-        locations: config.locations.length,
-        activeLocations: config.locations.filter(isActiveRecord).length,
-        units: config.units.length,
-        activeUnits: config.units.filter(isActiveRecord).length,
-        resourcePools: config.resourcePools.length,
-        activeResourcePools: config.resourcePools.filter(isActiveRecord).length,
-        modules: config.modules.length,
-        activeModules: config.modules.filter(isActiveRecord).length,
-        licences: config.licenses.length,
-        activeLicences: config.licenses.filter(isActiveRecord).length,
-        platformUsers: config.platformUsers.length,
-        activeUserAccessScopes: config.userAccess.filter(isActiveRecord).length
+        organisations: configOrganisations.length,
+        activeOrganisations: configOrganisations.filter(isActiveRecord).length,
+        locations: configLocations.length,
+        activeLocations: configLocations.filter(isActiveRecord).length,
+        units: configUnits.length,
+        activeUnits: configUnits.filter(isActiveRecord).length,
+        resourcePools: configResourcePools.length,
+        activeResourcePools: configResourcePools.filter(isActiveRecord).length,
+        modules: configModules.length,
+        activeModules: configModules.filter(isActiveRecord).length,
+        licences: configLicenses.length,
+        activeLicences: configLicenses.filter(isActiveRecord).length,
+        platformUsers: configPlatformUsers.length,
+        activeUserAccessScopes: configUserAccess.filter(isActiveRecord).length
       },
       readiness: {
         deploymentReadinessPercent: readinessPercent,
@@ -69816,7 +69831,8 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   };
   const updatePermissionProfiles = (profiles) => {
     setConfig((prev) => {
-      const organisations = prev.organisations.length > 0 ? prev.organisations : [{ code: "DEFAULT", name: "Organisation", status: "ACTIVE", settings: {} }];
+      const previousOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const organisations = previousOrganisations.length > 0 ? previousOrganisations : [{ code: "DEFAULT", name: "Organisation", status: "ACTIVE", settings: {} }];
       return {
         ...prev,
         organisations: organisations.map((org, index) => index === 0 ? { ...org, settings: { ...org.settings || {}, permissionProfiles: profiles } } : org)
@@ -69849,14 +69865,14 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   };
   const userOptions = reactExports.useMemo(
     () => {
-      const platformOptions = config.platformUsers.map((user) => ({
+      const platformOptions = configPlatformUsers.map((user) => ({
         id: user.userId || user.username,
         name: displayUserName(user),
         username: user.username || user.userId || "",
         email: user.email || ""
       })).filter((user) => user.id);
       const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
-      const orphanOptions = config.userAccess.filter((access) => {
+      const orphanOptions = configUserAccess.filter((access) => {
         const accessUserId = toIdentifier(access.userId);
         const accessUsername = toIdentifier(access.username);
         return (accessUserId || accessUsername) && !platformUserIds.has(accessUserId) && !platformUserIds.has(accessUsername);
@@ -69868,15 +69884,15 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       })).filter((user, index, rows) => user.id && rows.findIndex((candidate) => candidate.id === user.id) === index);
       return [...platformOptions, ...orphanOptions].sort((a, b) => a.name.localeCompare(b.name));
     },
-    [config.platformUsers, config.userAccess]
+    [configPlatformUsers, configUserAccess]
   );
   const selectedAccessUser = reactExports.useMemo(
-    () => config.platformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
-    [config.platformUsers, selectedAccessUserId]
+    () => configPlatformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
+    [configPlatformUsers, selectedAccessUserId]
   );
   const selectedAccessRows = reactExports.useMemo(
-    () => config.userAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId)),
-    [config.userAccess, selectedAccessUserId]
+    () => configUserAccess.map((access, index) => ({ access, index })).filter(({ access }) => [access.userId, access.username].map((value) => String(value || "").trim()).some((value) => value === selectedAccessUserId)),
+    [configUserAccess, selectedAccessUserId]
   );
   const selectedAccessDisplayName = selectedAccessUser ? `${selectedAccessUser.firstName || ""} ${selectedAccessUser.lastName || ""}`.trim() || selectedAccessUser.username || selectedAccessUser.userId : selectedAccessRows[0]?.access.displayName ? `${selectedAccessRows[0].access.displayName} (missing platform user record)` : selectedAccessUserId ? `${selectedAccessUserId} (missing platform user record)` : "No user selected";
   const selectedUserProfileIds = reactExports.useMemo(() => {
@@ -69888,23 +69904,23 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
   const setSelectedUserProfileIds = (profileIds) => {
     setConfig((prev) => ({
       ...prev,
-      userAccess: prev.userAccess.map((access) => access.userId === selectedAccessUserId ? { ...access, settings: { ...access.settings || {}, permissionProfileIds: profileIds } } : access)
+      userAccess: (Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => access.userId === selectedAccessUserId ? { ...access, settings: { ...access.settings || {}, permissionProfileIds: profileIds } } : access)
     }));
   };
   const addUserAccess = () => {
-    const defaultUser = selectedAccessUser || config.platformUsers[0];
+    const defaultUser = selectedAccessUser || configPlatformUsers[0];
     const userId = selectedAccessUserId || defaultUser?.userId || defaultUser?.username || "";
     const displayName = defaultUser ? `${defaultUser.firstName || ""} ${defaultUser.lastName || ""}`.trim() || defaultUser.username || userId : "";
     setConfig((prev) => ({
       ...prev,
       userAccess: [
-        ...prev.userAccess,
+        ...Array.isArray(prev.userAccess) ? prev.userAccess : [],
         {
           userId,
           username: defaultUser?.username || "",
           displayName,
-          organisationCode: prev.organisations[0]?.code || "DEFAULT",
-          locationCode: prev.locations[0]?.code || "",
+          organisationCode: (Array.isArray(prev.organisations) ? prev.organisations : [])[0]?.code || "DEFAULT",
+          locationCode: (Array.isArray(prev.locations) ? prev.locations : [])[0]?.code || "",
           unitCode: "",
           moduleCode: "",
           role: "Viewer",
@@ -70191,7 +70207,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     }
     setConfig((prev) => ({
       ...prev,
-      resourcePools: prev.resourcePools.filter((pool, index) => String(pool.id || pool.code || `resource-pool-${index}`) !== selectedResourcePoolDeleteOption.key)
+      resourcePools: (Array.isArray(prev.resourcePools) ? prev.resourcePools : []).filter((pool, index) => String(pool.id || pool.code || `resource-pool-${index}`) !== selectedResourcePoolDeleteOption.key)
     }));
     setSelectedResourcePoolDeleteKey("");
     onShowSuccess(`DFP resource row set "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
@@ -71192,7 +71208,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        config.organisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-[1fr_1fr_1fr_auto]", children: [
+        configOrganisations.map((org, index) => ({ org, index })).filter(({ org }) => isActiveRecord(org)).map(({ org, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-[1fr_1fr_1fr_auto]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Organisation Code", value: org.code, disabled: !canEdit || !organisationStructureUnlocked, onCommit: (value) => updateRow("organisations", index, { code: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Organisation Name", value: org.name, disabled: !canEdit || !organisationStructureUnlocked, onCommit: (value) => updateRow("organisations", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit || !organisationStructureUnlocked, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) }),
@@ -71590,7 +71606,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     ) : null
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !isUnitEditing, options: visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "", disabled: !isUnitEditing, options: unitTypeOptions, onChange: (value) => updateRow("units", index, { unitType: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -71857,7 +71873,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     label: "Unit",
                     value: rule.unitCode || "",
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)],
+                    options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)],
                     emptyLabel: "All Units",
                     onChange: (value) => updateMasterLmpAccessRule(index, { unitCode: value || null })
                   }
@@ -71919,7 +71935,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     label: "Location",
                     value: rule.locationCode || "",
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)],
+                    options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)],
                     emptyLabel: "All Locations",
                     onChange: (value) => updateMasterLmpAccessRule(index, { locationCode: value || null })
                   }
@@ -71930,7 +71946,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     label: "Aircraft Type",
                     value: rule.aircraftTypeCode || "",
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)],
+                    options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)],
                     emptyLabel: "Any Type",
                     onChange: (value) => updateMasterLmpAccessRule(index, { aircraftTypeCode: value || null })
                   }
@@ -71952,7 +71968,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     label: "Parent Org",
                     value: rule.parentOrganisationCode || "",
                     disabled: !canEditSection("platform-master-lmp-access"),
-                    options: ["", ...config.organisations.map((organisation) => organisation.code).filter(Boolean)],
+                    options: ["", ...configOrganisations.map((organisation) => organisation.code).filter(Boolean)],
                     emptyLabel: "Any Org",
                     onChange: (value) => updateMasterLmpAccessRule(index, { parentOrganisationCode: value || null })
                   }
@@ -72036,8 +72052,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete." }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration (min)", value: profile.durationMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { durationMinutes: clampWholeNumber(value, 240, 1, 1440) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre-Flight (min)", value: profile.preFlightMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { preFlightMinutes: clampWholeNumber(value, 90, 0, 1440) }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post-Flight (min)", value: profile.postFlightMinutes, disabled: !canEditSection("platform-standard-missions"), onChange: (value) => updateStandardMissionProfile(profile.id, { postFlightMinutes: clampWholeNumber(value, 60, 0, 1440) }) }),
@@ -73002,9 +73018,9 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Pool Code", value: pool.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { code: value }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Pool Name", value: pool.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { name: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEditResourcePools, options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
                       ] })
                     ] }),
@@ -73164,11 +73180,11 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Unit" }),
-          config.modules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: module.name }, module.code))
+          configModules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: module.name }, module.code))
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: visibleUnitRows.map(({ unit }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { id: `platform-unit-modules-${getSettingsFocusAnchor(unit.code)}`, className: "border-t border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-white", children: unit.name }),
-          config.modules.map((module) => {
+          configModules.map((module) => {
             const unitModuleIndex = config.unitModules.findIndex((item) => item.unitCode === unit.code && item.moduleCode === module.code);
             const unitModule = config.unitModules[unitModuleIndex];
             return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -73531,7 +73547,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Mode", value: licenseStatus?.runtimeMode || "development" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Enforcement", value: licenseStatus?.enforcementMode || deploymentProfile.enforcementMode }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Signed", value: String(licenseStatus?.verifiedLicenseCount ?? 0) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unsigned", value: String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unsigned", value: String(licenseStatus?.unsignedLicenseCount ?? configLicenses.length) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/30 bg-gray-950 px-3 py-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Deployment Fingerprint" }),
@@ -73587,8 +73603,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           licenseImportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-100", children: licenseImportMessage }),
           licenseImportError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100", children: licenseImportError })
         ] }),
-        config.licenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-license-records", className: "space-y-4", children: config.licenses.map((license, index) => {
+        configLicenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-license-records", className: "space-y-4", children: configLicenses.map((license, index) => {
           const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
           const licenceFeatures = license.features || {};
           const licenceStatus = getLicenceStatusSummary(license);
@@ -73628,7 +73644,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Licence Name", value: license.licenseName || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { licenseName: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Licence Key", value: license.licenseKey || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { licenseKey: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: license.organisationCode || config.organisations[0]?.code || "DEFAULT", disabled: !canEditSection("platform-licensing"), options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("licenses", index, { organisationCode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: license.organisationCode || configOrganisations[0]?.code || "DEFAULT", disabled: !canEditSection("platform-licensing"), options: configOrganisations.map((org) => org.code), onChange: (value) => updateRow("licenses", index, { organisationCode: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Deployment Model", value: normaliseDeploymentMode(license.deploymentMode || "Online SaaS"), disabled: !canEditSection("platform-licensing"), options: DEPLOYMENT_MODE_OPTIONS, onChange: (value) => updateRow("licenses", index, { deploymentMode: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: license.status || "ACTIVE", disabled: !canEditSection("platform-licensing"), options: ["ACTIVE", "SUSPENDED", "EXPIRED", "INACTIVE"], onChange: (value) => updateRow("licenses", index, { status: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Offline Fingerprint", value: license.offlineFingerprint || "", disabled: !canEditSection("platform-licensing"), onCommit: (value) => updateRow("licenses", index, { offlineFingerprint: value }) }),
@@ -73694,7 +73710,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   " selected"
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: config.modules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900 p-3 text-sm text-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: configModules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900 p-3 text-sm text-gray-200", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
@@ -74838,7 +74854,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           {
             callsigns: formationCallsigns,
             onUpdateCallsigns: onUpdateFormationCallsigns,
-            units: visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code).filter(Boolean),
+            units: visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code).filter(Boolean),
             locations: (visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location) => location.name || location.code).filter(Boolean),
             locationOptions: (visibleLocationRows.length > 0 ? visibleLocationRows.map(({ location }) => location) : config.locations).map((location) => ({ name: location.name || location.code || "", code: location.code || "" })).filter((location) => location.name),
             canEditSettings: canUnlockRankTerminology,
@@ -75090,9 +75106,9 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEditSection("platform-user-access"), options: configOrganisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEditSection("platform-user-access"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEditSection("platform-user-access"), options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEditSection("platform-user-access"), options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEditSection("platform-user-access"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
@@ -75112,7 +75128,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                               className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
                               checked: appliesToAllFeatures,
                               disabled: !canEditSection("platform-user-access"),
-                              onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : config.modules[0]?.code || "" })
+                              onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : configModules[0]?.code || "" })
                             }
                           ),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -75138,7 +75154,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                           /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Scope To One Feature Area" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: location + unit + NEO Build lets the user work with NEO Build for that unit, but not training records or reporting." })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEditSection("platform-user-access") || appliesToAllFeatures, options: ["", ...configModules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
                       ] })
                     ]
@@ -75234,8 +75250,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: visibleSchedulingRuleSetRows.map(({ ruleSet, index }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-5", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Name", value: ruleSet.name, disabled: !canEditSection("platform-scheduling-rule-sets"), onCommit: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["", ...visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEditSection("platform-scheduling-rule-sets"), options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
           ] }, ruleSet.id || index)) })
