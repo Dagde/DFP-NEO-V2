@@ -7483,7 +7483,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode} className={platformActionButtonClass}>Add Directed Task Setup</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode} className={`${platformActionButtonClass} text-[8px] leading-[9px]`}>Add Directed Task Setup</button>
             </div>
           ) : null}
         />

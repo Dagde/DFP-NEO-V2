@@ -72126,7 +72126,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           subtitle: "Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode, className: platformActionButtonClass, children: "Add Directed Task Setup" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode, className: `${platformActionButtonClass} text-[8px] leading-[9px]`, children: "Add Directed Task Setup" })
           ] }) : null
         }
       ),
