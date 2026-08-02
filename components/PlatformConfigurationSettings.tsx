@@ -4650,20 +4650,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ? { ...pool, aircraftTypeCode: null }
           : pool
       )),
-      masterLmpAccessRules: (Array.isArray(prev.masterLmpAccessRules) ? prev.masterLmpAccessRules : []).map((rule) => (
-        removedCode && normaliseUnitCode(rule.aircraftTypeCode) === removedCode
-          ? { ...rule, aircraftTypeCode: null }
-          : rule
-      )),
       schedulingRuleSets: (Array.isArray(prev.schedulingRuleSets) ? prev.schedulingRuleSets : []).map((ruleSet) => (
         removedCode && normaliseUnitCode(ruleSet.aircraftTypeCode) === removedCode
           ? { ...ruleSet, aircraftTypeCode: null }
           : ruleSet
       )),
-      organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => ({
-        ...organisation,
-        settings: clearDeletedAircraftSettings(organisation.settings || {}),
-      })),
+      organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => {
+        const nextSettings = { ...(organisation.settings || {}) };
+        if (Array.isArray(nextSettings.masterLmpAccess)) {
+          nextSettings.masterLmpAccess = nextSettings.masterLmpAccess.map((rule: any) => (
+            removedCode && normaliseUnitCode(rule.aircraftTypeCode) === removedCode
+              ? { ...rule, aircraftTypeCode: null }
+              : rule
+          ));
+        }
+        return {
+          ...organisation,
+          settings: clearDeletedAircraftSettings(nextSettings),
+        };
+      }),
     }));
     setNewAircraftTypeVisibleIds((current) => {
       const next = new Set(Array.from(current));

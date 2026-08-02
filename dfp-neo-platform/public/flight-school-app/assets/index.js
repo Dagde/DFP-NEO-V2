@@ -69717,12 +69717,17 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
         return { ...unit, settings: nextSettings };
       }),
       resourcePools: (Array.isArray(prev.resourcePools) ? prev.resourcePools : []).map((pool) => removedCode && normaliseUnitCode2(pool.aircraftTypeCode) === removedCode ? { ...pool, aircraftTypeCode: null } : pool),
-      masterLmpAccessRules: (Array.isArray(prev.masterLmpAccessRules) ? prev.masterLmpAccessRules : []).map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule),
       schedulingRuleSets: (Array.isArray(prev.schedulingRuleSets) ? prev.schedulingRuleSets : []).map((ruleSet) => removedCode && normaliseUnitCode2(ruleSet.aircraftTypeCode) === removedCode ? { ...ruleSet, aircraftTypeCode: null } : ruleSet),
-      organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => ({
-        ...organisation,
-        settings: clearDeletedAircraftSettings(organisation.settings || {})
-      }))
+      organisations: (Array.isArray(prev.organisations) ? prev.organisations : []).map((organisation) => {
+        const nextSettings = { ...organisation.settings || {} };
+        if (Array.isArray(nextSettings.masterLmpAccess)) {
+          nextSettings.masterLmpAccess = nextSettings.masterLmpAccess.map((rule) => removedCode && normaliseUnitCode2(rule.aircraftTypeCode) === removedCode ? { ...rule, aircraftTypeCode: null } : rule);
+        }
+        return {
+          ...organisation,
+          settings: clearDeletedAircraftSettings(nextSettings)
+        };
+      })
     }));
     setNewAircraftTypeVisibleIds((current) => {
       const next = new Set(Array.from(current));
