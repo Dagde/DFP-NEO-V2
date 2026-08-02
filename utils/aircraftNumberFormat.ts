@@ -26,7 +26,9 @@ export const normaliseAircraftNumberSettings = (settings?: Record<string, any> |
   const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
 
   return {
-    usePrefix: settings?.aircraftNumberUsePrefix !== false,
+    usePrefix: settings?.aircraftNumberUsePrefix === undefined
+      ? DEFAULT_AIRCRAFT_NUMBER_SETTINGS.usePrefix
+      : settings.aircraftNumberUsePrefix !== false,
     prefixes: nextPrefixes,
     defaultPrefix,
   };

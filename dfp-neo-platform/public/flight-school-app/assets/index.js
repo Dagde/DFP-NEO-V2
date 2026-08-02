@@ -3278,7 +3278,7 @@ const normaliseAircraftNumberSettings = (settings) => {
   const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
   const nextPrefixes = !defaultPrefix || prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
   return {
-    usePrefix: settings?.aircraftNumberUsePrefix !== false,
+    usePrefix: settings?.aircraftNumberUsePrefix === void 0 ? DEFAULT_AIRCRAFT_NUMBER_SETTINGS.usePrefix : settings.aircraftNumberUsePrefix !== false,
     prefixes: nextPrefixes,
     defaultPrefix
   };
