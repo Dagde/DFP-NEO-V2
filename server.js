@@ -2872,6 +2872,16 @@ app.post('/api/platform-config', async (req, res) => {
     const licenses = toArray(rawLicenses);
     const schedulingRuleSets = toArray(rawSchedulingRuleSets);
     const userAccess = toArray(rawUserAccess);
+    const incompleteAircraftType = aircraftTypes.find((aircraftType) => (
+      String(aircraftType?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE' &&
+      (!String(aircraftType?.code || '').trim() || !String(aircraftType?.name || '').trim())
+    ));
+    if (incompleteAircraftType) {
+      return res.status(400).json({
+        error: 'Unsafe platform configuration save blocked',
+        details: 'Every active aircraft type needs a code and name before saving.',
+      });
+    }
     const hasActiveRecords = (records) => records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
     const hasActiveOrganisations = hasActiveRecords(organisations);
     const hasActiveLocations = hasActiveRecords(locations);
