@@ -8,7 +8,7 @@ import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
 import { AircraftNumberSettings, normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { getOperationalModelLabel, getPlatformPermissionProfiles, getUnitOperationalModel, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
+import { getOperationalModelLabel, getPlatformPermissionProfiles, getUnitOperationalModel, normaliseMasterLmpAccessRules, normaliseOperationalModel, OPERATIONAL_MODEL_OPTIONS } from '../utils/platformConfigService';
 import { getTaskProfileAbbreviationsForUnit, getTaskProfilesForModel } from '../utils/taskProfiles';
 import { stopEditableKeyPropagation } from '../utils/editableKeyEvents';
 import { AIRCRAFT_CREW_RESOURCE_KINDS, normaliseAircraftCrewComposition } from '../utils/aircraftCrewComposition';
@@ -944,6 +944,10 @@ const validateWizardTemplateFile = async (
 
 const normaliseUnitSettingsIdentifier = (value: unknown): string => String(value || '').trim().toUpperCase();
 
+const getOrganisationMasterLmpAccessRules = (settings: any): any[] => (
+    normaliseMasterLmpAccessRules({ organisations: [{ settings: settings || {} }] } as any)
+);
+
 const formatPlainList = (items: string[], fallback = 'Not set'): string => {
     const cleanItems = items.map((item) => String(item || '').trim()).filter(Boolean);
     return cleanItems.length > 0 ? cleanItems.join(' / ') : fallback;
@@ -1670,7 +1674,7 @@ const OrganisationMyUnitSettings: React.FC<{
         String(profile?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
         && (!profile?.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code))
     ));
-    const masterLmpAccessRules = Array.isArray(organisationSettings.masterLmpAccess) ? organisationSettings.masterLmpAccess : [];
+    const masterLmpAccessRules = getOrganisationMasterLmpAccessRules(organisationSettings);
     const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule: any) => (
         !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)
     ));
@@ -2630,9 +2634,8 @@ const InitialSetupWizard: React.FC<{
     const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue)
         ? activeOrganisation.settings.masterLmpCatalogue.filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
         : [];
-    const activeMasterLmpAccess = Array.isArray(activeOrganisation?.settings?.masterLmpAccess)
-        ? activeOrganisation.settings.masterLmpAccess.filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
-        : [];
+    const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(activeOrganisation?.settings)
+        .filter((item: any) => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
     const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
     const standardCrewConfigured = activeAircraftTypes.some((aircraft: any) => {
         const standardSeats = normaliseAircraftCrewComposition(aircraft?.crewComposition || null)?.standardSeats;
@@ -3592,7 +3595,7 @@ const InitialSetupWizard: React.FC<{
         }
         saveWizardConfig('Master LMP and access rule saved into Settings.', (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
             const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-            const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+            const accessRules = getOrganisationMasterLmpAccessRules(settings);
             const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
             const ruleKey = primaryMasterLmpRule?.id || '';
             const nextCatalogueEntry = {
@@ -5608,9 +5611,7 @@ const InitialSetupWizard: React.FC<{
             const existingMasterLmpCatalogue = Array.isArray(existingOrganisationSettings.masterLmpCatalogue)
                 ? existingOrganisationSettings.masterLmpCatalogue
                 : [];
-            const existingMasterLmpAccess = Array.isArray(existingOrganisationSettings.masterLmpAccess)
-                ? existingOrganisationSettings.masterLmpAccess
-                : [];
+            const existingMasterLmpAccess = getOrganisationMasterLmpAccessRules(existingOrganisationSettings);
             const draftLmpCode = String(trainingDraft.lmpCode || '').trim();
             const shouldSyncDraftMasterLmp = Boolean(draftLmpCode && !/^new master lmp$/i.test(draftLmpCode));
             const draftMasterLmpCatalogueEntry = shouldSyncDraftMasterLmp ? {
@@ -6114,7 +6115,7 @@ const InitialSetupWizard: React.FC<{
         });
         saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? '' : 's'} to this setup.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
             const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-            const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+            const accessRules = getOrganisationMasterLmpAccessRules(settings);
             const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
             const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
             const accessExists = accessRules.some((rule: any) => (
@@ -6178,7 +6179,7 @@ const InitialSetupWizard: React.FC<{
                     hasTrainees: unit?.settings?.hasTrainees,
                 })) : [],
                 catalogue: (beforeOrganisation?.settings?.masterLmpCatalogue || []).map((item: any) => ({ code: item?.code, name: item?.name, status: item?.status })),
-                accessRules: (beforeOrganisation?.settings?.masterLmpAccess || []).map((rule: any) => ({
+                accessRules: getOrganisationMasterLmpAccessRules(beforeOrganisation?.settings).map((rule: any) => ({
                     lmpCode: rule?.lmpCode,
                     locationCode: rule?.locationCode,
                     unitCode: rule?.unitCode,
@@ -6189,7 +6190,7 @@ const InitialSetupWizard: React.FC<{
             });
             const nextSetupConfig = updatePrimaryOrganisationWithSettings(currentSetupConfig, (settings) => {
                 const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-                const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+                const accessRules = getOrganisationMasterLmpAccessRules(settings);
                 const catalogueExists = catalogue.some((item: any) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
                 const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
                 const accessLocationCode = cleanAccessLocationCode;

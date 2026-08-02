@@ -10760,6 +10760,7 @@ const validateWizardTemplateFile = async (template, file) => {
   };
 };
 const normaliseUnitSettingsIdentifier = (value) => String(value || "").trim().toUpperCase();
+const getOrganisationMasterLmpAccessRules = (settings) => normaliseMasterLmpAccessRules({ organisations: [{ settings: settings || {} }] });
 const formatPlainList = (items, fallback = "Not set") => {
   const cleanItems = items.map((item) => String(item || "").trim()).filter(Boolean);
   return cleanItems.length > 0 ? cleanItems.join(" / ") : fallback;
@@ -11194,7 +11195,7 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
   const alternateCrewProfiles = crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)) && profile.operationalModels.includes(operationalModel));
   const currencyProfiles = crewCompositionSettings.currencyProfiles.filter((profile) => String(profile.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)) && (!profile.aircraftTypeCode || aircraftTypeCodes.length === 0 || aircraftTypeCodes.includes(profile.aircraftTypeCode)));
   const standardMissionProfiles = (Array.isArray(organisationSettings.standardMissionProfiles?.profiles) ? organisationSettings.standardMissionProfiles.profiles : Array.isArray(organisationSettings.standardMissionProfiles) ? organisationSettings.standardMissionProfiles : []).filter((profile) => String(profile?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && (!profile?.unitCode || normaliseUnitSettingsIdentifier(profile.unitCode) === normaliseUnitSettingsIdentifier(unit?.code)));
-  const masterLmpAccessRules = Array.isArray(organisationSettings.masterLmpAccess) ? organisationSettings.masterLmpAccess : [];
+  const masterLmpAccessRules = getOrganisationMasterLmpAccessRules(organisationSettings);
   const masterLmpAccessForUnit = masterLmpAccessRules.filter((rule) => !rule?.unitCode || normaliseUnitSettingsIdentifier(rule.unitCode) === normaliseUnitSettingsIdentifier(unit?.code));
   const unitHomeLocationCode = normaliseUnitSettingsIdentifier(unit?.locationCode);
   const userAccessForUnit = (platformConfig?.userAccess || []).filter((access) => {
@@ -11920,7 +11921,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   const activeResourcePools = (platformConfig?.resourcePools || []).filter((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeUserAccess = (platformConfig?.userAccess || []).filter((access) => String(access?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const activeMasterLmpCatalogue = Array.isArray(activeOrganisation?.settings?.masterLmpCatalogue) ? activeOrganisation.settings.masterLmpCatalogue.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
-  const activeMasterLmpAccess = Array.isArray(activeOrganisation?.settings?.masterLmpAccess) ? activeOrganisation.settings.masterLmpAccess.filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE") : [];
+  const activeMasterLmpAccess = getOrganisationMasterLmpAccessRules(activeOrganisation?.settings).filter((item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE");
   const crewCompositionSettings = normaliseCrewCompositionSettings(activeOrganisation?.settings?.crewCompositionSettings || null);
   const standardCrewConfigured = activeAircraftTypes.some((aircraft) => {
     const standardSeats = normaliseAircraftCrewComposition(aircraft?.crewComposition || null)?.standardSeats;
@@ -12747,7 +12748,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     saveWizardConfig("Master LMP and access rule saved into Settings.", (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-      const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+      const accessRules = getOrganisationMasterLmpAccessRules(settings);
       const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(lmpCode));
       const ruleKey = primaryMasterLmpRule?.id || "";
       const nextCatalogueEntry = {
@@ -14478,7 +14479,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         draft: summariseOrganisationDraft(organisationDraft)
       });
       const existingMasterLmpCatalogue = Array.isArray(existingOrganisationSettings.masterLmpCatalogue) ? existingOrganisationSettings.masterLmpCatalogue : [];
-      const existingMasterLmpAccess = Array.isArray(existingOrganisationSettings.masterLmpAccess) ? existingOrganisationSettings.masterLmpAccess : [];
+      const existingMasterLmpAccess = getOrganisationMasterLmpAccessRules(existingOrganisationSettings);
       const draftLmpCode = String(trainingDraft.lmpCode || "").trim();
       const shouldSyncDraftMasterLmp = Boolean(draftLmpCode && !/^new master lmp$/i.test(draftLmpCode));
       const draftMasterLmpCatalogueEntry = shouldSyncDraftMasterLmp ? {
@@ -14968,7 +14969,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     });
     saveWizardConfig(`Committed ${scopedItems.length} LMP event${scopedItems.length === 1 ? "" : "s"} to this setup.`, (baseConfig) => updatePrimaryOrganisationWithSettings(baseConfig, (settings) => {
       const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-      const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+      const accessRules = getOrganisationMasterLmpAccessRules(settings);
       const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
       const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
       const accessExists = accessRules.some((rule) => normaliseUnitSettingsIdentifier(rule?.lmpCode) === normaliseUnitSettingsIdentifier(cleanLmpCode) && normaliseUnitSettingsIdentifier(rule?.unitCode) === normaliseUnitSettingsIdentifier(accessUnitCode));
@@ -15020,7 +15021,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           hasTrainees: unit?.settings?.hasTrainees
         })) : [],
         catalogue: (beforeOrganisation?.settings?.masterLmpCatalogue || []).map((item) => ({ code: item?.code, name: item?.name, status: item?.status })),
-        accessRules: (beforeOrganisation?.settings?.masterLmpAccess || []).map((rule) => ({
+        accessRules: getOrganisationMasterLmpAccessRules(beforeOrganisation?.settings).map((rule) => ({
           lmpCode: rule?.lmpCode,
           locationCode: rule?.locationCode,
           unitCode: rule?.unitCode,
@@ -15031,7 +15032,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       });
       const nextSetupConfig = updatePrimaryOrganisationWithSettings(currentSetupConfig, (settings) => {
         const catalogue = Array.isArray(settings.masterLmpCatalogue) ? settings.masterLmpCatalogue : [];
-        const accessRules = Array.isArray(settings.masterLmpAccess) ? settings.masterLmpAccess : [];
+        const accessRules = getOrganisationMasterLmpAccessRules(settings);
         const catalogueExists = catalogue.some((item) => normaliseUnitSettingsIdentifier(item?.code) === normaliseUnitSettingsIdentifier(cleanLmpCode));
         const accessUnitCode = cleanAccessUnitCode || unitDraft.code;
         const accessLocationCode = cleanAccessLocationCode;
