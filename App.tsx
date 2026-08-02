@@ -5965,6 +5965,7 @@ interface DfpConfig {
   remedialPrioritySyncTrace?: any[];
   remedialDataMovementTrace?: any[];
   taskProvenancePreBuild?: any;
+  reportFollowUps?: any;
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: ContinuationEventInput[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
@@ -7903,7 +7904,7 @@ function generateDfpInternal(
             finalEvents: [] as any[],
             conclusions: [] as string[],
         },
-        reportFollowUps: {
+        reportFollowUps: config.reportFollowUps || {
             purpose: 'Tracks training report follow-up changes applied to Individual LMPs before Flight School NEO Build sequencing starts.',
             fetchedAssessments: 0,
             followUpAssessments: 0,
@@ -36075,6 +36076,16 @@ const App: React.FC = () => {
         }
         markNeoBuildTiming(timingReport, 'lmp-refresh:complete', { buildTraineeLMPs: buildTraineeLMPs.size });
 
+        const reportFollowUpDiag: any = {
+            purpose: 'Tracks training report follow-up changes applied to Individual LMPs before Flight School NEO Build sequencing starts.',
+            fetchedAssessments: 0,
+            followUpAssessments: 0,
+            orderedAssessments: [] as any[],
+            skippedAssessments: [] as any[],
+            changedTrainees: [] as any[],
+            samples: [] as any[],
+        };
+
         if (activeOperationalModel === 'flight_school' && buildTraineeLMPs.size > 0) {
             const buildTraineeNameSet = new Set(
                 traineesForBuildScope
@@ -36471,8 +36482,8 @@ const App: React.FC = () => {
                     .filter(context => {
                         if (!context.actionable) return false;
                         if (!context.trainee || !context.lmpKey) {
-                            if (neoBuildDiag.reportFollowUps.skippedAssessments.length < 30) {
-                                neoBuildDiag.reportFollowUps.skippedAssessments.push({
+                            if (reportFollowUpDiag.skippedAssessments.length < 30) {
+                                reportFollowUpDiag.skippedAssessments.push({
                                     traineeFullName: context.assessment.traineeFullName,
                                     flightNumber: context.assessment.flightNumber,
                                     reason: context.trainee ? 'no-lmp-match' : 'no-trainee-match',
@@ -36501,9 +36512,9 @@ const App: React.FC = () => {
                 const changedTrainees: { trainee: Trainee | any; lmp: SyllabusItemDetail[]; updates: Record<string, any>[] }[] = [];
                 const updatesByTrainee = new Map<string, Record<string, any>[]>();
 
-                neoBuildDiag.reportFollowUps.fetchedAssessments = allAssessments.length;
-                neoBuildDiag.reportFollowUps.followUpAssessments = followUpAssessments.length;
-                neoBuildDiag.reportFollowUps.orderedAssessments = followUpAssessmentContexts.slice(0, 60).map(context => ({
+                reportFollowUpDiag.fetchedAssessments = allAssessments.length;
+                reportFollowUpDiag.followUpAssessments = followUpAssessments.length;
+                reportFollowUpDiag.orderedAssessments = followUpAssessmentContexts.slice(0, 60).map(context => ({
                     traineeFullName: context.lmpKey,
                     sourceIndex: context.sourceIndex,
                     flightNumber: context.assessment.flightNumber,
@@ -36571,11 +36582,11 @@ const App: React.FC = () => {
                         updates: updates.slice(0, 12),
                     })),
                 });
-                neoBuildDiag.reportFollowUps.changedTrainees = changedTrainees.slice(0, 60).map(changed => ({
+                reportFollowUpDiag.changedTrainees = changedTrainees.slice(0, 60).map(changed => ({
                     traineeFullName: changed.trainee.fullName || changed.trainee.name,
                     updates: changed.updates.slice(0, 12),
                 }));
-                neoBuildDiag.reportFollowUps.samples = Array.from(updatesByTrainee.entries()).slice(0, 40).map(([traineeFullName, updates]) => ({
+                reportFollowUpDiag.samples = Array.from(updatesByTrainee.entries()).slice(0, 40).map(([traineeFullName, updates]) => ({
                     traineeFullName,
                     updates: updates.slice(0, 12),
                 }));
@@ -36584,9 +36595,10 @@ const App: React.FC = () => {
                     followUpAssessments: followUpAssessments.length,
                     changedTrainees: changedTrainees.length,
                     orderedFollowUps: followUpAssessmentContexts.length,
-                    skippedFollowUps: neoBuildDiag.reportFollowUps.skippedAssessments.length,
+                    skippedFollowUps: reportFollowUpDiag.skippedAssessments.length,
                 });
             } catch (followUpError) {
+                reportFollowUpDiag.error = followUpError instanceof Error ? followUpError.message : String(followUpError);
                 pushDfpDataDiag('build:report-followups:error', {
                     error: followUpError instanceof Error ? followUpError.message : String(followUpError),
                 });
@@ -36745,6 +36757,7 @@ const App: React.FC = () => {
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
             remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
             taskProvenancePreBuild: (window as any).__lastTaskingProvenancePreBuild || null,
+            reportFollowUps: reportFollowUpDiag,
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,

@@ -91553,7 +91553,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   getGeneratedEventsForPersonForBuild = getGeneratedEventsForPerson;
   rebuildGeneratedEventIndexes();
   const buildContinuationShortLabel = getSctTerminology(config.platformConfig, buildActiveUnitCode).shortLabel;
-  const neoBuildDiag2 = {
+  const neoBuildDiag = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     buildDate,
     input: {
@@ -91844,7 +91844,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       finalEvents: [],
       conclusions: []
     },
-    reportFollowUps: {
+    reportFollowUps: config.reportFollowUps || {
       purpose: "Tracks training report follow-up changes applied to Individual LMPs before Flight School NEO Build sequencing starts.",
       fetchedAssessments: 0,
       followUpAssessments: 0,
@@ -91857,19 +91857,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const saveNeoBuildDiag = (stage) => {
     if (stage !== "build-start" && stage !== "final" && !neoBuildLiveDiagnostics) return;
-    neoBuildDiag2.stage = stage;
-    neoBuildDiag2.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    neoBuildDiag.stage = stage;
+    neoBuildDiag.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     if (typeof window !== "undefined") {
-      window.__lastNeoBuildDiagnosticReport = neoBuildDiag2;
+      window.__lastNeoBuildDiagnosticReport = neoBuildDiag;
     }
     try {
-      localStorage.setItem("neo_build_diag_report", JSON.stringify(neoBuildDiag2));
+      localStorage.setItem("neo_build_diag_report", JSON.stringify(neoBuildDiag));
     } catch (error) {
       const compactReport = {
-        ...neoBuildDiag2,
+        ...neoBuildDiag,
         storageCompacted: true,
         storageCompactedReason: error instanceof Error ? error.message : String(error),
-        scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag2.scheduleLists || {}).map(([name, diag]) => [
+        scheduleLists: Object.fromEntries(Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]) => [
           name,
           {
             ...diag,
@@ -91880,86 +91880,86 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             searchWindowSamples: diag.searchWindowSamples?.slice?.(0, 20) || []
           }
         ])),
-        scheduleFlow: (neoBuildDiag2.scheduleFlow || []).slice(-80),
+        scheduleFlow: (neoBuildDiag.scheduleFlow || []).slice(-80),
         dayFlightGapDiagnostics: {
-          attempts: neoBuildDiag2.dayFlightGapDiagnostics.attempts.slice(-500),
-          instructorTrace: neoBuildDiag2.dayFlightGapDiagnostics.instructorTrace.slice(-500),
-          placements: neoBuildDiag2.dayFlightGapDiagnostics.placements,
-          finalGaps: neoBuildDiag2.dayFlightGapDiagnostics.finalGaps
+          attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
+          instructorTrace: neoBuildDiag.dayFlightGapDiagnostics.instructorTrace.slice(-500),
+          placements: neoBuildDiag.dayFlightGapDiagnostics.placements,
+          finalGaps: neoBuildDiag.dayFlightGapDiagnostics.finalGaps
         },
         mandatoryRemedialFlights: {
-          ...neoBuildDiag2.mandatoryRemedialFlights,
-          prioritySyncTrace: neoBuildDiag2.mandatoryRemedialFlights.prioritySyncTrace.slice(-400),
-          priorityQueueAudit: neoBuildDiag2.mandatoryRemedialFlights.priorityQueueAudit.slice(-400),
-          nextEventClassificationTrace: neoBuildDiag2.mandatoryRemedialFlights.nextEventClassificationTrace.slice(-600),
-          scheduleAttempts: neoBuildDiag2.mandatoryRemedialFlights.scheduleAttempts.slice(-500),
-          instructorAllocationTrace: neoBuildDiag2.mandatoryRemedialFlights.instructorAllocationTrace.slice(-500),
-          placementTrace: neoBuildDiag2.mandatoryRemedialFlights.placementTrace.slice(-500)
+          ...neoBuildDiag.mandatoryRemedialFlights,
+          prioritySyncTrace: neoBuildDiag.mandatoryRemedialFlights.prioritySyncTrace.slice(-400),
+          priorityQueueAudit: neoBuildDiag.mandatoryRemedialFlights.priorityQueueAudit.slice(-400),
+          nextEventClassificationTrace: neoBuildDiag.mandatoryRemedialFlights.nextEventClassificationTrace.slice(-600),
+          scheduleAttempts: neoBuildDiag.mandatoryRemedialFlights.scheduleAttempts.slice(-500),
+          instructorAllocationTrace: neoBuildDiag.mandatoryRemedialFlights.instructorAllocationTrace.slice(-500),
+          placementTrace: neoBuildDiag.mandatoryRemedialFlights.placementTrace.slice(-500)
         },
-        scheduleAttemptTiming: neoBuildDiag2.scheduleAttemptTiming || null,
+        scheduleAttemptTiming: neoBuildDiag.scheduleAttemptTiming || null,
         remedialDataMovement: {
-          ...neoBuildDiag2.remedialDataMovement,
-          sourceTrace: neoBuildDiag2.remedialDataMovement.sourceTrace.slice(-500),
-          buildInputRequests: neoBuildDiag2.remedialDataMovement.buildInputRequests.slice(-500),
-          buildInputPriorityEvents: neoBuildDiag2.remedialDataMovement.buildInputPriorityEvents.slice(-500),
-          lmpLookupTrace: neoBuildDiag2.remedialDataMovement.lmpLookupTrace.slice(-500),
-          priorityPlacementTrace: neoBuildDiag2.remedialDataMovement.priorityPlacementTrace.slice(-800),
-          finalScheduleTrace: neoBuildDiag2.remedialDataMovement.finalScheduleTrace.slice(-500),
-          conclusion: neoBuildDiag2.remedialDataMovement.conclusion.slice(-500)
+          ...neoBuildDiag.remedialDataMovement,
+          sourceTrace: neoBuildDiag.remedialDataMovement.sourceTrace.slice(-500),
+          buildInputRequests: neoBuildDiag.remedialDataMovement.buildInputRequests.slice(-500),
+          buildInputPriorityEvents: neoBuildDiag.remedialDataMovement.buildInputPriorityEvents.slice(-500),
+          lmpLookupTrace: neoBuildDiag.remedialDataMovement.lmpLookupTrace.slice(-500),
+          priorityPlacementTrace: neoBuildDiag.remedialDataMovement.priorityPlacementTrace.slice(-800),
+          finalScheduleTrace: neoBuildDiag.remedialDataMovement.finalScheduleTrace.slice(-500),
+          conclusion: neoBuildDiag.remedialDataMovement.conclusion.slice(-500)
         },
         formationResourceDiagnostics: {
-          ...neoBuildDiag2.formationResourceDiagnostics,
-          nextEventAudit: neoBuildDiag2.formationResourceDiagnostics.nextEventAudit.slice(-300),
-          groupBuildTrace: neoBuildDiag2.formationResourceDiagnostics.groupBuildTrace.slice(-800),
-          scheduleEventTrace: neoBuildDiag2.formationResourceDiagnostics.scheduleEventTrace.slice(-1200),
-          skippedSinglePlacements: neoBuildDiag2.formationResourceDiagnostics.skippedSinglePlacements.slice(-800),
-          standbyExclusions: neoBuildDiag2.formationResourceDiagnostics.standbyExclusions.slice(-300),
-          laterScheduledEvents: neoBuildDiag2.formationResourceDiagnostics.laterScheduledEvents.slice(-500)
+          ...neoBuildDiag.formationResourceDiagnostics,
+          nextEventAudit: neoBuildDiag.formationResourceDiagnostics.nextEventAudit.slice(-300),
+          groupBuildTrace: neoBuildDiag.formationResourceDiagnostics.groupBuildTrace.slice(-800),
+          scheduleEventTrace: neoBuildDiag.formationResourceDiagnostics.scheduleEventTrace.slice(-1200),
+          skippedSinglePlacements: neoBuildDiag.formationResourceDiagnostics.skippedSinglePlacements.slice(-800),
+          standbyExclusions: neoBuildDiag.formationResourceDiagnostics.standbyExclusions.slice(-300),
+          laterScheduledEvents: neoBuildDiag.formationResourceDiagnostics.laterScheduledEvents.slice(-500)
         },
         currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
-        taskProvenance: neoBuildDiag2.taskProvenance ? {
-          ...neoBuildDiag2.taskProvenance,
-          generatedPushes: (neoBuildDiag2.taskProvenance.generatedPushes || []).slice(-500),
-          finalCleanup: (neoBuildDiag2.taskProvenance.finalCleanup || []).slice(-300),
-          finalEvents: (neoBuildDiag2.taskProvenance.finalEvents || []).slice(-300),
-          conclusions: (neoBuildDiag2.taskProvenance.conclusions || []).slice(-100)
+        taskProvenance: neoBuildDiag.taskProvenance ? {
+          ...neoBuildDiag.taskProvenance,
+          generatedPushes: (neoBuildDiag.taskProvenance.generatedPushes || []).slice(-500),
+          finalCleanup: (neoBuildDiag.taskProvenance.finalCleanup || []).slice(-300),
+          finalEvents: (neoBuildDiag.taskProvenance.finalEvents || []).slice(-300),
+          conclusions: (neoBuildDiag.taskProvenance.conclusions || []).slice(-100)
         } : void 0,
-        airCombatPriority: neoBuildDiag2.airCombatPriority ? {
-          ...neoBuildDiag2.airCombatPriority,
-          staffAudit: (neoBuildDiag2.airCombatPriority.staffAudit || []).slice(0, 120),
-          crewConfigurationAudit: neoBuildDiag2.airCombatPriority.crewConfigurationAudit || null,
-          crewRequirementAudit: (neoBuildDiag2.airCombatPriority.crewRequirementAudit || []).slice(-240),
-          staffRoleCoverage: (neoBuildDiag2.airCombatPriority.staffRoleCoverage || []).slice(0, 160),
-          taskingQueue: (neoBuildDiag2.airCombatPriority.taskingQueue || []).slice(-120),
-          taskingAttempts: (neoBuildDiag2.airCombatPriority.taskingAttempts || []).slice(-240),
-          taskingCrewAssignments: (neoBuildDiag2.airCombatPriority.taskingCrewAssignments || []).slice(-400),
-          taskStaffPriorityList: (neoBuildDiag2.airCombatPriority.taskStaffPriorityList || []).slice(0, 120),
-          courseStaffPriorityLists: (neoBuildDiag2.airCombatPriority.courseStaffPriorityLists || []).slice(-120),
-          trainingPackageStaffPriorityLists: (neoBuildDiag2.airCombatPriority.trainingPackageStaffPriorityLists || []).slice(-120),
-          trainingAttempts: (neoBuildDiag2.airCombatPriority.trainingAttempts || []).slice(-700),
-          resourceChecks: (neoBuildDiag2.airCombatPriority.resourceChecks || []).slice(-700),
-          formationCallsignDiagnostics: (neoBuildDiag2.airCombatPriority.formationCallsignDiagnostics || []).slice(-300),
-          skipReasons: (neoBuildDiag2.airCombatPriority.skipReasons || []).slice(-700),
-          stageTrace: (neoBuildDiag2.airCombatPriority.stageTrace || []).slice(-120),
-          placements: (neoBuildDiag2.airCombatPriority.placements || []).slice(-240),
-          placementCycles: (neoBuildDiag2.airCombatPriority.placementCycles || []).slice(-240),
-          schedulerSummary: neoBuildDiag2.airCombatPriority.schedulerSummary || null,
-          auditReportData: neoBuildDiag2.airCombatPriority.auditReportData || {
+        airCombatPriority: neoBuildDiag.airCombatPriority ? {
+          ...neoBuildDiag.airCombatPriority,
+          staffAudit: (neoBuildDiag.airCombatPriority.staffAudit || []).slice(0, 120),
+          crewConfigurationAudit: neoBuildDiag.airCombatPriority.crewConfigurationAudit || null,
+          crewRequirementAudit: (neoBuildDiag.airCombatPriority.crewRequirementAudit || []).slice(-240),
+          staffRoleCoverage: (neoBuildDiag.airCombatPriority.staffRoleCoverage || []).slice(0, 160),
+          taskingQueue: (neoBuildDiag.airCombatPriority.taskingQueue || []).slice(-120),
+          taskingAttempts: (neoBuildDiag.airCombatPriority.taskingAttempts || []).slice(-240),
+          taskingCrewAssignments: (neoBuildDiag.airCombatPriority.taskingCrewAssignments || []).slice(-400),
+          taskStaffPriorityList: (neoBuildDiag.airCombatPriority.taskStaffPriorityList || []).slice(0, 120),
+          courseStaffPriorityLists: (neoBuildDiag.airCombatPriority.courseStaffPriorityLists || []).slice(-120),
+          trainingPackageStaffPriorityLists: (neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []).slice(-120),
+          trainingAttempts: (neoBuildDiag.airCombatPriority.trainingAttempts || []).slice(-700),
+          resourceChecks: (neoBuildDiag.airCombatPriority.resourceChecks || []).slice(-700),
+          formationCallsignDiagnostics: (neoBuildDiag.airCombatPriority.formationCallsignDiagnostics || []).slice(-300),
+          skipReasons: (neoBuildDiag.airCombatPriority.skipReasons || []).slice(-700),
+          stageTrace: (neoBuildDiag.airCombatPriority.stageTrace || []).slice(-120),
+          placements: (neoBuildDiag.airCombatPriority.placements || []).slice(-240),
+          placementCycles: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-240),
+          schedulerSummary: neoBuildDiag.airCombatPriority.schedulerSummary || null,
+          auditReportData: neoBuildDiag.airCombatPriority.auditReportData || {
             staffPriorityTable: [],
             scheduleDecisionTable: []
           }
         } : void 0,
-        fixedCrewPriority: neoBuildDiag2.fixedCrewPriority ? {
-          ...neoBuildDiag2.fixedCrewPriority,
-          queue: (neoBuildDiag2.fixedCrewPriority.queue || []).slice(-160),
-          minuteTimeline: (neoBuildDiag2.fixedCrewPriority.minuteTimeline || []).slice(0, 1500),
-          attempts: (neoBuildDiag2.fixedCrewPriority.attempts || []).slice(-1200),
-          placements: (neoBuildDiag2.fixedCrewPriority.placements || []).slice(-500)
+        fixedCrewPriority: neoBuildDiag.fixedCrewPriority ? {
+          ...neoBuildDiag.fixedCrewPriority,
+          queue: (neoBuildDiag.fixedCrewPriority.queue || []).slice(-160),
+          minuteTimeline: (neoBuildDiag.fixedCrewPriority.minuteTimeline || []).slice(0, 1500),
+          attempts: (neoBuildDiag.fixedCrewPriority.attempts || []).slice(-1200),
+          placements: (neoBuildDiag.fixedCrewPriority.placements || []).slice(-500)
         } : void 0,
-        flightSchoolPriority: neoBuildDiag2.flightSchoolPriority ? {
-          ...neoBuildDiag2.flightSchoolPriority,
-          calls: (neoBuildDiag2.flightSchoolPriority.calls || []).slice(-80),
-          slowCalls: (neoBuildDiag2.flightSchoolPriority.slowCalls || []).slice(-40)
+        flightSchoolPriority: neoBuildDiag.flightSchoolPriority ? {
+          ...neoBuildDiag.flightSchoolPriority,
+          calls: (neoBuildDiag.flightSchoolPriority.calls || []).slice(-80),
+          slowCalls: (neoBuildDiag.flightSchoolPriority.slowCalls || []).slice(-40)
         } : void 0
       };
       try {
@@ -92049,7 +92049,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     slowest: neoBuildAttemptTiming.slowest
   });
   const normaliseTaskTraceText = (value) => String(value || "").trim().toLowerCase();
-  const taskTraceLabels = neoBuildDiag2.taskProvenance.watchedLabels;
+  const taskTraceLabels = neoBuildDiag.taskProvenance.watchedLabels;
   const getTaskTraceMatchedLabels = (event) => {
     const text = [
       event.id,
@@ -92095,11 +92095,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   const traceTaskProvenance = (bucket, phase, event, extra = {}) => {
     if (!eventMatchesTaskTrace(event)) return;
-    neoBuildDiag2.taskProvenance[bucket].push(summariseTaskTraceEvent(event, phase, extra));
+    neoBuildDiag.taskProvenance[bucket].push(summariseTaskTraceEvent(event, phase, extra));
   };
-  neoBuildDiag2.taskProvenance.buildInput.highestPriorityEvents = highestPriorityEvents.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "build-input-highest-priority"));
-  neoBuildDiag2.taskProvenance.buildInput.activeDfpFixedEvents = activeDfpEventsWithoutDate.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "build-input-active-dfp-fixed"));
-  neoBuildDiag2.taskProvenance.buildInput.publishedScheduleForDate = (publishedSchedules[buildDate] || []).filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "build-input-published-schedule"));
+  neoBuildDiag.taskProvenance.buildInput.highestPriorityEvents = highestPriorityEvents.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "build-input-highest-priority"));
+  neoBuildDiag.taskProvenance.buildInput.activeDfpFixedEvents = activeDfpEventsWithoutDate.filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "build-input-active-dfp-fixed"));
+  neoBuildDiag.taskProvenance.buildInput.publishedScheduleForDate = (publishedSchedules[buildDate] || []).filter(eventMatchesTaskTrace).map((event) => summariseTaskTraceEvent(event, "build-input-published-schedule"));
   generatedEvents.forEach((event) => traceTaskProvenance("generatedPushes", "initial-generated-from-active-dfp", event));
   const eventCounts = /* @__PURE__ */ new Map();
   originalInstructors.forEach((i) => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
@@ -92249,7 +92249,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     rawSource: event?._source || null
   });
   const runFixedCrewBuild = () => {
-    const diag = neoBuildDiag2.fixedCrewPriority;
+    const diag = neoBuildDiag.fixedCrewPriority;
     const fixedCrewUnit = buildActiveUnitCode;
     const isPooledCrewBuild = buildOperationalModel === "pooled_crew";
     const fixedCrewContextUnits = buildActiveContextUnitCodes.length > 0 ? buildActiveContextUnitCodes : fixedCrewUnit ? [fixedCrewUnit] : [];
@@ -94228,7 +94228,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       rejectionReasons: diag.rejectionReasons
     };
     diag.conclusion = diag.placements.length > 0 ? [`Fixed Crew NEO Build placed ${diag.placements.length} event(s) using whole crew groups. Swaps are diagnostic-only in this phase and are not auto-applied.`] : ["Fixed Crew scheduler ran but did not place any events. Inspect fixedCrewPriority.attempts and rejectionReasons."];
-    neoBuildDiag2.final = {
+    neoBuildDiag.final = {
       totalEvents: sortedFixedCrewEvents.length,
       byType: sortedFixedCrewEvents.reduce((acc, event) => {
         acc[event.type] = (acc[event.type] || 0) + 1;
@@ -94337,7 +94337,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const getRemedialInstructorOverride = (traineeName, eventCode2) => remedialInstructorOverrides.get(remedialInstructorOverrideKey(traineeName, eventCode2))?.instructor || "";
   const forcedRemedialInstructorConflicts = [];
   const traceMandatoryRemedial = (bucket, entry, limit = 1200) => {
-    const list = neoBuildDiag2.mandatoryRemedialFlights[bucket];
+    const list = neoBuildDiag.mandatoryRemedialFlights[bucket];
     limit = getNeoBuildTraceLimit(Math.min(limit, 300), limit);
     if (list.length >= limit) return;
     list.push({
@@ -94347,7 +94347,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   };
   const traceRemedialMovement = (bucket, entry, limit = 1500) => {
-    const list = neoBuildDiag2.remedialDataMovement[bucket];
+    const list = neoBuildDiag.remedialDataMovement[bucket];
     limit = getNeoBuildTraceLimit(Math.min(limit, 300), limit);
     if (list.length >= limit) return;
     list.push({
@@ -94357,7 +94357,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   };
   const traceDayFlightGap = (bucket, entry, limit = 8e3) => {
-    const list = neoBuildDiag2.dayFlightGapDiagnostics[bucket];
+    const list = neoBuildDiag.dayFlightGapDiagnostics[bucket];
     limit = getNeoBuildTraceLimit(Math.min(limit, 600), limit);
     if (list.length >= limit) return;
     list.push({
@@ -94367,7 +94367,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   };
   const traceFormation = (bucket, entry, limit = 2e3) => {
-    const list = neoBuildDiag2.formationResourceDiagnostics[bucket];
+    const list = neoBuildDiag.formationResourceDiagnostics[bucket];
     limit = getNeoBuildTraceLimit(Math.min(limit, 300), limit);
     if (list.length >= limit) return;
     list.push({
@@ -94377,7 +94377,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   };
   const traceCurrencyPriority = (bucket, entry, limit = 2500) => {
-    const list = neoBuildDiag2.currencyPriorityDiagnostics[bucket];
+    const list = neoBuildDiag.currencyPriorityDiagnostics[bucket];
     if (list.length >= limit) return;
     list.push({
       sequence: list.length + 1,
@@ -94387,15 +94387,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   function getCompactCurrencyPriorityDiagnostics() {
     return {
-      ...neoBuildDiag2.currencyPriorityDiagnostics,
-      queueAudit: neoBuildDiag2.currencyPriorityDiagnostics.queueAudit.slice(-600),
-      typePassTrace: neoBuildDiag2.currencyPriorityDiagnostics.typePassTrace.slice(-200),
-      slotTrace: neoBuildDiag2.currencyPriorityDiagnostics.slotTrace.slice(-1200),
-      candidateTrace: neoBuildDiag2.currencyPriorityDiagnostics.candidateTrace.slice(-1800),
-      scheduleAttempts: neoBuildDiag2.currencyPriorityDiagnostics.scheduleAttempts.slice(-2500),
-      placementTrace: neoBuildDiag2.currencyPriorityDiagnostics.placementTrace.slice(-1200),
-      remainingTrace: neoBuildDiag2.currencyPriorityDiagnostics.remainingTrace.slice(-1200),
-      finalAssignments: neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments.slice(-600)
+      ...neoBuildDiag.currencyPriorityDiagnostics,
+      queueAudit: neoBuildDiag.currencyPriorityDiagnostics.queueAudit.slice(-600),
+      typePassTrace: neoBuildDiag.currencyPriorityDiagnostics.typePassTrace.slice(-200),
+      slotTrace: neoBuildDiag.currencyPriorityDiagnostics.slotTrace.slice(-1200),
+      candidateTrace: neoBuildDiag.currencyPriorityDiagnostics.candidateTrace.slice(-1800),
+      scheduleAttempts: neoBuildDiag.currencyPriorityDiagnostics.scheduleAttempts.slice(-2500),
+      placementTrace: neoBuildDiag.currencyPriorityDiagnostics.placementTrace.slice(-1200),
+      remainingTrace: neoBuildDiag.currencyPriorityDiagnostics.remainingTrace.slice(-1200),
+      finalAssignments: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.slice(-600)
     };
   }
   function saveCurrencyPriorityDiagnostics(stage) {
@@ -94414,15 +94414,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           storageCompacted: true,
           storageCompactedReason: error instanceof Error ? error.message : String(error),
           currencyPriorityDiagnostics: {
-            ...neoBuildDiag2.currencyPriorityDiagnostics,
-            queueAudit: neoBuildDiag2.currencyPriorityDiagnostics.queueAudit.slice(-50),
-            typePassTrace: neoBuildDiag2.currencyPriorityDiagnostics.typePassTrace.slice(-80),
-            slotTrace: neoBuildDiag2.currencyPriorityDiagnostics.slotTrace.slice(-120),
-            candidateTrace: neoBuildDiag2.currencyPriorityDiagnostics.candidateTrace.slice(-120),
-            scheduleAttempts: neoBuildDiag2.currencyPriorityDiagnostics.scheduleAttempts.slice(-500),
-            placementTrace: neoBuildDiag2.currencyPriorityDiagnostics.placementTrace.slice(-300),
-            remainingTrace: neoBuildDiag2.currencyPriorityDiagnostics.remainingTrace.slice(-120),
-            finalAssignments: neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments.slice(-100)
+            ...neoBuildDiag.currencyPriorityDiagnostics,
+            queueAudit: neoBuildDiag.currencyPriorityDiagnostics.queueAudit.slice(-50),
+            typePassTrace: neoBuildDiag.currencyPriorityDiagnostics.typePassTrace.slice(-80),
+            slotTrace: neoBuildDiag.currencyPriorityDiagnostics.slotTrace.slice(-120),
+            candidateTrace: neoBuildDiag.currencyPriorityDiagnostics.candidateTrace.slice(-120),
+            scheduleAttempts: neoBuildDiag.currencyPriorityDiagnostics.scheduleAttempts.slice(-500),
+            placementTrace: neoBuildDiag.currencyPriorityDiagnostics.placementTrace.slice(-300),
+            remainingTrace: neoBuildDiag.currencyPriorityDiagnostics.remainingTrace.slice(-120),
+            finalAssignments: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.slice(-100)
           }
         }));
       } catch (compactError) {
@@ -94527,7 +94527,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   });
   saveNeoBuildDiag("build-start");
-  neoBuildDiag2.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
+  neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
   const placeRemedialPriorityEvent = (event) => {
     if (!event.isRemedial) return event;
     const isNightRemedial = event.dayNight === "Night";
@@ -94676,7 +94676,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return { ...event, startTime: searchStart };
   };
   const mandatoryRemedialFlights = highestPriorityEvents.filter(isMandatoryRemedialFlight);
-  neoBuildDiag2.mandatoryRemedialFlights.priorityQueueAudit = highestPriorityEvents.filter((event) => event.isRemedial || event.id?.startsWith("remedial-")).map((event) => {
+  neoBuildDiag.mandatoryRemedialFlights.priorityQueueAudit = highestPriorityEvents.filter((event) => event.isRemedial || event.id?.startsWith("remedial-")).map((event) => {
     const includedInMandatoryFlightQueue = isMandatoryRemedialFlight(event);
     const exclusionReasons = [];
     if (!priorityEventMatchesBuildDate(event, buildDate)) exclusionReasons.push("DATE_MISMATCH");
@@ -94701,7 +94701,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       exclusionReasons
     };
   });
-  neoBuildDiag2.mandatoryRemedialFlights.queue = mandatoryRemedialFlights.map((event) => ({
+  neoBuildDiag.mandatoryRemedialFlights.queue = mandatoryRemedialFlights.map((event) => ({
     id: event.id,
     flightNumber: event.flightNumber,
     baseEventCode: getRemedialBaseEventCode({ code: event.flightNumber }),
@@ -94920,9 +94920,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const activeTrainees = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
-  neoBuildDiag2.activeTrainees.total = activeTrainees.length;
-  neoBuildDiag2.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && (config.excludedCourses || []).includes(t.course)).length;
-  neoBuildDiag2.activeTrainees.excludedStaticUnavailable = trainees.filter(
+  neoBuildDiag.activeTrainees.total = activeTrainees.length;
+  neoBuildDiag.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && (config.excludedCourses || []).includes(t.course)).length;
+  neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   ).length;
   const countTraineesByCourse = (list) => list.reduce((counts, trainee) => {
@@ -94930,7 +94930,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     counts[courseName] = (counts[courseName] || 0) + 1;
     return counts;
   }, {});
-  neoBuildDiag2.activeTrainees.byCourse = countTraineesByCourse(activeTrainees);
+  neoBuildDiag.activeTrainees.byCourse = countTraineesByCourse(activeTrainees);
   const traineeNextEventMap = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
     const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
@@ -95131,7 +95131,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return getExplicitFormationResourceNumber(group.item);
   };
-  neoBuildDiag2.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
+  neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
     const resourceNumber = getFormationGroupResourceNumber(group);
     return {
       eventKey,
@@ -95151,7 +95151,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       selectedCandidates: group.trainees.slice(0, resourceNumber).map((trainee) => trainee.fullName)
     };
   });
-  neoBuildDiag2.nextEventLists = {
+  neoBuildDiag.nextEventLists = {
     next: {
       flight: nextEventLists.flight.length,
       ftd: nextEventLists.ftd.length,
@@ -95168,7 +95168,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     noNextEvent: activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next).length
   };
   const nextBucketByCourse = (list) => countTraineesByCourse(list);
-  neoBuildDiag2.nextByCourse = {
+  neoBuildDiag.nextByCourse = {
     flight: nextBucketByCourse(nextEventLists.flight),
     ftd: nextBucketByCourse(nextEventLists.ftd),
     cpt: nextBucketByCourse(nextEventLists.cpt),
@@ -95179,8 +95179,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     plusOneCpt: nextBucketByCourse(nextPlusOneLists.cpt),
     plusOneGround: nextBucketByCourse(nextPlusOneLists.ground)
   };
-  neoBuildDiag2.noNextByCourse = countTraineesByCourse(activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next));
-  neoBuildDiag2.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
+  neoBuildDiag.noNextByCourse = countTraineesByCourse(activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next));
+  neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).map(([name, ev]) => {
     const trainee = activeTrainees.find((candidate) => candidate.fullName === name);
     return {
       name,
@@ -95192,13 +95192,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       plusOneType: ev.plusOne?.type || null
     };
   });
-  neoBuildDiag2.zeroTileInvestigation.checkpoints.push({
+  neoBuildDiag.zeroTileInvestigation.checkpoints.push({
     stage: "category-lists-built",
     activeTrainees: activeTrainees.length,
     traineeLMPs: traineeLMPs.size,
-    nextEventLists: neoBuildDiag2.nextEventLists,
-    noNextByCourse: neoBuildDiag2.noNextByCourse,
-    nextSamples: neoBuildDiag2.nextSamples.slice(0, 40)
+    nextEventLists: neoBuildDiag.nextEventLists,
+    noNextByCourse: neoBuildDiag.noNextByCourse,
+    nextSamples: neoBuildDiag.nextSamples.slice(0, 40)
   });
   saveNeoBuildDiag("category-lists-built");
   buildDebugLog(
@@ -95260,12 +95260,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const saveFlightSchoolPriorityDiagSnapshot = (reason) => {
     if (buildOperationalModel !== "flight_school") return;
-    const calls = neoBuildDiag2.flightSchoolPriority.calls || [];
-    neoBuildDiag2.flightSchoolPriority.summary = {
+    const calls = neoBuildDiag.flightSchoolPriority.calls || [];
+    neoBuildDiag.flightSchoolPriority.summary = {
       reason,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       callCount: calls.length,
-      slowCallCount: (neoBuildDiag2.flightSchoolPriority.slowCalls || []).length,
+      slowCallCount: (neoBuildDiag.flightSchoolPriority.slowCalls || []).length,
       totalDurationMs: Math.round(calls.reduce((sum, call) => sum + (call.durationMs || 0), 0)),
       maxDurationMs: Math.round(Math.max(0, ...calls.map((call) => call.durationMs || 0))),
       coursePrioritiesCount: coursePriorities.length,
@@ -95273,7 +95273,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     if (!isDetailedNeoBuildDiagnosticsEnabled) return;
     try {
-      localStorage.setItem("flight_school_priority_diag_report", JSON.stringify(neoBuildDiag2.flightSchoolPriority));
+      localStorage.setItem("flight_school_priority_diag_report", JSON.stringify(neoBuildDiag.flightSchoolPriority));
     } catch (error) {
       console.warn("[FLIGHT-SCHOOL-PRIORITY-DIAG] Failed to save focused diagnostic:", error);
     }
@@ -95281,12 +95281,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (buildOperationalModel === "flight_school") {
     const rawPercentageTotal = Array.from(coursePercentages.values()).reduce((sum, value) => sum + (Number(value) || 0), 0);
     const normalisedAtBuildStart = normalizePercentages(new Map(coursePercentages));
-    neoBuildDiag2.flightSchoolPriority.inputs.activeTraineesAtBuildStart = activeTrainees.length;
-    neoBuildDiag2.flightSchoolPriority.inputs.rawPercentageTotal = rawPercentageTotal;
-    neoBuildDiag2.flightSchoolPriority.inputs.coursePriorityDuplicates = coursePriorities.filter((course, index) => coursePriorities.indexOf(course) !== index);
-    neoBuildDiag2.flightSchoolPriority.inputs.percentagesWithoutPriority = Array.from(coursePercentages.keys()).filter((course) => !coursePriorities.includes(course));
-    neoBuildDiag2.flightSchoolPriority.inputs.prioritiesWithoutPercentage = coursePriorities.filter((course) => !coursePercentages.has(course));
-    neoBuildDiag2.flightSchoolPriority.normalisedPercentages = Array.from(normalisedAtBuildStart.entries()).map(([course, percentage]) => ({
+    neoBuildDiag.flightSchoolPriority.inputs.activeTraineesAtBuildStart = activeTrainees.length;
+    neoBuildDiag.flightSchoolPriority.inputs.rawPercentageTotal = rawPercentageTotal;
+    neoBuildDiag.flightSchoolPriority.inputs.coursePriorityDuplicates = coursePriorities.filter((course, index) => coursePriorities.indexOf(course) !== index);
+    neoBuildDiag.flightSchoolPriority.inputs.percentagesWithoutPriority = Array.from(coursePercentages.keys()).filter((course) => !coursePriorities.includes(course));
+    neoBuildDiag.flightSchoolPriority.inputs.prioritiesWithoutPercentage = coursePriorities.filter((course) => !coursePercentages.has(course));
+    neoBuildDiag.flightSchoolPriority.normalisedPercentages = Array.from(normalisedAtBuildStart.entries()).map(([course, percentage]) => ({
       course,
       percentage
     }));
@@ -95306,8 +95306,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         coursePercentagesCount: coursePercentages.size,
         ...extra
       };
-      neoBuildDiag2.flightSchoolPriority.calls.push(call);
-      if (durationMs > 50 || rankedList.length > 200) neoBuildDiag2.flightSchoolPriority.slowCalls.push(call);
+      neoBuildDiag.flightSchoolPriority.calls.push(call);
+      if (durationMs > 50 || rankedList.length > 200) neoBuildDiag.flightSchoolPriority.slowCalls.push(call);
       saveFlightSchoolPriorityDiagSnapshot(durationMs > 50 ? `slow:${diagnosticLabel}` : `call:${diagnosticLabel}`);
       markBuildTiming(`flight-school-priority:${diagnosticLabel}`, {
         durationMs,
@@ -95620,13 +95620,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       ...details
     };
-    neoBuildDiag2.individualLmpDurationDiagnostics.lookups.push(entry);
-    if (neoBuildDiag2.individualLmpDurationDiagnostics.lookups.length > 600) {
-      neoBuildDiag2.individualLmpDurationDiagnostics.lookups = neoBuildDiag2.individualLmpDurationDiagnostics.lookups.slice(-600);
+    neoBuildDiag.individualLmpDurationDiagnostics.lookups.push(entry);
+    if (neoBuildDiag.individualLmpDurationDiagnostics.lookups.length > 600) {
+      neoBuildDiag.individualLmpDurationDiagnostics.lookups = neoBuildDiag.individualLmpDurationDiagnostics.lookups.slice(-600);
     }
     if (phase.includes("placed")) {
-      neoBuildDiag2.individualLmpDurationDiagnostics.placements.push(entry);
-      neoBuildDiag2.individualLmpDurationDiagnostics.placements = neoBuildDiag2.individualLmpDurationDiagnostics.placements.slice(-240);
+      neoBuildDiag.individualLmpDurationDiagnostics.placements.push(entry);
+      neoBuildDiag.individualLmpDurationDiagnostics.placements = neoBuildDiag.individualLmpDurationDiagnostics.placements.slice(-240);
     }
   };
   const resolveIndividualLmpItemForTraineeEvent = (trainee, syllabusItem) => {
@@ -95793,7 +95793,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }),
       unplaced: []
     };
-    neoBuildDiag2.scheduleLists[listName] = listDiag;
+    neoBuildDiag.scheduleLists[listName] = listDiag;
     saveNeoBuildDiag(`schedule-list-start:${listName}`);
     const segments = [];
     if ((type === "cpt" || type === "ground") && !isNightPass) {
@@ -96073,7 +96073,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     listDiag.generatedDelta = listDiag.generatedEventsAtEnd - listDiag.generatedEventsAtStart;
     listDiag.durationMs = Math.round(performance.now() - scheduleListStartedAt);
     listDiag.passes = passNumber;
-    neoBuildDiag2.scheduleFlow.push({
+    neoBuildDiag.scheduleFlow.push({
       listName,
       type,
       isPlusOne,
@@ -97621,7 +97621,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }).sort(
     (left, right) => left.taskingCompleted - right.taskingCompleted || left.lastTaskingDateValue - right.lastTaskingDateValue || left.tieBreak - right.tieBreak
   );
-  neoBuildDiag2.airCombatPriority = {
+  neoBuildDiag.airCombatPriority = {
     enabled: isAirCombatBuild,
     model: buildOperationalModel,
     context: {
@@ -97910,7 +97910,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const neoAuditLogger = createNeoAuditLogger();
   const pushAirCombatDiag = (bucket, entry, limit = 500) => {
-    const diag = neoBuildDiag2.airCombatPriority;
+    const diag = neoBuildDiag.airCombatPriority;
     if (!diag || !Array.isArray(diag[bucket])) return;
     limit = getNeoBuildTraceLimit(Math.min(limit, 220), limit);
     diag[bucket].push(entry);
@@ -97925,9 +97925,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   };
   const countAirCombatRejection = (reason) => {
-    const reasons = neoBuildDiag2.airCombatPriority.rejectionReasons || {};
+    const reasons = neoBuildDiag.airCombatPriority.rejectionReasons || {};
     reasons[reason] = (reasons[reason] || 0) + 1;
-    neoBuildDiag2.airCombatPriority.rejectionReasons = reasons;
+    neoBuildDiag.airCombatPriority.rejectionReasons = reasons;
   };
   const recordAirCombatSkip = (entry) => {
     pushAirCombatDiag("skipReasons", entry, 800);
@@ -97978,7 +97978,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const crewPositionStaff = instructors.filter(isAirCombatCrewPositionStaff);
     const terminology = normaliseCrewPositionTerminology(buildCrewPositionTerminology);
     const allCrewRoles = terminology.positions.map((position) => position.genericName);
-    neoBuildDiag2.airCombatPriority.crewConfigurationAudit = {
+    neoBuildDiag.airCombatPriority.crewConfigurationAudit = {
       operationalModel: buildOperationalModel,
       terminology,
       buildAircraftCrewComposition,
@@ -97986,7 +97986,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       aircraftSeatRoleGroups: airCombatFlightCrewRoleGroups,
       aircraftSeatRoleGroupLabels: summariseCrewRoleGroups(airCombatFlightCrewRoleGroups)
     };
-    neoBuildDiag2.airCombatPriority.staffAudit = instructors.map((staff) => {
+    neoBuildDiag.airCombatPriority.staffAudit = instructors.map((staff) => {
       const assignments = normaliseAirCombatTrainingAssignments(staff.preferences);
       const matchedCrewPosition = findCrewPositionEntry(staff.role, buildCrewPositionTerminology);
       return {
@@ -98008,7 +98008,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         trainingPackageAssignments: assignments.trainingPackages.map((item) => ({ code: item.code, trainingKey: item.trainingKey, unitCode: item.unitCode }))
       };
     });
-    neoBuildDiag2.airCombatPriority.staffRoleCoverage = allCrewRoles.map((role) => {
+    neoBuildDiag.airCombatPriority.staffRoleCoverage = allCrewRoles.map((role) => {
       const matchingStaff = instructors.filter((staff) => airCombatStaffMatchesCrewRole(staff, role));
       return {
         role,
@@ -98035,7 +98035,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         explanation: matchingStaff.length === 0 ? `No active staff in ${school} - ${buildActiveUnitCode || "selected unit"} match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}). Flights needing this seat cannot be scheduled.` : `${matchingStaff.length} active staff match required crew seat ${seatIndex + 1} (${formatCrewRoleGroup(requiredRoles)}).`
       };
     }).filter((shortfall) => shortfall.matchingStaffCount === 0);
-    neoBuildDiag2.airCombatPriority.crewRoleShortfalls = crewRoleShortfalls;
+    neoBuildDiag.airCombatPriority.crewRoleShortfalls = crewRoleShortfalls;
     crewRoleShortfalls.forEach((shortfall) => {
       recordAirCombatSkip({
         list: "input",
@@ -98050,7 +98050,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         explanation: shortfall.explanation
       });
     });
-    neoBuildDiag2.airCombatPriority.assignmentAudit = {
+    neoBuildDiag.airCombatPriority.assignmentAudit = {
       pilotStaff: pilotStaff.length,
       crewPositionStaff: crewPositionStaff.length,
       pilotsWithCourseAssignments: pilotStaff.filter((staff) => normaliseAirCombatTrainingAssignments(staff.preferences).courses.length > 0).length,
@@ -98098,7 +98098,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let scheduledCount = 0;
     buildDebugLog(`DEBUG Scheduling directed-task priority events: ${orderedTaskingEvents.length}`);
     if (isAirCombatBuild) {
-      neoBuildDiag2.airCombatPriority.taskingQueue = orderedTaskingEvents.map((event) => ({
+      neoBuildDiag.airCombatPriority.taskingQueue = orderedTaskingEvents.map((event) => ({
         ...getTaskingEventIdentity(event),
         mandatory: event.isMandatoryTasking !== false,
         type: event.type,
@@ -98108,7 +98108,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         acceptableAircraftConfigs: normaliseAircraftConfigRequirement(event),
         crewRequirementDiagnostic: getCrewRequirementDiagnostic(event, getPriorityEventCrewCount(event))
       }));
-      neoBuildDiag2.airCombatPriority.crewRequirementAudit = orderedTaskingEvents.map((event) => ({
+      neoBuildDiag.airCombatPriority.crewRequirementAudit = orderedTaskingEvents.map((event) => ({
         priorityEvent: getTaskingEventIdentity(event),
         type: event.type,
         flightType: event.flightType,
@@ -98172,7 +98172,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           secondaryCandidates: secondaryPool.slice(0, 40).map((staff) => ({ name: staff.name, role: staff.role, unit: staff.unit || null })),
           rejections: []
         };
-        neoBuildDiag2.airCombatPriority.taskStaffPriorityList = priorityList.map((entry) => ({
+        neoBuildDiag.airCombatPriority.taskStaffPriorityList = priorityList.map((entry) => ({
           name: entry.staff.name,
           role: entry.staff.role,
           requiredRole: formatCrewRoleGroup(primaryRequiredRoles),
@@ -98480,7 +98480,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (staffCounts) staffCounts.flightFtd++;
         });
         if (isAirCombatBuild) {
-          neoBuildDiag2.airCombatPriority.placements.push({
+          neoBuildDiag.airCombatPriority.placements.push({
             kind: "task",
             event: placedEvent.flightNumber,
             startTime: placedEvent.startTime,
@@ -98950,7 +98950,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }))
       };
     });
-    neoBuildDiag2.airCombatPriority.trainingInputs = {
+    neoBuildDiag.airCombatPriority.trainingInputs = {
       scheduleMode,
       courseCodes,
       packageCodes,
@@ -98965,13 +98965,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       packageCodes,
       weightedTrainingStreams,
       placementLimit,
-      courseMatchCounts: neoBuildDiag2.airCombatPriority.trainingInputs.courseSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches })),
-      packageMatchCounts: neoBuildDiag2.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches }))
+      courseMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches })),
+      packageMatchCounts: neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches.map((item) => ({ code: item.code, matches: item.matches }))
     });
     if (courseCodes.length === 0 && packageCodes.length === 0) {
       recordAirCombatSkip({ list: "training", staff: "Assigned Training", event: "Air Combat build", reason: "NO_AIR_COMBAT_TRAINING_ASSIGNMENTS", startTime: null });
     }
-    [...neoBuildDiag2.airCombatPriority.trainingInputs.courseSyllabusMatches, ...neoBuildDiag2.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches].filter((item) => item.matches === 0).forEach((item) => recordAirCombatSkip({
+    [...neoBuildDiag.airCombatPriority.trainingInputs.courseSyllabusMatches, ...neoBuildDiag.airCombatPriority.trainingInputs.trainingPackageSyllabusMatches].filter((item) => item.matches === 0).forEach((item) => recordAirCombatSkip({
       list: item.kind,
       staff: "Syllabus",
       event: item.code,
@@ -99723,7 +99723,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (!eventCounts.has(assignment.crew.name)) eventCounts.set(assignment.crew.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
           eventCounts.get(assignment.crew.name).flightFtd++;
         });
-        neoBuildDiag2.airCombatPriority.placements.push({
+        neoBuildDiag.airCombatPriority.placements.push({
           kind,
           code,
           event: leadItem.code,
@@ -99841,7 +99841,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         let listDiagnostic = null;
         if (!emittedTrainingListDiagnostics.has(diagnosticKey)) {
           listDiagnostic = getTrainingListDiagnostic(kind, code);
-          neoBuildDiag2.airCombatPriority[diagKey].push({
+          neoBuildDiag.airCombatPriority[diagKey].push({
             code,
             matchingSyllabusItems: matchingItems.length,
             assignedStaffCount: listDiagnostic.assignedStaffCount,
@@ -100104,7 +100104,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               if (!eventCounts.has(secondaryCrew.name)) eventCounts.set(secondaryCrew.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
               eventCounts.get(secondaryCrew.name).flightFtd++;
             }
-            neoBuildDiag2.airCombatPriority.placements.push({
+            neoBuildDiag.airCombatPriority.placements.push({
               kind,
               code,
               event: item.code,
@@ -100219,7 +100219,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       cycleTrace.placedKind = placedKind;
       cycleTrace.placedStream = placedStream ? { kind: placedStream.kind, code: placedStream.code, weight: placedStream.weight } : null;
       cycleTrace.generatedEventsAfter = generatedEvents.length;
-      cycleTrace.placementsAfter = neoBuildDiag2.airCombatPriority.placements.length;
+      cycleTrace.placementsAfter = neoBuildDiag.airCombatPriority.placements.length;
       if (!placedKind) {
         cycleTrace.noPlacementReason = "NO_PLACEMENT_FROM_WEIGHTED_STREAMS_AT_TILE";
         pushAirCombatDiag("placementCycles", cycleTrace, 300);
@@ -100261,7 +100261,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       pushAirCombatDiag("placementCycles", cycleTrace, 300);
     }
-    neoBuildDiag2.airCombatPriority.schedulerSummary = {
+    neoBuildDiag.airCombatPriority.schedulerSummary = {
       placementLimit,
       scheduleMode,
       courseCodes,
@@ -100280,9 +100280,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }),
       totalTrainingPlacements: coursePlaced + packagePlaced,
       generatedEventsAfterTrainingLoop: generatedEvents.length,
-      placementCount: neoBuildDiag2.airCombatPriority.placements.length,
-      rejectionReasons: neoBuildDiag2.airCombatPriority.rejectionReasons,
-      lastCycle: (neoBuildDiag2.airCombatPriority.placementCycles || []).slice(-1)[0] || null,
+      placementCount: neoBuildDiag.airCombatPriority.placements.length,
+      rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons,
+      lastCycle: (neoBuildDiag.airCombatPriority.placementCycles || []).slice(-1)[0] || null,
       weights: airCombatWeights,
       exhaustedTrainingCodes: Array.from(exhaustedTrainingCodes),
       cacheStats: {
@@ -100293,12 +100293,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         generatedStaffHistoryLists: airCombatGeneratedEventsByStaff.size
       }
     };
-    neoBuildDiag2.airCombatPriority.auditReportData = neoAuditLogger.getAuditReportData();
-    recordAirCombatStage("training-placement-loop-complete", neoBuildDiag2.airCombatPriority.schedulerSummary);
+    neoBuildDiag.airCombatPriority.auditReportData = neoAuditLogger.getAuditReportData();
+    recordAirCombatStage("training-placement-loop-complete", neoBuildDiag.airCombatPriority.schedulerSummary);
     markBuildTiming("air-combat-training:complete", {
       coursePlaced,
       packagePlaced,
-      placementCount: neoBuildDiag2.airCombatPriority.placements.length,
+      placementCount: neoBuildDiag.airCombatPriority.placements.length,
       generatedEvents: generatedEvents.length,
       exhaustedTrainingCodes: exhaustedTrainingCodes.size,
       sortedTrainingItemLists: sortedTrainingItemsCache.size,
@@ -100751,7 +100751,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     scheduleType("ftd");
     scheduleType("flight");
-    neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map((priorityEvent) => {
+    neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map((priorityEvent) => {
       const scheduledEvent = findScheduledCurrencyEvent(priorityEvent);
       return {
         priorityEvent: getCurrencyEventIdentity(priorityEvent),
@@ -100772,13 +100772,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         likelySkippedBySharedDraftId: !scheduledEvent && !!priorityEvent.currencyDraftId && scheduledCurrencyDraftIds.has(priorityEvent.currencyDraftId)
       };
     });
-    neoBuildDiag2.currencyPriorityDiagnostics.summary = {
+    neoBuildDiag.currencyPriorityDiagnostics.summary = {
       totalInput: currencyPriorityEvents.length,
-      scheduledCount: neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments.filter((entry) => entry.scheduled).length,
-      unscheduledCount: neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments.filter((entry) => !entry.scheduled).length,
+      scheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry) => entry.scheduled).length,
+      unscheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry) => !entry.scheduled).length,
       generatedEventsAfterCurrencyPriority: generatedEvents.length,
       scheduledCurrencyDraftIdsAtEnd: Array.from(scheduledCurrencyDraftIds),
-      likelySharedDraftIdSkips: neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments.filter((entry) => entry.likelySkippedBySharedDraftId).map((entry) => entry.priorityEvent)
+      likelySharedDraftIdSkips: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry) => entry.likelySkippedBySharedDraftId).map((entry) => entry.priorityEvent)
     };
     saveCurrencyPriorityDiagnostics("currency-priority-complete");
   };
@@ -100882,7 +100882,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       successes: [],
       unplaced: []
     };
-    neoBuildDiag2.scheduleLists[diagnosticLabel] = listDiag;
+    neoBuildDiag.scheduleLists[diagnosticLabel] = listDiag;
     groups.forEach((group) => {
       const resourceNumber = getFormationGroupResourceNumber(group);
       const selectedTrainees = group.trainees.slice(0, resourceNumber);
@@ -101345,7 +101345,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       latestStartBefore
     );
   };
-  neoBuildDiag2.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map((event) => {
+  neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map((event) => {
     const eventTrainee = event.student || event.pilot || "";
     const trainee = activeTrainees.find((t) => t.fullName === eventTrainee) || null;
     const next = trainee ? traineeNextEventMap.get(trainee.fullName)?.next : null;
@@ -101379,7 +101379,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       reason: !trainee ? "TRAINEE_NOT_ACTIVE_OR_FILTERED" : mandatoryItem ? "MATCHED_SELECTED_REMEDIAL_EVENT" : "SELECTED_REMEDIAL_EVENT_NOT_FOUND_IN_INDIVIDUAL_LMP"
     };
   });
-  neoBuildDiag2.mandatoryRemedialFlights.normalFlightListExclusions = mandatoryRemedialFlights.map((event) => {
+  neoBuildDiag.mandatoryRemedialFlights.normalFlightListExclusions = mandatoryRemedialFlights.map((event) => {
     const eventTrainee = event.student || event.pilot || "";
     return {
       priorityEventId: event.id,
@@ -101394,13 +101394,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   buildDebugLog(`
 🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Formation groups: ${_formationFlightGroups.length}, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
-  buildDebugLog("[MANDATORY-REMEDIAL-DIAG] Match audit:", neoBuildDiag2.mandatoryRemedialFlights.matchAudit);
+  buildDebugLog("[MANDATORY-REMEDIAL-DIAG] Match audit:", neoBuildDiag.mandatoryRemedialFlights.matchAudit);
   window.__fbFlightListSize = _allFlightList.length;
   if (isAirCombatBuild) {
     const airCombatNightTrainingEvents = getAirCombatRequiredNightTrainingEvents();
     const airCombatNightRequirementCount = airCombatNightTaskingEvents.length + airCombatNightCurrencyEvents.length + airCombatNightTrainingEvents.length;
     const airCombatNightSchedulingActive = allowNightFlying && airCombatNightRequirementCount >= 2;
-    neoBuildDiag2.airCombatPriority.nightScheduling = {
+    neoBuildDiag.airCombatPriority.nightScheduling = {
       active: airCombatNightSchedulingActive,
       requirementCount: airCombatNightRequirementCount,
       taskings: airCombatNightTaskingEvents.map(getTaskingEventIdentity),
@@ -102437,7 +102437,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       nextCurrencyFlightSequenceStart = event.startTime + timeIncrement;
     });
-    neoBuildDiag2.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map((priorityEvent) => {
+    neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map((priorityEvent) => {
       const scheduledEvent = generatedEvents.find((event) => event.id === priorityEvent.id) || generatedEvents.find(
         (event) => !!priorityEvent.currencyDraftId && event.currencyDraftId === priorityEvent.currencyDraftId && event.type === priorityEvent.type && isCurrencyPriorityEvent(event)
       ) || null;
@@ -102746,7 +102746,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       soloOrDual: "Dual"
     };
   }).filter((event) => Boolean(event)) : conflictSafeEvents;
-  neoBuildDiag2.finalCleanup = {
+  neoBuildDiag.finalCleanup = {
     beforeDayNightGuard: generatedEventsBeforeFinalCleanup,
     afterDayNightGuard: dayNightSeparatedEvents.length,
     removedByDayNightGuard: generatedEventsBeforeFinalCleanup - dayNightSeparatedEvents.length,
@@ -102765,10 +102765,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return a.startTime - b.startTime;
   });
   sortedEvents.filter(eventMatchesTaskTrace).forEach((event) => traceTaskProvenance("finalEvents", "final-sorted-event", event));
-  if (neoBuildDiag2.fixedCrewPriority?.sctCrewTrace) {
-    const sctTrace = neoBuildDiag2.fixedCrewPriority.sctCrewTrace;
-    sctTrace.attemptsForSctEvents = (neoBuildDiag2.fixedCrewPriority.attempts || []).filter((attempt) => attempt.isSct || attempt.sctRequestId).slice(-500);
-    sctTrace.placementsForSctEvents = (neoBuildDiag2.fixedCrewPriority.placements || []).filter((placement) => placement.isSct || placement.sctRequestId).slice(-200);
+  if (neoBuildDiag.fixedCrewPriority?.sctCrewTrace) {
+    const sctTrace = neoBuildDiag.fixedCrewPriority.sctCrewTrace;
+    sctTrace.attemptsForSctEvents = (neoBuildDiag.fixedCrewPriority.attempts || []).filter((attempt) => attempt.isSct || attempt.sctRequestId).slice(-500);
+    sctTrace.placementsForSctEvents = (neoBuildDiag.fixedCrewPriority.placements || []).filter((placement) => placement.isSct || placement.sctRequestId).slice(-200);
     sctTrace.finalEvents = sortedEvents.filter(isFixedCrewSctEventForDiag).map((event) => summarizeFixedCrewSctEventForDiag(event, "final-sorted-events"));
     const requestsById = new Map((sctTrace.requestInputs || []).map((request) => [request.id, request]));
     sctTrace.conclusions = sctTrace.finalEvents.map((event) => {
@@ -102809,17 +102809,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     });
   }
-  if (neoBuildDiag2.taskProvenance) {
+  if (neoBuildDiag.taskProvenance) {
     const finalWatchedEvents = sortedEvents.filter(eventMatchesTaskTrace);
     const findMatchingTrace = (event, entries = []) => entries.find((entry) => entry.id === event.id) || entries.find(
       (entry) => entry.flightNumber === event.flightNumber && entry.startTime === event.startTime && entry.resourceId === event.resourceId && (entry.pilot || "") === (event.pilot || "")
     ) || null;
-    neoBuildDiag2.taskProvenance.conclusions = finalWatchedEvents.length > 0 ? finalWatchedEvents.map((event) => {
-      const firstGeneratedTrace = findMatchingTrace(event, neoBuildDiag2.taskProvenance.generatedPushes || []);
+    neoBuildDiag.taskProvenance.conclusions = finalWatchedEvents.length > 0 ? finalWatchedEvents.map((event) => {
+      const firstGeneratedTrace = findMatchingTrace(event, neoBuildDiag.taskProvenance.generatedPushes || []);
       const matchingInputs = [
-        ...neoBuildDiag2.taskProvenance.buildInput?.highestPriorityEvents || [],
-        ...neoBuildDiag2.taskProvenance.buildInput?.activeDfpFixedEvents || [],
-        ...neoBuildDiag2.taskProvenance.buildInput?.publishedScheduleForDate || []
+        ...neoBuildDiag.taskProvenance.buildInput?.highestPriorityEvents || [],
+        ...neoBuildDiag.taskProvenance.buildInput?.activeDfpFixedEvents || [],
+        ...neoBuildDiag.taskProvenance.buildInput?.publishedScheduleForDate || []
       ].filter(
         (entry) => entry.id === event.id || entry.flightNumber === event.flightNumber && (entry.pilot || "") === (event.pilot || "") && (entry.startTime === event.startTime || entry.resourceId === event.resourceId)
       );
@@ -102837,19 +102837,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       outcome: "No watched task labels survived into the final sorted build."
     }];
   }
-  if (neoBuildDiag2.airCombatPriority?.enabled) {
-    const airCombatPlacements = neoBuildDiag2.airCombatPriority.placements || [];
+  if (neoBuildDiag.airCombatPriority?.enabled) {
+    const airCombatPlacements = neoBuildDiag.airCombatPriority.placements || [];
     const conclusions = [];
     if (buildOperationalModel !== "air_combat") conclusions.push(`Air Combat scheduler did not run because active model was ${buildOperationalModel || "blank"}.`);
-    if ((neoBuildDiag2.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push(`No non-admin pilot or ${(instructorLabel || "Instructor").toLowerCase()}-qualified staff were available in the active Air Combat staff pool.`);
-    if ((neoBuildDiag2.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed-task requests matched the build date.");
-    const crewRoleShortfalls = neoBuildDiag2.airCombatPriority.crewRoleShortfalls || [];
+    if ((neoBuildDiag.airCombatPriority.inputs?.pilotRoleStaff || 0) === 0) conclusions.push(`No non-admin pilot or ${(instructorLabel || "Instructor").toLowerCase()}-qualified staff were available in the active Air Combat staff pool.`);
+    if ((neoBuildDiag.airCombatPriority.inputs?.mandatoryTaskingEvents || 0) === 0) conclusions.push("No mandatory Air Combat directed-task requests matched the build date.");
+    const crewRoleShortfalls = neoBuildDiag.airCombatPriority.crewRoleShortfalls || [];
     if (crewRoleShortfalls.length > 0) {
       conclusions.push(`Required Air Combat crew roles have no matching active staff in ${school} - ${buildActiveUnitCode || "selected unit"}: ${crewRoleShortfalls.map((shortfall) => `seat ${shortfall.seat} ${shortfall.requiredRoleLabel}`).join(", ")}. Flights needing those seats cannot be scheduled until staff data, unit selection, or staff-sharing includes those roles.`);
     }
-    const trainingInputs = neoBuildDiag2.airCombatPriority.trainingInputs;
+    const trainingInputs = neoBuildDiag.airCombatPriority.trainingInputs;
     if (trainingInputs && trainingInputs.courseCodes.length === 0 && trainingInputs.packageCodes.length === 0) conclusions.push("No Air Combat course or training-package assignments were found on Pilot staff preferences.");
-    const schedulerSummary = neoBuildDiag2.airCombatPriority.schedulerSummary;
+    const schedulerSummary = neoBuildDiag.airCombatPriority.schedulerSummary;
     if (trainingInputs && schedulerSummary?.placementLimit === 0 && (trainingInputs.courseCodes.length > 0 || trainingInputs.packageCodes.length > 0)) conclusions.push("Air Combat training assignments existed, but placementLimit was zero; inspect schedulerSummary and placementCycles.");
     if (schedulerSummary?.lastCycle?.breakReason === "NO_PLACEMENT_FROM_PREFERRED_OR_FALLBACK") conclusions.push(`Air Combat training loop stopped because neither ${schedulerSummary.lastCycle.preferredKind || "preferred kind"} nor ${schedulerSummary.lastCycle.fallbackKind || "fallback kind"} placed an event; inspect placementCycles, courseStaffPriorityLists, trainingPackageStaffPriorityLists, and trainingAttempts.`);
     const allSyllabusMatches = [
@@ -102858,26 +102858,26 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     ];
     if (allSyllabusMatches.length > 0 && allSyllabusMatches.every((item) => item.matches === 0)) conclusions.push("Training assignments existed, but none matched active syllabus/training-package events by code.");
     const allTrainingLists = [
-      ...neoBuildDiag2.airCombatPriority.courseStaffPriorityLists || [],
-      ...neoBuildDiag2.airCombatPriority.trainingPackageStaffPriorityLists || []
+      ...neoBuildDiag.airCombatPriority.courseStaffPriorityLists || [],
+      ...neoBuildDiag.airCombatPriority.trainingPackageStaffPriorityLists || []
     ];
-    const availableAircraftConfigIds = new Set(Object.values(neoBuildDiag2.airCombatPriority.inputs?.resources?.aircraftConfigIdsByResource || {}).filter(Boolean));
-    const missingRequiredConfigs = Array.from(new Set((neoBuildDiag2.airCombatPriority.resourceChecks || []).filter((check) => check.reason === "AIRCRAFT_CONFIG_INCOMPATIBLE").flatMap((check) => Array.isArray(check.required) ? check.required : []).map((config2) => String(config2 || "").trim()).filter((config2) => config2 && config2 !== "ANY" && config2 !== "CONFIG N/A" && !availableAircraftConfigIds.has(config2))));
+    const availableAircraftConfigIds = new Set(Object.values(neoBuildDiag.airCombatPriority.inputs?.resources?.aircraftConfigIdsByResource || {}).filter(Boolean));
+    const missingRequiredConfigs = Array.from(new Set((neoBuildDiag.airCombatPriority.resourceChecks || []).filter((check) => check.reason === "AIRCRAFT_CONFIG_INCOMPATIBLE").flatMap((check) => Array.isArray(check.required) ? check.required : []).map((config2) => String(config2 || "").trim()).filter((config2) => config2 && config2 !== "ANY" && config2 !== "CONFIG N/A" && !availableAircraftConfigIds.has(config2))));
     if (allTrainingLists.length > 0 && allTrainingLists.every((item) => (item.assignedStaffCount || 0) > 0 && (item.assignedWithNextEvent || 0) === 0)) conclusions.push("Assigned Air Combat pilots were found, but every assigned pilot had no next event in the matched sequence; inspect assignedStaff in the priority-list diagnostics.");
     if (missingRequiredConfigs.length > 0) conclusions.push(`Air Combat training events require aircraft config ${missingRequiredConfigs.join(", ")}, but the active aircraft resource map does not contain that config; inspect inputs.resources.aircraftConfigIdsByResource and resourceChecks.`);
-    if (airCombatPlacements.length === 0 && Object.keys(neoBuildDiag2.airCombatPriority.rejectionReasons || {}).length > 0) conclusions.push("Air Combat scheduler ran but every candidate was rejected; see rejectionReasons, taskingAttempts, trainingAttempts, and resourceChecks.");
+    if (airCombatPlacements.length === 0 && Object.keys(neoBuildDiag.airCombatPriority.rejectionReasons || {}).length > 0) conclusions.push("Air Combat scheduler ran but every candidate was rejected; see rejectionReasons, taskingAttempts, trainingAttempts, and resourceChecks.");
     if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push("Events existed before final cleanup but were removed by day/night guard or ground conflict repair; see finalCleanup.");
     if (airCombatPlacements.length > 0 && sortedEvents.length === 0) conclusions.push("Air Combat placements were created but none survived final cleanup; see finalCleanup and placements.");
     if (conclusions.length === 0) conclusions.push(airCombatPlacements.length > 0 ? "Air Combat events were placed." : "No single dominant blocker identified; inspect taskingAttempts, trainingAttempts, resourceChecks, and skipReasons.");
-    neoBuildDiag2.airCombatPriority.finalSummary = {
+    neoBuildDiag.airCombatPriority.finalSummary = {
       generatedEventsBeforeFinalCleanup,
       sortedEvents: sortedEvents.length,
       placements: airCombatPlacements.length,
-      rejectionReasons: neoBuildDiag2.airCombatPriority.rejectionReasons || {},
-      finalCleanup: neoBuildDiag2.finalCleanup
+      rejectionReasons: neoBuildDiag.airCombatPriority.rejectionReasons || {},
+      finalCleanup: neoBuildDiag.finalCleanup
     };
-    neoBuildDiag2.airCombatPriority.conclusion = conclusions;
-    recordAirCombatStage("air-combat-final-summary", neoBuildDiag2.airCombatPriority.finalSummary);
+    neoBuildDiag.airCombatPriority.conclusion = conclusions;
+    recordAirCombatStage("air-combat-final-summary", neoBuildDiag.airCombatPriority.finalSummary);
   }
   const dayAircraftFlightsByStart = sortedEvents.filter(
     (event) => event.type === "flight" && event.resourceId?.startsWith(buildAircraftResourceIdPrefix) && getGeneratedEventDayNightClassification(event) !== "Night" && event.startTime < flyingEndTime
@@ -102909,8 +102909,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         expectedNextStart,
         expectedDisplayTime: _fmtT(expectedNextStart),
         gapMinutes,
-        attemptsAtExpectedSlot: (neoBuildDiag2.dayFlightGapDiagnostics.attempts || []).filter((attempt) => Math.abs((attempt.startTime || 0) - expectedNextStart) < 1e-3).slice(0, 30),
-        instructorTraceAtExpectedSlot: (neoBuildDiag2.dayFlightGapDiagnostics.instructorTrace || []).filter((trace) => Math.abs((trace.startTime || 0) - expectedNextStart) < 1e-3).slice(0, 30)
+        attemptsAtExpectedSlot: (neoBuildDiag.dayFlightGapDiagnostics.attempts || []).filter((attempt) => Math.abs((attempt.startTime || 0) - expectedNextStart) < 1e-3).slice(0, 30),
+        instructorTraceAtExpectedSlot: (neoBuildDiag.dayFlightGapDiagnostics.instructorTrace || []).filter((trace) => Math.abs((trace.startTime || 0) - expectedNextStart) < 1e-3).slice(0, 30)
       });
     }
   }
@@ -103188,7 +103188,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       detail: "The build received zero remedialRequests and zero remedial highestPriorityEvents."
     });
   }
-  neoBuildDiag2.mandatoryRemedialFlights.finalAssignments = mandatoryRemedialFlights.map((event) => {
+  neoBuildDiag.mandatoryRemedialFlights.finalAssignments = mandatoryRemedialFlights.map((event) => {
     const eventTrainee = event.student || event.pilot || "";
     const priorityCodes = new Set([
       normalizeLmpEventId(event.flightNumber),
@@ -103226,8 +103226,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }))
     };
   });
-  neoBuildDiag2.mandatoryRemedialFlights.forcedInstructorConflicts = forcedRemedialInstructorConflicts;
-  neoBuildDiag2.individualLmpDurationDiagnostics.finalEvents = sortedEvents.filter((event) => {
+  neoBuildDiag.mandatoryRemedialFlights.forcedInstructorConflicts = forcedRemedialInstructorConflicts;
+  neoBuildDiag.individualLmpDurationDiagnostics.finalEvents = sortedEvents.filter((event) => {
     const eventCode2 = String(event.flightNumber || event.eventCode || "").trim().toUpperCase();
     const peopleText = [
       event._traineeName,
@@ -103258,20 +103258,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     preFlightNoteLength: String(event.preFlightNotes || "").trim().length,
     forwardedKeys: Object.keys(event.trainingReportForwardedNotes || {})
   }));
-  neoBuildDiag2.individualLmpDurationDiagnostics.conclusions = [
+  neoBuildDiag.individualLmpDurationDiagnostics.conclusions = [
     "If lookups show no matching Individual LMP item, the scheduler is receiving a base syllabus row instead of the trainee LMP row or the event identifiers do not match.",
     "If lookups show individualFlightOrSimHours is correct but placements/finalEvents show duration 1.0, the duration is being overwritten after resolution.",
     "If finalEvents has no forwardedKeys/preFlightNoteLength for the target event, the pre-flight triangle cannot render because the tile event has no forwarded notes attached."
   ];
-  neoBuildDiag2.scheduleAttemptTiming = getCompactNeoBuildAttemptTiming();
+  neoBuildDiag.scheduleAttemptTiming = getCompactNeoBuildAttemptTiming();
   markBuildTiming("schedule-attempt-timing:summary", {
-    attempts: neoBuildDiag2.scheduleAttemptTiming.overall.attempts,
-    totalMs: neoBuildDiag2.scheduleAttemptTiming.overall.totalMs,
-    avgMs: neoBuildDiag2.scheduleAttemptTiming.overall.avgMs,
-    maxMs: neoBuildDiag2.scheduleAttemptTiming.overall.maxMs,
-    slowest: neoBuildDiag2.scheduleAttemptTiming.slowest.slice(0, 5)
+    attempts: neoBuildDiag.scheduleAttemptTiming.overall.attempts,
+    totalMs: neoBuildDiag.scheduleAttemptTiming.overall.totalMs,
+    avgMs: neoBuildDiag.scheduleAttemptTiming.overall.avgMs,
+    maxMs: neoBuildDiag.scheduleAttemptTiming.overall.maxMs,
+    slowest: neoBuildDiag.scheduleAttemptTiming.slowest.slice(0, 5)
   });
-  neoBuildDiag2.final = {
+  neoBuildDiag.final = {
     totalEvents: sortedEvents.length,
     byType: sortedEvents.reduce((acc, event) => {
       const typeKey = event.type || "unknown";
@@ -103312,7 +103312,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   if (sortedEvents.length === 0) {
     const scheduleListSummary = Object.fromEntries(
-      Object.entries(neoBuildDiag2.scheduleLists || {}).map(([name, diag]) => [
+      Object.entries(neoBuildDiag.scheduleLists || {}).map(([name, diag]) => [
         name,
         {
           input: diag.input ?? null,
@@ -103325,35 +103325,35 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       ])
     );
-    const nextTotal = Object.values(neoBuildDiag2.nextEventLists?.next || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    const nextTotal = Object.values(neoBuildDiag.nextEventLists?.next || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
     const conclusions = [];
-    if ((neoBuildDiag2.input?.trainees || 0) === 0) conclusions.push("Build received zero trainees.");
-    if ((neoBuildDiag2.activeTrainees?.total || 0) === 0) conclusions.push("All trainees were filtered out before next-event classification.");
-    if ((neoBuildDiag2.input?.traineeLmps || 0) === 0) conclusions.push("Build received zero Individual LMP records.");
-    if (nextTotal === 0 && (neoBuildDiag2.activeTrainees?.total || 0) > 0) conclusions.push("Active trainees exist, but none had a schedulable next event.");
+    if ((neoBuildDiag.input?.trainees || 0) === 0) conclusions.push("Build received zero trainees.");
+    if ((neoBuildDiag.activeTrainees?.total || 0) === 0) conclusions.push("All trainees were filtered out before next-event classification.");
+    if ((neoBuildDiag.input?.traineeLmps || 0) === 0) conclusions.push("Build received zero Individual LMP records.");
+    if (nextTotal === 0 && (neoBuildDiag.activeTrainees?.total || 0) > 0) conclusions.push("Active trainees exist, but none had a schedulable next event.");
     if (nextTotal > 0) conclusions.push("Schedulable next-event buckets existed, but no schedule list placed an event; inspect scheduleListSummary rejection samples.");
     if (generatedEventsBeforeFinalCleanup > 0 && sortedEvents.length === 0) conclusions.push("Events existed before final cleanup but all were removed by final cleanup guards.");
     if (conclusions.length === 0) conclusions.push("No dominant zero-tile cause was inferred; inspect checkpoints and scheduleListSummary.");
-    neoBuildDiag2.zeroTileInvestigation.checkpoints.push({
+    neoBuildDiag.zeroTileInvestigation.checkpoints.push({
       stage: "final-zero-output",
       generatedEventsBeforeFinalCleanup,
-      finalCleanup: neoBuildDiag2.finalCleanup,
-      final: neoBuildDiag2.final,
+      finalCleanup: neoBuildDiag.finalCleanup,
+      final: neoBuildDiag.final,
       scheduleListSummary
     });
-    neoBuildDiag2.zeroTileInvestigation.conclusion = conclusions;
+    neoBuildDiag.zeroTileInvestigation.conclusion = conclusions;
     console.error("[NEO-Build][ZeroTileInvestigation] Build produced zero tiles.", {
       buildDate,
       conclusions,
-      input: neoBuildDiag2.input,
-      activeTrainees: neoBuildDiag2.activeTrainees,
-      nextEventLists: neoBuildDiag2.nextEventLists,
-      finalCleanup: neoBuildDiag2.finalCleanup,
+      input: neoBuildDiag.input,
+      activeTrainees: neoBuildDiag.activeTrainees,
+      nextEventLists: neoBuildDiag.nextEventLists,
+      finalCleanup: neoBuildDiag.finalCleanup,
       scheduleListSummary,
       download: "Run __downloadNeoBuildDiagnostic() in DevTools or use the downloaded NEO Build diagnostic file."
     });
     try {
-      localStorage.setItem("neo_build_zero_tile_trace", JSON.stringify(neoBuildDiag2.zeroTileInvestigation));
+      localStorage.setItem("neo_build_zero_tile_trace", JSON.stringify(neoBuildDiag.zeroTileInvestigation));
     } catch (error) {
       console.warn("[NEO-Build][ZeroTileInvestigation] Failed to save zero-tile trace:", error);
     }
@@ -103363,20 +103363,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (sortedEvents.length === 0 || windowNormalisationWarnings.length > 0 || normalisedFlyingWindowExclusions.length > 0) {
     console.info("[NEO-Build][ScheduleDiagnostics] Report saved for download.", {
       buildDate,
-      final: neoBuildDiag2.final,
-      finalCleanup: neoBuildDiag2.finalCleanup,
+      final: neoBuildDiag.final,
+      finalCleanup: neoBuildDiag.finalCleanup,
       windowWarnings: windowNormalisationWarnings,
       flyingWindowExclusions: normalisedFlyingWindowExclusions.length,
       download: "Use the Air Combat diagnostics download button or run __downloadNeoBuildDiagnostic() in DevTools."
     });
   }
   buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report" for JSON download.', {
-    activeTrainees: neoBuildDiag2.activeTrainees,
-    nextEventLists: neoBuildDiag2.nextEventLists,
-    final: neoBuildDiag2.final
+    activeTrainees: neoBuildDiag.activeTrainees,
+    nextEventLists: neoBuildDiag.nextEventLists,
+    final: neoBuildDiag.final
   });
   if (neoBuildVerboseDiagnostics) {
-    console.table(Object.entries(neoBuildDiag2.scheduleLists).map(([name, diag]) => ({
+    console.table(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => ({
       list: name,
       input: diag.input,
       attempts: diag.attempts,
@@ -115148,6 +115148,15 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       console.warn("[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:", lmpRefreshErr);
     }
     markNeoBuildTiming(timingReport, "lmp-refresh:complete", { buildTraineeLMPs: buildTraineeLMPs.size });
+    const reportFollowUpDiag = {
+      purpose: "Tracks training report follow-up changes applied to Individual LMPs before Flight School NEO Build sequencing starts.",
+      fetchedAssessments: 0,
+      followUpAssessments: 0,
+      orderedAssessments: [],
+      skippedAssessments: [],
+      changedTrainees: [],
+      samples: []
+    };
     if (activeOperationalModel === "flight_school" && buildTraineeLMPs.size > 0) {
       const buildTraineeNameSet = new Set(
         traineesForBuildScope.flatMap((trainee) => [trainee.fullName, trainee.name]).map((name) => String(name || "").trim()).filter(Boolean)
@@ -115499,8 +115508,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         }).filter((context) => {
           if (!context.actionable) return false;
           if (!context.trainee || !context.lmpKey) {
-            if (neoBuildDiag.reportFollowUps.skippedAssessments.length < 30) {
-              neoBuildDiag.reportFollowUps.skippedAssessments.push({
+            if (reportFollowUpDiag.skippedAssessments.length < 30) {
+              reportFollowUpDiag.skippedAssessments.push({
                 traineeFullName: context.assessment.traineeFullName,
                 flightNumber: context.assessment.flightNumber,
                 reason: context.trainee ? "no-lmp-match" : "no-trainee-match"
@@ -115527,9 +115536,9 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
         });
         const changedTrainees = [];
         const updatesByTrainee = /* @__PURE__ */ new Map();
-        neoBuildDiag.reportFollowUps.fetchedAssessments = allAssessments.length;
-        neoBuildDiag.reportFollowUps.followUpAssessments = followUpAssessments.length;
-        neoBuildDiag.reportFollowUps.orderedAssessments = followUpAssessmentContexts.slice(0, 60).map((context) => ({
+        reportFollowUpDiag.fetchedAssessments = allAssessments.length;
+        reportFollowUpDiag.followUpAssessments = followUpAssessments.length;
+        reportFollowUpDiag.orderedAssessments = followUpAssessmentContexts.slice(0, 60).map((context) => ({
           traineeFullName: context.lmpKey,
           sourceIndex: context.sourceIndex,
           flightNumber: context.assessment.flightNumber,
@@ -115593,11 +115602,11 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
             updates: updates.slice(0, 12)
           }))
         });
-        neoBuildDiag.reportFollowUps.changedTrainees = changedTrainees.slice(0, 60).map((changed) => ({
+        reportFollowUpDiag.changedTrainees = changedTrainees.slice(0, 60).map((changed) => ({
           traineeFullName: changed.trainee.fullName || changed.trainee.name,
           updates: changed.updates.slice(0, 12)
         }));
-        neoBuildDiag.reportFollowUps.samples = Array.from(updatesByTrainee.entries()).slice(0, 40).map(([traineeFullName, updates]) => ({
+        reportFollowUpDiag.samples = Array.from(updatesByTrainee.entries()).slice(0, 40).map(([traineeFullName, updates]) => ({
           traineeFullName,
           updates: updates.slice(0, 12)
         }));
@@ -115606,9 +115615,10 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
           followUpAssessments: followUpAssessments.length,
           changedTrainees: changedTrainees.length,
           orderedFollowUps: followUpAssessmentContexts.length,
-          skippedFollowUps: neoBuildDiag.reportFollowUps.skippedAssessments.length
+          skippedFollowUps: reportFollowUpDiag.skippedAssessments.length
         });
       } catch (followUpError) {
+        reportFollowUpDiag.error = followUpError instanceof Error ? followUpError.message : String(followUpError);
         pushDfpDataDiag("build:report-followups:error", {
           error: followUpError instanceof Error ? followUpError.message : String(followUpError)
         });
@@ -115741,6 +115751,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       remedialPrioritySyncTrace: window.__lastRemedialPrioritySyncTrace || [],
       remedialDataMovementTrace: window.__lastRemedialDataMovementTrace || [],
       taskProvenancePreBuild: window.__lastTaskingProvenancePreBuild || null,
+      reportFollowUps: reportFollowUpDiag,
       getEventDayNightClassification,
       staffSharingEnabled: organisationSettings.staffSharingEnabled,
       staffSharingUnits: organisationSettings.staffSharingUnits,
