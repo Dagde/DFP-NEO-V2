@@ -163,6 +163,32 @@ const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] =>
     return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
 };
 
+const getConfiguredScoringMatrixElementGroups = (phraseBank: PhraseBank): {
+    groups: Record<string, string>;
+    hasExplicitGroups: boolean;
+} => {
+    const savedGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY];
+    const hasExplicitGroups = !!savedGroups && typeof savedGroups === 'object' && !Array.isArray(savedGroups);
+    return {
+        groups: hasExplicitGroups ? savedGroups as Record<string, string> : {},
+        hasExplicitGroups,
+    };
+};
+
+const getScoringMatrixElementGroup = (
+    element: string,
+    groups: Record<string, string>,
+    hasExplicitGroups: boolean,
+): string => {
+    if (Object.prototype.hasOwnProperty.call(groups, element)) {
+        return String(groups[element] || '').trim() || 'Additional Elements';
+    }
+    if (!hasExplicitGroups) {
+        return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || 'Additional Elements';
+    }
+    return 'Additional Elements';
+};
+
 interface ScoringMatrixInlineProps {
     activeTab: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
     phraseBank: PhraseBank;
@@ -197,15 +223,15 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
     const [elementGroupDrafts, setElementGroupDrafts] = useState<Record<string, string>>({});
 
     const currentDimension = activeTab === 'Elements' ? selectedElement : activeTab;
-    const configuredElementGroups = ((phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY] || {}) as Record<string, string>;
-    const savedElementGroup = configuredElementGroups[selectedElement] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[selectedElement] || 'Additional Elements';
+    const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
+    const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
     const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
     const sectionOptions = Array.from(new Set([
-        ...DEFAULT_SCORING_MATRIX_SECTIONS,
+        ...(hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS),
         ...Object.values(configuredElementGroups).map(value => String(value || '').trim()).filter(Boolean),
         savedElementGroup,
         String(currentElementGroup || '').trim(),
-    ]));
+    ].filter(Boolean)));
 
     const handleElementGroupChange = (element: string, group: string) => {
         const nextGroup = String(group || '').trim();
@@ -213,7 +239,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
             ...phraseBank,
             [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
                 ...configuredElementGroups,
-                [element]: nextGroup || (DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || 'Additional Elements'),
+                [element]: nextGroup || 'Additional Elements',
             },
         } as PhraseBank);
     };
@@ -221,7 +247,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
     const beginElementGroupDraft = (element: string) => {
         setElementGroupDrafts(previous => ({
             ...previous,
-            [element]: previous[element] ?? (configuredElementGroups[element] || DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || 'Additional Elements'),
+            [element]: previous[element] ?? getScoringMatrixElementGroup(element, configuredElementGroups, hasExplicitElementGroups),
         }));
     };
 
