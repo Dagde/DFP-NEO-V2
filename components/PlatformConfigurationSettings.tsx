@@ -1463,15 +1463,24 @@ const buildConfigurationHealth = (
     });
   };
 
-  const activeOrganisations = config.organisations.filter(isActiveRecord);
-  const activeLocations = config.locations.filter(isActiveRecord);
-  const activeUnits = config.units.filter(isActiveRecord);
-  const activeAircraftTypes = config.aircraftTypes.filter(isActiveRecord);
-  const activeModules = config.modules.filter(isActiveRecord);
-  const activeResourcePools = config.resourcePools.filter(isActiveRecord);
-  const activeLicences = config.licenses.filter(isActiveRecord);
-  const activeUserAccess = config.userAccess.filter(isActiveRecord);
-  const organisationSettings = config.organisations[0]?.settings || {};
+  const organisations = Array.isArray(config.organisations) ? config.organisations : [];
+  const locations = Array.isArray(config.locations) ? config.locations : [];
+  const units = Array.isArray(config.units) ? config.units : [];
+  const aircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
+  const modules = Array.isArray(config.modules) ? config.modules : [];
+  const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+  const licenses = Array.isArray(config.licenses) ? config.licenses : [];
+  const userAccess = Array.isArray(config.userAccess) ? config.userAccess : [];
+
+  const activeOrganisations = organisations.filter(isActiveRecord);
+  const activeLocations = locations.filter(isActiveRecord);
+  const activeUnits = units.filter(isActiveRecord);
+  const activeAircraftTypes = aircraftTypes.filter(isActiveRecord);
+  const activeModules = modules.filter(isActiveRecord);
+  const activeResourcePools = resourcePools.filter(isActiveRecord);
+  const activeLicences = licenses.filter(isActiveRecord);
+  const activeUserAccess = userAccess.filter(isActiveRecord);
+  const organisationSettings = organisations[0]?.settings || {};
   const healthSctTerminology = normaliseSctTerminology(organisationSettings.sctTerminology || null);
   const healthContinuationCurrencyEventsLabel = `${healthSctTerminology.shortLabel} / Currency Events`;
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
@@ -1482,7 +1491,8 @@ const buildConfigurationHealth = (
   const activeUnitCodes = new Set(activeUnits.map((unit) => toIdentifier(unit.code)));
   const activeAircraftTypeCodes = new Set(activeAircraftTypes.map((aircraft) => toIdentifier(aircraft.code)));
   const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
-  const userIds = new Set(config.platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
+  const platformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
+  const userIds = new Set(platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
   const profileIds = new Set(permissionProfiles.map((profile) => toIdentifier(profile.id)));
 
   if (activeOrganisations.length === 0) {
@@ -1652,7 +1662,7 @@ const buildConfigurationHealth = (
     if (unitCode && !activeUnitCodes.has(unitCode)) {
       add('CRITICAL', 'User Access', `${userLabel} has invalid unit scope`, `${unitCode} is not an active unit.`, `access-${userId}-${unitCode}`, undefined, { focusUserId: userId, focusSubsectionId: 'platform-user-access-records' });
     }
-    const unit = unitCode ? config.units.find((item) => toIdentifier(item.code) === unitCode) : null;
+    const unit = unitCode ? units.find((item) => toIdentifier(item.code) === unitCode) : null;
     if (unit && locationCode && toIdentifier(unit.locationCode) !== locationCode) {
       add('CRITICAL', 'User Access', `${userLabel} has mismatched scope`, `${unitCode} belongs to ${toIdentifier(unit.locationCode)}, but the access scope is set to ${locationCode}.`, `access-${userId}-${unitCode}-mismatch`, undefined, { focusUserId: userId, focusLocationCode: locationCode, focusSubsectionId: `platform-user-access-location-${getConfigurationHealthFocusAnchor(locationCode)}` });
     }
@@ -1914,6 +1924,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
+  const configOrganisations = Array.isArray(config.organisations) ? config.organisations : [];
+  const configLocations = Array.isArray(config.locations) ? config.locations : [];
+  const configUnits = Array.isArray(config.units) ? config.units : [];
+  const configAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
+  const configResourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+  const configSchedulingRuleSets = Array.isArray(config.schedulingRuleSets) ? config.schedulingRuleSets : [];
+  const configUserAccess = Array.isArray(config.userAccess) ? config.userAccess : [];
   const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePoolsDirty = useMemo(() => (
     JSON.stringify({
@@ -2807,13 +2824,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     const nextConfig: PlatformConfig = {
       ...config,
-      organisations: config.organisations.filter((_, index) => index !== organisationIndex),
-      locations: config.locations.map((location) => (
+      organisations: (Array.isArray(config.organisations) ? config.organisations : []).filter((_, index) => index !== organisationIndex),
+      locations: (Array.isArray(config.locations) ? config.locations : []).map((location) => (
         String(location.organisationCode || '').trim() === organisationCode
           ? { ...location, organisationCode: '' }
           : location
       )),
-      units: config.units.map((unit) => {
+      units: (Array.isArray(config.units) ? config.units : []).map((unit) => {
         const unitOrganisationCode = String(unit.organisationCode || '').trim();
         if (!organisationCode || unitOrganisationCode !== organisationCode) return unit;
         return {
@@ -2826,22 +2843,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           },
         };
       }),
-      resourcePools: config.resourcePools.map((pool) => (
+      resourcePools: (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool) => (
         String(pool.organisationCode || '').trim() === organisationCode
           ? { ...pool, organisationCode: '' }
           : pool
       )),
-      schedulingRuleSets: config.schedulingRuleSets.map((ruleSet) => (
+      schedulingRuleSets: (Array.isArray(config.schedulingRuleSets) ? config.schedulingRuleSets : []).map((ruleSet) => (
         String(ruleSet.organisationCode || '').trim() === organisationCode
           ? { ...ruleSet, organisationCode: '' }
           : ruleSet
       )),
-      licenses: config.licenses.map((license) => (
+      licenses: (Array.isArray(config.licenses) ? config.licenses : []).map((license) => (
         String(license.organisationCode || '').trim() === organisationCode
           ? { ...license, organisationCode: '' }
           : license
       )),
-      userAccess: config.userAccess.map((access) => (
+      userAccess: (Array.isArray(config.userAccess) ? config.userAccess : []).map((access) => (
         String(access.organisationCode || '').trim() === organisationCode
           ? { ...access, organisationCode: '' }
           : access
@@ -4241,18 +4258,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
 
     setConfig((prev) => {
-      const removed = prev.locations[index];
+      const prevLocations = Array.isArray(prev.locations) ? prev.locations : [];
+      const prevUnits = Array.isArray(prev.units) ? prev.units : [];
+      const prevResourcePools = Array.isArray(prev.resourcePools) ? prev.resourcePools : [];
+      const removed = prevLocations[index];
       const removedCode = String(removed?.code || '').trim();
-      const nextLocations = prev.locations.filter((_, itemIndex) => itemIndex !== index);
+      const nextLocations = prevLocations.filter((_, itemIndex) => itemIndex !== index);
       const fallbackCode = String(nextLocations[0]?.code || '').trim();
 
       return {
         ...prev,
         locations: nextLocations,
-        units: prev.units.map((unit) => (
+        units: prevUnits.map((unit) => (
           removedCode && unit.locationCode === removedCode ? { ...unit, locationCode: fallbackCode } : unit
         )),
-        resourcePools: prev.resourcePools.map((pool) => (
+        resourcePools: prevResourcePools.map((pool) => (
           removedCode && pool.locationCode === removedCode ? { ...pool, locationCode: fallbackCode || null } : pool
         )),
       };
@@ -4315,33 +4335,39 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const updateUnitCode = (index: number, value: string) => {
     const nextCode = String(value || '').trim();
     setConfig((prev) => {
-      const oldCode = String(prev.units[index]?.code || '').trim();
+      const prevUnits = Array.isArray(prev.units) ? prev.units : [];
+      const prevUnitModules = Array.isArray(prev.unitModules) ? prev.unitModules : [];
+      const prevResourcePools = Array.isArray(prev.resourcePools) ? prev.resourcePools : [];
+      const prevUserAccess = Array.isArray(prev.userAccess) ? prev.userAccess : [];
+      const prevSchedulingRuleSets = Array.isArray(prev.schedulingRuleSets) ? prev.schedulingRuleSets : [];
+      const prevOrganisations = Array.isArray(prev.organisations) ? prev.organisations : [];
+      const oldCode = String(prevUnits[index]?.code || '').trim();
       if (!oldCode || !nextCode || oldCode === nextCode) {
         return {
           ...prev,
-          units: prev.units.map((unit, unitIndex) => (
+          units: prevUnits.map((unit, unitIndex) => (
             unitIndex === index ? { ...unit, code: value } : unit
           )),
         };
       }
       return {
         ...prev,
-        units: prev.units.map((unit, unitIndex) => (
+        units: prevUnits.map((unit, unitIndex) => (
           unitIndex === index ? { ...unit, code: value } : unit
         )),
-        unitModules: prev.unitModules.map((item) => (
+        unitModules: prevUnitModules.map((item) => (
           String(item.unitCode || '').trim() === oldCode ? { ...item, unitCode: nextCode } : item
         )),
-        resourcePools: prev.resourcePools.map((pool) => (
+        resourcePools: prevResourcePools.map((pool) => (
           String(pool.unitCode || '').trim() === oldCode ? { ...pool, unitCode: nextCode } : pool
         )),
-        userAccess: prev.userAccess.map((access) => (
+        userAccess: prevUserAccess.map((access) => (
           String(access.unitCode || '').trim() === oldCode ? { ...access, unitCode: nextCode } : access
         )),
-        schedulingRuleSets: prev.schedulingRuleSets.map((ruleSet) => (
+        schedulingRuleSets: prevSchedulingRuleSets.map((ruleSet) => (
           String(ruleSet.unitCode || '').trim() === oldCode ? { ...ruleSet, unitCode: nextCode } : ruleSet
         )),
-        organisations: prev.organisations.map((organisation) => ({
+        organisations: prevOrganisations.map((organisation) => ({
           ...organisation,
           settings: rewriteUnitCodesInSettings(organisation.settings || {}, oldCode, nextCode),
         })),
@@ -6061,7 +6087,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       locationCode: location.code,
       organisationCode: location.organisationCode,
     }));
-  const visibleUnitRows = config.units
+  const visibleUnitRows = configUnits
     .map((unit, index) => ({ unit, index }))
     .filter(({ unit, index }) => {
       if (index === editingUnitIndex) return true;
@@ -6073,7 +6099,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         parentOrganisationCode: getUnitParentOrganisationCode(unit),
       });
     });
-  const visibleResourcePoolRows = config.resourcePools
+  const visibleResourcePoolRows = configResourcePools
     .map((pool, index) => ({ pool, index }))
     .filter(({ pool }) => isRecordVisibleForSettingsPolicy({
       unitCode: pool.unitCode,
@@ -6095,7 +6121,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ...(!settingsVisibilityPolicy.filters.includes('unit') ? visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ''))) : []),
     ...(!settingsVisibilityPolicy.filters.includes('unit') ? visibleResourcePoolRows.map(({ pool }) => String(pool.aircraftTypeCode || '').trim().toUpperCase()) : []),
   ].map(normaliseUnitCode).filter(Boolean));
-  const visibleAircraftTypeRows = config.aircraftTypes
+  const visibleAircraftTypeRows = configAircraftTypes
     .map((aircraft, index) => ({ aircraft, index }))
     .filter(({ aircraft }) => {
       if (newAircraftTypeVisibleIds.has(String(aircraft.id || ''))) return true;
@@ -6117,7 +6143,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleAircraftTypeOptions = visibleAircraftTypeRows.map(({ aircraft }) => aircraft.code).filter(Boolean);
   const getAircraftTypeDisplayLabel = (aircraftTypeCode: unknown): string => {
     const normalisedAircraftCode = normaliseUnitCode(aircraftTypeCode);
-    const aircraftType = config.aircraftTypes.find((aircraft) => normaliseUnitCode(aircraft.code) === normalisedAircraftCode);
+    const aircraftType = configAircraftTypes.find((aircraft) => normaliseUnitCode(aircraft.code) === normalisedAircraftCode);
     return String(aircraftType?.name || aircraftType?.code || normalisedAircraftCode || 'Aircraft').trim();
   };
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
@@ -6203,7 +6229,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleUnitCallsignEntries = unitCallsignSettings.entries.filter((entry) => isRecordVisibleForSettingsPolicy({
     unitCode: entry.unitCode,
   }));
-  const visibleUserAccessRows = config.userAccess
+  const visibleUserAccessRows = configUserAccess
     .map((access, index) => ({ access, index }))
     .filter(({ access }) => isRecordVisibleForSettingsPolicy({
       unitCode: access.unitCode,
@@ -6274,7 +6300,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const visibleMasterLmpCatalogueRows = masterLmpCatalogue
     .map((entry, index) => ({ entry, index }))
     .filter(({ entry }) => isMasterLmpCatalogueEntryVisibleForActiveContext(entry));
-  const visibleSchedulingRuleSetRows = config.schedulingRuleSets
+  const visibleSchedulingRuleSetRows = configSchedulingRuleSets
     .map((ruleSet, index) => ({ ruleSet, index }))
     .filter(({ ruleSet }) => isRecordVisibleForSettingsPolicy({
       unitCode: ruleSet.unitCode,
@@ -6312,7 +6338,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
   const getAircraftConfigOptions = (aircraftTypeCode: string): string[] => Array.from(new Set([
     'ANY',
-    ...config.resourcePools
+    ...configResourcePools
       .filter((pool) => !aircraftTypeCode || String(pool.aircraftTypeCode || '').trim().toUpperCase() === String(aircraftTypeCode || '').trim().toUpperCase())
       .flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : [])
       .map((item: any) => String(item.label || item.definition || item.id || '').trim())
