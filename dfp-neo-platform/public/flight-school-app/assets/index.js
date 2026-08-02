@@ -72191,12 +72191,14 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      DraftField,
+                      SelectField,
                       {
                         label: "Aircraft Type",
                         value: missionAircraftTypeCode,
-                        disabled: !canEditSection("platform-standard-missions"),
-                        onCommit: (value) => {
+                        disabled: !canEditSection("platform-standard-missions") || activeUnitAircraftTypeCodes.length === 0,
+                        options: Array.from(new Set([missionAircraftTypeCode, ...activeUnitAircraftTypeCodes].filter(Boolean))),
+                        emptyLabel: "Select aircraft type",
+                        onChange: (value) => {
                           const nextAircraftTypeCode = String(value || "").trim().toUpperCase();
                           const nextCrewOptions = getStandardMissionCrewOptions(nextAircraftTypeCode);
                           const nextCrewCompositionId = nextCrewOptions.find((option) => option.mode === "STANDARD")?.id || nextCrewOptions[0]?.id || "";
@@ -72208,7 +72210,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                             crewCompositionMode: nextCrewCompositionId ? "STANDARD" : "CUSTOM"
                           });
                         },
-                        info: "Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete."
+                        info: "Uses aircraft types from the selected unit's DFP resource row setup."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
