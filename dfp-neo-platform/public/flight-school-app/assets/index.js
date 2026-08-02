@@ -68778,7 +68778,7 @@ This permanently removes the organisation record from platform configuration and
       aircraftTypeCode: displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
       code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
-      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode || "Aircraft"} Crew`,
+      crew: currencyProfileCrewOptions[0] || "",
       config: "ANY",
       acceptableAircraftConfigs: ["ANY"],
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
@@ -70624,7 +70624,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
   const addStandardMissionProfile = () => {
     const missionIndex = standardMissionProfiles.length + 1;
     const firstRole = crewCompositionRoleOptions[0] || "";
-    const aircraftTypeCode = String(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code || "").trim().toUpperCase();
+    const aircraftTypeCode = String(activeMissionAircraftTypeCode || "").trim().toUpperCase();
     if (!firstRole || !aircraftTypeCode) return;
     const crewOptions = getStandardMissionCrewOptions(aircraftTypeCode);
     const selectedCrewCompositionId = crewOptions.find((option) => option.mode === "STANDARD")?.id || crewOptions[0]?.id || "";
@@ -71146,12 +71146,13 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
   ) || "Callsign";
   const trainingReportPreviewUnitCode = String(activeTrainingReportUnit?.code || activeTrainingReportUnitCode || "Unit").trim();
   const getStandardMissionCrewOptions = (aircraftTypeCode) => {
-    const aircraftCode = String(aircraftTypeCode || activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || "AIRCRAFT").trim().toUpperCase();
+    const aircraftCode = String(aircraftTypeCode || "").trim().toUpperCase();
+    if (!aircraftCode) return [];
     const alternateCompositions = uniqueProfilesByCompositeGroup(
       crewCompositionSettings.alternateCompositions.filter((profile) => String(profile.aircraftTypeCode || "").trim().toUpperCase() === aircraftCode && isProfileInActiveUnitContext(profile))
     );
     return [
-      { id: `standard:${aircraftCode || "AIRCRAFT"}`, label: `Standard ${aircraftCode || "Aircraft"} Crew`, mode: "STANDARD" },
+      { id: `standard:${aircraftCode}`, label: `Standard ${aircraftCode} Crew`, mode: "STANDARD" },
       ...alternateCompositions.map((profile) => ({
         id: `alternate:${profile.id}`,
         label: profile.name || profile.code,
@@ -72127,7 +72128,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           subtitle: "Full reusable directed tasks with aircraft, crew, timing, callsign and formation settings.",
           action: canEdit && fixedCrewContext ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-[1px]", children: [
             renderSectionEditSaveButton("platform-standard-missions"),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code), className: platformActionButtonClass, children: "Add Directed Task Setup" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addStandardMissionProfile, disabled: !canEditSection("platform-standard-missions") || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode, className: platformActionButtonClass, children: "Add Directed Task Setup" })
           ] }) : null
         }
       ),
@@ -72139,7 +72140,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New Directed Task Setups start with the unit home location and unit callsign. Use these when a recurring task needs aircraft, crew, timing or callsign details, not just a name in the Directed Task box." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: "No full directed task setups are configured for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: activeMissionAircraftTypeCode ? "No full directed task setups are configured for this unit." : "Add an aircraft type and DFP resource row set for this unit before creating Directed Task Setups." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -72190,7 +72191,27 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                         info: "Directed Task Setups are scoped to the current unit context. Change the top-left context selector to work on a different unit or combined unit."
                       }
                     ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Type", value: missionAircraftTypeCode, disabled: !canEditSection("platform-standard-missions"), onCommit: (value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || "ANY", selectedCrewCompositionId: `standard:${value.toUpperCase() || "AIRCRAFT"}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || "AIRCRAFT"}`], crewCompositionMode: "STANDARD" }), info: "Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete." }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      DraftField,
+                      {
+                        label: "Aircraft Type",
+                        value: missionAircraftTypeCode,
+                        disabled: !canEditSection("platform-standard-missions"),
+                        onCommit: (value) => {
+                          const nextAircraftTypeCode = String(value || "").trim().toUpperCase();
+                          const nextCrewOptions = getStandardMissionCrewOptions(nextAircraftTypeCode);
+                          const nextCrewCompositionId = nextCrewOptions.find((option) => option.mode === "STANDARD")?.id || nextCrewOptions[0]?.id || "";
+                          updateStandardMissionProfile(profile.id, {
+                            aircraftTypeCode: nextAircraftTypeCode,
+                            config: getAircraftConfigOptions(nextAircraftTypeCode)[0] || "ANY",
+                            selectedCrewCompositionId: nextCrewCompositionId,
+                            acceptableCrewCompositionIds: nextCrewCompositionId ? [nextCrewCompositionId] : [],
+                            crewCompositionMode: nextCrewCompositionId ? "STANDARD" : "CUSTOM"
+                          });
+                        },
+                        info: "Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete."
+                      }
+                    ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Dep", value: profile.departureLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Arr", value: profile.arrivalLocationCode || activeHomeLocationCode, disabled: !canEditSection("platform-standard-missions"), options: visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code), onChange: (value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() }) }),
@@ -72248,7 +72269,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                         `${profile.id}-${mode}`
                       );
                     }) }),
-                    crewMode === "STANDARD" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100", children: selectedCrewOption?.label || `Standard ${missionAircraftTypeCode || "Aircraft"} Crew` }) : crewMode === "ALTERNATE" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
+                    crewMode === "STANDARD" ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100", children: selectedCrewOption?.label || (missionAircraftTypeCode ? `Standard ${missionAircraftTypeCode} Crew` : "No aircraft type selected") }) : crewMode === "ALTERNATE" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         SelectField,
                         {

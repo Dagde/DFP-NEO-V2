@@ -3464,7 +3464,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       aircraftTypeCode: displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode,
       name: `Profile ${profileIndex}`,
       code: `CURR${profileIndex}`.slice(0, 8).toUpperCase(),
-      crew: currencyProfileCrewOptions[0] || `Standard ${activeMissionAircraftTypeCode || displayCrewCompositionAircraftCode || activeCrewCompositionAircraftCode || 'Aircraft'} Crew`,
+      crew: currencyProfileCrewOptions[0] || '',
       config: 'ANY',
       acceptableAircraftConfigs: ['ANY'],
       currency: activeCurrencyDefinitionNames[0] || `Currency ${profileIndex}`,
@@ -5775,7 +5775,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const addStandardMissionProfile = () => {
     const missionIndex = standardMissionProfiles.length + 1;
     const firstRole = crewCompositionRoleOptions[0] || '';
-    const aircraftTypeCode = String(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code || '').trim().toUpperCase();
+    const aircraftTypeCode = String(activeMissionAircraftTypeCode || '').trim().toUpperCase();
     if (!firstRole || !aircraftTypeCode) return;
     const crewOptions = getStandardMissionCrewOptions(aircraftTypeCode);
     const selectedCrewCompositionId = crewOptions.find((option) => option.mode === 'STANDARD')?.id || crewOptions[0]?.id || '';
@@ -6454,7 +6454,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ) || 'Callsign';
   const trainingReportPreviewUnitCode = String(activeTrainingReportUnit?.code || activeTrainingReportUnitCode || 'Unit').trim();
   const getStandardMissionCrewOptions = (aircraftTypeCode: string): Array<{ id: string; label: string; mode: 'STANDARD' | 'ALTERNATE' }> => {
-    const aircraftCode = String(aircraftTypeCode || activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || 'AIRCRAFT').trim().toUpperCase();
+    const aircraftCode = String(aircraftTypeCode || '').trim().toUpperCase();
+    if (!aircraftCode) return [];
     const alternateCompositions = uniqueProfilesByCompositeGroup(
       crewCompositionSettings.alternateCompositions.filter((profile) => (
         String(profile.aircraftTypeCode || '').trim().toUpperCase() === aircraftCode
@@ -6462,7 +6463,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       )),
     );
     return [
-      { id: `standard:${aircraftCode || 'AIRCRAFT'}`, label: `Standard ${aircraftCode || 'Aircraft'} Crew`, mode: 'STANDARD' },
+      { id: `standard:${aircraftCode}`, label: `Standard ${aircraftCode} Crew`, mode: 'STANDARD' },
       ...alternateCompositions.map((profile) => ({
         id: `alternate:${profile.id}`,
         label: profile.name || profile.code,
@@ -7488,7 +7489,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           action={canEdit && fixedCrewContext ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {renderSectionEditSaveButton('platform-standard-missions')}
-              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !(activeMissionAircraftTypeCode || activeCrewCompositionAircraftCode || config.aircraftTypes[0]?.code)} className={platformActionButtonClass}>Add Directed Task Setup</button>
+              <button type="button" onClick={addStandardMissionProfile} disabled={!canEditSection('platform-standard-missions') || crewCompositionRoleOptions.length === 0 || !activeMissionAircraftTypeCode} className={platformActionButtonClass}>Add Directed Task Setup</button>
             </div>
           ) : null}
         />
@@ -7507,7 +7508,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               {standardMissionProfilesForContext.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                  No full directed task setups are configured for this unit.
+                  {activeMissionAircraftTypeCode ? 'No full directed task setups are configured for this unit.' : 'Add an aircraft type and DFP resource row set for this unit before creating Directed Task Setups.'}
                 </div>
               ) : (
                 <div id="platform-standard-mission-records" className="space-y-4">
@@ -7570,7 +7571,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 onChange={() => undefined}
                                 info="Directed Task Setups are scoped to the current unit context. Change the top-left context selector to work on a different unit or combined unit."
                               />
-                              <DraftField label="Aircraft Type" value={missionAircraftTypeCode} disabled={!canEditSection('platform-standard-missions')} onCommit={(value) => updateStandardMissionProfile(profile.id, { aircraftTypeCode: value.toUpperCase(), config: getAircraftConfigOptions(value)[0] || 'ANY', selectedCrewCompositionId: `standard:${value.toUpperCase() || 'AIRCRAFT'}`, acceptableCrewCompositionIds: [`standard:${value.toUpperCase() || 'AIRCRAFT'}`], crewCompositionMode: 'STANDARD' })} info="Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete." />
+                              <DraftField
+                                label="Aircraft Type"
+                                value={missionAircraftTypeCode}
+                                disabled={!canEditSection('platform-standard-missions')}
+                                onCommit={(value) => {
+                                  const nextAircraftTypeCode = String(value || '').trim().toUpperCase();
+                                  const nextCrewOptions = getStandardMissionCrewOptions(nextAircraftTypeCode);
+                                  const nextCrewCompositionId = nextCrewOptions.find((option) => option.mode === 'STANDARD')?.id || nextCrewOptions[0]?.id || '';
+                                  updateStandardMissionProfile(profile.id, {
+                                    aircraftTypeCode: nextAircraftTypeCode,
+                                    config: getAircraftConfigOptions(nextAircraftTypeCode)[0] || 'ANY',
+                                    selectedCrewCompositionId: nextCrewCompositionId,
+                                    acceptableCrewCompositionIds: nextCrewCompositionId ? [nextCrewCompositionId] : [],
+                                    crewCompositionMode: nextCrewCompositionId ? 'STANDARD' : 'CUSTOM',
+                                  });
+                                }}
+                                info="Uses the selected unit's DFP resource rows where available. Type the aircraft code manually if the unit setup is incomplete."
+                              />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
                               <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />
                               <SelectField label="Arr" value={profile.arrivalLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { arrivalLocationCode: value.toUpperCase() })} />
@@ -7638,7 +7656,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               </div>
                               {crewMode === 'STANDARD' ? (
                                 <div className="mt-3 rounded border border-cyan-400/25 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-100">
-                                  {selectedCrewOption?.label || `Standard ${missionAircraftTypeCode || 'Aircraft'} Crew`}
+                                  {selectedCrewOption?.label || (missionAircraftTypeCode ? `Standard ${missionAircraftTypeCode} Crew` : 'No aircraft type selected')}
                                 </div>
                               ) : crewMode === 'ALTERNATE' ? (
                                 <div className="mt-3">
