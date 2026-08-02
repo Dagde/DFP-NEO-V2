@@ -4690,6 +4690,7 @@ const stableStringifyForSync = (value) => {
   if (value && typeof value === 'object') {
     return `{${Object.keys(value)
       .filter(key => !LMP_SYNC_COMPARISON_IGNORED_KEYS.has(key))
+      .filter(key => value[key] !== undefined)
       .sort()
       .map(key => `${JSON.stringify(key)}:${stableStringifyForSync(value[key])}`)
       .join(',')}}`;
