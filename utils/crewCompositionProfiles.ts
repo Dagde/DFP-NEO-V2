@@ -147,7 +147,7 @@ export const normaliseCrewCompositionSettings = (value: unknown): CrewCompositio
       aircraftTypeCode: String(row?.aircraftTypeCode || row?.aircraftType || '').trim().toUpperCase(),
       name: String(row?.name || '').trim() ? String(row?.name || '') : code,
       description: String(row?.description || ''),
-      operationalModels: operationalModels.length > 0 ? operationalModels : SUPPORTED_MODELS,
+      operationalModels,
       roleRequirements: normaliseRoleRequirements(row?.roleRequirements),
       status: String(row?.status || 'ACTIVE').trim().toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     };
