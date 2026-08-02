@@ -2873,10 +2873,14 @@ app.post('/api/platform-config', async (req, res) => {
     const schedulingRuleSets = toArray(rawSchedulingRuleSets);
     const userAccess = toArray(rawUserAccess);
     const hasActiveRecords = (records) => records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
-    const structuralBlocker =
-      !hasActiveRecords(organisations) ? 'At least one active organisation is required.' :
-      !hasActiveRecords(locations) ? 'At least one active location is required.' :
-      !hasActiveRecords(units) ? 'At least one active unit is required.' :
+    const hasActiveOrganisations = hasActiveRecords(organisations);
+    const hasActiveLocations = hasActiveRecords(locations);
+    const hasActiveUnits = hasActiveRecords(units);
+    const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
+    const structuralBlocker = isDeliberatelyEmptyStructure ? '' :
+      !hasActiveOrganisations ? 'At least one active organisation is required while locations or units still exist.' :
+      !hasActiveLocations ? 'At least one active location is required while units still exist.' :
+      !hasActiveUnits ? 'At least one active unit is required while organisations or locations still exist.' :
       '';
     if (structuralBlocker) {
       return res.status(400).json({
