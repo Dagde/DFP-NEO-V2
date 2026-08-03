@@ -67273,9 +67273,9 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
           "WARNING",
           "Unit Separation",
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} is a Fixed Crew unit without its own DFP resource row set. It can still schedule by falling back to shared or location capacity, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} has no unit-specific DFP resource row set. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          "Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator or trainer capacity after separation.",
+          "Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.",
           { focusSubsectionId: "platform-resource-pools" }
         );
       }
