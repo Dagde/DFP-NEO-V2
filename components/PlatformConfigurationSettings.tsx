@@ -4797,8 +4797,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         || selectedUnitRecord?.settings?.aircraftType
         || '',
       ).trim().toUpperCase();
-      const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || '').trim().toUpperCase();
-      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode;
+      const defaultAircraftTypeCode = unitAircraftCode;
       const defaultAircraftType = previousAircraftTypes.find((aircraft) => (
         String(aircraft.code || '').trim().toUpperCase() === defaultAircraftTypeCode
       ));

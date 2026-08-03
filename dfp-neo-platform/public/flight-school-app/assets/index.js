@@ -69832,8 +69832,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       const unitAircraftCode = String(
         selectedUnitRecord?.settings?.aircraftTypeCode || selectedUnitRecord?.settings?.aircraftType || ""
       ).trim().toUpperCase();
-      const visibleAircraftCode = String(visibleAircraftTypeOptions.find(Boolean) || "").trim().toUpperCase();
-      const defaultAircraftTypeCode = unitAircraftCode || visibleAircraftCode;
+      const defaultAircraftTypeCode = unitAircraftCode;
       const defaultAircraftType = previousAircraftTypes.find((aircraft) => String(aircraft.code || "").trim().toUpperCase() === defaultAircraftTypeCode);
       const defaultAircraftLabel = String(
         defaultAircraftType?.name || defaultAircraftType?.code || defaultAircraftTypeCode
