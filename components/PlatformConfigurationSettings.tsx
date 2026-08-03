@@ -2038,8 +2038,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [errorLink, setErrorLink] = useState<PlatformConfigSaveBlocker['link'] | null>(null);
   const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
-  const [unitTypesDraft, setUnitTypesDraft] = useState('');
-  const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
 
@@ -2057,10 +2055,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setError('');
     setErrorLink(null);
   }, []);
-
-  useEffect(() => {
-    if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
-  }, [isEditingUnitTypes, unitTypeOptions]);
 
   useEffect(() => {
     const handlePlatformConfigUpdated = (event: Event) => {
@@ -4254,25 +4248,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
-  const updateUnitTypes = (value: string) => {
-    setConfig((prev) => {
-      const nextConfig = {
-        ...prev,
-        unitTypes: normaliseUnitTypes(
-          value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
-          prev.units,
-        ),
-      };
-      notifyPlatformConfigUpdatedSoon(nextConfig);
-      return nextConfig;
-    });
-  };
-
-  const commitUnitTypesDraft = () => {
-    setIsEditingUnitTypes(false);
-    updateUnitTypes(unitTypesDraft);
-  };
-
   const removeUserAccessScope = (index: number) => {
     setConfig((prev) => {
       const nextConfig = {
@@ -6457,20 +6432,44 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     : activeUnitCode || 'Current DFP context';
   const ownershipAircraftRows = configAircraftTypes
     .filter((aircraft) => activeUnitAircraftTypeCodes.includes(normaliseUnitCode(aircraft.code)))
-    .map((aircraft) => ({
-      code: normaliseUnitCode(aircraft.code),
-      label: getAircraftTypeDisplayLabel(aircraft.code),
-    }));
+    .map((aircraft) => {
+      const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+      return {
+        code: normaliseUnitCode(aircraft.code),
+        label: getAircraftTypeDisplayLabel(aircraft.code),
+        category: String(aircraft.category || 'Aircraft').trim(),
+        crewSeats: crewComposition.crewCount,
+        cruiseSpeed: aircraft.defaultTasKtas ?? null,
+        cruiseLevel: aircraft.defaultCruiseAltitudeFl ?? null,
+      };
+    });
   const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool }) => {
     const rowSnapshot = getEditableDfpResourceRows(pool);
     const rowCount = Object.values(rowSnapshot).reduce((total, value) => total + Math.max(0, Number(value) || 0), 0);
     return {
       code: String(pool.code || '').trim(),
       name: String(pool.name || '').trim(),
+      locationCode: String(pool.locationCode || '').trim().toUpperCase(),
+      owningUnitCode: String(pool.unitCode || '').trim().toUpperCase(),
+      poolType: String(pool.poolType || '').trim(),
       aircraftTypeCode: normaliseUnitCode(pool.aircraftTypeCode),
       rowCount,
+      rows: rowSnapshot,
     };
   });
+  const openAircraftResourceSettings = useCallback((tab: 'aircraftTypes' | 'resourcePools', focusResourcePoolCode?: string) => {
+    setResourcePoolActiveTab(tab);
+    onNavigateToSettingsSection?.({
+      section: 'platform-resource-pools',
+      label: 'Aircraft Types & DFP Resource Rows',
+      focusSubsectionId: tab === 'aircraftTypes' ? 'platform-aircraft-type-settings' : 'platform-resource-pools',
+      focusResourcePoolCode,
+    });
+    window.setTimeout(() => {
+      const focusId = tab === 'aircraftTypes' ? 'platform-aircraft-type-settings' : 'platform-resource-pools';
+      document.getElementById(focusId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }, [onNavigateToSettingsSection]);
   const beginUnitOwnershipEdit = async () => {
     if (!canEdit) return;
     if (editingUnitIndex !== null) {
@@ -7237,14 +7236,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             <div className="rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3">
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80">Aircraft Operated</div>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 space-y-2">
                 {ownershipAircraftRows.length > 0 ? ownershipAircraftRows.map((aircraft) => (
-                  <span key={`ownership-aircraft-${aircraft.code}`} className="rounded border border-gray-600 bg-gray-900 px-2 py-1 text-xs font-bold text-gray-100">
-                    {aircraft.label}
-                  </span>
+                  <div key={`ownership-aircraft-${aircraft.code}`} className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-white">{aircraft.label}</span>
+                      <span className="rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-100">{aircraft.category}</span>
+                    </div>
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      {[
+                        `Crew seats ${aircraft.crewSeats}`,
+                        aircraft.cruiseSpeed ? `Cruise ${aircraft.cruiseSpeed} KTAS` : 'No cruise speed',
+                        aircraft.cruiseLevel ? `FL${aircraft.cruiseLevel}` : 'No cruise level',
+                      ].join(' · ')}
+                    </div>
+                  </div>
                 )) : (
                   <span className="text-xs font-semibold text-gray-400">No aircraft type assigned to this unit context.</span>
                 )}
+              </div>
+              <div className="mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400">
+                Aircraft identity, crew seats, cruise speed and cruise level are managed in{' '}
+                <button
+                  type="button"
+                  onClick={() => openAircraftResourceSettings('aircraftTypes')}
+                  className="font-bold text-cyan-200/80 underline decoration-cyan-300/30 underline-offset-2 hover:text-cyan-100"
+                >
+                  Aircraft Types & DFP Resource Rows
+                </button>.
               </div>
             </div>
             <div className="rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3">
@@ -7252,33 +7271,43 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="mt-2 space-y-2">
                 {ownershipResourcePoolRows.length > 0 ? ownershipResourcePoolRows.map((pool) => (
                   <div key={`ownership-resource-pool-${pool.code || pool.name}`} className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5">
-                    <div className="text-xs font-bold text-white">{pool.name || pool.code || 'Unnamed row set'}</div>
-                    <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                      {[pool.aircraftTypeCode || 'No aircraft type', `${pool.rowCount} row${pool.rowCount === 1 ? '' : 's'}`].join(' · ')}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-white">{pool.name || pool.code || 'Unnamed row set'}</span>
+                      {pool.code ? <span className="rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-100">{pool.code}</span> : null}
+                    </div>
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      {[
+                        pool.aircraftTypeCode || 'No aircraft type',
+                        pool.locationCode || 'No location',
+                        pool.owningUnitCode || 'No owning unit',
+                        pool.poolType || 'No pool type',
+                      ].join(' · ')}
+                    </div>
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      {[
+                        `Aircraft ${pool.rows.aircraft}`,
+                        `Simulator ${pool.rows.ftd}`,
+                        `Trainer ${pool.rows.cpt}`,
+                        `Standby ${pool.rows.standby}`,
+                        `Ground ${pool.rows.ground}`,
+                      ].join(' · ')}
                     </div>
                   </div>
                 )) : (
                   <div className="text-xs font-semibold text-gray-400">No DFP resource row set is visible for this unit context.</div>
                 )}
               </div>
+              <div className="mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400">
+                DFP row counts, row ownership, resource labels and aircraft assignment are managed in{' '}
+                <button
+                  type="button"
+                  onClick={() => openAircraftResourceSettings('resourcePools', ownershipResourcePoolRows[0]?.code)}
+                  className="font-bold text-cyan-200/80 underline decoration-cyan-300/30 underline-offset-2 hover:text-cyan-100"
+                >
+                  Aircraft Types & DFP Resource Rows
+                </button>.
+              </div>
             </div>
-          </div>
-          <div className="mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3">
-            <TextAreaField
-              label="Unit Types"
-              value={isEditingUnitTypes ? unitTypesDraft : unitTypeOptions.join('\n')}
-              disabled={!canEdit}
-              onChange={setUnitTypesDraft}
-              onFocus={() => {
-                setUnitTypesDraft(unitTypeOptions.join('\n'));
-                setIsEditingUnitTypes(true);
-              }}
-              onBlur={commitUnitTypesDraft}
-              info="One unit type per line. These options appear in the Unit Type dropdown below and are saved in platform configuration."
-              className="block"
-              fieldClassName="w-[300px] max-w-full"
-              fieldSizingClassName="min-h-[104px]"
-            />
           </div>
           <div className="max-w-full overflow-x-auto pb-2">
             <div className="min-w-[1180px] space-y-3">

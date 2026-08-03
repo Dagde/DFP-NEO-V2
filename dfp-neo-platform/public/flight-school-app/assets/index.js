@@ -67592,8 +67592,6 @@ const PlatformConfigurationSettings = ({
   const [errorLink, setErrorLink] = reactExports.useState(null);
   const loadedConfigRef = reactExports.useRef(emptyConfig);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
-  const [unitTypesDraft, setUnitTypesDraft] = reactExports.useState("");
-  const [isEditingUnitTypes, setIsEditingUnitTypes] = reactExports.useState(false);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
   const showPlatformConfigError = reactExports.useCallback((message, link = null) => {
@@ -67608,9 +67606,6 @@ const PlatformConfigurationSettings = ({
     setError("");
     setErrorLink(null);
   }, []);
-  reactExports.useEffect(() => {
-    if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
-  }, [isEditingUnitTypes, unitTypeOptions]);
   reactExports.useEffect(() => {
     const handlePlatformConfigUpdated = (event) => {
       const rawConfig = event.detail?.config;
@@ -69391,23 +69386,6 @@ This permanently removes the organisation record from platform configuration and
       return nextConfig;
     });
   };
-  const updateUnitTypes = (value) => {
-    setConfig((prev) => {
-      const nextConfig = {
-        ...prev,
-        unitTypes: normaliseUnitTypes(
-          value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
-          prev.units
-        )
-      };
-      notifyPlatformConfigUpdatedSoon(nextConfig);
-      return nextConfig;
-    });
-  };
-  const commitUnitTypesDraft = () => {
-    setIsEditingUnitTypes(false);
-    updateUnitTypes(unitTypesDraft);
-  };
   const removeUserAccessScope = (index) => {
     setConfig((prev) => {
       const nextConfig = {
@@ -71161,20 +71139,44 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
   const scopedOwnershipUnitRows = scopedOwnershipUnitRowsBase.length > 0 ? scopedOwnershipUnitRowsBase : selectedOwnershipFallbackRows.slice(0, 1);
   const unitOwnershipRows = showAllUnitsInOwnership ? visibleUnitRows : scopedOwnershipUnitRows;
   const ownershipContextLabel = activeSettingsVisibilityUnitCodes.length > 0 ? activeSettingsVisibilityUnitCodes.join(" + ") : activeUnitCode || "Current DFP context";
-  const ownershipAircraftRows = configAircraftTypes.filter((aircraft) => activeUnitAircraftTypeCodes.includes(normaliseUnitCode2(aircraft.code))).map((aircraft) => ({
-    code: normaliseUnitCode2(aircraft.code),
-    label: getAircraftTypeDisplayLabel(aircraft.code)
-  }));
+  const ownershipAircraftRows = configAircraftTypes.filter((aircraft) => activeUnitAircraftTypeCodes.includes(normaliseUnitCode2(aircraft.code))).map((aircraft) => {
+    const crewComposition = normaliseAircraftCrewComposition(aircraft.crewComposition);
+    return {
+      code: normaliseUnitCode2(aircraft.code),
+      label: getAircraftTypeDisplayLabel(aircraft.code),
+      category: String(aircraft.category || "Aircraft").trim(),
+      crewSeats: crewComposition.crewCount,
+      cruiseSpeed: aircraft.defaultTasKtas ?? null,
+      cruiseLevel: aircraft.defaultCruiseAltitudeFl ?? null
+    };
+  });
   const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool }) => {
     const rowSnapshot = getEditableDfpResourceRows(pool);
     const rowCount = Object.values(rowSnapshot).reduce((total, value) => total + Math.max(0, Number(value) || 0), 0);
     return {
       code: String(pool.code || "").trim(),
       name: String(pool.name || "").trim(),
+      locationCode: String(pool.locationCode || "").trim().toUpperCase(),
+      owningUnitCode: String(pool.unitCode || "").trim().toUpperCase(),
+      poolType: String(pool.poolType || "").trim(),
       aircraftTypeCode: normaliseUnitCode2(pool.aircraftTypeCode),
-      rowCount
+      rowCount,
+      rows: rowSnapshot
     };
   });
+  const openAircraftResourceSettings = reactExports.useCallback((tab, focusResourcePoolCode2) => {
+    setResourcePoolActiveTab(tab);
+    onNavigateToSettingsSection?.({
+      section: "platform-resource-pools",
+      label: "Aircraft Types & DFP Resource Rows",
+      focusSubsectionId: tab === "aircraftTypes" ? "platform-aircraft-type-settings" : "platform-resource-pools",
+      focusResourcePoolCode: focusResourcePoolCode2
+    });
+    window.setTimeout(() => {
+      const focusId = tab === "aircraftTypes" ? "platform-aircraft-type-settings" : "platform-resource-pools";
+      document.getElementById(focusId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }, [onNavigateToSettingsSection]);
   const beginUnitOwnershipEdit = async () => {
     if (!canEdit) return;
     if (editingUnitIndex !== null) {
@@ -71820,34 +71822,69 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80", children: "Aircraft Operated" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-2", children: ownershipAircraftRows.length > 0 ? ownershipAircraftRows.map((aircraft) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600 bg-gray-900 px-2 py-1 text-xs font-bold text-gray-100", children: aircraft.label }, `ownership-aircraft-${aircraft.code}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-400", children: "No aircraft type assigned to this unit context." }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: ownershipAircraftRows.length > 0 ? ownershipAircraftRows.map((aircraft) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: aircraft.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-100", children: aircraft.category })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400", children: [
+                `Crew seats ${aircraft.crewSeats}`,
+                aircraft.cruiseSpeed ? `Cruise ${aircraft.cruiseSpeed} KTAS` : "No cruise speed",
+                aircraft.cruiseLevel ? `FL${aircraft.cruiseLevel}` : "No cruise level"
+              ].join(" · ") })
+            ] }, `ownership-aircraft-${aircraft.code}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-400", children: "No aircraft type assigned to this unit context." }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400", children: [
+              "Aircraft identity, crew seats, cruise speed and cruise level are managed in",
+              " ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => openAircraftResourceSettings("aircraftTypes"),
+                  className: "font-bold text-cyan-200/80 underline decoration-cyan-300/30 underline-offset-2 hover:text-cyan-100",
+                  children: "Aircraft Types & DFP Resource Rows"
+                }
+              ),
+              "."
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80", children: "DFP Resource Rows" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: ownershipResourcePoolRows.length > 0 ? ownershipResourcePoolRows.map((pool) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1.5", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold text-white", children: pool.name || pool.code || "Unnamed row set" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400", children: [pool.aircraftTypeCode || "No aircraft type", `${pool.rowCount} row${pool.rowCount === 1 ? "" : "s"}`].join(" · ") })
-            ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP resource row set is visible for this unit context." }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: pool.name || pool.code || "Unnamed row set" }),
+                pool.code ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-100", children: pool.code }) : null
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400", children: [
+                pool.aircraftTypeCode || "No aircraft type",
+                pool.locationCode || "No location",
+                pool.owningUnitCode || "No owning unit",
+                pool.poolType || "No pool type"
+              ].join(" · ") }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400", children: [
+                `Aircraft ${pool.rows.aircraft}`,
+                `Simulator ${pool.rows.ftd}`,
+                `Trainer ${pool.rows.cpt}`,
+                `Standby ${pool.rows.standby}`,
+                `Ground ${pool.rows.ground}`
+              ].join(" · ") })
+            ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP resource row set is visible for this unit context." }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400", children: [
+              "DFP row counts, row ownership, resource labels and aircraft assignment are managed in",
+              " ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => openAircraftResourceSettings("resourcePools", ownershipResourcePoolRows[0]?.code),
+                  className: "font-bold text-cyan-200/80 underline decoration-cyan-300/30 underline-offset-2 hover:text-cyan-100",
+                  children: "Aircraft Types & DFP Resource Rows"
+                }
+              ),
+              "."
+            ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          TextAreaField,
-          {
-            label: "Unit Types",
-            value: isEditingUnitTypes ? unitTypesDraft : unitTypeOptions.join("\n"),
-            disabled: !canEdit,
-            onChange: setUnitTypesDraft,
-            onFocus: () => {
-              setUnitTypesDraft(unitTypeOptions.join("\n"));
-              setIsEditingUnitTypes(true);
-            },
-            onBlur: commitUnitTypesDraft,
-            info: "One unit type per line. These options appear in the Unit Type dropdown below and are saved in platform configuration.",
-            className: "block",
-            fieldClassName: "w-[300px] max-w-full",
-            fieldSizingClassName: "min-h-[104px]"
-          }
-        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: unitOwnershipRows.map(({ unit, index }) => {
           const unitSettings = unit.settings || {};
           const isSelectedUnit = selectedUnitIndex === index;
