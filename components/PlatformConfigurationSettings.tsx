@@ -8606,56 +8606,54 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div className="mb-3 flex items-center justify-between border-b border-gray-700/80 pb-2">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200/80">Setup Pages</div>
-              <div className="mt-1 text-xs text-gray-400">Choose aircraft setup or the DFP resource rows it feeds.</div>
+          <div className="mb-4 rounded-lg border-2 border-cyan-700/55 bg-gray-950 p-3 shadow-inner shadow-black/30">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700/80 pb-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200/80">This Section Has 2 Setup Pages</div>
+                <div className="mt-1 text-xs leading-relaxed text-gray-400">Use the page buttons below. Page 1 defines aircraft. Page 2 defines the DFP rows those aircraft use.</div>
+              </div>
+              <div className="rounded border border-gray-600 bg-gray-900 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-gray-300">
+                Current: {resourcePoolActiveTab === 'aircraftTypes' ? 'Page 1 of 2' : 'Page 2 of 2'}
+              </div>
             </div>
-            <div className="rounded border border-gray-600 bg-gray-950 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-gray-300">
-              {resourcePoolActiveTab === 'aircraftTypes' ? 'Page 1 of 2' : 'Page 2 of 2'}
-            </div>
-          </div>
-          <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg border border-cyan-700/50 bg-gray-950 p-2 shadow-inner shadow-black/30" role="tablist" aria-label="Aircraft and DFP resource row sections">
+          <div className="mt-3 grid gap-2" role="tablist" aria-label="Aircraft and DFP resource row sections">
             <button
               type="button"
               role="tab"
               aria-selected={resourcePoolActiveTab === 'aircraftTypes'}
               onClick={() => setResourcePoolActiveTab('aircraftTypes')}
-              className={`min-h-[74px] rounded-md border-2 px-4 py-3 text-left transition-colors ${
+              className={`flex min-h-[68px] items-center gap-3 rounded-md border-2 px-4 py-3 text-left transition-colors ${
                 resourcePoolActiveTab === 'aircraftTypes'
                   ? 'border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95),0_0_0_1px_rgba(251,146,60,0.25)]'
                   : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-orange-300/55 hover:text-orange-50'
               }`}
             >
-              <span className="flex items-start justify-between gap-3 text-sm font-black uppercase tracking-wide">
-                <span>
-                  <span className="block text-[10px] tracking-[0.18em] text-orange-200/80">Page 1</span>
-                  Aircraft Setup
-                </span>
-                <span className="rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100">{visibleAircraftTypeRows.length}</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-orange-300/40 bg-orange-500/15 text-sm font-black text-orange-100">1</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black uppercase tracking-wide">Aircraft Setup</span>
+                <span className="mt-1 block text-[11px] leading-relaxed">Aircraft identity, cruise speed, cruise altitude and crew seats.</span>
               </span>
-              <span className="mt-2 block text-[11px] leading-relaxed">Aircraft identity, cruise speed, cruise altitude and crew seats.</span>
+              <span className="shrink-0 rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] font-black text-orange-100">{visibleAircraftTypeRows.length} types</span>
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={resourcePoolActiveTab === 'resourcePools'}
               onClick={() => setResourcePoolActiveTab('resourcePools')}
-              className={`min-h-[74px] rounded-md border-2 px-4 py-3 text-left transition-colors ${
+              className={`flex min-h-[68px] items-center gap-3 rounded-md border-2 px-4 py-3 text-left transition-colors ${
                 resourcePoolActiveTab === 'resourcePools'
                   ? 'border-cyan-300 bg-cyan-500/20 text-cyan-50 shadow-[inset_0_4px_0_rgba(34,211,238,0.95),0_0_0_1px_rgba(34,211,238,0.25)]'
                   : 'border-gray-700 bg-gray-900/80 text-gray-300 hover:border-cyan-300/55 hover:text-cyan-50'
               }`}
             >
-              <span className="flex items-start justify-between gap-3 text-sm font-black uppercase tracking-wide">
-                <span>
-                  <span className="block text-[10px] tracking-[0.18em] text-cyan-200/80">Page 2</span>
-                  DFP Resource Rows
-                </span>
-                <span className="rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100">{config.resourcePools.length}</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-cyan-300/40 bg-cyan-500/15 text-sm font-black text-cyan-100">2</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black uppercase tracking-wide">DFP Resource Rows</span>
+                <span className="mt-1 block text-[11px] leading-relaxed">DFP row counts, row labels, numbering and ownership.</span>
               </span>
-              <span className="mt-2 block text-[11px] leading-relaxed">DFP row counts, row labels, numbering and ownership.</span>
+              <span className="shrink-0 rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] font-black text-cyan-100">{config.resourcePools.length} row sets</span>
             </button>
+            </div>
           </div>
           {resourcePoolActiveTab === 'aircraftTypes' ? (
           <div id="platform-aircraft-type-settings" className="space-y-3" role="tabpanel">
