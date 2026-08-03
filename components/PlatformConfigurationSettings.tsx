@@ -8610,7 +8610,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
-                        <DraftField label="Aircraft" value={pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode)} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
+                        <DraftField label="Aircraft" value={pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : '')} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
                         <DraftField label="Simulator" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
                         <DraftField label="Procedural Trainer" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEditResourcePools} onCommit={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                       </div>

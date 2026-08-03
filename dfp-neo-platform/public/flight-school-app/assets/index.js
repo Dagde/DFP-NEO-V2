@@ -73205,7 +73205,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP. Changing these labels does not alter existing saved records." })
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft", value: pool.settings?.aircraftLabel || getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
                       ] })
