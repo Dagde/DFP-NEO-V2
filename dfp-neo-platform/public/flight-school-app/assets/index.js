@@ -73161,7 +73161,14 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 pb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-2 gap-1 rounded-lg border border-gray-700 bg-gray-950 p-1 shadow-inner shadow-black/20", role: "tablist", "aria-label": "Aircraft and DFP resource row sections", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between border-b border-gray-700/80 pb-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200/80", children: "Setup Pages" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: "Choose aircraft setup or the DFP resource rows it feeds." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-gray-600 bg-gray-950 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-gray-300", children: resourcePoolActiveTab === "aircraftTypes" ? "Page 1 of 2" : "Page 2 of 2" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-2 gap-2 rounded-lg border border-cyan-700/50 bg-gray-950 p-2 shadow-inner shadow-black/30", role: "tablist", "aria-label": "Aircraft and DFP resource row sections", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
@@ -73169,13 +73176,16 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               role: "tab",
               "aria-selected": resourcePoolActiveTab === "aircraftTypes",
               onClick: () => setResourcePoolActiveTab("aircraftTypes"),
-              className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "border-orange-300/60 bg-orange-500/15 text-orange-50 shadow-[inset_0_3px_0_rgba(251,146,60,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
+              className: `min-h-[74px] rounded-md border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95),0_0_0_1px_rgba(251,146,60,0.25)]" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-orange-300/55 hover:text-orange-50"}`,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Aircraft Setup" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-start justify-between gap-3 text-sm font-black uppercase tracking-wide", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] tracking-[0.18em] text-orange-200/80", children: "Page 1" }),
+                    "Aircraft Setup"
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100", children: visibleAircraftTypeRows.length })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Capability, cruise planning and crew seats" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block text-[11px] leading-relaxed", children: "Aircraft identity, cruise speed, cruise altitude and crew seats." })
               ]
             }
           ),
@@ -73186,13 +73196,16 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               role: "tab",
               "aria-selected": resourcePoolActiveTab === "resourcePools",
               onClick: () => setResourcePoolActiveTab("resourcePools"),
-              className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
+              className: `min-h-[74px] rounded-md border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "border-cyan-300 bg-cyan-500/20 text-cyan-50 shadow-[inset_0_4px_0_rgba(34,211,238,0.95),0_0_0_1px_rgba(34,211,238,0.25)]" : "border-gray-700 bg-gray-900/80 text-gray-300 hover:border-cyan-300/55 hover:text-cyan-50"}`,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DFP Row Sets" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-start justify-between gap-3 text-sm font-black uppercase tracking-wide", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-[10px] tracking-[0.18em] text-cyan-200/80", children: "Page 2" }),
+                    "DFP Resource Rows"
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100", children: config.resourcePools.length })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Rows, labels, numbering and ownership" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block text-[11px] leading-relaxed", children: "DFP row counts, row labels, numbering and ownership." })
               ]
             }
           )
