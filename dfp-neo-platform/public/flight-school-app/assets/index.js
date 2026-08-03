@@ -66561,15 +66561,62 @@ const getPlatformConfigSaveBlocker = (config) => {
     const name = String(aircraftType?.name || "").trim();
     return code || name || "New aircraft type";
   };
-  if (incompleteAircraftType) return `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open Aircraft Types, complete Code and Name, then save again.`;
-  if (incompleteResourcePool) return `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, complete the row code and row name, then save again.`;
-  if (missingResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose the Aircraft Type for that row set, then save again.`;
-  if (invalidResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose an active Aircraft Type, then save again.`;
-  if (isDeliberatelyEmptyStructure) return "";
-  if (!hasActiveOrganisations) return "Platform configuration save blocked: at least one active organisation is required while locations or units still exist.";
-  if (!hasActiveLocations) return "Platform configuration save blocked: at least one active location is required while units still exist.";
-  if (!hasActiveUnits) return "Platform configuration save blocked: at least one active unit is required while organisations or locations still exist.";
-  return "";
+  const getResourcePoolFocusCode = (pool) => String(pool?.id || pool?.code || pool?.name || "").trim();
+  const getResourcePoolSettingsLink = (pool, suffix = "") => ({
+    label: "Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows",
+    target: {
+      section: "platform-resource-pools",
+      label: "Aircraft Types & DFP Resource Rows",
+      focusResourcePoolCode: getResourcePoolFocusCode(pool)
+    },
+    suffix
+  });
+  if (incompleteAircraftType) {
+    return {
+      message: `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Open`,
+      link: {
+        label: "Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows",
+        target: {
+          section: "platform-resource-pools",
+          label: "Aircraft Types & DFP Resource Rows",
+          focusSubsectionId: "platform-resource-pools"
+        },
+        suffix: "open Aircraft Types, complete Code and Name, then save again."
+      }
+    };
+  }
+  if (incompleteResourcePool) {
+    return {
+      message: `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Open`,
+      link: getResourcePoolSettingsLink(
+        incompleteResourcePool,
+        "open DFP Resource Rows, complete the row code and row name, then save again."
+      )
+    };
+  }
+  if (missingResourcePoolAircraftType) {
+    return {
+      message: `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Open`,
+      link: getResourcePoolSettingsLink(
+        missingResourcePoolAircraftType,
+        "open DFP Resource Rows, choose the Aircraft Type for that row set, then save again."
+      )
+    };
+  }
+  if (invalidResourcePoolAircraftType) {
+    return {
+      message: `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Open`,
+      link: getResourcePoolSettingsLink(
+        invalidResourcePoolAircraftType,
+        "open DFP Resource Rows, choose an active Aircraft Type, then save again."
+      )
+    };
+  }
+  if (isDeliberatelyEmptyStructure) return null;
+  if (!hasActiveOrganisations) return { message: "Platform configuration save blocked: at least one active organisation is required while locations or units still exist." };
+  if (!hasActiveLocations) return { message: "Platform configuration save blocked: at least one active location is required while units still exist." };
+  if (!hasActiveUnits) return { message: "Platform configuration save blocked: at least one active unit is required while organisations or locations still exist." };
+  return null;
 };
 const notifyPlatformConfigUpdated = (config) => {
   if (typeof window === "undefined") return;
@@ -67542,12 +67589,21 @@ const PlatformConfigurationSettings = ({
   const [saving, setSaving] = reactExports.useState(false);
   const [applyingChanges, setApplyingChanges] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
+  const [errorLink, setErrorLink] = reactExports.useState(null);
   const loadedConfigRef = reactExports.useRef(emptyConfig);
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [unitTypesDraft, setUnitTypesDraft] = reactExports.useState("");
   const [isEditingUnitTypes, setIsEditingUnitTypes] = reactExports.useState(false);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
+  const showPlatformConfigError = useCallback((message, link = null) => {
+    setError(message);
+    setErrorLink(link);
+  }, []);
+  const clearPlatformConfigError = useCallback(() => {
+    setError("");
+    setErrorLink(null);
+  }, []);
   reactExports.useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
   }, [isEditingUnitTypes, unitTypeOptions]);
@@ -67661,7 +67717,7 @@ const PlatformConfigurationSettings = ({
       variant: "warning"
     });
     if (!password) return false;
-    setError("");
+    clearPlatformConfigError();
     try {
       const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const verifyResp = await fetch("/api/auth/verify-password", {
@@ -67675,14 +67731,14 @@ const PlatformConfigurationSettings = ({
       });
       const verifyData = await verifyResp.json().catch(() => ({}));
       if (!verifyResp.ok || !verifyData.valid) {
-        setError("Rank, Terminology & Labels editing was not unlocked. The password was not accepted.");
+        showPlatformConfigError("Rank, Terminology & Labels editing was not unlocked. The password was not accepted.");
         return false;
       }
       setRankTerminologyUnlocked(true);
       onShowSuccess("Rank, Terminology & Labels editing unlocked.");
       return true;
     } catch (err) {
-      setError(err?.message || "Could not verify password for Rank, Terminology & Labels editing.");
+      showPlatformConfigError(err?.message || "Could not verify password for Rank, Terminology & Labels editing.");
       return false;
     }
   };
@@ -67718,7 +67774,7 @@ const PlatformConfigurationSettings = ({
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      setError("");
+      clearPlatformConfigError();
       try {
         if (isSetupTestMode()) {
           const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
@@ -67746,7 +67802,7 @@ const PlatformConfigurationSettings = ({
           setSelectedAccessUserId((current) => current || firstUserId);
         }
       } catch (err) {
-        if (!cancelled) setError(err?.message || "Failed to load platform configuration");
+        if (!cancelled) showPlatformConfigError(err?.message || "Failed to load platform configuration");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -70462,16 +70518,16 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     if (!canEdit) return false;
     const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
     if (saveBlocker) {
-      setError(saveBlocker);
+      showPlatformConfigError(saveBlocker.message, saveBlocker.link || null);
       return false;
     }
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
-      setError(solarValidationError);
+      showPlatformConfigError(solarValidationError);
       return false;
     }
     setSaving(true);
-    setError("");
+    clearPlatformConfigError();
     let shouldReload = false;
     try {
       if (isSetupTestMode()) {
@@ -70557,7 +70613,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       }, 900);
       return true;
     } catch (err) {
-      setError(err?.message || "Failed to save platform configuration");
+      showPlatformConfigError(err?.message || "Failed to save platform configuration");
       return false;
     } finally {
       if (!shouldReload) setSaving(false);
@@ -71261,6 +71317,26 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     if (target?.closest('input, textarea, select, [contenteditable="true"], [data-rank-equivalency-input="true"]')) return;
     stopEditableKeyPropagation(event);
   };
+  const renderPlatformConfigError = () => {
+    if (!error) return null;
+    const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: error }),
+      canNavigate ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => onNavigateToSettingsSection?.(errorLink.target),
+            className: "font-bold text-cyan-200/75 underline decoration-cyan-300/35 underline-offset-4 hover:text-cyan-100",
+            children: errorLink.label
+          }
+        ),
+        errorLink?.suffix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: ` ${errorLink.suffix}` }) : null
+      ] }) : null
+    ] });
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: handleSettingsKeyDownCapture, children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
@@ -71268,10 +71344,10 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     ] }) }),
     sectionOnly && showSectionOnlyStatusPanel ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
-      error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
+      renderPlatformConfigError()
     ] }) : !sectionOnly && (!canEdit || Boolean(error)) ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
-      error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
+      renderPlatformConfigError()
     ] }) : null,
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-configuration-health", className: getSectionClass("platform-configuration-health"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(

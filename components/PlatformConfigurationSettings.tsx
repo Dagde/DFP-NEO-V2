@@ -676,7 +676,27 @@ const fillSingleAircraftTypeForResourceRows = (config: PlatformConfig): Platform
   return changed ? { ...config, resourcePools } : config;
 };
 
-const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
+type PlatformConfigSaveBlockerTarget = {
+  section: string;
+  label: string;
+  focusUnitCode?: string;
+  focusLocationCode?: string;
+  focusResourcePoolCode?: string;
+  focusAircraftTypeCode?: string;
+  focusUserId?: string;
+  focusSubsectionId?: string;
+};
+
+type PlatformConfigSaveBlocker = {
+  message: string;
+  link?: {
+    label: string;
+    target: PlatformConfigSaveBlockerTarget;
+    suffix?: string;
+  };
+};
+
+const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSaveBlocker | null => {
   const hasActiveOrganisations = hasActivePlatformRecords(Array.isArray(config.organisations) ? config.organisations : []);
   const hasActiveLocations = hasActivePlatformRecords(Array.isArray(config.locations) ? config.locations : []);
   const hasActiveUnits = hasActivePlatformRecords(Array.isArray(config.units) ? config.units : []);
@@ -716,15 +736,64 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
     const name = String(aircraftType?.name || '').trim();
     return code || name || 'New aircraft type';
   };
-  if (incompleteAircraftType) return `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open Aircraft Types, complete Code and Name, then save again.`;
-  if (incompleteResourcePool) return `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, complete the row code and row name, then save again.`;
-  if (missingResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose the Aircraft Type for that row set, then save again.`;
-  if (invalidResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose an active Aircraft Type, then save again.`;
-  if (isDeliberatelyEmptyStructure) return '';
-  if (!hasActiveOrganisations) return 'Platform configuration save blocked: at least one active organisation is required while locations or units still exist.';
-  if (!hasActiveLocations) return 'Platform configuration save blocked: at least one active location is required while units still exist.';
-  if (!hasActiveUnits) return 'Platform configuration save blocked: at least one active unit is required while organisations or locations still exist.';
-  return '';
+  const getResourcePoolFocusCode = (pool?: any): string => (
+    String(pool?.id || pool?.code || pool?.name || '').trim()
+  );
+  const getResourcePoolSettingsLink = (pool?: any, suffix = ''): PlatformConfigSaveBlocker['link'] => ({
+    label: 'Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows',
+    target: {
+      section: 'platform-resource-pools',
+      label: 'Aircraft Types & DFP Resource Rows',
+      focusResourcePoolCode: getResourcePoolFocusCode(pool),
+    },
+    suffix,
+  });
+  if (incompleteAircraftType) {
+    return {
+      message: `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Open`,
+      link: {
+        label: 'Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows',
+        target: {
+          section: 'platform-resource-pools',
+          label: 'Aircraft Types & DFP Resource Rows',
+          focusSubsectionId: 'platform-resource-pools',
+        },
+        suffix: 'open Aircraft Types, complete Code and Name, then save again.',
+      },
+    };
+  }
+  if (incompleteResourcePool) {
+    return {
+      message: `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Open`,
+      link: getResourcePoolSettingsLink(
+        incompleteResourcePool,
+        'open DFP Resource Rows, complete the row code and row name, then save again.'
+      ),
+    };
+  }
+  if (missingResourcePoolAircraftType) {
+    return {
+      message: `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Open`,
+      link: getResourcePoolSettingsLink(
+        missingResourcePoolAircraftType,
+        'open DFP Resource Rows, choose the Aircraft Type for that row set, then save again.'
+      ),
+    };
+  }
+  if (invalidResourcePoolAircraftType) {
+    return {
+      message: `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Open`,
+      link: getResourcePoolSettingsLink(
+        invalidResourcePoolAircraftType,
+        'open DFP Resource Rows, choose an active Aircraft Type, then save again.'
+      ),
+    };
+  }
+  if (isDeliberatelyEmptyStructure) return null;
+  if (!hasActiveOrganisations) return { message: 'Platform configuration save blocked: at least one active organisation is required while locations or units still exist.' };
+  if (!hasActiveLocations) return { message: 'Platform configuration save blocked: at least one active location is required while units still exist.' };
+  if (!hasActiveUnits) return { message: 'Platform configuration save blocked: at least one active unit is required while organisations or locations still exist.' };
+  return null;
 };
 
 const notifyPlatformConfigUpdated = (config: PlatformConfig) => {
@@ -1966,12 +2035,23 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [saving, setSaving] = useState(false);
   const [applyingChanges, setApplyingChanges] = useState(false);
   const [error, setError] = useState('');
+  const [errorLink, setErrorLink] = useState<PlatformConfigSaveBlocker['link'] | null>(null);
   const loadedConfigRef = useRef<PlatformConfig>(emptyConfig);
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [unitTypesDraft, setUnitTypesDraft] = useState('');
   const [isEditingUnitTypes, setIsEditingUnitTypes] = useState(false);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
+
+  const showPlatformConfigError = useCallback((message: string, link: PlatformConfigSaveBlocker['link'] | null = null) => {
+    setError(message);
+    setErrorLink(link);
+  }, []);
+
+  const clearPlatformConfigError = useCallback(() => {
+    setError('');
+    setErrorLink(null);
+  }, []);
 
   useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
@@ -2097,7 +2177,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       variant: 'warning',
     });
     if (!password) return false;
-    setError('');
+    clearPlatformConfigError();
     try {
       const sessionToken = localStorage.getItem('dfp_session_token') || '';
       const verifyResp = await fetch('/api/auth/verify-password', {
@@ -2111,14 +2191,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       });
       const verifyData = await verifyResp.json().catch(() => ({}));
       if (!verifyResp.ok || !verifyData.valid) {
-        setError('Rank, Terminology & Labels editing was not unlocked. The password was not accepted.');
+        showPlatformConfigError('Rank, Terminology & Labels editing was not unlocked. The password was not accepted.');
         return false;
       }
       setRankTerminologyUnlocked(true);
       onShowSuccess('Rank, Terminology & Labels editing unlocked.');
       return true;
     } catch (err: any) {
-      setError(err?.message || 'Could not verify password for Rank, Terminology & Labels editing.');
+      showPlatformConfigError(err?.message || 'Could not verify password for Rank, Terminology & Labels editing.');
       return false;
     }
   };
@@ -2158,7 +2238,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      setError('');
+      clearPlatformConfigError();
       try {
         if (isSetupTestMode()) {
           const nextConfig = normaliseSettingsPlatformConfig(readSetupTestPlatformConfig());
@@ -2186,7 +2266,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           setSelectedAccessUserId((current) => current || firstUserId);
         }
       } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'Failed to load platform configuration');
+        if (!cancelled) showPlatformConfigError(err?.message || 'Failed to load platform configuration');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -5595,16 +5675,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (!canEdit) return false;
     const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
     if (saveBlocker) {
-      setError(saveBlocker);
+      showPlatformConfigError(saveBlocker.message, saveBlocker.link || null);
       return false;
     }
     const solarValidationError = configToSave.locations.map(validateSolarLocation).find(Boolean);
     if (solarValidationError) {
-      setError(solarValidationError);
+      showPlatformConfigError(solarValidationError);
       return false;
     }
     setSaving(true);
-    setError('');
+    clearPlatformConfigError();
     let shouldReload = false;
     try {
       if (isSetupTestMode()) {
@@ -5693,7 +5773,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       }, 900);
       return true;
     } catch (err: any) {
-      setError(err?.message || 'Failed to save platform configuration');
+      showPlatformConfigError(err?.message || 'Failed to save platform configuration');
       return false;
     } finally {
       if (!shouldReload) setSaving(false);
@@ -6593,6 +6673,29 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     stopEditableKeyPropagation(event);
   };
 
+  const renderPlatformConfigError = () => {
+    if (!error) return null;
+    const canNavigate = Boolean(errorLink?.target && onNavigateToSettingsSection);
+    return (
+      <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
+        <span>{error}</span>
+        {canNavigate ? (
+          <>
+            {' '}
+            <button
+              type="button"
+              onClick={() => onNavigateToSettingsSection?.(errorLink!.target)}
+              className="font-bold text-cyan-200/75 underline decoration-cyan-300/35 underline-offset-4 hover:text-cyan-100"
+            >
+              {errorLink!.label}
+            </button>
+            {errorLink?.suffix ? <span>{` ${errorLink.suffix}`}</span> : null}
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className="relative space-y-8" onKeyDownCapture={handleSettingsKeyDownCapture}>
       {applyingChanges && (
@@ -6610,11 +6713,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               Read-only. Super Admin or Admin permission is required to change platform configuration.
             </div>
           )}
-          {error && (
-            <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+          {renderPlatformConfigError()}
         </div>
       ) : !sectionOnly && (!canEdit || Boolean(error)) ? (
         <div className="rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3">
@@ -6623,11 +6722,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               Read-only. Super Admin or Admin permission is required to change platform configuration.
             </div>
           )}
-          {error && (
-            <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
-              {error}
-            </div>
-          )}
+          {renderPlatformConfigError()}
         </div>
       ) : null}
 
