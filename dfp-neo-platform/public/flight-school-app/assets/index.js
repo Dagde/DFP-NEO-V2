@@ -69997,9 +69997,17 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     ]);
     setSelectedProfileId(id);
   };
-  const deleteSelectedPermissionProfile = () => {
+  const deleteSelectedPermissionProfile = async () => {
     if (!selectedPermissionProfile) return;
-    if (!window.confirm(`Delete permission profile "${selectedPermissionProfile.name || selectedPermissionProfile.id}"?`)) return;
+    const profileLabel = selectedPermissionProfile.name || selectedPermissionProfile.id;
+    const confirmed = await showDarkConfirm(
+      `Delete permission profile "${profileLabel}"?
+
+This removes the reusable permission profile from Settings. Users assigned only this profile may lose those permissions after you save.`,
+      "Delete Permission Profile?",
+      "warning"
+    );
+    if (!confirmed) return;
     const nextProfiles = permissionProfiles.filter((profile) => profile.id !== selectedPermissionProfile.id);
     updatePermissionProfiles(nextProfiles);
     setSelectedProfileId(nextProfiles[0]?.id || "");
