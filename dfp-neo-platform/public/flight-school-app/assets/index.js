@@ -71164,7 +71164,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       rows: rowSnapshot
     };
   });
-  const openAircraftResourceSettings = reactExports.useCallback((tab, focusResourcePoolCode2) => {
+  const openAircraftResourceSettings = (tab, focusResourcePoolCode2) => {
     setResourcePoolActiveTab(tab);
     onNavigateToSettingsSection?.({
       section: "platform-resource-pools",
@@ -71176,7 +71176,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       const focusId = tab === "aircraftTypes" ? "platform-aircraft-type-settings" : "platform-resource-pools";
       document.getElementById(focusId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
-  }, [onNavigateToSettingsSection]);
+  };
   const beginUnitOwnershipEdit = async () => {
     if (!canEdit) return;
     if (editingUnitIndex !== null) {

@@ -6457,7 +6457,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       rows: rowSnapshot,
     };
   });
-  const openAircraftResourceSettings = useCallback((tab: 'aircraftTypes' | 'resourcePools', focusResourcePoolCode?: string) => {
+  const openAircraftResourceSettings = (tab: 'aircraftTypes' | 'resourcePools', focusResourcePoolCode?: string) => {
     setResourcePoolActiveTab(tab);
     onNavigateToSettingsSection?.({
       section: 'platform-resource-pools',
@@ -6469,7 +6469,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const focusId = tab === 'aircraftTypes' ? 'platform-aircraft-type-settings' : 'platform-resource-pools';
       document.getElementById(focusId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
-  }, [onNavigateToSettingsSection]);
+  };
   const beginUnitOwnershipEdit = async () => {
     if (!canEdit) return;
     if (editingUnitIndex !== null) {
