@@ -8618,13 +8618,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onClick={() => setResourcePoolActiveTab('aircraftTypes')}
               className={`flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${
                 resourcePoolActiveTab === 'aircraftTypes'
-                  ? 'relative z-20 rounded-t-lg rounded-b-none border-b-0 border-orange-300 bg-orange-500/20 pb-[14px] text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]'
+                  ? 'relative z-20 rounded-t-lg rounded-b-none border-b-0 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]'
                   : 'rounded-lg border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50'
               }`}
             >
-              {resourcePoolActiveTab === 'aircraftTypes' && (
-                <span aria-hidden="true" className="pointer-events-none absolute -bottom-[2px] left-[-2px] right-[-2px] h-[4px] border-x-2 border-orange-300 bg-gray-950/35" />
-              )}
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-orange-300/40 bg-orange-500/15 text-sm font-black text-orange-100">1</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-black uppercase tracking-wide">Aircraft Setup</span>
@@ -8639,13 +8636,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onClick={() => setResourcePoolActiveTab('resourcePools')}
               className={`flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${
                 resourcePoolActiveTab === 'resourcePools'
-                  ? 'relative z-20 rounded-t-lg rounded-b-none border-b-0 border-lime-300 bg-lime-500/25 pb-[14px] text-lime-50 shadow-[inset_0_4px_0_rgba(132,204,22,0.95)]'
+                  ? 'relative z-20 rounded-t-lg rounded-b-none border-b-0 border-lime-300 bg-lime-500/25 text-lime-50 shadow-[inset_0_4px_0_rgba(132,204,22,0.95)]'
                   : 'rounded-lg border-lime-500/70 bg-lime-900/25 text-lime-100 hover:border-lime-300/80 hover:text-lime-50'
               }`}
             >
-              {resourcePoolActiveTab === 'resourcePools' && (
-                <span aria-hidden="true" className="pointer-events-none absolute -bottom-[2px] left-[-2px] right-[-2px] h-[4px] border-x-2 border-lime-300 bg-gray-950/35" />
-              )}
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-lime-300/45 bg-lime-500/20 text-sm font-black text-lime-100">2</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-black uppercase tracking-wide">DFP Resource Rows</span>
@@ -8655,7 +8649,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </button>
           </div>
           {resourcePoolActiveTab === 'aircraftTypes' ? (
-          <div id="platform-aircraft-type-settings" className="-mt-[2px] space-y-3 rounded-b-lg border-2 border-orange-300 bg-gray-950/35 p-3" role="tabpanel">
+          <div id="platform-aircraft-type-settings" className="-mt-[2px] space-y-3 rounded-b-lg border-x-2 border-b-2 border-t-0 border-orange-300 bg-gray-950/35 p-3" role="tabpanel">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Setup</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft identity, cruise planning values and normal crew-seat eligibility.</p>
@@ -8821,7 +8815,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
           ) : (
-          <div className="-mt-[2px] space-y-3 rounded-b-lg border-2 border-lime-300 bg-gray-950/35 p-3" role="tabpanel">
+          <div className="-mt-[2px] space-y-3 rounded-b-lg border-x-2 border-b-2 border-t-0 border-lime-300 bg-gray-950/35 p-3" role="tabpanel">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-lime-100">DFP Row Sets</h4>
               <p className="mt-1 text-xs text-gray-500">Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering.</p>
