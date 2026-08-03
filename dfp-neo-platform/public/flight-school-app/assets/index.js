@@ -67642,6 +67642,7 @@ const PlatformConfigurationSettings = ({
   const organisationStructureFileInputRef = reactExports.useRef(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = reactExports.useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = reactExports.useState(null);
+  const [showAllUnitsInOwnership, setShowAllUnitsInOwnership] = reactExports.useState(false);
   const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = reactExports.useState(null);
   const [parentOrgMenuPlacement, setParentOrgMenuPlacement] = reactExports.useState({ direction: "down", maxHeight: 340 });
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = reactExports.useState(false);
@@ -69697,16 +69698,6 @@ This permanently removes the organisation record from platform configuration and
       ]
     }));
   };
-  const editSelectedUnit = async () => {
-    if (!canEdit) return;
-    if (config.units.length === 0) {
-      await showDarkAlert("Add a unit before editing unit details.", "No Unit Selected", "warning");
-      return;
-    }
-    const unitIndex = Math.min(selectedUnitIndex, config.units.length - 1);
-    scrollUnitRowIntoView(unitIndex);
-    setEditingUnitIndex(unitIndex);
-  };
   const deleteSelectedUnit = async () => {
     if (!canEdit) return;
     if (config.units.length === 0) {
@@ -71160,6 +71151,47 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     const aircraftType = configAircraftTypes.find((aircraft) => normaliseUnitCode2(aircraft.code) === normalisedAircraftCode);
     return String(aircraftType?.name || aircraftType?.code || normalisedAircraftCode || "Aircraft").trim();
   };
+  const ownershipScopedUnitCodeSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode2).filter(Boolean));
+  const scopedOwnershipUnitRowsBase = visibleUnitRows.filter(({ unit, index }) => {
+    if (index === editingUnitIndex) return true;
+    if (ownershipScopedUnitCodeSet.size === 0) return false;
+    return ownershipScopedUnitCodeSet.has(normaliseUnitCode2(unit.code));
+  });
+  const selectedOwnershipFallbackRows = visibleUnitRows.filter(({ index }) => index === Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1)));
+  const scopedOwnershipUnitRows = scopedOwnershipUnitRowsBase.length > 0 ? scopedOwnershipUnitRowsBase : selectedOwnershipFallbackRows.slice(0, 1);
+  const unitOwnershipRows = showAllUnitsInOwnership ? visibleUnitRows : scopedOwnershipUnitRows;
+  const ownershipContextLabel = activeSettingsVisibilityUnitCodes.length > 0 ? activeSettingsVisibilityUnitCodes.join(" + ") : activeUnitCode || "Current DFP context";
+  const ownershipAircraftRows = configAircraftTypes.filter((aircraft) => activeUnitAircraftTypeCodes.includes(normaliseUnitCode2(aircraft.code))).map((aircraft) => ({
+    code: normaliseUnitCode2(aircraft.code),
+    label: getAircraftTypeDisplayLabel(aircraft.code)
+  }));
+  const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool }) => {
+    const rowSnapshot = getEditableDfpResourceRows(pool);
+    const rowCount = Object.values(rowSnapshot).reduce((total, value) => total + Math.max(0, Number(value) || 0), 0);
+    return {
+      code: String(pool.code || "").trim(),
+      name: String(pool.name || "").trim(),
+      aircraftTypeCode: normaliseUnitCode2(pool.aircraftTypeCode),
+      rowCount
+    };
+  });
+  const beginUnitOwnershipEdit = async () => {
+    if (!canEdit) return;
+    if (editingUnitIndex !== null) {
+      void save(void 0, "platform-units").then((saved2) => {
+        if (saved2) setEditingUnitIndex(null);
+      });
+      return;
+    }
+    const firstVisibleRow = unitOwnershipRows[0];
+    if (!firstVisibleRow) {
+      await showDarkAlert("Add a unit before editing unit details.", "No Unit Selected", "warning");
+      return;
+    }
+    setSelectedUnitIndex(firstVisibleRow.index);
+    scrollUnitRowIntoView(firstVisibleRow.index);
+    setEditingUnitIndex(firstVisibleRow.index);
+  };
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
   const visibleOperationalModelValues = new Set(
@@ -71739,37 +71771,65 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Units",
-          subtitle: "Manage each unit's operating model, type, home location and enabled modules. Select a unit row first, then press Edit to change it.",
+          title: "Units & Ownership",
+          subtitle: showAllUnitsInOwnership ? "Manage every configured unit. Use this when setting up or correcting the organisation-wide unit catalogue." : "Review and edit the unit or combined-unit context currently selected in the DFP.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
-                onClick: () => {
-                  if (editingUnitIndex !== null) {
-                    void save(void 0, "platform-units").then((saved2) => {
-                      if (saved2) setEditingUnitIndex(null);
-                    });
-                    return;
-                  }
-                  editSelectedUnit();
-                },
-                disabled: config.units.length === 0 || editingUnitIndex !== null && (saving || applyingChanges),
+                onClick: () => void beginUnitOwnershipEdit(),
+                disabled: unitOwnershipRows.length === 0 || editingUnitIndex !== null && (saving || applyingChanges),
                 className: platformActionButtonClass,
                 children: editingUnitIndex !== null ? "Save" : "Edit"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: deleteSelectedUnit, disabled: config.units.length === 0, className: platformActionButtonClass, children: "Delete" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUnit, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
-              "Add",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Unit"
-            ] }) })
+            showAllUnitsInOwnership ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: deleteSelectedUnit, disabled: config.units.length === 0 || editingUnitIndex !== null, className: platformActionButtonClass, children: "Delete" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUnit, disabled: editingUnitIndex !== null, className: platformActionButtonClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+                "Add",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Unit"
+              ] }) })
+            ] }) : null,
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setShowAllUnitsInOwnership((value) => !value);
+                  setOpenParentOrgUnitIndex(null);
+                },
+                disabled: editingUnitIndex !== null,
+                className: platformActionButtonClass,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "leading-tight", children: showAllUnitsInOwnership ? "Show Current Setup" : "Manage All Units" })
+              }
+            )
           ] }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 lg:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80", children: "Current DFP Context" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-black text-white", children: ownershipContextLabel }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-1 text-xs text-gray-300", children: unitOwnershipRows.length > 0 ? unitOwnershipRows.map(({ unit }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              unit.code || "Unnamed",
+              unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""
+            ] }, `ownership-current-unit-${unit.id || unit.code}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "No unit is visible for the current DFP context." }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80", children: "Aircraft Operated" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap gap-2", children: ownershipAircraftRows.length > 0 ? ownershipAircraftRows.map((aircraft) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-gray-600 bg-gray-900 px-2 py-1 text-xs font-bold text-gray-100", children: aircraft.label }, `ownership-aircraft-${aircraft.code}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-400", children: "No aircraft type assigned to this unit context." }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80", children: "DFP Resource Rows" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: ownershipResourcePoolRows.length > 0 ? ownershipResourcePoolRows.map((pool) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-bold text-white", children: pool.name || pool.code || "Unnamed row set" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400", children: [pool.aircraftTypeCode || "No aircraft type", `${pool.rowCount} row${pool.rowCount === 1 ? "" : "s"}`].join(" · ") })
+            ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP resource row set is visible for this unit context." }) })
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           TextAreaField,
           {
@@ -71788,7 +71848,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             fieldSizingClassName: "min-h-[104px]"
           }
         ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: visibleUnitRows.map(({ unit, index }) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-w-full overflow-x-auto pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-[1180px] space-y-3", children: unitOwnershipRows.map(({ unit, index }) => {
           const unitSettings = unit.settings || {};
           const isSelectedUnit = selectedUnitIndex === index;
           const isUnitEditing = canEdit && editingUnitIndex === index;

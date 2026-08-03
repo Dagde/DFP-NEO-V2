@@ -2095,6 +2095,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const organisationStructureFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedUnitIndex, setSelectedUnitIndex] = useState(0);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
+  const [showAllUnitsInOwnership, setShowAllUnitsInOwnership] = useState(false);
   const [openParentOrgUnitIndex, setOpenParentOrgUnitIndex] = useState<number | null>(null);
   const [parentOrgMenuPlacement, setParentOrgMenuPlacement] = useState<{ direction: 'down' | 'up'; maxHeight: number }>({ direction: 'down', maxHeight: 340 });
   const [resourcePoolsUnlocked, setResourcePoolsUnlocked] = useState(false);
@@ -6440,6 +6441,53 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const aircraftType = configAircraftTypes.find((aircraft) => normaliseUnitCode(aircraft.code) === normalisedAircraftCode);
     return String(aircraftType?.name || aircraftType?.code || normalisedAircraftCode || 'Aircraft').trim();
   };
+  const ownershipScopedUnitCodeSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode).filter(Boolean));
+  const scopedOwnershipUnitRowsBase = visibleUnitRows.filter(({ unit, index }) => {
+    if (index === editingUnitIndex) return true;
+    if (ownershipScopedUnitCodeSet.size === 0) return false;
+    return ownershipScopedUnitCodeSet.has(normaliseUnitCode(unit.code));
+  });
+  const selectedOwnershipFallbackRows = visibleUnitRows.filter(({ index }) => index === Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1)));
+  const scopedOwnershipUnitRows = scopedOwnershipUnitRowsBase.length > 0
+    ? scopedOwnershipUnitRowsBase
+    : selectedOwnershipFallbackRows.slice(0, 1);
+  const unitOwnershipRows = showAllUnitsInOwnership ? visibleUnitRows : scopedOwnershipUnitRows;
+  const ownershipContextLabel = activeSettingsVisibilityUnitCodes.length > 0
+    ? activeSettingsVisibilityUnitCodes.join(' + ')
+    : activeUnitCode || 'Current DFP context';
+  const ownershipAircraftRows = configAircraftTypes
+    .filter((aircraft) => activeUnitAircraftTypeCodes.includes(normaliseUnitCode(aircraft.code)))
+    .map((aircraft) => ({
+      code: normaliseUnitCode(aircraft.code),
+      label: getAircraftTypeDisplayLabel(aircraft.code),
+    }));
+  const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool }) => {
+    const rowSnapshot = getEditableDfpResourceRows(pool);
+    const rowCount = Object.values(rowSnapshot).reduce((total, value) => total + Math.max(0, Number(value) || 0), 0);
+    return {
+      code: String(pool.code || '').trim(),
+      name: String(pool.name || '').trim(),
+      aircraftTypeCode: normaliseUnitCode(pool.aircraftTypeCode),
+      rowCount,
+    };
+  });
+  const beginUnitOwnershipEdit = async () => {
+    if (!canEdit) return;
+    if (editingUnitIndex !== null) {
+      void save(undefined, 'platform-units').then((saved) => {
+        if (saved) setEditingUnitIndex(null);
+      });
+      return;
+    }
+    const firstVisibleRow = unitOwnershipRows[0];
+    if (!firstVisibleRow) {
+      await showDarkAlert('Add a unit before editing unit details.', 'No Unit Selected', 'warning');
+      return;
+    }
+    setSelectedUnitIndex(firstVisibleRow.index);
+    scrollUnitRowIntoView(firstVisibleRow.index);
+    setEditingUnitIndex(firstVisibleRow.index);
+  };
   const visibleLocationOptions = visibleLocationRows.map(({ location }) => location.code).filter(Boolean);
   const visibleUnitOptions = visibleUnitRows.map(({ unit }) => unit.code).filter(Boolean);
   const visibleOperationalModelValues = new Set(
@@ -7136,34 +7184,85 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-units" className={getSectionClass('platform-units')}>
         <SectionHeader
-          title="Units"
-          subtitle="Manage each unit's operating model, type, home location and enabled modules. Select a unit row first, then press Edit to change it."
+          title="Units & Ownership"
+          subtitle={showAllUnitsInOwnership
+            ? 'Manage every configured unit. Use this when setting up or correcting the organisation-wide unit catalogue.'
+            : 'Review and edit the unit or combined-unit context currently selected in the DFP.'}
           action={canEdit ? (
             <div className="flex items-center gap-[1px]">
               <button
                 type="button"
-                onClick={() => {
-                  if (editingUnitIndex !== null) {
-                    void save(undefined, 'platform-units').then((saved) => {
-                      if (saved) setEditingUnitIndex(null);
-                    });
-                    return;
-                  }
-                  editSelectedUnit();
-                }}
-                disabled={config.units.length === 0 || (editingUnitIndex !== null && (saving || applyingChanges))}
+                onClick={() => void beginUnitOwnershipEdit()}
+                disabled={unitOwnershipRows.length === 0 || (editingUnitIndex !== null && (saving || applyingChanges))}
                 className={platformActionButtonClass}
               >
                 {editingUnitIndex !== null ? 'Save' : 'Edit'}
               </button>
-              <button type="button" onClick={deleteSelectedUnit} disabled={config.units.length === 0} className={platformActionButtonClass}>Delete</button>
-              <button type="button" onClick={addUnit} className={platformActionButtonClass}>
-                <span className="leading-tight">Add<br />Unit</span>
+              {showAllUnitsInOwnership ? (
+                <>
+                  <button type="button" onClick={deleteSelectedUnit} disabled={config.units.length === 0 || editingUnitIndex !== null} className={platformActionButtonClass}>Delete</button>
+                  <button type="button" onClick={addUnit} disabled={editingUnitIndex !== null} className={platformActionButtonClass}>
+                    <span className="leading-tight">Add<br />Unit</span>
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAllUnitsInOwnership((value) => !value);
+                  setOpenParentOrgUnitIndex(null);
+                }}
+                disabled={editingUnitIndex !== null}
+                className={platformActionButtonClass}
+              >
+                <span className="leading-tight">{showAllUnitsInOwnership ? 'Show Current Setup' : 'Manage All Units'}</span>
               </button>
             </div>
           ) : null}
         />
         <div className="p-4">
+          <div className="mb-4 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-lg border border-cyan-500/25 bg-cyan-950/20 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80">Current DFP Context</div>
+              <div className="mt-2 text-lg font-black text-white">{ownershipContextLabel}</div>
+              <div className="mt-2 space-y-1 text-xs text-gray-300">
+                {unitOwnershipRows.length > 0 ? unitOwnershipRows.map(({ unit }) => (
+                  <div key={`ownership-current-unit-${unit.id || unit.code}`}>
+                    {unit.code || 'Unnamed'}{unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ''}
+                  </div>
+                )) : (
+                  <div>No unit is visible for the current DFP context.</div>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80">Aircraft Operated</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {ownershipAircraftRows.length > 0 ? ownershipAircraftRows.map((aircraft) => (
+                  <span key={`ownership-aircraft-${aircraft.code}`} className="rounded border border-gray-600 bg-gray-900 px-2 py-1 text-xs font-bold text-gray-100">
+                    {aircraft.label}
+                  </span>
+                )) : (
+                  <span className="text-xs font-semibold text-gray-400">No aircraft type assigned to this unit context.</span>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-cyan-500/25 bg-gray-950/45 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80">DFP Resource Rows</div>
+              <div className="mt-2 space-y-2">
+                {ownershipResourcePoolRows.length > 0 ? ownershipResourcePoolRows.map((pool) => (
+                  <div key={`ownership-resource-pool-${pool.code || pool.name}`} className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5">
+                    <div className="text-xs font-bold text-white">{pool.name || pool.code || 'Unnamed row set'}</div>
+                    <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                      {[pool.aircraftTypeCode || 'No aircraft type', `${pool.rowCount} row${pool.rowCount === 1 ? '' : 's'}`].join(' · ')}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-xs font-semibold text-gray-400">No DFP resource row set is visible for this unit context.</div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="mb-4 rounded-lg border border-cyan-500/25 bg-cyan-950/15 p-3">
             <TextAreaField
               label="Unit Types"
@@ -7183,7 +7282,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
           <div className="max-w-full overflow-x-auto pb-2">
             <div className="min-w-[1180px] space-y-3">
-              {visibleUnitRows.map(({ unit, index }) => {
+              {unitOwnershipRows.map(({ unit, index }) => {
                 const unitSettings = unit.settings || {};
                 const isSelectedUnit = selectedUnitIndex === index;
                 const isUnitEditing = canEdit && editingUnitIndex === index;
