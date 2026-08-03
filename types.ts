@@ -219,8 +219,8 @@ export interface Instructor {
   email?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
-  callsign?: string;           // Primary callsign string (e.g. "ROLR042")
-  secondaryCallsign?: string;  // Secondary callsign string (e.g. "VIPR007")
+  callsign?: string;           // Primary callsign string
+  secondaryCallsign?: string;  // Secondary callsign string
   crew?: string;               // Fixed crew grouping/name for Fixed Crew Model
   preferences?: PersonnelPreferences;
 }

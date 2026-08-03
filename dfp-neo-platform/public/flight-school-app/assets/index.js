@@ -66549,10 +66549,17 @@ const getPlatformConfigSaveBlocker = (config) => {
     return String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && !!aircraftTypeCode && activeAircraftTypeCodes.size > 0 && !activeAircraftTypeCodes.has(aircraftTypeCode);
   });
   const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
+  const describeResourcePool = (pool) => {
+    const code = String(pool?.code || "").trim();
+    const name = String(pool?.name || "").trim();
+    const unit = String(pool?.unitCode || "").trim();
+    const location = String(pool?.locationCode || "").trim();
+    return [code || name || "Unnamed row set", unit, location].filter(Boolean).join(" / ");
+  };
   if (incompleteAircraftType) return "Platform configuration save blocked: every active aircraft type needs a code and name before saving.";
-  if (incompleteResourcePool) return "Platform configuration save blocked: every active DFP resource row set needs a code and name before saving.";
-  if (missingResourcePoolAircraftType) return "Platform configuration save blocked: every active DFP resource row set needs an Aircraft Type before saving.";
-  if (invalidResourcePoolAircraftType) return "Platform configuration save blocked: a DFP resource row set points to an Aircraft Type that is not active.";
+  if (incompleteResourcePool) return `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, complete the row code and row name, then save again.`;
+  if (missingResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose the Aircraft Type for that row set, then save again.`;
+  if (invalidResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose an active Aircraft Type, then save again.`;
   if (isDeliberatelyEmptyStructure) return "";
   if (!hasActiveOrganisations) return "Platform configuration save blocked: at least one active organisation is required while locations or units still exist.";
   if (!hasActiveLocations) return "Platform configuration save blocked: at least one active location is required while units still exist.";

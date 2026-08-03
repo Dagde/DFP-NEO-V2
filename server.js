@@ -3434,12 +3434,12 @@ app.get('/api/courses', async (req, res) => {
       orderBy: { startDate: 'asc' },
     });
     
-    // Sort courses by code numerically (FIC210 before FIC211)
+    // Sort courses with numeric suffixes in numeric order.
     courses.sort((a, b) => {
       const aCode = a.code || a.name;
       const bCode = b.code || b.name;
       
-      // Extract numeric part from course codes (e.g., "FIC210" -> 210)
+      // Extract the numeric part from course codes.
       const aNum = parseInt(aCode.replace(/\D/g, ''), 10) || 0;
       const bNum = parseInt(bCode.replace(/\D/g, ''), 10) || 0;
       
