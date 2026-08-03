@@ -73105,12 +73105,12 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
           ] }),
-          canEditResourcePools && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
+          canEditResourcePools && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[200px] max-w-full rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-red-100", children: "Delete Aircraft Type Entered In Error" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-red-100/70", children: "Select by aircraft type name only. Deletion requires your password and is applied only when this section is saved." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectField,
                 {
@@ -73129,7 +73129,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   type: "button",
                   disabled: !canEditResourcePools || !selectedAircraftTypeDeleteKey,
                   onClick: deleteSelectedAircraftType,
-                  className: aircraftResourceMiniButtonClass,
+                  className: `${aircraftResourceMiniButtonClass} w-full`,
                   children: "Delete Aircraft Type"
                 }
               )
