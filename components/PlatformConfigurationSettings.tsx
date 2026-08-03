@@ -2107,7 +2107,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [newAircraftTypeVisibleIds, setNewAircraftTypeVisibleIds] = useState<Set<string>>(new Set());
-  const [showAircraftTypeDeletePanel, setShowAircraftTypeDeletePanel] = useState(false);
   const [selectedAircraftTypeDeleteKey, setSelectedAircraftTypeDeleteKey] = useState('');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = useState('');
@@ -4876,9 +4875,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addResourcePool = () => {
-    const selectedUnit = configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))];
-    const defaultLocation = selectedUnit?.locationCode || configLocations[0]?.code || '';
-    const defaultUnitCode = selectedUnit?.code || '';
+    clearLinkedPlatformConfigError();
+    const activeUnitCode = String(activePrimaryUnitCode || activeContextUnitCodes[0] || '').trim().toUpperCase();
+    const selectedUnit = configUnits.find((unit) => String(unit.code || '').trim().toUpperCase() === activeUnitCode)
+      || activePlatformUnit
+      || configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))];
+    const defaultLocation = String(activeHomeLocationCode || selectedUnit?.locationCode || configLocations[0]?.code || '').trim().toUpperCase();
+    const defaultUnitCode = String(selectedUnit?.code || activeUnitCode || '').trim().toUpperCase();
     const newPoolId = createClientRecordId('pool');
     pendingResourcePoolScrollIdRef.current = newPoolId;
     setResourcePoolActiveTab('resourcePools');
@@ -4904,6 +4907,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         || defaultAircraftType?.code
         || defaultAircraftTypeCode,
       ).trim();
+      const newPoolCode = [defaultLocation, defaultUnitCode, defaultAircraftTypeCode || 'ROWS']
+        .filter(Boolean)
+        .join('-');
+      const newPoolName = [
+        selectedUnitRecord?.name || defaultUnitCode || 'New unit',
+        defaultAircraftLabel || 'DFP',
+        'Resource Rows',
+      ].filter(Boolean).join(' ');
 
       return {
         ...prev,
@@ -4911,8 +4922,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ...previousResourcePools,
           {
             id: newPoolId,
-            code: '',
-            name: '',
+            code: newPoolCode,
+            name: newPoolName,
             organisationCode: previousOrganisations[0]?.code || 'DEFAULT',
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
@@ -8400,11 +8411,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <button
                     type="button"
                     onClick={() => {
-                      setShowAircraftTypeDeletePanel((current) => !current);
                       setResourcePoolActiveTab('aircraftTypes');
                     }}
                     className={platformActionButtonClass}
-                    title="Show or hide aircraft type deletion controls"
+                    title="Open aircraft type deletion controls"
                   >
                     <span className="text-[8px] leading-[0.7rem]">Delete<br />Aircraft<br />Type</span>
                   </button>
@@ -8510,7 +8520,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Types</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft capability and normal seat eligibility.</p>
             </div>
-            {showAircraftTypeDeletePanel && (
+            {canEditResourcePools && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
                 <div className="mb-3">
                   <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete Aircraft Type Entered In Error</div>

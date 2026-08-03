@@ -67654,7 +67654,6 @@ const PlatformConfigurationSettings = ({
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = reactExports.useState("");
   const [resourcePoolActiveTab, setResourcePoolActiveTab] = reactExports.useState("aircraftTypes");
   const [newAircraftTypeVisibleIds, setNewAircraftTypeVisibleIds] = reactExports.useState(/* @__PURE__ */ new Set());
-  const [showAircraftTypeDeletePanel, setShowAircraftTypeDeletePanel] = reactExports.useState(false);
   const [selectedAircraftTypeDeleteKey, setSelectedAircraftTypeDeleteKey] = reactExports.useState("");
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = reactExports.useState(false);
   const [selectedResourcePoolDeleteKey, setSelectedResourcePoolDeleteKey] = reactExports.useState("");
@@ -69890,9 +69889,11 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
     onShowSuccess(`Aircraft type "${selectedAircraftTypeDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const addResourcePool = () => {
-    const selectedUnit = configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))];
-    const defaultLocation = selectedUnit?.locationCode || configLocations[0]?.code || "";
-    const defaultUnitCode = selectedUnit?.code || "";
+    clearLinkedPlatformConfigError();
+    const activeUnitCode2 = String(activePrimaryUnitCode || activeContextUnitCodes[0] || "").trim().toUpperCase();
+    const selectedUnit = configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === activeUnitCode2) || activePlatformUnit || configUnits[Math.min(selectedUnitIndex, Math.max(0, configUnits.length - 1))];
+    const defaultLocation = String(activeHomeLocationCode || selectedUnit?.locationCode || configLocations[0]?.code || "").trim().toUpperCase();
+    const defaultUnitCode = String(selectedUnit?.code || activeUnitCode2 || "").trim().toUpperCase();
     const newPoolId = createClientRecordId("pool");
     pendingResourcePoolScrollIdRef.current = newPoolId;
     setResourcePoolActiveTab("resourcePools");
@@ -69910,14 +69911,20 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
       const defaultAircraftLabel = String(
         defaultAircraftType?.name || defaultAircraftType?.code || defaultAircraftTypeCode
       ).trim();
+      const newPoolCode = [defaultLocation, defaultUnitCode, defaultAircraftTypeCode || "ROWS"].filter(Boolean).join("-");
+      const newPoolName = [
+        selectedUnitRecord?.name || defaultUnitCode || "New unit",
+        defaultAircraftLabel || "DFP",
+        "Resource Rows"
+      ].filter(Boolean).join(" ");
       return {
         ...prev,
         resourcePools: [
           ...previousResourcePools,
           {
             id: newPoolId,
-            code: "",
-            name: "",
+            code: newPoolCode,
+            name: newPoolName,
             organisationCode: previousOrganisations[0]?.code || "DEFAULT",
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
@@ -72970,11 +72977,10 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               {
                 type: "button",
                 onClick: () => {
-                  setShowAircraftTypeDeletePanel((current) => !current);
                   setResourcePoolActiveTab("aircraftTypes");
                 },
                 className: platformActionButtonClass,
-                title: "Show or hide aircraft type deletion controls",
+                title: "Open aircraft type deletion controls",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[8px] leading-[0.7rem]", children: [
                   "Delete",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -73099,7 +73105,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
           ] }),
-          showAircraftTypeDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
+          canEditResourcePools && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-red-100", children: "Delete Aircraft Type Entered In Error" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-red-100/70", children: "Select by aircraft type name only. Deletion requires your password and is applied only when this section is saved." })
