@@ -8542,7 +8542,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     disabled={!canEditResourcePools || !selectedAircraftTypeDeleteKey}
                     onClick={deleteSelectedAircraftType}
-                    className="h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={aircraftResourceMiniButtonClass}
                   >
                     Delete Aircraft Type
                   </button>
@@ -8912,11 +8912,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                        <NumberField label="Aircraft" value={editableDfpRows.aircraft} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
-                        <NumberField label="Simulator" value={editableDfpRows.ftd} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
-                        <NumberField label="Trainer" value={editableDfpRows.cpt} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
-                        <NumberField label="STBY" value={editableDfpRows.standby} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
-                        <NumberField label="Ground" value={editableDfpRows.ground} disabled={!canEditResourcePools} min={0} step={1} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                        <NumberField label="Aircraft" value={editableDfpRows.aircraft} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                        <NumberField label="Simulator" value={editableDfpRows.ftd} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                        <NumberField label="Trainer" value={editableDfpRows.cpt} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                        <NumberField label="STBY" value={editableDfpRows.standby} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
+                        <NumberField label="Ground" value={editableDfpRows.ground} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                       </div>
                     </div>
                   </div>
@@ -11519,6 +11519,8 @@ const NumberField = ({
         min={min}
         max={max}
         step={step}
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
         onKeyDownCapture={stopEditableKeyPropagation}
         onKeyDown={stopEditableKeyPropagation}
         onFocus={() => {

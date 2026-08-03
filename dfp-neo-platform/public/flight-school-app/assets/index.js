@@ -73129,7 +73129,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   type: "button",
                   disabled: !canEditResourcePools || !selectedAircraftTypeDeleteKey,
                   onClick: deleteSelectedAircraftType,
-                  className: "h-[38px] rounded-md border border-red-300/50 bg-red-500/20 px-4 text-sm font-black text-red-100 hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50",
+                  className: aircraftResourceMiniButtonClass,
                   children: "Delete Aircraft Type"
                 }
               )
@@ -73480,11 +73480,11 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "These row counts drive the DFP resource columns. Saved changes apply from tomorrow forward." })
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: editableDfpRows.aircraft, disabled: !canEditResourcePools, min: 0, step: 1, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: editableDfpRows.ftd, disabled: !canEditResourcePools, min: 0, step: 1, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: editableDfpRows.cpt, disabled: !canEditResourcePools, min: 0, step: 1, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: editableDfpRows.standby, disabled: !canEditResourcePools, min: 0, step: 1, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: editableDfpRows.ground, disabled: !canEditResourcePools, min: 0, step: 1, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: editableDfpRows.aircraft, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: editableDfpRows.ftd, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: editableDfpRows.cpt, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: editableDfpRows.standby, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: editableDfpRows.ground, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
                       ] })
                     ] })
                   ] })
@@ -75959,6 +75959,8 @@ const NumberField = ({
         min,
         max,
         step,
+        onMouseDown: (event) => event.stopPropagation(),
+        onClick: (event) => event.stopPropagation(),
         onKeyDownCapture: stopEditableKeyPropagation,
         onKeyDown: stopEditableKeyPropagation,
         onFocus: () => {
