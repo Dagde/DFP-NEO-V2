@@ -67596,11 +67596,11 @@ const PlatformConfigurationSettings = ({
   const [isEditingUnitTypes, setIsEditingUnitTypes] = reactExports.useState(false);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
-  const showPlatformConfigError = useCallback((message, link = null) => {
+  const showPlatformConfigError = reactExports.useCallback((message, link = null) => {
     setError(message);
     setErrorLink(link);
   }, []);
-  const clearPlatformConfigError = useCallback(() => {
+  const clearPlatformConfigError = reactExports.useCallback(() => {
     setError("");
     setErrorLink(null);
   }, []);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TrashIcon } from '@heroicons/react/24/outline';
 import {
   DEFAULT_PLATFORM_PERMISSION_PROFILES,
