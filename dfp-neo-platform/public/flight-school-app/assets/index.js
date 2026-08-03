@@ -73165,50 +73165,58 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200/80", children: "Setup Tabs" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: "The selected tab carries its outline around the page below." })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative z-10 mt-3 grid grid-cols-2 gap-2", role: "tablist", "aria-label": "Aircraft and DFP resource row sections", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              role: "tab",
-              "aria-selected": resourcePoolActiveTab === "aircraftTypes",
-              onClick: () => setResourcePoolActiveTab("aircraftTypes"),
-              className: `flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "relative z-20 rounded-t-lg rounded-b-none border-b-0 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]" : "rounded-lg border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-orange-300/40 bg-orange-500/15 text-sm font-black text-orange-100", children: "1" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-black uppercase tracking-wide", children: "Aircraft Setup" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Aircraft identity, cruise speed, cruise altitude and crew seats." })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] font-black text-orange-100", children: [
-                  visibleAircraftTypeRows.length,
-                  " types"
-                ] })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              role: "tab",
-              "aria-selected": resourcePoolActiveTab === "resourcePools",
-              onClick: () => setResourcePoolActiveTab("resourcePools"),
-              className: `flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "relative z-20 rounded-t-lg rounded-b-none border-b-0 border-lime-300 bg-lime-500/25 text-lime-50 shadow-[inset_0_4px_0_rgba(132,204,22,0.95)]" : "rounded-lg border-lime-500/70 bg-lime-900/25 text-lime-100 hover:border-lime-300/80 hover:text-lime-50"}`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-lime-300/45 bg-lime-500/20 text-sm font-black text-lime-100", children: "2" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-black uppercase tracking-wide", children: "DFP Resource Rows" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "DFP row counts, row labels, numbering and ownership." })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded border border-lime-300/40 bg-lime-500/20 px-2 py-0.5 text-[10px] font-black text-lime-100", children: [
-                  config.resourcePools.length,
-                  " row sets"
-                ] })
-              ]
-            }
-          )
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: `relative z-10 mt-3 grid grid-cols-2 gap-2 border-b-2 ${resourcePoolActiveTab === "aircraftTypes" ? "border-orange-300" : "border-lime-300"}`,
+            role: "tablist",
+            "aria-label": "Aircraft and DFP resource row sections",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  role: "tab",
+                  "aria-selected": resourcePoolActiveTab === "aircraftTypes",
+                  onClick: () => setResourcePoolActiveTab("aircraftTypes"),
+                  className: `flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "relative z-20 rounded-t-lg rounded-b-none border-b-0 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]" : "rounded-t-lg rounded-b-none border-b-0 border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50"}`,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-orange-300/40 bg-orange-500/15 text-sm font-black text-orange-100", children: "1" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-black uppercase tracking-wide", children: "Aircraft Setup" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Aircraft identity, cruise speed, cruise altitude and crew seats." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] font-black text-orange-100", children: [
+                      visibleAircraftTypeRows.length,
+                      " types"
+                    ] })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  type: "button",
+                  role: "tab",
+                  "aria-selected": resourcePoolActiveTab === "resourcePools",
+                  onClick: () => setResourcePoolActiveTab("resourcePools"),
+                  className: `flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "relative z-20 rounded-t-lg rounded-b-none border-b-0 border-lime-300 bg-lime-500/25 text-lime-50 shadow-[inset_0_4px_0_rgba(132,204,22,0.95)]" : "rounded-t-lg rounded-b-none border-b-0 border-lime-500/70 bg-lime-900/25 text-lime-100 hover:border-lime-300/80 hover:text-lime-50"}`,
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-lime-300/45 bg-lime-500/20 text-sm font-black text-lime-100", children: "2" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-black uppercase tracking-wide", children: "DFP Resource Rows" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "DFP row counts, row labels, numbering and ownership." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded border border-lime-300/40 bg-lime-500/20 px-2 py-0.5 text-[10px] font-black text-lime-100", children: [
+                      config.resourcePools.length,
+                      " row sets"
+                    ] })
+                  ]
+                }
+              )
+            ]
+          }
+        ),
         resourcePoolActiveTab === "aircraftTypes" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-aircraft-type-settings", className: "-mt-[2px] space-y-3 rounded-b-lg border-x-2 border-b-2 border-t-0 border-orange-300 bg-gray-950/35 p-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Setup" }),
