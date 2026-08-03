@@ -72953,7 +72953,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
         SectionHeader,
         {
           title: "Aircraft Types & DFP Resource Rows",
-          subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply aircraft type and DFP resource row changes, then return this section to read-only mode." : "Aircraft type defines capability; DFP resource rows define the aircraft, simulator, procedural trainer, standby and ground rows shown on the DFP. Click Edit before making changes.",
+          subtitle: resourcePoolsUnlocked ? "Editing is active. Press Save to apply aircraft setup and DFP row changes, then return this section to read-only mode." : "Aircraft setup defines aircraft capability, cruise planning values and crew seats. DFP resource rows define the aircraft, simulator, procedural trainer, standby and ground rows shown on the DFP. Click Edit before making changes.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap justify-end gap-[1px]", children: resourcePoolsUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -72968,7 +72968,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                 children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[9px] leading-tight", children: [
                   "Delete",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Pool"
+                  "Rows"
                 ] })
               }
             ),
@@ -73053,14 +73053,14 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Types" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Setup" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-orange-100", children: visibleAircraftTypeRows.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Capability, category and crew-seat rules." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Capability, cruise planning and crew seats." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "DFP Resource Rows" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "DFP Row Sets" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: config.resourcePools.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Dedicated or shared DFP row sets." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Rows, labels, numbering and ownership." })
         ] })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 pb-4", children: [
@@ -73075,10 +73075,10 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "border-orange-300/60 bg-orange-500/15 text-orange-50 shadow-[inset_0_3px_0_rgba(251,146,60,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Aircraft Types" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Aircraft Setup" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-100", children: visibleAircraftTypeRows.length })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Capability and crew-seat rules" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Capability, cruise planning and crew seats" })
               ]
             }
           ),
@@ -73092,18 +73092,18 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               className: `min-h-[52px] rounded-md border px-3 py-2 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "border-cyan-300/60 bg-cyan-500/15 text-cyan-50 shadow-[inset_0_3px_0_rgba(34,211,238,0.85)]" : "border-transparent bg-gray-900/70 text-gray-400 hover:border-gray-600 hover:text-gray-200"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center justify-between gap-2 text-xs font-black uppercase tracking-wide", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DFP Resource Rows" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "DFP Row Sets" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] text-cyan-100", children: config.resourcePools.length })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Rows, labels and resource ownership" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "Rows, labels, numbering and ownership" })
               ]
             }
           )
         ] }),
         resourcePoolActiveTab === "aircraftTypes" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-aircraft-type-settings", className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Types" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft capability and normal seat eligibility." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-orange-100", children: "Aircraft Setup" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft identity, cruise planning values and normal crew-seat eligibility." })
           ] }),
           canEditResourcePools && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[200px] max-w-full rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -73164,13 +73164,13 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[0.7fr_1.25fr_0.9fr_0.8fr_0.8fr]", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Code", value: aircraft.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("aircraftTypes", index, { code: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Name", value: aircraft.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("aircraftTypes", index, { name: value }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Code", value: aircraft.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("aircraftTypes", index, { code: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Name", value: aircraft.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("aircraftTypes", index, { name: value }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Category", value: aircraft.category || "Training", disabled: !canEditResourcePools, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     TasField,
                     {
-                      label: "TAS (KTAS)",
+                      label: "Cruise Speed (KTAS)",
                       value: aircraft.defaultTasKtas ?? null,
                       disabled: !canEditResourcePools,
                       info: "Used for route/time planning when a flight, task or event does not specify a custom speed.",
@@ -73180,7 +73180,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     TasField,
                     {
-                      label: "Cruise Alt (FL)",
+                      label: "Cruise Level (FL)",
                       value: aircraft.defaultCruiseAltitudeFl ?? null,
                       disabled: !canEditResourcePools,
                       placeholder: "360",
@@ -73192,7 +73192,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelHeaderClass, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: "Crew Composition" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-black uppercase tracking-wide text-orange-100", children: "Crew Seats & Roles" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Set seat count and which configured roles may occupy each seat." })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-32", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -73264,8 +73264,8 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
           })
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "DFP Resource Rows" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Map DFP rows to units, labels, aircraft numbering and owned or shared resources." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "DFP Row Sets" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering." })
           ] }),
           showResourcePoolDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
@@ -73340,27 +73340,37 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Pool Identity" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "The owning unit, aircraft type and sharing model for this pool." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Rows Shown On The DFP" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "These numbers control how many rows appear in each DFP resource column. Saved changes apply from tomorrow forward." })
                       ] }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Pool Code", value: pool.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { code: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Pool Name", value: pool.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { name: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: displayedResourcePoolAircraftTypeCode, disabled: !canEditResourcePools, options: ["", ...aircraftTypeOptions], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: editableDfpRows.aircraft, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: editableDfpRows.ftd, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: editableDfpRows.cpt, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Standby", value: editableDfpRows.standby, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: editableDfpRows.ground, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Display Names" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Terminology shown on the DFP. Changing these labels does not alter existing saved records." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Unit, Location & Aircraft" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Connect this row set to the unit, base and aircraft type it supports." })
                       ] }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEditResourcePools, options: ["", ...visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: pool.unitCode || "", disabled: !canEditResourcePools, options: ["", ...visibleUnitOptions.length > 0 ? visibleUnitOptions : configUnits.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: displayedResourcePoolAircraftTypeCode, disabled: !canEditResourcePools, options: ["", ...aircraftTypeOptions], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) })
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "DFP Row Labels" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Labels shown on the DFP resource columns. Changing these labels does not alter existing saved records." })
+                      ] }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Aircraft Row Label", value: pool.settings?.aircraftLabel || (displayedResourcePoolAircraftTypeCode ? getAircraftTypeDisplayLabel(displayedResourcePoolAircraftTypeCode) : ""), disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Simulator Row Label", value: pool.settings?.ftdLabel || "FTD", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Procedural Trainer Row Label", value: pool.settings?.cptLabel || "CPT", disabled: !canEditResourcePools, onCommit: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
                       ] })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
@@ -73476,15 +73486,13 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "DFP Resource Rows" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "These row counts drive the DFP resource columns. Saved changes apply from tomorrow forward." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "Row Set Administration" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Administrative identity and whether this row set is dedicated or shared." })
                       ] }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 lg:grid-cols-5", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: editableDfpRows.aircraft, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator", value: editableDfpRows.ftd, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: editableDfpRows.cpt, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: editableDfpRows.standby, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: editableDfpRows.ground, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2 xl:grid-cols-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Row Set Code", value: pool.code, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { code: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(DraftField, { label: "Row Set Name", value: pool.name, disabled: !canEditResourcePools, onCommit: (value) => updateRow("resourcePools", index, { name: value }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Sharing", value: pool.poolType || "Dedicated", disabled: !canEditResourcePools, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
                       ] })
                     ] })
                   ] })
