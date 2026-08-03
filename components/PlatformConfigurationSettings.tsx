@@ -8616,7 +8616,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               role="tab"
               aria-selected={resourcePoolActiveTab === 'aircraftTypes'}
               onClick={() => setResourcePoolActiveTab('aircraftTypes')}
-              className={`flex min-h-[74px] items-center gap-3 rounded-t-lg border-2 border-b-0 px-4 py-3 text-left transition-colors ${
+              className={`flex min-h-[74px] items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${
                 resourcePoolActiveTab === 'aircraftTypes'
                   ? 'relative z-10 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]'
                   : 'border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50'
@@ -8634,18 +8634,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               role="tab"
               aria-selected={resourcePoolActiveTab === 'resourcePools'}
               onClick={() => setResourcePoolActiveTab('resourcePools')}
-              className={`flex min-h-[74px] items-center gap-3 rounded-t-lg border-2 border-b-0 px-4 py-3 text-left transition-colors ${
+              className={`flex min-h-[74px] items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${
                 resourcePoolActiveTab === 'resourcePools'
-                  ? 'relative z-10 border-cyan-300 bg-cyan-500/20 text-cyan-50 shadow-[inset_0_4px_0_rgba(34,211,238,0.95)]'
-                  : 'border-cyan-700/45 bg-cyan-950/20 text-cyan-100/80 hover:border-cyan-300/65 hover:text-cyan-50'
+                  ? 'relative z-10 border-emerald-300 bg-emerald-500/20 text-emerald-50 shadow-[inset_0_4px_0_rgba(52,211,153,0.95)]'
+                  : 'border-emerald-700/45 bg-emerald-950/20 text-emerald-100/80 hover:border-emerald-300/65 hover:text-emerald-50'
               }`}
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-cyan-300/40 bg-cyan-500/15 text-sm font-black text-cyan-100">2</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-emerald-300/40 bg-emerald-500/15 text-sm font-black text-emerald-100">2</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-black uppercase tracking-wide">DFP Resource Rows</span>
                 <span className="mt-1 block text-[11px] leading-relaxed">DFP row counts, row labels, numbering and ownership.</span>
               </span>
-              <span className="shrink-0 rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] font-black text-cyan-100">{config.resourcePools.length} row sets</span>
+              <span className="shrink-0 rounded border border-emerald-300/35 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black text-emerald-100">{config.resourcePools.length} row sets</span>
             </button>
           </div>
           {resourcePoolActiveTab === 'aircraftTypes' ? (
@@ -8815,9 +8815,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             })}
           </div>
           ) : (
-          <div className="-mt-px space-y-3 rounded-b-lg border-2 border-cyan-300 bg-gray-950/35 p-3" role="tabpanel">
+          <div className="-mt-px space-y-3 rounded-b-lg border-2 border-emerald-300 bg-gray-950/35 p-3" role="tabpanel">
             <div>
-              <h4 className="text-sm font-black uppercase tracking-wide text-cyan-100">DFP Row Sets</h4>
+              <h4 className="text-sm font-black uppercase tracking-wide text-emerald-100">DFP Row Sets</h4>
               <p className="mt-1 text-xs text-gray-500">Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering.</p>
             </div>
             {showResourcePoolDeletePanel && (

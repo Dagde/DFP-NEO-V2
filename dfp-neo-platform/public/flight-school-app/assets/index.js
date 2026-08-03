@@ -73173,7 +73173,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               role: "tab",
               "aria-selected": resourcePoolActiveTab === "aircraftTypes",
               onClick: () => setResourcePoolActiveTab("aircraftTypes"),
-              className: `flex min-h-[74px] items-center gap-3 rounded-t-lg border-2 border-b-0 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "relative z-10 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]" : "border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50"}`,
+              className: `flex min-h-[74px] items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "aircraftTypes" ? "relative z-10 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]" : "border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-orange-300/40 bg-orange-500/15 text-sm font-black text-orange-100", children: "1" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
@@ -73194,14 +73194,14 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               role: "tab",
               "aria-selected": resourcePoolActiveTab === "resourcePools",
               onClick: () => setResourcePoolActiveTab("resourcePools"),
-              className: `flex min-h-[74px] items-center gap-3 rounded-t-lg border-2 border-b-0 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "relative z-10 border-cyan-300 bg-cyan-500/20 text-cyan-50 shadow-[inset_0_4px_0_rgba(34,211,238,0.95)]" : "border-cyan-700/45 bg-cyan-950/20 text-cyan-100/80 hover:border-cyan-300/65 hover:text-cyan-50"}`,
+              className: `flex min-h-[74px] items-center gap-3 rounded-lg border-2 px-4 py-3 text-left transition-colors ${resourcePoolActiveTab === "resourcePools" ? "relative z-10 border-emerald-300 bg-emerald-500/20 text-emerald-50 shadow-[inset_0_4px_0_rgba(52,211,153,0.95)]" : "border-emerald-700/45 bg-emerald-950/20 text-emerald-100/80 hover:border-emerald-300/65 hover:text-emerald-50"}`,
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-cyan-300/40 bg-cyan-500/15 text-sm font-black text-cyan-100", children: "2" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-emerald-300/40 bg-emerald-500/15 text-sm font-black text-emerald-100", children: "2" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-black uppercase tracking-wide", children: "DFP Resource Rows" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-[11px] leading-relaxed", children: "DFP row counts, row labels, numbering and ownership." })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded border border-cyan-300/35 bg-cyan-500/15 px-2 py-0.5 text-[10px] font-black text-cyan-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 rounded border border-emerald-300/35 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black text-emerald-100", children: [
                   config.resourcePools.length,
                   " row sets"
                 ] })
@@ -73371,9 +73371,9 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
               ] })
             ] }, aircraft.id || `platform-aircraft-type-${index}`);
           })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-px space-y-3 rounded-b-lg border-2 border-cyan-300 bg-gray-950/35 p-3", role: "tabpanel", children: [
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "-mt-px space-y-3 rounded-b-lg border-2 border-emerald-300 bg-gray-950/35 p-3", role: "tabpanel", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-cyan-100", children: "DFP Row Sets" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-emerald-100", children: "DFP Row Sets" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering." })
           ] }),
           showResourcePoolDeletePanel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/30 bg-red-500/10 p-3", children: [
