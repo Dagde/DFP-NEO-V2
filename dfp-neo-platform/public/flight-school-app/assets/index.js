@@ -73153,7 +73153,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
             const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
             const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
             const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)).filter(Boolean);
-            const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || (aircraftTypeOptions.length === 1 ? aircraftTypeOptions[0] : "");
+            const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || "";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "div",
               {

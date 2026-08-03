@@ -8554,7 +8554,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 ? visibleAircraftTypeOptions
                 : configAircraftTypes.map((aircraft) => aircraft.code)
               ).filter(Boolean);
-              const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || (aircraftTypeOptions.length === 1 ? aircraftTypeOptions[0] : '');
+              const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || '';
               return (
                 <div
                   key={pool.id || `platform-resource-pool-${index}`}
