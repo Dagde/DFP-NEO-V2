@@ -2053,6 +2053,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setErrorLink(null);
   }, []);
 
+  const clearLinkedPlatformConfigError = useCallback(() => {
+    setError((currentError) => (errorLink && currentError ? '' : currentError));
+    if (errorLink) setErrorLink(null);
+  }, [errorLink]);
+
   useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join('\n'));
   }, [isEditingUnitTypes, unitTypeOptions]);
@@ -4236,6 +4241,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateRow = (collection: keyof PlatformConfig, index: number, changes: Record<string, any>) => {
+    clearLinkedPlatformConfigError();
     setConfig((prev) => {
       const nextConfig = {
         ...prev,

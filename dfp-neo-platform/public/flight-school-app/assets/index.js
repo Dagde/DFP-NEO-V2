@@ -67604,6 +67604,10 @@ const PlatformConfigurationSettings = ({
     setError("");
     setErrorLink(null);
   }, []);
+  const clearLinkedPlatformConfigError = reactExports.useCallback(() => {
+    setError((currentError) => errorLink && currentError ? "" : currentError);
+    if (errorLink) setErrorLink(null);
+  }, [errorLink]);
   reactExports.useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
   }, [isEditingUnitTypes, unitTypeOptions]);
@@ -69377,6 +69381,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const updateRow = (collection, index, changes) => {
+    clearLinkedPlatformConfigError();
     setConfig((prev) => {
       const nextConfig = {
         ...prev,
