@@ -711,7 +711,12 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): string => {
     const location = String(pool?.locationCode || '').trim();
     return [code || name || 'Unnamed row set', unit, location].filter(Boolean).join(' / ');
   };
-  if (incompleteAircraftType) return 'Platform configuration save blocked: every active aircraft type needs a code and name before saving.';
+  const describeAircraftType = (aircraftType?: any): string => {
+    const code = String(aircraftType?.code || '').trim();
+    const name = String(aircraftType?.name || '').trim();
+    return code || name || 'New aircraft type';
+  };
+  if (incompleteAircraftType) return `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open Aircraft Types, complete Code and Name, then save again.`;
   if (incompleteResourcePool) return `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, complete the row code and row name, then save again.`;
   if (missingResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose the Aircraft Type for that row set, then save again.`;
   if (invalidResourcePoolAircraftType) return `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Go to Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows, open DFP Resource Rows, choose an active Aircraft Type, then save again.`;
@@ -11368,6 +11373,7 @@ const NumberField = ({
           const nextNumber = Number(nextValue);
           if (!Number.isFinite(nextNumber)) return;
           const safeNumber = clampValue(nextNumber);
+          setDraftValue(normaliseNumberDraft(safeNumber));
           if (safeNumber !== Number(value ?? 0)) onChange(safeNumber);
         }}
       />
