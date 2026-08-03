@@ -67605,9 +67605,9 @@ const PlatformConfigurationSettings = ({
     setErrorLink(null);
   }, []);
   const clearLinkedPlatformConfigError = reactExports.useCallback(() => {
-    setError((currentError) => errorLink && currentError ? "" : currentError);
-    if (errorLink) setErrorLink(null);
-  }, [errorLink]);
+    setError("");
+    setErrorLink(null);
+  }, []);
   reactExports.useEffect(() => {
     if (!isEditingUnitTypes) setUnitTypesDraft(unitTypeOptions.join("\n"));
   }, [isEditingUnitTypes, unitTypeOptions]);
@@ -70521,7 +70521,7 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
     }
     const reloadPage = options?.reloadPage ?? false;
     if (!canEdit) return false;
-    const saveBlocker = getPlatformConfigSaveBlocker(configToSave);
+    const saveBlocker = getPlatformConfigSaveBlocker(getPlatformConfigSaveBlockerContext(configToSave));
     if (saveBlocker) {
       showPlatformConfigError(saveBlocker.message, saveBlocker.link || null);
       return false;
@@ -71069,19 +71069,66 @@ This removes it from Aircraft Types & DFP Resource Rows. Press Save in this sect
       parentOrganisationCode: getUnitParentOrganisationCode(unit)
     });
   });
-  const visibleResourcePoolRows = configResourcePools.map((pool, index) => ({ pool, index })).filter(({ pool }) => isRecordVisibleForSettingsPolicy({
-    unitCode: pool.unitCode,
-    locationCode: pool.locationCode,
-    aircraftTypeCode: pool.aircraftTypeCode,
-    organisationCode: pool.organisationCode
-  })).filter(({ pool }) => {
-    if (!settingsVisibilityEnabled || !settingsVisibilityPolicy.filters.includes("unit") || visibilityUnitSet.size === 0) {
-      return true;
+  const getStrictUnitAircraftTypeCodeSet = (sourceConfig, scopedUnitCodes) => {
+    const sourceUnits = Array.isArray(sourceConfig.units) ? sourceConfig.units : [];
+    const sourcePools = Array.isArray(sourceConfig.resourcePools) ? sourceConfig.resourcePools : [];
+    const scopedUnitSet = new Set(scopedUnitCodes.map(normaliseUnitCode2).filter(Boolean));
+    const aircraftCodes = /* @__PURE__ */ new Set();
+    sourceUnits.forEach((unit) => {
+      const unitCode = normaliseUnitCode2(unit?.code);
+      if (!unitCode || !scopedUnitSet.has(unitCode)) return;
+      [
+        unit?.settings?.aircraftTypeCode,
+        unit?.settings?.aircraftType,
+        ...Array.isArray(unit?.settings?.aircraftTypeCodes) ? unit.settings.aircraftTypeCodes : []
+      ].forEach((aircraftCode) => {
+        const normalisedAircraftCode = normaliseUnitCode2(aircraftCode);
+        if (normalisedAircraftCode) aircraftCodes.add(normalisedAircraftCode);
+      });
+    });
+    sourcePools.forEach((pool) => {
+      const poolUnitCode = normaliseUnitCode2(pool?.unitCode);
+      const poolAircraftTypeCode = normaliseUnitCode2(pool?.aircraftTypeCode);
+      if (poolUnitCode && scopedUnitSet.has(poolUnitCode) && poolAircraftTypeCode) {
+        aircraftCodes.add(poolAircraftTypeCode);
+      }
+    });
+    return aircraftCodes;
+  };
+  const getVisibleResourcePoolRowsForConfig = (sourceConfig) => {
+    const sourceResourcePools = Array.isArray(sourceConfig.resourcePools) ? sourceConfig.resourcePools : [];
+    const sourceUnits = Array.isArray(sourceConfig.units) ? sourceConfig.units : [];
+    const scopedUnitCodes = getActiveScopedUnitCodes().map(normaliseUnitCode2).filter(Boolean);
+    const scopedUnitSet = new Set(scopedUnitCodes);
+    const scopedUnits = sourceUnits.filter((unit) => scopedUnitSet.has(normaliseUnitCode2(unit?.code)));
+    const scopedLocationSet = new Set(
+      scopedUnits.map((unit) => normaliseUnitCode2(unit?.locationCode)).filter(Boolean)
+    );
+    if (scopedLocationSet.size === 0 && activeSettingsVisibilityLocationCode) {
+      scopedLocationSet.add(normaliseUnitCode2(activeSettingsVisibilityLocationCode));
     }
-    const poolUnitCode = normaliseUnitCode2(pool.unitCode);
-    const poolAircraftTypeCode = normaliseUnitCode2(pool.aircraftTypeCode);
-    return poolUnitCode && visibilityUnitSet.has(poolUnitCode) || !poolUnitCode && (!poolAircraftTypeCode || visibilityAircraftTypeSet.has(poolAircraftTypeCode));
+    const scopedAircraftTypeSet = getStrictUnitAircraftTypeCodeSet(sourceConfig, scopedUnitCodes);
+    return sourceResourcePools.map((pool, index) => ({ pool, index })).filter(({ pool }) => {
+      if (scopedUnitSet.size === 0) return true;
+      const poolUnitCode = normaliseUnitCode2(pool?.unitCode);
+      const poolLocationCode = normaliseUnitCode2(pool?.locationCode);
+      const poolAircraftTypeCode = normaliseUnitCode2(pool?.aircraftTypeCode);
+      if (poolUnitCode) return scopedUnitSet.has(poolUnitCode);
+      if (!poolAircraftTypeCode || scopedAircraftTypeSet.size === 0) return false;
+      const locationMatches = !poolLocationCode || scopedLocationSet.size === 0 || scopedLocationSet.has(poolLocationCode);
+      return locationMatches && scopedAircraftTypeSet.has(poolAircraftTypeCode);
+    }).filter(({ pool }) => isRecordVisibleForSettingsPolicy({
+      unitCode: pool.unitCode,
+      locationCode: pool.locationCode,
+      aircraftTypeCode: pool.aircraftTypeCode,
+      organisationCode: pool.organisationCode
+    }));
+  };
+  const getPlatformConfigSaveBlockerContext = (sourceConfig) => ({
+    ...sourceConfig,
+    resourcePools: getVisibleResourcePoolRowsForConfig(sourceConfig).map(({ pool }) => pool)
   });
+  const visibleResourcePoolRows = getVisibleResourcePoolRowsForConfig(config);
   const visibleAircraftTypeCodes = new Set([
     ...settingsVisibilityPolicy.filters.includes("unit") ? activeUnitAircraftTypeCodes : [],
     ...!settingsVisibilityPolicy.filters.includes("unit") ? visibleUnitRows.map(({ unit }) => getUnitAircraftTypeCode(String(unit.code || ""))) : [],
