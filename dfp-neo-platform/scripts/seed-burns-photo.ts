@@ -3,6 +3,11 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.DFP_SEED_BURNS_PHOTO !== 'true') {
+    console.log('Burns profile photo seed disabled. Set DFP_SEED_BURNS_PHOTO=true only for deliberate demo data repair.');
+    return;
+  }
+
   console.log('🔄 Setting Burns profile photo...');
 
   const personnel = await prisma.personnel.findFirst({

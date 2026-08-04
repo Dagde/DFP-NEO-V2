@@ -189,7 +189,7 @@ function populatePrerequisites(items: SyllabusItemSeed[]): SyllabusItemSeed[] {
   });
 }
 
-// All syllabus items - mirrors INITIAL_SYLLABUS_DETAILS from mockData.ts
+// Demo syllabus items. This seed is opt-in only and must not run in commercial deployments by accident.
 const syllabusItemsRaw: SyllabusItemSeed[] = [
   // BPC + IPC Items
   createSyllabusItem('BGF MB1', 'Preparation and Pre / Post Flight Admin'),
@@ -291,6 +291,11 @@ const syllabusItems = populatePrerequisites(syllabusItemsRaw).map((item, index) 
 }));
 
 async function seedSyllabus() {
+  if (process.env.DFP_SEED_DEMO_SYLLABUS_DATA !== 'true') {
+    console.log('Demo syllabus seed disabled. Set DFP_SEED_DEMO_SYLLABUS_DATA=true only for deliberate demo or development seed runs.');
+    return;
+  }
+
   console.log('📚 Starting SyllabusItem database seeding...');
   console.log(`   Found ${syllabusItems.length} syllabus items to seed`);
 
@@ -343,7 +348,7 @@ async function seedSyllabus() {
           isActive: item.isActive,
           version: 1,
           createdBy: 'system-seed',
-          notes: 'Initial seed from INITIAL_SYLLABUS_DETAILS',
+          notes: 'Deliberate demo syllabus seed',
         },
       });
       created++;
@@ -365,7 +370,7 @@ async function seedSyllabus() {
         changeType: 'CREATE',
         changeData: { code: item.code },
         changedBy: 'system-seed',
-        changeReason: 'Initial migration from mockData.ts INITIAL_SYLLABUS_DETAILS',
+        changeReason: 'Deliberate demo syllabus seed',
       },
     });
   }
