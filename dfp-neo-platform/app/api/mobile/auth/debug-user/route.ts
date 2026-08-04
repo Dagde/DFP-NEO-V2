@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateMobileRequest } from '@/lib/mobile-middleware';
+import { debugRoutesDisabledResponse } from '../../../debug/guard';
 
 export async function GET(request: NextRequest) {
   try {
+    const disabled = debugRoutesDisabledResponse();
+    if (disabled) return disabled;
+
     // Authenticate request
     const { user, error } = await authenticateMobileRequest(request);
     if (error) return error;
