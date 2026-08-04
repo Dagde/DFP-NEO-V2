@@ -67272,7 +67272,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   return "Open the matching Settings section, correct the referenced record, save that section, and recheck Configuration Health.";
 };
-const normaliseConfigurationHealthUnitCode = (value) => String(value || "").trim().toUpperCase();
+const normaliseConfigurationHealthUnitCode = (value) => String(value || "").trim().toUpperCase().replace(/^[A-Z0-9]{3,5}\s+-\s*/, "");
 const parseConfigurationHealthUnitCodes = (...values) => values.flatMap((value) => String(value || "").split(/[+/]/).map(normaliseConfigurationHealthUnitCode).filter(Boolean)).filter((value, index, all) => all.indexOf(value) === index);
 const buildScopedConfigurationHealthConfig = (config, unitCodes) => {
   const organisations = Array.isArray(config.organisations) ? config.organisations : [];

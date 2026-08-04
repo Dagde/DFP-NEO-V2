@@ -1629,7 +1629,12 @@ type ConfigurationHealthScope = {
   includeOrganisationWideChecks?: boolean;
 };
 
-const normaliseConfigurationHealthUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+const normaliseConfigurationHealthUnitCode = (value: unknown): string => (
+  String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/^[A-Z0-9]{3,5}\s+-\s*/, '')
+);
 
 const parseConfigurationHealthUnitCodes = (...values: unknown[]): string[] => (
   values.flatMap((value) => (
