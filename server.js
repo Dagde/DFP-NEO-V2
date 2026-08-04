@@ -1158,7 +1158,9 @@ app.get('/api/settings', async (req, res) => {
 // POST /api/settings - Save all org settings including currencies
 app.post('/api/settings', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { orgId = 'default', settings, updatedBy } = req.body;
     if (!settings) {
       return res.status(400).json({ error: 'Missing settings data' });

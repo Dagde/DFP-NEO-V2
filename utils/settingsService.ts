@@ -235,10 +235,14 @@ const saveSettingsNow = async (settings: AppSettingsData, userId?: string): Prom
       },
       updatedBy: userId || null,
     };
+    const sessionToken = localStorage.getItem('dfp_session_token') || '';
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+      },
       body: JSON.stringify(payload),
     });
 
