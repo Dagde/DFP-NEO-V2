@@ -230,7 +230,8 @@ const platformConfigurationSections = [
     'platform-units',
     'platform-task-profiles',
     'platform-master-lmp-access',
-    'platform-resource-pools',
+    'platform-aircraft-setup',
+    'platform-dfp-resource-rows',
     'platform-unit-modules',
     'platform-settings-visibility',
     'platform-deployment-readiness',
@@ -251,7 +252,8 @@ const platformSectionTargets: Record<PlatformConfigurationMenuSection, string> =
     'platform-units': 'platform-units',
     'platform-task-profiles': 'platform-task-profiles',
     'platform-master-lmp-access': 'platform-master-lmp-access',
-    'platform-resource-pools': 'platform-resource-pools',
+    'platform-aircraft-setup': 'platform-aircraft-setup',
+    'platform-dfp-resource-rows': 'platform-dfp-resource-rows',
     'platform-unit-modules': 'platform-unit-modules',
     'platform-settings-visibility': 'platform-settings-visibility',
     'platform-deployment-readiness': 'platform-deployment-readiness',
@@ -291,7 +293,8 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-units': 'Units & Ownership',
     'platform-task-profiles': 'Directed Task Lists',
     'platform-master-lmp-access': 'Master LMP Access',
-    'platform-resource-pools': 'Aircraft Types & DFP Resource Rows',
+    'platform-aircraft-setup': 'Aircraft Setup',
+    'platform-dfp-resource-rows': 'DFP Resource Rows',
     'platform-unit-modules': 'Unit Features & Modules',
     'platform-settings-visibility': 'Settings Visibility',
     'platform-deployment-readiness': 'Deployment Readiness',
@@ -436,7 +439,8 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
   'platform-units': platformConfigurationIcon,
   'platform-task-profiles': platformConfigurationIcon,
   'platform-master-lmp-access': platformConfigurationIcon,
-  'platform-resource-pools': platformConfigurationIcon,
+  'platform-aircraft-setup': platformConfigurationIcon,
+  'platform-dfp-resource-rows': platformConfigurationIcon,
   'platform-unit-modules': platformConfigurationIcon,
   'platform-settings-visibility': platformConfigurationIcon,
   'platform-deployment-readiness': platformConfigurationIcon,
@@ -491,7 +495,8 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-units': 'Unit type, base ownership and operating status',
   'platform-task-profiles': 'Short directed task names by operational model',
   'platform-master-lmp-access': 'Location and unit access to Master LMPs',
-  'platform-resource-pools': 'Aircraft types and DFP resource row sets',
+  'platform-aircraft-setup': 'Aircraft capability, cruise planning and crew seats',
+  'platform-dfp-resource-rows': 'DFP row counts, ownership, labels and numbering',
   'platform-unit-modules': 'Enable features and modules for each unit',
   'platform-settings-visibility': 'Control which settings records are visible using unit, location, aircraft type and organisation filters',
   'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid readiness checks',
@@ -543,7 +548,8 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'platform-units': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-task-profiles': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-master-lmp-access': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
-  'platform-resource-pools': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-aircraft-setup': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-dfp-resource-rows': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-unit-modules': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-settings-visibility': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-deployment-readiness': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -580,7 +586,8 @@ const sectionGroups: {
         'platform-task-profiles',
         'standard-missions',
         'platform-master-lmp-access',
-        'platform-resource-pools',
+        'platform-aircraft-setup',
+        'platform-dfp-resource-rows',
         'platform-unit-modules',
         'platform-settings-visibility',
         'platform-deployment-readiness',
@@ -751,6 +758,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const normaliseLegacySettingsSection = (section: string) => {
         if (section === 'platform-configuration') return 'platform-configuration-health';
         if (section === 'platform-standard-missions') return 'standard-missions';
+        if (section === 'platform-resource-pools') return 'platform-dfp-resource-rows';
         return section;
     };
     const [activeSection, setActiveSection] = useState<ActiveSection>(() => {

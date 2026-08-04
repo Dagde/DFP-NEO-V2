@@ -740,10 +740,10 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
     String(pool?.id || pool?.code || pool?.name || '').trim()
   );
   const getResourcePoolSettingsLink = (pool?: any, suffix = ''): PlatformConfigSaveBlocker['link'] => ({
-    label: 'Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows',
+    label: 'Settings -> Platform & Deployment -> DFP Resource Rows',
     target: {
-      section: 'platform-resource-pools',
-      label: 'Aircraft Types & DFP Resource Rows',
+      section: 'platform-dfp-resource-rows',
+      label: 'DFP Resource Rows',
       focusResourcePoolCode: getResourcePoolFocusCode(pool),
     },
     suffix,
@@ -752,13 +752,13 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
     return {
       message: `Save blocked: the aircraft type "${describeAircraftType(incompleteAircraftType)}" needs both Code and Name. Open`,
       link: {
-        label: 'Settings -> Platform & Deployment -> Aircraft Types & DFP Resource Rows',
+        label: 'Settings -> Platform & Deployment -> Aircraft Setup',
         target: {
-          section: 'platform-resource-pools',
-          label: 'Aircraft Types & DFP Resource Rows',
-          focusSubsectionId: 'platform-resource-pools',
+          section: 'platform-aircraft-setup',
+          label: 'Aircraft Setup',
+          focusSubsectionId: 'platform-aircraft-type-settings',
         },
-        suffix: 'open Aircraft Types, complete Code and Name, then save again.',
+        suffix: 'complete Code and Name, then save again.',
       },
     };
   }
@@ -1495,8 +1495,17 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
   if (area === 'Modules') {
     return { section: 'platform-unit-modules', label: 'Unit Features & Modules' };
   }
-  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
-    return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
+  if (area === 'Aircraft Setup') {
+    return { section: 'platform-aircraft-setup', label: 'Aircraft Setup' };
+  }
+  if (area === 'DFP Resource Rows' || area === 'Resource Pools') {
+    return { section: 'platform-dfp-resource-rows', label: 'DFP Resource Rows' };
+  }
+  if (area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
+    if (lowerTitle.includes('aircraft type') && !lowerTitle.includes('resource row')) {
+      return { section: 'platform-aircraft-setup', label: 'Aircraft Setup' };
+    }
+    return { section: 'platform-dfp-resource-rows', label: 'DFP Resource Rows' };
   }
   if (area === 'User Access') {
     return { section: 'platform-user-access', label: 'User Access' };
@@ -1515,7 +1524,7 @@ const getConfigurationHealthSettingsLink = (area: string, title: string): Config
   }
   if (area === 'Unit Separation') {
     if (lowerTitle.includes('resource')) {
-      return { section: 'platform-resource-pools', label: 'Aircraft Types & DFP Resource Rows' };
+      return { section: 'platform-dfp-resource-rows', label: 'DFP Resource Rows' };
     }
     if (lowerTitle.includes('directed task setup') || lowerTitle.includes('directed flight setup') || lowerTitle.includes('flight setup') || lowerTitle.includes('flight template')) {
       return { section: 'standard-missions', label: 'Directed Task Setups', focusSubsectionId: 'platform-standard-missions' };
@@ -1541,11 +1550,14 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   if (area === 'Modules') {
     return 'Open Settings → Platform & Deployment → Unit Features & Modules and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
   }
-  if (area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
+  if (area === 'Aircraft Setup') {
+    return 'Open Settings -> Platform & Deployment -> Aircraft Setup and correct aircraft code, name, category, cruise planning values, crew seats or role eligibility.';
+  }
+  if (area === 'DFP Resource Rows' || area === 'Resource Pools' || area === 'Aircraft & Resource Pools' || area === 'Aircraft Types & DFP Resource Rows') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows, enter non-zero counts in DFP Resource Rows such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
+      return 'Open Settings -> Platform & Deployment -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.';
     }
-    return 'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and correct the row set location, unit, aircraft type and DFP row quantities so they match active platform records.';
+    return 'Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the row set location, unit, aircraft type and DFP row quantities so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
@@ -1706,7 +1718,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'Aircraft Types & DFP Resource Rows', `${unitCode} has no active DFP resource row set`, 'DFP resource rows and scheduling resources need a configured row set for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-resource-pools' });
+      add('WARNING', 'DFP Resource Rows', `${unitCode} has no active DFP resource row set`, 'DFP resource rows and scheduling resources need a configured row set for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-dfp-resource-rows' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1725,8 +1737,8 @@ const buildConfigurationHealth = (
           `${unitCode} will use shared resource capacity`,
           `${unitCode} has no unit-specific DFP resource row set. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          'Open Settings → Platform & Deployment → Aircraft Types & DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.',
-          { focusSubsectionId: 'platform-resource-pools' }
+          'Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.',
+          { focusSubsectionId: 'platform-dfp-resource-rows' }
         );
       }
     }
@@ -1739,12 +1751,12 @@ const buildConfigurationHealth = (
   if (activeAircraftTypes.length === 0) {
     add(
       'WARNING',
-      'Aircraft Types & DFP Resource Rows',
+      'Aircraft Setup',
       'No active aircraft type',
       'Add at least one aircraft type before configuring DFP resource rows or building flight resources.',
       'aircraft-types-none',
       undefined,
-      { focusSubsectionId: 'platform-aircraft-types' }
+      { focusSubsectionId: 'platform-aircraft-type-settings' }
     );
   }
 
@@ -1755,12 +1767,12 @@ const buildConfigurationHealth = (
       const aircraftLabel = String(aircraft.name || aircraft.code || 'Aircraft type').trim();
       add(
         'WARNING',
-        'Aircraft Types & DFP Resource Rows',
+        'DFP Resource Rows',
         `${aircraftLabel} is not used by any DFP resource row set`,
         `The aircraft type exists, but no active DFP resource row set points to ${aircraftTypeCode}. It will not drive DFP rows until a row set uses it.`,
         `aircraft-${aircraftTypeCode}-unused-by-pools`,
         undefined,
-        { focusAircraftTypeCode: aircraftTypeCode, focusSubsectionId: 'platform-resource-pools' }
+        { focusAircraftTypeCode: aircraftTypeCode, focusSubsectionId: 'platform-dfp-resource-rows' }
       );
     });
   }
@@ -1772,19 +1784,19 @@ const buildConfigurationHealth = (
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
 
     if (locationCode && !activeLocationCodes.has(locationCode)) {
-      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'DFP Resource Rows', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (unitCode && !activeUnitCodes.has(unitCode)) {
-      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'DFP Resource Rows', `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
-      add('WARNING', 'Aircraft Types & DFP Resource Rows', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('WARNING', 'DFP Resource Rows', `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
     const aircraftRows = toNumber(pool.settings?.aircraft);
     if (aircraftRows > 0 && !aircraftTypeCode) {
       add(
         'WARNING',
-        'Aircraft Types & DFP Resource Rows',
+        'DFP Resource Rows',
         `${poolName} has no aircraft type`,
         `${poolName} has ${aircraftRows} aircraft row${aircraftRows === 1 ? '' : 's'}, but is not linked to an active aircraft type.`,
         `pool-${poolName}-missing-aircraft-type`,
@@ -1795,14 +1807,14 @@ const buildConfigurationHealth = (
     const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add('CRITICAL', 'Aircraft Types & DFP Resource Rows', `${poolName} has no usable resources`, 'This row set controls DFP resource rows, but all DFP row quantities are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'DFP Resource Rows', `${poolName} has no usable resources`, 'This row set controls DFP resource rows, but all DFP row quantities are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
   });
 
   if (activeResourcePools.length === 0) {
-    add('WARNING', 'Aircraft Types & DFP Resource Rows', 'No active DFP resource row set', 'At least one active row set is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-resource-pools' });
-  } else if (!items.some((item) => item.area === 'Aircraft Types & DFP Resource Rows' && item.severity === 'CRITICAL')) {
-    add('OK', 'Aircraft Types & DFP Resource Rows', 'DFP resource rows are configured', `${activeResourcePools.length} active row set${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
+    add('WARNING', 'DFP Resource Rows', 'No active DFP resource row set', 'At least one active row set is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-dfp-resource-rows' });
+  } else if (!items.some((item) => item.area === 'DFP Resource Rows' && item.severity === 'CRITICAL')) {
+    add('OK', 'DFP Resource Rows', 'DFP resource rows are configured', `${activeResourcePools.length} active row set${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
   }
 
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
@@ -2100,7 +2112,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [taskProfileDrafts, setTaskProfileDrafts] = useState<Record<string, string>>({});
   const [taskProfileAbbreviationDrafts, setTaskProfileAbbreviationDrafts] = useState<Record<string, string>>({});
   const [crewCompositionAircraftCode, setCrewCompositionAircraftCode] = useState('');
-  const [resourcePoolActiveTab, setResourcePoolActiveTab] = useState<'aircraftTypes' | 'resourcePools'>('aircraftTypes');
   const [newAircraftTypeVisibleIds, setNewAircraftTypeVisibleIds] = useState<Set<string>>(new Set());
   const [selectedAircraftTypeDeleteKey, setSelectedAircraftTypeDeleteKey] = useState('');
   const [showResourcePoolDeletePanel, setShowResourcePoolDeletePanel] = useState(false);
@@ -2398,7 +2409,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   useEffect(() => {
     const cleanPoolCode = String(focusResourcePoolCode || '').trim().toUpperCase();
-    if (loading || !cleanPoolCode || scrollTarget !== 'platform-resource-pools') return;
+    if (loading || !cleanPoolCode || scrollTarget !== 'platform-dfp-resource-rows') return;
     const poolIndex = config.resourcePools.findIndex((pool) => (
       [pool.id, pool.code, pool.name]
         .map((value) => String(value || '').trim().toUpperCase())
@@ -2407,14 +2418,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (poolIndex < 0) return;
     const pool = config.resourcePools[poolIndex];
     const rowKey = pool.id || `platform-resource-pool-${poolIndex}`;
-    setResourcePoolActiveTab('resourcePools');
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         resourcePoolRowRefs.current[rowKey]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 120);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget, resourcePoolActiveTab]);
+  }, [config.resourcePools, focusResourcePoolCode, loading, scrollTarget]);
 
   useEffect(() => {
     const cleanAircraftCode = String(focusAircraftTypeCode || '').trim().toUpperCase();
@@ -2469,13 +2479,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || '').trim();
     if (loading || !cleanSubsectionId) return;
-    if (scrollTarget === 'platform-resource-pools') {
-      if (cleanSubsectionId.startsWith('platform-aircraft-type')) {
-        setResourcePoolActiveTab('aircraftTypes');
-      } else if (cleanSubsectionId.startsWith('platform-resource-pool')) {
-        setResourcePoolActiveTab('resourcePools');
-      }
-    }
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         const target = document.getElementById(cleanSubsectionId);
@@ -4688,7 +4691,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const addAircraftType = () => {
-    setResourcePoolActiveTab('aircraftTypes');
     const id = createClientRecordId('aircraft-type');
     setNewAircraftTypeVisibleIds((current) => new Set([...Array.from(current), id]));
     setConfig((prev) => {
@@ -4860,7 +4862,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const defaultUnitCode = String(selectedUnit?.code || activeUnitCode || '').trim().toUpperCase();
     const newPoolId = createClientRecordId('pool');
     pendingResourcePoolScrollIdRef.current = newPoolId;
-    setResourcePoolActiveTab('resourcePools');
     setConfig((prev) => {
       const previousUnits = Array.isArray(prev.units) ? prev.units : [];
       const previousAircraftTypes = Array.isArray(prev.aircraftTypes) ? prev.aircraftTypes : [];
@@ -5522,7 +5523,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }
 
     const confirmed = await showDarkConfirm(
-      `Delete DFP resource row set "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes it from Aircraft Types & DFP Resource Rows. Press Save in this section to apply the deletion.`,
+      `Delete DFP resource row set "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes it from DFP Resource Rows. Press Save in this section to apply the deletion.`,
       'Delete DFP Resource Rows?',
       'warning',
     );
@@ -5774,7 +5775,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const saveResourcePoolsAndExitEdit = async () => {
-    const saved = await save(undefined, 'platform-resource-pools');
+    const saved = await save(undefined, scrollTarget === 'platform-aircraft-setup' ? 'platform-aircraft-setup' : 'platform-dfp-resource-rows');
     if (saved) {
       setNewAircraftTypeVisibleIds(new Set());
       setResourcePoolsUnlocked(false);
@@ -5988,7 +5989,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (resourcePoolExitPromptOpenRef.current) return;
     resourcePoolExitPromptOpenRef.current = true;
     const shouldSave = await showDarkConfirm(
-      'You have unsaved Aircraft Types & DFP Resource Rows changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit DFP Resource Rows edit mode.',
+      'You have unsaved Aircraft Setup or DFP Resource Rows changes.\n\nSelect OK to save and apply the changes now. Select Cancel to continue without saving and exit edit mode.',
       'Unsaved DFP Resource Row Changes',
       'warning',
     );
@@ -6012,7 +6013,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const handleOutsideResourcePoolClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest('#platform-resource-pools')) return;
+      if (target.closest('#platform-aircraft-setup') || target.closest('#platform-dfp-resource-rows')) return;
       if (target.closest('.fixed.inset-0')) return;
       if (target.closest('button')) return;
       if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
@@ -6458,15 +6459,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     };
   });
   const openAircraftResourceSettings = (tab: 'aircraftTypes' | 'resourcePools', focusResourcePoolCode?: string) => {
-    setResourcePoolActiveTab(tab);
+    const section = tab === 'aircraftTypes' ? 'platform-aircraft-setup' : 'platform-dfp-resource-rows';
+    const label = tab === 'aircraftTypes' ? 'Aircraft Setup' : 'DFP Resource Rows';
+    const focusId = tab === 'aircraftTypes' ? 'platform-aircraft-type-settings' : 'platform-dfp-resource-rows';
     onNavigateToSettingsSection?.({
-      section: 'platform-resource-pools',
-      label: 'Aircraft Types & DFP Resource Rows',
-      focusSubsectionId: tab === 'aircraftTypes' ? 'platform-aircraft-type-settings' : 'platform-resource-pools',
+      section,
+      label,
+      focusSubsectionId: focusId,
       focusResourcePoolCode,
     });
     window.setTimeout(() => {
-      const focusId = tab === 'aircraftTypes' ? 'platform-aircraft-type-settings' : 'platform-resource-pools';
       document.getElementById(focusId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 80);
   };
@@ -7262,7 +7264,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   onClick={() => openAircraftResourceSettings('aircraftTypes')}
                   className="font-bold text-cyan-200/80 underline decoration-cyan-300/30 underline-offset-2 hover:text-cyan-100"
                 >
-                  Aircraft Types & DFP Resource Rows
+                  Aircraft Setup
                 </button>.
               </div>
             </div>
@@ -7304,7 +7306,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   onClick={() => openAircraftResourceSettings('resourcePools', ownershipResourcePoolRows[0]?.code)}
                   className="font-bold text-cyan-200/80 underline decoration-cyan-300/30 underline-offset-2 hover:text-cyan-100"
                 >
-                  Aircraft Types & DFP Resource Rows
+                  DFP Resource Rows
                 </button>.
               </div>
             </div>
@@ -8061,14 +8063,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="w-full rounded-md border border-dashed border-gray-700 bg-gray-900/70 p-4 text-sm text-gray-400">
                 <div className="font-bold text-gray-200">No aircraft types configured.</div>
                 <div className="mt-1 text-xs leading-relaxed">
-                  Add an aircraft type in Settings &gt; Platform &amp; Deployment &gt; Aircraft Types &amp; DFP Resource Rows before setting aircraft crew composition.
+                  Add an aircraft type in Settings &gt; Platform &amp; Deployment &gt; Aircraft Setup before setting aircraft crew composition.
                 </div>
                 <button
                   type="button"
-                  onClick={() => setResourcePoolActiveTab('aircraftTypes')}
+                  onClick={() => openAircraftResourceSettings('aircraftTypes')}
                   className={`${platformActionButtonClass} mt-3`}
                 >
-                  Open Aircraft Types
+                  Open Aircraft Setup
                 </button>
               </div>
             )}
@@ -8376,14 +8378,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="w-full rounded-md border border-dashed border-gray-700 bg-gray-900/70 p-4 text-sm text-gray-400">
                 <div className="font-bold text-gray-200">No aircraft types configured.</div>
                 <div className="mt-1 text-xs leading-relaxed">
-                  Add an aircraft type in Settings &gt; Platform &amp; Deployment &gt; Aircraft Types &amp; DFP Resource Rows before setting {continuationCurrencyEventsLabel}.
+                  Add an aircraft type in Settings &gt; Platform &amp; Deployment &gt; Aircraft Setup before setting {continuationCurrencyEventsLabel}.
                 </div>
                 <button
                   type="button"
-                  onClick={() => setResourcePoolActiveTab('aircraftTypes')}
+                  onClick={() => openAircraftResourceSettings('aircraftTypes')}
                   className={`${platformActionButtonClass} mt-3`}
                 >
-                  Open Aircraft Types
+                  Open Aircraft Setup
                 </button>
               </div>
             )}
@@ -8515,37 +8517,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-resource-pools" className={getSectionClass('platform-resource-pools')}>
+      <section id="platform-aircraft-setup" className={getSectionClass('platform-aircraft-setup')}>
         <SectionHeader
-          title="Aircraft Types & DFP Resource Rows"
+          title="Aircraft Setup"
           subtitle={resourcePoolsUnlocked
-            ? 'Editing is active. Press Save to apply aircraft setup and DFP row changes, then return this section to read-only mode.'
-            : 'Aircraft setup defines aircraft capability, cruise planning values and crew seats. DFP resource rows define the aircraft, simulator, procedural trainer, standby and ground rows shown on the DFP. Click Edit before making changes.'}
+            ? 'Editing is active. Press Save to apply aircraft setup changes, then return this section to read-only mode.'
+            : 'Define aircraft identity, capability, cruise planning values and crew-seat eligibility. Click Edit before making changes.'}
           action={canEdit ? (
             <div className="flex flex-wrap justify-end gap-[1px]">
               {resourcePoolsUnlocked ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowResourcePoolDeletePanel((current) => !current);
-                      setResourcePoolActiveTab('resourcePools');
-                    }}
-                    className={platformActionButtonClass}
-                    title="Show or hide DFP resource row set deletion controls"
-                  >
-                    <span className="text-[9px] leading-tight">Delete<br />Rows</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResourcePoolActiveTab('aircraftTypes');
-                    }}
-                    className={platformActionButtonClass}
-                    title="Open aircraft type deletion controls"
-                  >
-                    <span className="text-[8px] leading-[0.7rem]">Delete<br />Aircraft<br />Type</span>
-                  </button>
                   <button
                     type="button"
                     onClick={addAircraftType}
@@ -8553,14 +8534,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     title="Add aircraft type"
                   >
                     <span className="text-[8px] leading-[0.7rem]">Add<br />Aircraft<br />Type</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={addResourcePool}
-                    className={platformActionButtonClass}
-                    title="Add DFP resource row set"
-                  >
-                    <span className="text-[9px] leading-tight">Add<br />Rows</span>
                   </button>
                   <button
                     type="button"
@@ -8598,62 +8571,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div className="mt-1 text-lg font-black text-orange-100">{visibleAircraftTypeRows.length}</div>
               <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Capability, cruise planning and crew seats.</div>
             </div>
-            <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">DFP Row Sets</div>
-              <div className="mt-1 text-lg font-black text-cyan-100">{config.resourcePools.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Rows, labels, numbering and ownership.</div>
-            </div>
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div className="mb-0 border-b border-gray-700/80 pb-2">
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200/80">Setup Tabs</div>
-            <div className="mt-1 text-xs text-gray-400">The selected tab carries its outline around the page below.</div>
-          </div>
-          <div
-            className="relative z-20 mt-3 grid grid-cols-2 gap-2"
-            role="tablist"
-            aria-label="Aircraft and DFP resource row sections"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={resourcePoolActiveTab === 'aircraftTypes'}
-              onClick={() => setResourcePoolActiveTab('aircraftTypes')}
-              className={`flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${
-                resourcePoolActiveTab === 'aircraftTypes'
-                  ? 'relative z-30 -mb-[2px] rounded-t-lg rounded-b-none border-b-0 border-orange-300 bg-orange-500/20 text-orange-50 shadow-[inset_0_4px_0_rgba(251,146,60,0.95)]'
-                  : 'relative z-10 rounded-t-lg rounded-b-none border-b-0 border-orange-700/45 bg-orange-950/20 text-orange-100/80 hover:border-orange-300/65 hover:text-orange-50'
-              }`}
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-orange-300/40 bg-orange-500/15 text-sm font-black text-orange-100">1</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-black uppercase tracking-wide">Aircraft Setup</span>
-                <span className="mt-1 block text-[11px] leading-relaxed">Aircraft identity, cruise speed, cruise altitude and crew seats.</span>
-              </span>
-              <span className="shrink-0 rounded border border-orange-300/35 bg-orange-500/15 px-2 py-0.5 text-[10px] font-black text-orange-100">{visibleAircraftTypeRows.length} types</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={resourcePoolActiveTab === 'resourcePools'}
-              onClick={() => setResourcePoolActiveTab('resourcePools')}
-              className={`flex min-h-[74px] items-center gap-3 border-2 px-4 py-3 text-left transition-colors ${
-                resourcePoolActiveTab === 'resourcePools'
-                  ? 'relative z-30 -mb-[2px] rounded-t-lg rounded-b-none border-b-0 border-lime-300 bg-lime-500/25 text-lime-50 shadow-[inset_0_4px_0_rgba(132,204,22,0.95)]'
-                  : 'relative z-10 rounded-t-lg rounded-b-none border-b-0 border-lime-500/70 bg-lime-900/25 text-lime-100 hover:border-lime-300/80 hover:text-lime-50'
-              }`}
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-lime-300/45 bg-lime-500/20 text-sm font-black text-lime-100">2</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-black uppercase tracking-wide">DFP Resource Rows</span>
-                <span className="mt-1 block text-[11px] leading-relaxed">DFP row counts, row labels, numbering and ownership.</span>
-              </span>
-              <span className="shrink-0 rounded border border-lime-300/40 bg-lime-500/20 px-2 py-0.5 text-[10px] font-black text-lime-100">{config.resourcePools.length} row sets</span>
-            </button>
-          </div>
-          {resourcePoolActiveTab === 'aircraftTypes' ? (
-          <div id="platform-aircraft-type-settings" className="relative z-10 -mt-[2px] space-y-3 rounded-b-lg border-2 border-orange-300 bg-gray-950/35 p-3" role="tabpanel">
+          <div id="platform-aircraft-type-settings" className="space-y-3 rounded-lg border-2 border-orange-300 bg-gray-950/35 p-3">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Setup</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft identity, cruise planning values and normal crew-seat eligibility.</p>
@@ -8817,9 +8738,149 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               );
             })}
+            <div className={resourceSectionPanelClass}>
+              <div className={resourceSectionPanelHeaderClass}>
+                <div>
+                  <div className="text-xs font-black uppercase tracking-wide text-orange-100">Aircraft Configurations</div>
+                  <div className={resourceSectionPanelHintClass}>Aircraft fit states that LMP events may require. Use ANY when configuration does not matter.</div>
+                </div>
+              </div>
+              {visibleResourcePoolRows.length === 0 ? (
+                <div className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400">
+                  Add a DFP resource row set before defining aircraft configurations for this unit context.
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {visibleResourcePoolRows.map(({ pool, index }) => {
+                    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
+                    return (
+                      <div key={`aircraft-configurations-${pool.id || pool.code || index}`} className="rounded-lg border border-gray-800 bg-gray-900/80 p-3">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2">
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-wide text-orange-100">
+                              {pool.aircraftTypeCode || pool.settings?.aircraftLabel || pool.name || pool.code || 'Aircraft'} Configurations
+                            </div>
+                            <div className={resourceSectionPanelHintClass}>
+                              {pool.name || pool.code || 'DFP resource row set'}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!canEditResourcePools}
+                            onClick={() => addAircraftConfiguration(index)}
+                            className={aircraftResourceMiniButtonClass}
+                          >
+                            Add Config
+                          </button>
+                        </div>
+                        {aircraftConfigurations.length === 0 ? (
+                          <div className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400">
+                            No configured aircraft states. LMP events will show ANY only.
+                          </div>
+                        ) : (
+                          <div className="grid gap-2">
+                            {aircraftConfigurations.map((aircraftConfig, configIndex) => {
+                              const isBaseConfig = aircraftConfig.id === 'CONFIG-0';
+                              return (
+                                <div key={aircraftConfig.id || configIndex} className="grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
+                                  <div className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100">
+                                    {aircraftConfig.label}
+                                  </div>
+                                  <DraftField
+                                    label="Definition"
+                                    value={aircraftConfig.definition}
+                                    disabled={!canEditResourcePools || isBaseConfig}
+                                    onCommit={(value) => updateAircraftConfiguration(index, configIndex, value)}
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={!canEditResourcePools || isBaseConfig}
+                                    onClick={() => removeAircraftConfiguration(index, configIndex)}
+                                    className="h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {isBaseConfig ? 'Base' : 'Delete'}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-          ) : (
-          <div className="relative z-10 -mt-[2px] space-y-3 rounded-b-lg border-2 border-lime-300 bg-gray-950/35 p-3" role="tabpanel">
+        </div>
+      </section>
+
+      <section id="platform-dfp-resource-rows" className={getSectionClass('platform-dfp-resource-rows')}>
+        <SectionHeader
+          title="DFP Resource Rows"
+          subtitle={resourcePoolsUnlocked
+            ? 'Editing is active. Press Save to apply DFP row changes, then return this section to read-only mode.'
+            : 'Define row counts shown on the DFP, then connect those rows to location, unit, aircraft type, labels and numbering. Click Edit before making changes.'}
+          action={canEdit ? (
+            <div className="flex flex-wrap justify-end gap-[1px]">
+              {resourcePoolsUnlocked ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowResourcePoolDeletePanel((current) => !current)}
+                    className={platformActionButtonClass}
+                    title="Show or hide DFP resource row set deletion controls"
+                  >
+                    <span className="text-[9px] leading-tight">Delete<br />Rows</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addResourcePool}
+                    className={platformActionButtonClass}
+                    title="Add DFP resource row set"
+                  >
+                    <span className="text-[9px] leading-tight">Add<br />Rows</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveResourcePoolsAndExitEdit}
+                    disabled={saving || applyingChanges}
+                    className={platformActionButtonClass}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exitResourcePoolsEditMode}
+                    disabled={saving || applyingChanges}
+                    className={platformActionButtonClass}
+                  >
+                    Exit
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={enterResourcePoolsEditMode}
+                  className={platformActionButtonClass}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          ) : null}
+        />
+        <div className="p-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">DFP Row Sets</div>
+              <div className="mt-1 text-lg font-black text-cyan-100">{config.resourcePools.length}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Rows, labels, numbering and ownership.</div>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 pb-4">
+          <div id="platform-dfp-resource-row-settings" className="space-y-3 rounded-lg border-2 border-lime-300 bg-gray-950/35 p-3">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-lime-100">DFP Row Sets</h4>
               <p className="mt-1 text-xs text-gray-500">Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering.</p>
@@ -8864,7 +8925,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             {visibleResourcePoolRows.map(({ pool, index }) => {
               const editableDfpRows = getEditableDfpResourceRows(pool);
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
-              const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
               const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0
                 ? visibleAircraftTypeOptions
                 : configAircraftTypes.map((aircraft) => aircraft.code)
@@ -9009,55 +9069,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className={resourceSectionPanelClass}>
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
-                          <div className={resourceSectionPanelTitleClass}>{pool.settings?.aircraftLabel || 'Aircraft'} Configurations</div>
-                          <div className={resourceSectionPanelHintClass}>Aircraft fit states that LMP events may require. Use ANY when configuration does not matter.</div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={!canEditResourcePools}
-                          onClick={() => addAircraftConfiguration(index)}
-                          className={aircraftResourceMiniButtonClass}
-                        >
-                          Add Config
-                        </button>
-                      </div>
-                      {aircraftConfigurations.length === 0 ? (
-                        <div className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400">
-                          No configured aircraft states. LMP events will show ANY only.
-                        </div>
-                      ) : (
-                        <div className="grid gap-2">
-                          {aircraftConfigurations.map((aircraftConfig, configIndex) => {
-                            const isBaseConfig = aircraftConfig.id === 'CONFIG-0';
-                            return (
-                              <div key={aircraftConfig.id || configIndex} className="grid items-end gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto]">
-                                <div className="rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-black text-cyan-100">
-                                  {aircraftConfig.label}
-                                </div>
-                                <DraftField
-                                  label="Definition"
-                                  value={aircraftConfig.definition}
-                                  disabled={!canEditResourcePools || isBaseConfig}
-                                  onCommit={(value) => updateAircraftConfiguration(index, configIndex, value)}
-                                />
-                                <button
-                                  type="button"
-                                  disabled={!canEditResourcePools || isBaseConfig}
-                                  onClick={() => removeAircraftConfiguration(index, configIndex)}
-                                  className="h-[38px] rounded-md border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {isBaseConfig ? 'Base' : 'Delete'}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className={resourceSectionPanelClass}>
-                      <div className={resourceSectionPanelHeaderClass}>
-                        <div>
                           <div className={resourceSectionPanelTitleClass}>Row Set Administration</div>
                           <div className={resourceSectionPanelHintClass}>Administrative identity and whether this row set is dedicated or shared.</div>
                         </div>
@@ -9073,7 +9084,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               );
             })}
           </div>
-          )}
         </div>
       </section>
 

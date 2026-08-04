@@ -709,14 +709,14 @@ const initialSetupTemplates: InitialSetupWizardTemplate[] = [
     },
     {
         id: 'resources',
-        label: 'Aircraft types and DFP resource rows',
+        label: 'DFP resource rows',
         fileName: 'DFP_NEO_Resource_Pools_Template.csv',
         requiredHeaders: ['Pool Name', 'Aircraft Type', 'Unit', 'Location', 'Aircraft', 'Sim', 'Trainer', 'Standby', 'Ground'],
         optionalHeaders: ['Notes'],
         exampleRows: [
             ['DFP Resource Rows', 'Aircraft Type', 'UNIT-01', 'LOC-01', '4', '0', '0', '1', '0', ''],
         ],
-        settingsSection: 'platform-resource-pools',
+        settingsSection: 'platform-dfp-resource-rows',
     },
     {
         id: 'staff',
@@ -2012,9 +2012,9 @@ const OrganisationMyUnitSettings: React.FC<{
             return (
                 <div className="space-y-4">
                     <UnitSettingsGroup
-                        title="Aircraft Types & DFP Resource Rows"
+                        title="DFP Resource Rows"
                         description="DFP row sets assigned to this unit or its home location. Edit them from the dedicated aircraft and row page so row changes use the correct effective date."
-                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} row sets</span>{settingsLink('platform-resource-pools', 'Open Aircraft Types & DFP Resource Rows', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
+                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} row sets</span>{settingsLink('platform-dfp-resource-rows', 'Open DFP Resource Rows', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
                     >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
                             return (
@@ -2024,13 +2024,13 @@ const OrganisationMyUnitSettings: React.FC<{
                                     <UnitSettingsReadRow label="Pool type" value={pool.poolType || 'Dedicated'} />
                                     <UnitSettingsReadRow label="Location" value={pool.locationCode || unit.locationCode || 'Not set'} muted={!pool.locationCode && !unit.locationCode} />
                                     <div className="border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300">
-                                        Aircraft type and DFP row changes are managed from the main Aircraft Types & DFP Resource Rows page. Saved row changes apply from tomorrow forward, leave today and previous days unchanged, and clear future built schedules that rely on the old rows.
+                                        DFP row changes are managed from the DFP Resource Rows page. Saved row changes apply from tomorrow forward, leave today and previous days unchanged, and clear future built schedules that rely on the old rows.
                                     </div>
                                 </div>
                             );
                         }) : <UnitSettingsReadRow label="DFP resource row sets" value="No DFP resource row sets are assigned to this unit or location." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP resource row sets." action={settingsLink('platform-resource-pools', 'Open Aircraft Types & DFP Resource Rows', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
+                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP resource row sets." action={settingsLink('platform-aircraft-setup', 'Open Aircraft Setup', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
                         {aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft: any) => {
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
@@ -3635,11 +3635,11 @@ const InitialSetupWizard: React.FC<{
         },
         {
             id: 'resources',
-            label: 'Aircraft types and DFP resource rows',
+            label: 'Aircraft setup and DFP resource rows',
             mandatory: true,
             complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0,
             summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP resource row set${activeResourcePools.length === 1 ? '' : 's'} configured` : 'Aircraft types and DFP resource rows are needed before NEO can build.',
-            settingsSection: 'platform-resource-pools',
+            settingsSection: activeAircraftTypes.length > 0 ? 'platform-dfp-resource-rows' : 'platform-aircraft-setup',
         },
         {
             id: 'crew',

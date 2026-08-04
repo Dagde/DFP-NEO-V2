@@ -1037,7 +1037,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               <div>
                 <h4 className="text-base font-medium text-white mb-1">Configured DFP Resource Rows</h4>
                 <p className="text-xs text-gray-400">
-                  Aircraft rows defined in Aircraft Types & DFP Resource Rows. Daily aircraft availability is entered in Build Priorities.
+                  Aircraft rows are defined in DFP Resource Rows. Daily aircraft availability is entered in Build Priorities.
                 </p>
               </div>
               <div className="text-right">

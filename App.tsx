@@ -2086,7 +2086,7 @@ const DfpSidePanelTimeline: React.FC<{
         const dep = getAssistAirfieldByCode(depCode);
         const arr = getAssistAirfieldByCode(arrCode);
         if (!dep || !arr) return { status: 'error' as const, message: 'Enter valid departure and arrival ICAO/IATA codes.' };
-        if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: 'error' as const, message: 'Aircraft TAS is missing. Add TAS in Settings \u2192 Platform & Deployment \u2192 Aircraft Types & DFP Resource Rows \u2192 Aircraft Types.' };
+        if (!activeAircraftTasKtas || activeAircraftTasKtas <= 0) return { status: 'error' as const, message: 'Aircraft TAS is missing. Add TAS in Settings -> Platform & Deployment -> Aircraft Setup.' };
         const route = calculateGreatCircleRoute(dep, arr);
         const wind = getNearestAssistWindProfile((dep.lat + arr.lat) / 2, (dep.lon + arr.lon) / 2, activeAircraftCruiseFlightLevel);
         if (!wind) return { status: 'error' as const, message: 'Wind profile data is unavailable.' };
@@ -3369,7 +3369,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 step={10}
                                 value={activeAircraftCruiseFlightLevel}
                                 readOnly
-                                title="Set this in Settings \u2192 Platform & Deployment \u2192 Aircraft Types & DFP Resource Rows \u2192 Aircraft Types \u2192 Cruise Alt (FL)."
+                                title="Set this in Settings -> Platform & Deployment -> Aircraft Setup -> Cruise Level (FL)."
                                 className="mt-1 w-full rounded border border-slate-600 bg-slate-900/80 px-2 py-1.5 text-[11px] normal-case tracking-normal text-slate-300"
                             />
                         </label>
