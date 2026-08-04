@@ -107,7 +107,7 @@ async function getPrisma() {
     await ensureAircraftAvailabilityEventTable(prisma);
     // Ensure SctRequest table exists (create if missing)
     await ensureSctRequestTable(prisma);
-    // Ensure CancellationCode table exists and seed defaults
+    // Ensure CancellationCode table exists; starter codes are opt-in for commercial deployments.
     await ensureCancellationCodesTable(prisma);
     await seedCancellationCodesIfEmpty(prisma);
     // Ensure SystemConfig table exists and seed defaults
@@ -2116,11 +2116,15 @@ async function migrateFleetSizeInHistory(db) {
   }
 }
 
-// Seed default codes if table is empty
+// Seed starter codes only when explicitly enabled. Deleted customer codes must stay deleted.
 async function seedCancellationCodesIfEmpty(db) {
   const existing = await db.$queryRawUnsafe(`SELECT COUNT(*) as cnt FROM "CancellationCode"`);
   const count = parseInt(existing[0].cnt);
   if (count > 0) return;
+  if (process.env.DFP_SEED_STARTER_CANCELLATION_CODES !== 'true') {
+    console.log('ℹ️  CancellationCode table is empty - setup cancellation code seed disabled');
+    return;
+  }
 
   const defaults = [
     { code: 'AD', category: 'Aircraft', description: 'On deployment',           appliesTo: 'Both' },
