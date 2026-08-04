@@ -2292,6 +2292,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = useState('');
   const locationRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingLocationScrollIdRef = useRef<string | null>(null);
+  const completedAutoScrollKeysRef = useRef<Set<string>>(new Set());
   const unitRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingUnitScrollIdRef = useRef<string | null>(null);
   const resourcePoolRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -2561,6 +2562,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (locationIndex < 0) return;
     const location = config.locations[locationIndex];
     const rowKey = location.id || `platform-location-${locationIndex}`;
+    const autoScrollKey = `location:${scrollTarget}:${cleanLocationCode}:${rowKey}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         locationRowRefs.current[rowKey]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2652,6 +2656,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || '').trim();
     if (loading || !cleanSubsectionId) return;
+    const autoScrollKey = `subsection:${cleanSubsectionId}:${scrollTarget || ''}:${focusAircraftTypeCode || ''}:${focusUserId || ''}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         const target = document.getElementById(cleanSubsectionId);
@@ -2679,6 +2686,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
+    const autoScrollKey = `section:${scrollTarget}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const frame = window.requestAnimationFrame(() => {
       const target = document.getElementById(scrollTarget);
       target?.scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -67808,6 +67808,7 @@ const PlatformConfigurationSettings = ({
   const [trainingReportSyncUnitCode, setTrainingReportSyncUnitCode] = reactExports.useState("");
   const locationRowRefs = reactExports.useRef({});
   const pendingLocationScrollIdRef = reactExports.useRef(null);
+  const completedAutoScrollKeysRef = reactExports.useRef(/* @__PURE__ */ new Set());
   const unitRowRefs = reactExports.useRef({});
   const pendingUnitScrollIdRef = reactExports.useRef(null);
   const resourcePoolRowRefs = reactExports.useRef({});
@@ -68053,6 +68054,9 @@ const PlatformConfigurationSettings = ({
     if (locationIndex < 0) return;
     const location = config.locations[locationIndex];
     const rowKey = location.id || `platform-location-${locationIndex}`;
+    const autoScrollKey = `location:${scrollTarget}:${cleanLocationCode}:${rowKey}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         locationRowRefs.current[rowKey]?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -68126,6 +68130,9 @@ const PlatformConfigurationSettings = ({
   reactExports.useEffect(() => {
     const cleanSubsectionId = String(focusSubsectionId || "").trim();
     if (loading || !cleanSubsectionId) return;
+    const autoScrollKey = `subsection:${cleanSubsectionId}:${scrollTarget || ""}:${focusAircraftTypeCode || ""}:${focusUserId || ""}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const frame = window.requestAnimationFrame(() => {
       window.setTimeout(() => {
         const target = document.getElementById(cleanSubsectionId);
@@ -68151,6 +68158,9 @@ const PlatformConfigurationSettings = ({
   }, [applyingChanges, config.aircraftTypes, config.resourcePools, resourcePoolsDirty, resourcePoolsUnlocked, saving]);
   reactExports.useEffect(() => {
     if (!scrollTarget || loading || sectionOnly) return;
+    const autoScrollKey = `section:${scrollTarget}`;
+    if (completedAutoScrollKeysRef.current.has(autoScrollKey)) return;
+    completedAutoScrollKeysRef.current.add(autoScrollKey);
     const frame = window.requestAnimationFrame(() => {
       const target = document.getElementById(scrollTarget);
       target?.scrollIntoView({ behavior: "smooth", block: "start" });
