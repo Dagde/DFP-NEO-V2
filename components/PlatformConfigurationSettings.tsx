@@ -1645,6 +1645,19 @@ const parseConfigurationHealthUnitCodes = (...values: unknown[]): string[] => (
   )).filter((value, index, all) => all.indexOf(value) === index)
 );
 
+const resolveConfigurationHealthUnitCodes = (units: any[], unitCodes: string[]): string[] => {
+  const configuredCodes = units
+    .map((unit) => normaliseConfigurationHealthUnitCode(unit?.code))
+    .filter(Boolean);
+  const requestedCodes = parseConfigurationHealthUnitCodes(unitCodes);
+  const requestedText = requestedCodes.join(' ');
+  const resolvedCodes = configuredCodes.filter((code) => (
+    requestedCodes.includes(code)
+    || requestedText.split(/[^A-Z0-9]+/).includes(code)
+  ));
+  return resolvedCodes.length > 0 ? resolvedCodes : requestedCodes;
+};
+
 const buildScopedConfigurationHealthConfig = (
   config: PlatformConfig,
   unitCodes: string[],
@@ -1655,7 +1668,7 @@ const buildScopedConfigurationHealthConfig = (
   const aircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
   const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
   const userAccess = Array.isArray(config.userAccess) ? config.userAccess : [];
-  const requestedUnitCodes = parseConfigurationHealthUnitCodes(unitCodes);
+  const requestedUnitCodes = resolveConfigurationHealthUnitCodes(units, unitCodes);
   const fallbackUnit = units.find(isActiveRecord) || units[0] || null;
   const scopedUnitCodes = requestedUnitCodes.length > 0
     ? requestedUnitCodes
