@@ -2665,9 +2665,13 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
     setRunProgress('Initialising analytics engine\u2026');
     setError(null);
     try {
+      const sessionToken = localStorage.getItem('dfp_session_token') || '';
       const r = await fetch('/api/tie/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        },
         body: JSON.stringify({ courseFilter: selectedCourse || null, triggeredBy: 'manual-ui' }),
       });
       const result = await r.json();

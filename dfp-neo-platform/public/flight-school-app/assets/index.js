@@ -47253,9 +47253,13 @@ const TrainingIntelligenceTab = ({ trainingReportDisplayName = "Training Reports
     setRunProgress("Initialising analytics engine…");
     setError(null);
     try {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const r = await fetch("/api/tie/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
         body: JSON.stringify({ courseFilter: selectedCourse || null, triggeredBy: "manual-ui" })
       });
       const result = await r.json();

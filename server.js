@@ -13467,7 +13467,9 @@ app.delete('/api/scores/trainee/:traineeId/events', async (req, res) => {
 // POST /api/tie/run - trigger analytics run (fire-and-forget to avoid Railway timeout)
 app.post('/api/tie/run', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { courseFilter, triggeredBy } = req.body;
 
     // Start the analytics run in background WITHOUT awaiting it
