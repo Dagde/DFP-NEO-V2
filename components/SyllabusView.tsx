@@ -1944,7 +1944,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           const deleteResp = await fetch(`/api/syllabus/${deleteEventItem.id}`, {
               method: 'DELETE',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                  'Content-Type': 'application/json',
+                  ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+              },
               body: JSON.stringify({ changeReason: `Event deleted by user` }),
           });
           if (!deleteResp.ok) {

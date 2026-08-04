@@ -4180,7 +4180,9 @@ app.get('/api/audit/logs', async (req, res) => {
 // DELETE /api/personnel/:id - Delete a personnel record
 app.delete('/api/personnel/:id', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { id } = req.params;
 
     if (!id) {
@@ -4385,7 +4387,9 @@ app.get('/api/trainees', async (req, res) => {
 // DELETE /api/trainees/:id - Delete a trainee record
 app.delete('/api/trainees/:id', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { id } = req.params;
 
     if (!id) {
@@ -6963,7 +6967,9 @@ app.put('/api/syllabus/:id', async (req, res) => {
 // DELETE /api/syllabus/:id - Hard delete a syllabus item (permanently removes from DB)
 app.delete('/api/syllabus/:id', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { id } = req.params;
     const { hardDelete } = req.body || {};
 

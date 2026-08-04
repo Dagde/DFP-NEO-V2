@@ -56721,7 +56721,10 @@ const SyllabusView = ({
       const deleteResp = await fetch(`/api/syllabus/${deleteEventItem.id}`, {
         method: "DELETE",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
         body: JSON.stringify({ changeReason: `Event deleted by user` })
       });
       if (!deleteResp.ok) {
@@ -64015,8 +64018,10 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChange
   const handleDeleteStaff = async (staffId, staffName, staffRank) => {
     try {
       setDeletingId(staffId);
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const response = await fetch(`/api/personnel/${staffId}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -64364,8 +64369,10 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
   const handleDeleteTrainee = async (traineeId, traineeName, traineeRank) => {
     try {
       setDeletingId(traineeId);
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       const response = await fetch(`/api/trainees/${traineeId}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
       });
       if (!response.ok) {
         const errorData = await response.json();

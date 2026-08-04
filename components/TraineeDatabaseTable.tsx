@@ -147,9 +147,11 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
   const handleDeleteTrainee = async (traineeId: string, traineeName: string, traineeRank?: string) => {
     try {
       setDeletingId(traineeId);
+      const sessionToken = localStorage.getItem('dfp_session_token') || '';
       
       const response = await fetch(`/api/trainees/${traineeId}`, {
         method: 'DELETE',
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
       });
 
       if (!response.ok) {

@@ -192,9 +192,11 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
   const handleDeleteStaff = async (staffId: string, staffName: string, staffRank?: string) => {
     try {
       setDeletingId(staffId);
+      const sessionToken = localStorage.getItem('dfp_session_token') || '';
       
       const response = await fetch(`/api/personnel/${staffId}`, {
         method: 'DELETE',
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
       });
 
       if (!response.ok) {
