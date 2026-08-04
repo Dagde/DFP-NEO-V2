@@ -22424,27 +22424,13 @@ const App: React.FC = () => {
     const _scheduleUpdatePersistTimer = useRef<number | null>(null);
     const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
 
-    // Data Source Settings - manages which sources are active (drives immediate filtering)
+    // Data Source Settings - production runtime is DB-only; setup-test records remain separately scoped.
     const [dataSourceSettings, setDataSourceSettings] = useState<{
         staff: boolean;
         trainee: boolean;
         staffDb: boolean;
         traineeDb: boolean;
-    }>(() => {
-        try {
-            const stored = localStorage.getItem('dataSourceSettings');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                return {
-                    staff: parsed.staff === true,
-                    trainee: parsed.trainee === true,
-                    staffDb: parsed.staffDb !== false,
-                    traineeDb: parsed.traineeDb !== false,
-                };
-            }
-        } catch (e) {}
-        return { staff: false, trainee: false, staffDb: true, traineeDb: true };
-    });
+    }>({ staff: false, trainee: false, staffDb: true, traineeDb: true });
 
     const getStoredOperationalContext = (): { location: string; unit: string } => {
         try {
@@ -24633,21 +24619,21 @@ const App: React.FC = () => {
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
         if (!platformConfigLoaded) return;
-        // One-time migration: reset mock data toggles to OFF if they were previously defaulted ON
-        // This prevents mock data contaminating real staff/trainee lists after DB is populated
+        // One-time migration: reset legacy mock data toggles to OFF if they exist in browser storage.
+        // Runtime personnel lists are database-only unless setup-test mode is active.
         try {
             const stored = localStorage.getItem('dataSourceSettings');
             if (stored) {
                 const parsed = JSON.parse(stored);
-                // If mock data toggles were saved as true (old default), reset them to false
-                // We detect "old default" by checking if staffDb is also true (new installs have DB on, mock off)
-                if (parsed.staff === true && parsed.staffDb === true && !parsed._mockDataMigrated) {
-                    parsed.staff = false;
-                    parsed.trainee = false;
-                    parsed._mockDataMigrated = true;
-                    localStorage.setItem('dataSourceSettings', JSON.stringify(parsed));
-                    setDataSourceSettings(prev => ({ ...prev, staff: false, trainee: false }));
-                }
+                localStorage.setItem('dataSourceSettings', JSON.stringify({
+                    ...parsed,
+                    staff: false,
+                    trainee: false,
+                    staffDb: true,
+                    traineeDb: true,
+                    _mockDataMigrated: true,
+                }));
+                setDataSourceSettings({ staff: false, trainee: false, staffDb: true, traineeDb: true });
             }
         } catch (e) {
             console.warn('Could not migrate dataSourceSettings');

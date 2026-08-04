@@ -105010,22 +105010,7 @@ const App = () => {
   const [isVisualAdjustMode, setIsVisualAdjustMode] = reactExports.useState(false);
   const _scheduleUpdatePersistTimer = reactExports.useRef(null);
   const [visualAdjustEvent, setVisualAdjustEvent] = reactExports.useState(null);
-  const [dataSourceSettings, setDataSourceSettings] = reactExports.useState(() => {
-    try {
-      const stored = localStorage.getItem("dataSourceSettings");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return {
-          staff: parsed.staff === true,
-          trainee: parsed.trainee === true,
-          staffDb: parsed.staffDb !== false,
-          traineeDb: parsed.traineeDb !== false
-        };
-      }
-    } catch (e) {
-    }
-    return { staff: false, trainee: false, staffDb: true, traineeDb: true };
-  });
+  const [dataSourceSettings, setDataSourceSettings] = reactExports.useState({ staff: false, trainee: false, staffDb: true, traineeDb: true });
   const getStoredOperationalContext = () => {
     try {
       const raw = localStorage.getItem(ACTIVE_OPERATIONAL_CONTEXT_STORAGE_KEY);
@@ -106816,13 +106801,15 @@ const App = () => {
       const stored = localStorage.getItem("dataSourceSettings");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.staff === true && parsed.staffDb === true && !parsed._mockDataMigrated) {
-          parsed.staff = false;
-          parsed.trainee = false;
-          parsed._mockDataMigrated = true;
-          localStorage.setItem("dataSourceSettings", JSON.stringify(parsed));
-          setDataSourceSettings((prev) => ({ ...prev, staff: false, trainee: false }));
-        }
+        localStorage.setItem("dataSourceSettings", JSON.stringify({
+          ...parsed,
+          staff: false,
+          trainee: false,
+          staffDb: true,
+          traineeDb: true,
+          _mockDataMigrated: true
+        }));
+        setDataSourceSettings({ staff: false, trainee: false, staffDb: true, traineeDb: true });
       }
     } catch (e) {
       console.warn("Could not migrate dataSourceSettings");
