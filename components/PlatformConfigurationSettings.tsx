@@ -1811,7 +1811,7 @@ const buildConfigurationHealth = (
     const locationCode = toIdentifier(location.code);
     const organisationCode = toIdentifier(location.organisationCode);
     if (organisationCode && !activeOrganisationCodes.has(organisationCode)) {
-      add('WARNING', 'Locations', `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`, undefined, { focusLocationCode: locationCode });
+      add('WARNING', 'Locations', `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`, 'Open the location row and set Organisation to an active organisation.', { focusLocationCode: locationCode });
     }
     if (!hasUsableSolarLocation(location)) {
       const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
@@ -7400,6 +7400,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
           {visibleLocationRows.map(({ location, index }) => {
             const rowKey = location.id || `platform-location-${index}`;
+            const locationOrganisationOptions = [
+              '',
+              ...uniqueValues([
+                ...configOrganisations.filter((organisation) => isActiveRecord(organisation)).map((organisation) => organisation.code),
+                location.organisationCode || '',
+              ]),
+            ];
             return (
               <div
                 key={rowKey}
@@ -7454,10 +7461,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
+                  <SelectField
+                    label="Organisation"
+                    value={location.organisationCode || ''}
+                    disabled={!canEditSection('platform-locations')}
+                    options={locationOrganisationOptions}
+                    emptyLabel="Unassigned"
+                    onChange={(value) => updateRow('locations', index, { organisationCode: value || '' })}
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEditSection('platform-locations')} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
                 </div>
                 <div className="md:col-span-2">
                   <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEditSection('platform-locations')} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />

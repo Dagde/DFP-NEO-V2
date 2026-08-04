@@ -67403,7 +67403,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     const locationCode = toIdentifier(location.code);
     const organisationCode = toIdentifier(location.organisationCode);
     if (organisationCode && !activeOrganisationCodes.has(organisationCode)) {
-      add("WARNING", "Locations", `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`, void 0, { focusLocationCode: locationCode });
+      add("WARNING", "Locations", `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`, "Open the location row and set Organisation to an active organisation.", { focusLocationCode: locationCode });
     }
     if (!hasUsableSolarLocation(location)) {
       const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
@@ -71934,6 +71934,13 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] }),
         visibleLocationRows.map(({ location, index }) => {
           const rowKey = location.id || `platform-location-${index}`;
+          const locationOrganisationOptions = [
+            "",
+            ...uniqueValues([
+              ...configOrganisations.filter((organisation) => isActiveRecord(organisation)).map((organisation) => organisation.code),
+              location.organisationCode || ""
+            ])
+          ];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
@@ -71992,8 +71999,19 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                     onSelect: (entry) => applyKnownAirfieldToLocation(index, entry, location)
                   }
                 ) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectField,
+                  {
+                    label: "Organisation",
+                    value: location.organisationCode || "",
+                    disabled: !canEditSection("platform-locations"),
+                    options: locationOrganisationOptions,
+                    emptyLabel: "Unassigned",
+                    onChange: (value) => updateRow("locations", index, { organisationCode: value || "" })
+                  }
+                ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEditSection("platform-locations"), options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Latitude", value: toNullableNumber(location.latitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { latitude: value }), info: "Decimal degrees. South is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Longitude", value: toNullableNumber(location.longitude), disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { longitude: value }), info: "Decimal degrees. West is negative." }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TimeZoneField, { label: "IANA Timezone", value: location.timezone || "", disabled: !canEditSection("platform-locations"), onChange: (value) => updateRow("locations", index, { timezone: value }), info: "Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." }) }),
