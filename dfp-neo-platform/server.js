@@ -49,6 +49,69 @@ function isOriginAllowed(req) {
   return getAllowedOrigins().has(origin);
 }
 
+function isExplicitlyEnabled(value) {
+  return value === 'true';
+}
+
+function getSuppliedSecret(req, headerName, queryName) {
+  return req.get(headerName) || req.query?.[queryName] || '';
+}
+
+function secretsMatch(expected, supplied) {
+  if (!expected || !supplied) return false;
+  const expectedBuffer = Buffer.from(String(expected));
+  const suppliedBuffer = Buffer.from(String(supplied));
+  return expectedBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
+}
+
+function rejectAvailabilityDebugRequest(req, res) {
+  if (process.env.NODE_ENV === 'production' && !isExplicitlyEnabled(process.env.DFP_ENABLE_DEBUG_ROUTES)) {
+    res.status(404).json({ error: 'Not found' });
+    return true;
+  }
+
+  const debugSecret = process.env.DFP_DEBUG_ROUTE_SECRET?.trim() || '';
+  if (process.env.NODE_ENV === 'production' && !debugSecret) {
+    res.status(503).json({ error: 'Debug route secret is not configured' });
+    return true;
+  }
+
+  if (debugSecret) {
+    const suppliedSecret = getSuppliedSecret(req, 'x-dfp-debug-secret', 'debugSecret');
+    if (!secretsMatch(debugSecret, suppliedSecret)) {
+      res.status(403).json({ error: 'Debug route secret is required' });
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isAdminSetupEnabled() {
+  return isExplicitlyEnabled(process.env.DFP_ENABLE_ADMIN_SETUP);
+}
+
+function rejectAdminSetupRequest(req, res) {
+  if (!isAdminSetupEnabled()) {
+    res.status(404).json({ error: 'Admin setup is not enabled for this deployment' });
+    return true;
+  }
+
+  const setupSecret = process.env.DFP_ADMIN_SETUP_SECRET?.trim() || '';
+  if (!setupSecret) {
+    res.status(503).json({ error: 'Admin setup secret is not configured' });
+    return true;
+  }
+
+  const suppliedSecret = getSuppliedSecret(req, 'x-dfp-admin-setup-secret', 'setupSecret');
+  if (!secretsMatch(setupSecret, suppliedSecret)) {
+    res.status(403).json({ error: 'Admin setup secret is required' });
+    return true;
+  }
+
+  return false;
+}
+
 // Robust UUID generator - works on all Node versions
 import crypto from 'crypto';
 function generateUUID() {
@@ -1712,6 +1775,8 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
 
 // GET /api/aircraft-availability-debug - Diagnostic endpoint
 app.get('/api/aircraft-availability-debug', async (req, res) => {
+  if (rejectAvailabilityDebugRequest(req, res)) return;
+
   const requestId = `debug_${Date.now()}`;
   console.log(`\n${'='.repeat(80)}`);
   console.log(`[AV-DEBUG] 🔍 Diagnostic request ${requestId}`);
@@ -1810,6 +1875,8 @@ app.get('/api/aircraft-availability-debug', async (req, res) => {
 
 // POST /api/aircraft-availability-debug - Force insert test record
 app.post('/api/aircraft-availability-debug', async (req, res) => {
+  if (rejectAvailabilityDebugRequest(req, res)) return;
+
   const requestId = `debug_post_${Date.now()}`;
   console.log(`\n${'='.repeat(80)}`);
   console.log(`[AV-DEBUG] 🧪 Force insert test ${requestId}`);
@@ -2411,12 +2478,18 @@ app.get('/api/user/search', async (req, res) => {
 // POST /api/admin/setup - Create or reset admin user
 app.post('/api/admin/setup', async (req, res) => {
   try {
+    if (rejectAdminSetupRequest(req, res)) return;
+
     const db = await getPrisma();
     const bcrypt = require('bcryptjs');
 
     const adminUserId = process.env.INITIAL_ADMIN_USERID || 'admin';
-    const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'ChangeMe123!';
+    const adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
     const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@dfpneo.com';
+
+    if (!adminPassword) {
+      return res.status(503).json({ error: 'Initial admin password is not configured' });
+    }
 
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
@@ -2431,8 +2504,7 @@ app.post('/api/admin/setup', async (req, res) => {
       return res.json({
         message: 'Admin password reset successfully',
         userId: adminUserId,
-        password: adminPassword,
-        note: 'Please change the password after login',
+        note: 'Initial admin password was read from deployment configuration and is not returned by this endpoint',
       });
     }
 
@@ -2453,12 +2525,11 @@ app.post('/api/admin/setup', async (req, res) => {
     res.json({
       message: 'Admin user created successfully',
       userId: adminUserId,
-      password: adminPassword,
-      note: 'Please change the password after first login',
+      note: 'Initial admin password was read from deployment configuration and is not returned by this endpoint',
     });
   } catch (error) {
     console.error('❌ POST /api/admin/setup error:', error);
-    res.status(500).json({ error: 'Failed to setup admin user', details: error.message });
+    res.status(500).json({ error: 'Failed to setup admin user' });
   }
 });
 
@@ -2476,18 +2547,24 @@ app.get('/api/admin/setup', async (req, res) => {
     if (!admin) {
       return res.json({
         exists: false,
-        message: 'Admin user does not exist. Use POST /api/admin/setup to create one.',
+        setupEnabled: isAdminSetupEnabled(),
+        message: isAdminSetupEnabled()
+          ? 'Admin user does not exist. Admin setup requires the deployment setup secret.'
+          : 'Admin user does not exist. Admin setup is not enabled for this deployment.',
       });
     }
 
     res.json({
       exists: true,
       admin,
-      message: 'Admin user exists. Use POST /api/admin/setup to reset password.',
+      setupEnabled: isAdminSetupEnabled(),
+      message: isAdminSetupEnabled()
+        ? 'Admin user exists. Password reset requires the deployment setup secret.'
+        : 'Admin user exists. Admin setup is not enabled for this deployment.',
     });
   } catch (error) {
     console.error('❌ GET /api/admin/setup error:', error);
-    res.status(500).json({ error: 'Failed to check admin status', details: error.message });
+    res.status(500).json({ error: 'Failed to check admin status' });
   }
 });
 
