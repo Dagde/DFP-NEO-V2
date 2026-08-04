@@ -1447,7 +1447,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
     isValid: (row) => Boolean(row.code && row.name),
     normalise: (row) => ({
       id: row.id || null,
-      organisationCode: row.organisationCode || 'DEFAULT',
+      organisationCode: String(row.organisationCode || '').trim(),
       code: row.code || '',
       iataCode: row.iataCode || '',
       name: row.name || '',
@@ -1469,7 +1469,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
     isValid: (row) => Boolean(row.code && row.name),
     normalise: (row) => ({
       id: row.id || null,
-      organisationCode: row.organisationCode || 'DEFAULT',
+      organisationCode: String(row.organisationCode || '').trim(),
       locationCode: row.locationCode || '',
       code: row.code || '',
       name: row.name || '',
@@ -1503,7 +1503,7 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
     isValid: (row) => Boolean(row.code && row.name),
     normalise: (row) => ({
       id: row.id || null,
-      organisationCode: row.organisationCode || 'DEFAULT',
+      organisationCode: String(row.organisationCode || '').trim(),
       locationCode: row.locationCode || null,
       unitCode: row.unitCode || null,
       aircraftTypeCode: row.aircraftTypeCode || null,
@@ -1725,10 +1725,10 @@ const PLATFORM_FIELD_LABELS = {
     locationCode: 'Location',
     unitCode: 'Unit',
     aircraftTypeCode: 'Aircraft type',
-    code: 'DFP resource row set code',
-    name: 'DFP resource row set name',
-    poolType: 'DFP resource row set type',
-    status: 'DFP resource row set status',
+    code: 'DFP Resource Rows code',
+    name: 'DFP Resource Rows name',
+    poolType: 'DFP Resource Rows sharing type',
+    status: 'DFP Resource Rows status',
     'settings.aircraftLabel': 'Aircraft display name',
     'settings.aircraftNumberUsePrefix': 'Aircraft number prefix enabled',
     'settings.aircraftNumberPrefixes': 'Aircraft number prefixes',
@@ -1795,7 +1795,7 @@ const PLATFORM_ENTITY_LABELS = {
   CommercialLocation: 'location',
   CommercialUnit: 'unit',
   CommercialAircraftType: 'aircraft type',
-  CommercialResourcePool: 'DFP resource row set',
+  CommercialResourcePool: 'DFP Resource Rows',
   CommercialUnitModule: 'unit module',
   CommercialLicense: 'licence',
   CommercialSchedulingRuleSet: 'scheduling rule set',
@@ -2889,7 +2889,7 @@ app.post('/api/platform-config', async (req, res) => {
     if (incompleteResourcePool) {
       return res.status(400).json({
         error: 'Unsafe platform configuration save blocked',
-        details: 'Every active DFP resource row set needs a code and name before saving.',
+        details: 'Every active DFP Resource Rows record needs a code and name before saving.',
       });
     }
     const hasActiveRecords = (records) => records.some((record) => String(record?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
@@ -2998,7 +2998,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $10,
           "settings" = $11::jsonb,
           "updatedAt" = $12::timestamp
-      `, location.organisationCode || 'DEFAULT', location.code, iataCode, location.name, Number(location.timezoneOffset ?? 10), solar.latitude, solar.longitude, solar.timezone, toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
+      `, String(location.organisationCode || '').trim(), location.code, iataCode, location.name, Number(location.timezoneOffset ?? 10), solar.latitude, solar.longitude, solar.timezone, toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
     }
 
     for (const unit of units) {
@@ -3014,7 +3014,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $6,
           "settings" = $7::jsonb,
           "updatedAt" = $8::timestamp
-      `, unit.organisationCode || 'DEFAULT', unit.locationCode || '', unit.code, unit.name, unit.unitType || '', unit.status || 'ACTIVE', toJson(unit.settings), now);
+      `, String(unit.organisationCode || '').trim(), unit.locationCode || '', unit.code, unit.name, unit.unitType || '', unit.status || 'ACTIVE', toJson(unit.settings), now);
     }
 
     for (const aircraftType of aircraftTypes) {
@@ -3047,7 +3047,7 @@ app.post('/api/platform-config', async (req, res) => {
           "status" = $8,
           "settings" = $9::jsonb,
           "updatedAt" = $10::timestamp
-      `, pool.organisationCode || 'DEFAULT', pool.locationCode || null, pool.unitCode || null, pool.aircraftTypeCode || null, pool.code, pool.name, pool.poolType || 'Dedicated', pool.status || 'ACTIVE', toJson(pool.settings), now);
+      `, String(pool.organisationCode || '').trim(), pool.locationCode || null, pool.unitCode || null, pool.aircraftTypeCode || null, pool.code, pool.name, pool.poolType || 'Dedicated', pool.status || 'ACTIVE', toJson(pool.settings), now);
     }
 
     for (const unitModule of unitModules) {
@@ -9118,7 +9118,7 @@ async function seedCommercialConfigIfEmpty(db) {
         INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
         VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, $2, $3, $4, 'Shared', 'ACTIVE', $5::jsonb, $6::timestamp, $6::timestamp)
         ON CONFLICT ("code") DO NOTHING
-      `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} DFP Resource Row Set`, JSON.stringify({
+      `, locationCode, seedAircraftCode, `${locationCode}-${seedAircraftCode}-POOL`, `${locationName} ${seedAircraftName} DFP Resource Rows`, JSON.stringify({
         applyToV2Runtime: true,
         aircraftLabel: seedAircraftName,
         aircraftNumberUsePrefix: seedAircraftPrefixes.length > 0,

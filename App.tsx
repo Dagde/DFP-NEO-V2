@@ -39923,10 +39923,16 @@ appliedUpdates.forEach(update => {
                     _dataSource: 'database' as const,
                 }));
 
-                // Update instructors - remove old database entries and add fresh ones
+                // Update staff - remove old database entries and add fresh ones.
+                // Mock records are retained only when deliberately enabled.
                 setInstructorsData(prev => {
-                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
-                    return [...nonDbInstructors, ...dbPersonnel];
+                    const retainedSessionStaff = prev.filter(i => {
+                        const source = (i as any)._dataSource;
+                        if (source === 'database') return false;
+                        if (source === 'mockdata') return dataSourceSettings.staff === true;
+                        return source === 'setup-test';
+                    });
+                    return [...retainedSessionStaff, ...dbPersonnel];
                 });
                 setArchivedInstructorsData(dbPersonnel.filter((person: any) => !isRecordActive(person)));
                 logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
@@ -39941,10 +39947,15 @@ appliedUpdates.forEach(update => {
                     _dataSource: 'database' as const,
                 }));
 
-                // Update trainees - replace old database entries with fresh ones, preserve mock
+                // Update trainees - replace old database entries and retain mock data only when deliberately enabled.
                 setTraineesData(prev => {
-                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
-                    return [...mockTrainees, ...dbTrainees];
+                    const retainedSessionTrainees = prev.filter(t => {
+                        const source = (t as any)._dataSource;
+                        if (source === 'database') return false;
+                        if (source === 'mockdata') return dataSourceSettings.trainee === true;
+                        return source === 'setup-test';
+                    });
+                    return [...retainedSessionTrainees, ...dbTrainees];
                 });
 
                 // Register any DB trainee courses that aren't in courseColors yet
@@ -39972,7 +39983,7 @@ appliedUpdates.forEach(update => {
         } catch (error) {
             console.error('❌ Error refreshing database data:', error);
         }
-    }, [scopedApiPath]);
+    }, [dataSourceSettings.staff, dataSourceSettings.trainee, scopedApiPath]);
 
     const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
         logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
@@ -40160,8 +40171,13 @@ appliedUpdates.forEach(update => {
                     if (prevHash === newHash) return prev;
                     logRoutineAppDebug('[Poll] Personnel unavailability CHANGED - updating state');
                     pollChanged = true;
-                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
-                    return [...nonDbInstructors, ...dbPersonnel];
+                    const retainedSessionStaff = prev.filter(i => {
+                        const source = (i as any)._dataSource;
+                        if (source === 'database') return false;
+                        if (source === 'mockdata') return dataSourceSettings.staff === true;
+                        return source === 'setup-test';
+                    });
+                    return [...retainedSessionStaff, ...dbPersonnel];
                 });
             }
             if (traineesRes.ok) {
@@ -40178,8 +40194,13 @@ appliedUpdates.forEach(update => {
                     if (prevHash === newHash) return prev;
                     logRoutineAppDebug('[Poll] Trainee unavailability CHANGED - updating state');
                     pollChanged = true;
-                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
-                    return [...mockTrainees, ...dbTrainees];
+                    const retainedSessionTrainees = prev.filter(t => {
+                        const source = (t as any)._dataSource;
+                        if (source === 'database') return false;
+                        if (source === 'mockdata') return dataSourceSettings.trainee === true;
+                        return source === 'setup-test';
+                    });
+                    return [...retainedSessionTrainees, ...dbTrainees];
                 });
             }
             const now = new Date();
@@ -40191,7 +40212,7 @@ appliedUpdates.forEach(update => {
             console.error('[Poll] Error during poll:', e);
             return false;
         }
-    }, [buildUnavailHash, isUserEditing]);
+    }, [buildUnavailHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing]);
 
     useEffect(() => {
         if (!liveSyncEnabled || isAddFlightTileModalOpen) return;

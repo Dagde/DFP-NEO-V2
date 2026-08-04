@@ -69457,7 +69457,7 @@ This permanently removes the organisation record from platform configuration and
       {
         id: createClientRecordId("master-lmp-access"),
         lmpCode: masterLmpOptions[0] || "",
-        organisationCode: primaryOrganisation?.code || "DEFAULT",
+        organisationCode: primaryOrganisation?.code || "",
         locationCode: null,
         unitCode: defaultUnit?.code || "",
         aircraftTypeCode: null,
@@ -69661,7 +69661,7 @@ This permanently removes the organisation record from platform configuration and
           ...prev.locations,
           {
             id: newLocationId,
-            organisationCode: prev.organisations[0]?.code || "DEFAULT",
+            organisationCode: prev.organisations[0]?.code || "",
             code: "",
             iataCode: "",
             name: "",
@@ -69812,7 +69812,7 @@ This permanently removes the organisation record from platform configuration and
           id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
           name: `UNIT-${prev.units.length + 1}`,
-          organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || "DEFAULT",
+          organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || "",
           locationCode: defaultLocation,
           unitType: contextUnit?.unitType || "",
           status: "ACTIVE",
@@ -70060,7 +70060,7 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
             id: newPoolId,
             code: newPoolCode,
             name: newPoolName,
-            organisationCode: previousOrganisations[0]?.code || "DEFAULT",
+            organisationCode: previousOrganisations[0]?.code || "",
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
             aircraftTypeCode: defaultAircraftTypeCode || null,
@@ -73756,7 +73756,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHeaderClass, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "DFP Row Labels" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelTitleClass, children: "DFP Resource Row Labels" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: "Labels shown on the DFP resource columns. Changing these labels does not alter existing saved records." })
                     ] }) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
@@ -119410,8 +119410,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           _dataSource: "database"
         }));
         setInstructorsData((prev) => {
-          const nonDbInstructors = prev.filter((i) => i._dataSource !== "database");
-          return [...nonDbInstructors, ...dbPersonnel];
+          const retainedSessionStaff = prev.filter((i) => {
+            const source = i._dataSource;
+            if (source === "database") return false;
+            if (source === "mockdata") return dataSourceSettings.staff === true;
+            return source === "setup-test";
+          });
+          return [...retainedSessionStaff, ...dbPersonnel];
         });
         setArchivedInstructorsData(dbPersonnel.filter((person) => !isRecordActive(person)));
         logRoutineAppDebug(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
@@ -119424,8 +119429,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           _dataSource: "database"
         }));
         setTraineesData((prev) => {
-          const mockTrainees = prev.filter((t) => t._dataSource === "mockdata");
-          return [...mockTrainees, ...dbTrainees];
+          const retainedSessionTrainees = prev.filter((t) => {
+            const source = t._dataSource;
+            if (source === "database") return false;
+            if (source === "mockdata") return dataSourceSettings.trainee === true;
+            return source === "setup-test";
+          });
+          return [...retainedSessionTrainees, ...dbTrainees];
         });
         const defaultColors = [
           "bg-sky-400/80",
@@ -119457,7 +119467,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     } catch (error) {
       console.error("❌ Error refreshing database data:", error);
     }
-  }, [scopedApiPath]);
+  }, [dataSourceSettings.staff, dataSourceSettings.trainee, scopedApiPath]);
   const handleBulkUpdateTrainees = reactExports.useCallback(async (updatedTrainees) => {
     logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
     logRoutineAppDebug(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
@@ -119592,8 +119602,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           if (prevHash === newHash) return prev;
           logRoutineAppDebug("[Poll] Personnel unavailability CHANGED - updating state");
           pollChanged = true;
-          const nonDbInstructors = prev.filter((i) => i._dataSource !== "database");
-          return [...nonDbInstructors, ...dbPersonnel];
+          const retainedSessionStaff = prev.filter((i) => {
+            const source = i._dataSource;
+            if (source === "database") return false;
+            if (source === "mockdata") return dataSourceSettings.staff === true;
+            return source === "setup-test";
+          });
+          return [...retainedSessionStaff, ...dbPersonnel];
         });
       }
       if (traineesRes.ok) {
@@ -119610,8 +119625,13 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
           if (prevHash === newHash) return prev;
           logRoutineAppDebug("[Poll] Trainee unavailability CHANGED - updating state");
           pollChanged = true;
-          const mockTrainees = prev.filter((t) => t._dataSource === "mockdata");
-          return [...mockTrainees, ...dbTrainees];
+          const retainedSessionTrainees = prev.filter((t) => {
+            const source = t._dataSource;
+            if (source === "database") return false;
+            if (source === "mockdata") return dataSourceSettings.trainee === true;
+            return source === "setup-test";
+          });
+          return [...retainedSessionTrainees, ...dbTrainees];
         });
       }
       const now = /* @__PURE__ */ new Date();
@@ -119623,7 +119643,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       console.error("[Poll] Error during poll:", e);
       return false;
     }
-  }, [buildUnavailHash, isUserEditing]);
+  }, [buildUnavailHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing]);
   reactExports.useEffect(() => {
     if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
     syncUnavailabilityFromDatabase();

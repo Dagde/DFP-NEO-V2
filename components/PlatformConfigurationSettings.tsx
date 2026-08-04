@@ -4335,7 +4335,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       {
         id: createClientRecordId('master-lmp-access'),
         lmpCode: masterLmpOptions[0] || '',
-        organisationCode: primaryOrganisation?.code || 'DEFAULT',
+        organisationCode: primaryOrganisation?.code || '',
         locationCode: null,
         unitCode: defaultUnit?.code || '',
         aircraftTypeCode: null,
@@ -4583,7 +4583,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ...prev.locations,
           {
             id: newLocationId,
-            organisationCode: prev.organisations[0]?.code || 'DEFAULT',
+            organisationCode: prev.organisations[0]?.code || '',
             code: '',
             iataCode: '',
             name: '',
@@ -4774,7 +4774,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           id: newUnitId,
           code: `UNIT-${prev.units.length + 1}`,
           name: `UNIT-${prev.units.length + 1}`,
-          organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || 'DEFAULT',
+          organisationCode: contextUnit?.organisationCode || prev.organisations[0]?.code || '',
           locationCode: defaultLocation,
           unitType: contextUnit?.unitType || '',
           status: 'ACTIVE',
@@ -5103,7 +5103,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             id: newPoolId,
             code: newPoolCode,
             name: newPoolName,
-            organisationCode: previousOrganisations[0]?.code || 'DEFAULT',
+            organisationCode: previousOrganisations[0]?.code || '',
             locationCode: defaultLocation,
             unitCode: defaultUnitCode,
             aircraftTypeCode: defaultAircraftTypeCode || null,
@@ -9308,7 +9308,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className={resourceSectionPanelClass}>
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
-                          <div className={resourceSectionPanelTitleClass}>DFP Row Labels</div>
+                          <div className={resourceSectionPanelTitleClass}>DFP Resource Row Labels</div>
                           <div className={resourceSectionPanelHintClass}>Labels shown on the DFP resource columns. Changing these labels does not alter existing saved records.</div>
                         </div>
                       </div>
