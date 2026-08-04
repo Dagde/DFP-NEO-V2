@@ -61228,6 +61228,10 @@ const ACHistoryPage = ({
   const [codesLoading, setCodesLoading] = reactExports.useState(true);
   const [codesError, setCodesError] = reactExports.useState(null);
   const canEdit = currentUserRole === "Super Admin" || currentUserRole === "Admin";
+  const getAuthHeaders = reactExports.useCallback(() => {
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
+    return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+  }, []);
   const loadCodesFromDB = reactExports.useCallback(async () => {
     setCodesLoading(true);
     setCodesError(null);
@@ -61261,6 +61265,10 @@ const ACHistoryPage = ({
     setUsedCodes(used);
   }, [cancellationRecords]);
   const handleAddCode = async (newCode) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
+      return;
+    }
     if (cancellationCodes.some((c) => c.code === newCode.code)) {
       await showDarkAlert("A code with this identifier already exists.", "Cancellation Code Exists", "warning");
       return;
@@ -61268,7 +61276,7 @@ const ACHistoryPage = ({
     try {
       const res = await fetch("/api/cancellation-codes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         credentials: "include",
         body: JSON.stringify({ ...newCode, createdBy: currentUserId })
       });
@@ -61287,16 +61295,21 @@ const ACHistoryPage = ({
     }
   };
   const handleEditCode = async (oldCode, newCode) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
+      return;
+    }
     try {
       if (oldCode !== newCode.code) {
         await fetch(`/api/cancellation-codes/${encodeURIComponent(oldCode)}`, {
           method: "DELETE",
+          headers: getAuthHeaders(),
           credentials: "include"
         });
       }
       const res = await fetch("/api/cancellation-codes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         credentials: "include",
         body: JSON.stringify({ ...newCode, createdBy: currentUserId })
       });
@@ -61312,9 +61325,14 @@ const ACHistoryPage = ({
     }
   };
   const handleToggleActive = async (code) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to change cancellation codes.", "Access Denied", "warning");
+      return;
+    }
     try {
       const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}/toggle`, {
         method: "PATCH",
+        headers: getAuthHeaders(),
         credentials: "include"
       });
       if (!res.ok) {
@@ -61331,9 +61349,14 @@ const ACHistoryPage = ({
     }
   };
   const handleDeleteCode = async (code) => {
+    if (!canEdit) {
+      await showDarkAlert("Admin permission is required to delete cancellation codes.", "Access Denied", "warning");
+      return;
+    }
     try {
       const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
         credentials: "include"
       });
       if (!res.ok) {

@@ -10460,7 +10460,9 @@ app.get('/api/cancellation-codes', async (req, res) => {
 // POST /api/cancellation-codes - Create or update a code (upsert)
 app.post('/api/cancellation-codes', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { code, category, description, isActive } = req.body;
     if (!code) return res.status(400).json({ success: false, error: 'code is required' });
     await db.$executeRawUnsafe(`
@@ -10484,7 +10486,9 @@ app.post('/api/cancellation-codes', async (req, res) => {
 // PATCH /api/cancellation-codes/:code/toggle - Toggle active status
 app.patch('/api/cancellation-codes/:code/toggle', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { code } = req.params;
     await db.$executeRawUnsafe(`
       UPDATE "CancellationCode" SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE "code" = $1::text
@@ -10502,7 +10506,9 @@ app.patch('/api/cancellation-codes/:code/toggle', async (req, res) => {
 // DELETE /api/cancellation-codes/:code
 app.delete('/api/cancellation-codes/:code', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { code } = req.params;
     const existing = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1::text`, code);
     if (!existing.length) return res.status(404).json({ success: false, error: 'Code not found' });

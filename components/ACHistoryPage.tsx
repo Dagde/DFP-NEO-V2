@@ -29,6 +29,10 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
 
   // Check if user has edit permissions (Admin or Super Admin)
   const canEdit = currentUserRole === 'Super Admin' || currentUserRole === 'Admin';
+  const getAuthHeaders = useCallback(() => {
+    const sessionToken = localStorage.getItem('dfp_session_token') || '';
+    return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+  }, []);
 
   // ─── Load cancellation codes from the database ───────────────────────────
   const loadCodesFromDB = useCallback(async () => {
@@ -69,6 +73,10 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
 
   // ─── DB-backed CRUD handlers ──────────────────────────────────────────────
   const handleAddCode = async (newCode: CancellationCode) => {
+    if (!canEdit) {
+      await showDarkAlert('Admin permission is required to change cancellation codes.', 'Access Denied', 'warning');
+      return;
+    }
     // Check for duplicate locally first
     if (cancellationCodes.some(c => c.code === newCode.code)) {
       await showDarkAlert('A code with this identifier already exists.', 'Cancellation Code Exists', 'warning');
@@ -77,7 +85,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
     try {
       const res = await fetch('/api/cancellation-codes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         credentials: 'include',
         body: JSON.stringify({ ...newCode, createdBy: currentUserId }),
       });
@@ -98,17 +106,22 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   };
 
   const handleEditCode = async (oldCode: string, newCode: CancellationCode) => {
+    if (!canEdit) {
+      await showDarkAlert('Admin permission is required to change cancellation codes.', 'Access Denied', 'warning');
+      return;
+    }
     try {
       // If the code string changed, delete old and insert new
       if (oldCode !== newCode.code) {
         await fetch(`/api/cancellation-codes/${encodeURIComponent(oldCode)}`, {
           method: 'DELETE',
+          headers: getAuthHeaders(),
           credentials: 'include',
         });
       }
       const res = await fetch('/api/cancellation-codes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         credentials: 'include',
         body: JSON.stringify({ ...newCode, createdBy: currentUserId }),
       });
@@ -125,9 +138,14 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   };
 
   const handleToggleActive = async (code: string) => {
+    if (!canEdit) {
+      await showDarkAlert('Admin permission is required to change cancellation codes.', 'Access Denied', 'warning');
+      return;
+    }
     try {
       const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}/toggle`, {
         method: 'PATCH',
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
       if (!res.ok) {
@@ -146,9 +164,14 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   };
 
   const handleDeleteCode = async (code: string) => {
+    if (!canEdit) {
+      await showDarkAlert('Admin permission is required to delete cancellation codes.', 'Access Denied', 'warning');
+      return;
+    }
     try {
       const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
       if (!res.ok) {
