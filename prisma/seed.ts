@@ -101,17 +101,17 @@ async function main() {
     },
   })
 
-  // Create a test user
+  // Create a standard user
   const standardUserPassword = requiredSeedPassword('DFP_SEED_STANDARD_USER_PASSWORD')
-  const testUserPassword = await bcrypt.hash(standardUserPassword, 10)
+  const standardUserHash = await bcrypt.hash(standardUserPassword, 10)
   await prisma.user.upsert({
     where: { userId: 'USER001' },
     update: {},
     create: {
       userId: 'USER001',
       email: 'user@dfpneo.com',
-      password: testUserPassword,
-      name: 'Test User',
+      password: standardUserHash,
+      name: 'Standard User',
       status: 'active',
       role: {
         connect: { id: userRole.id },
