@@ -1625,11 +1625,90 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   return 'Open the matching Settings section, correct the referenced record, save that section, and recheck Configuration Health.';
 };
 
+type ConfigurationHealthScope = {
+  includeOrganisationWideChecks?: boolean;
+};
+
+const normaliseConfigurationHealthUnitCode = (value: unknown): string => String(value || '').trim().toUpperCase();
+
+const parseConfigurationHealthUnitCodes = (...values: unknown[]): string[] => (
+  values.flatMap((value) => (
+    String(value || '')
+      .split(/[+/]/)
+      .map(normaliseConfigurationHealthUnitCode)
+      .filter(Boolean)
+  )).filter((value, index, all) => all.indexOf(value) === index)
+);
+
+const buildScopedConfigurationHealthConfig = (
+  config: PlatformConfig,
+  unitCodes: string[],
+): PlatformConfig => {
+  const organisations = Array.isArray(config.organisations) ? config.organisations : [];
+  const locations = Array.isArray(config.locations) ? config.locations : [];
+  const units = Array.isArray(config.units) ? config.units : [];
+  const aircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
+  const resourcePools = Array.isArray(config.resourcePools) ? config.resourcePools : [];
+  const userAccess = Array.isArray(config.userAccess) ? config.userAccess : [];
+  const requestedUnitCodes = parseConfigurationHealthUnitCodes(unitCodes);
+  const fallbackUnit = units.find(isActiveRecord) || units[0] || null;
+  const scopedUnitCodes = requestedUnitCodes.length > 0
+    ? requestedUnitCodes
+    : [normaliseConfigurationHealthUnitCode(fallbackUnit?.code)].filter(Boolean);
+  const scopedUnitCodeSet = new Set(scopedUnitCodes);
+  const scopedUnits = units.filter((unit) => scopedUnitCodeSet.has(normaliseConfigurationHealthUnitCode(unit?.code)));
+  const locationCodeSet = new Set(
+    scopedUnits.map((unit) => normaliseConfigurationHealthUnitCode(unit?.locationCode)).filter(Boolean)
+  );
+  const scopedResourcePools = resourcePools.filter((pool) => {
+    const unitCode = normaliseConfigurationHealthUnitCode(pool?.unitCode);
+    const locationCode = normaliseConfigurationHealthUnitCode(pool?.locationCode);
+    if (unitCode) return scopedUnitCodeSet.has(unitCode);
+    return locationCodeSet.has(locationCode);
+  });
+  const aircraftTypeCodeSet = new Set([
+    ...scopedUnits.flatMap((unit) => [
+      normaliseConfigurationHealthUnitCode(unit?.settings?.aircraftTypeCode),
+      normaliseConfigurationHealthUnitCode(unit?.settings?.aircraftType),
+    ]),
+    ...scopedResourcePools.map((pool) => normaliseConfigurationHealthUnitCode(pool?.aircraftTypeCode)),
+  ].filter(Boolean));
+  const organisationCodeSet = new Set([
+    ...scopedUnits.map((unit) => normaliseConfigurationHealthUnitCode(unit?.organisationCode)),
+    ...locations
+      .filter((location) => locationCodeSet.has(normaliseConfigurationHealthUnitCode(location?.code)))
+      .map((location) => normaliseConfigurationHealthUnitCode(location?.organisationCode)),
+    normaliseConfigurationHealthUnitCode(organisations.find(isActiveRecord)?.code || organisations[0]?.code),
+  ].filter(Boolean));
+
+  return {
+    ...config,
+    organisations: organisations.filter((organisation) => {
+      const code = normaliseConfigurationHealthUnitCode(organisation?.code);
+      return !code || organisationCodeSet.size === 0 || organisationCodeSet.has(code);
+    }),
+    locations: locations.filter((location) => locationCodeSet.has(normaliseConfigurationHealthUnitCode(location?.code))),
+    units: scopedUnits,
+    aircraftTypes: aircraftTypes.filter((aircraft) => aircraftTypeCodeSet.has(normaliseConfigurationHealthUnitCode(aircraft?.code))),
+    resourcePools: scopedResourcePools,
+    unitModules: (Array.isArray(config.unitModules) ? config.unitModules : []).filter((unitModule) => (
+      scopedUnitCodeSet.has(normaliseConfigurationHealthUnitCode(unitModule?.unitCode))
+    )),
+    userAccess: userAccess.filter((access) => {
+      const unitCode = normaliseConfigurationHealthUnitCode(access?.unitCode);
+      const locationCode = normaliseConfigurationHealthUnitCode(access?.locationCode);
+      if (unitCode) return scopedUnitCodeSet.has(unitCode);
+      return locationCodeSet.has(locationCode);
+    }),
+  };
+};
+
 const buildConfigurationHealth = (
   config: PlatformConfig,
   permissionProfiles: PermissionProfile[],
   readinessPercent: number,
   operationalReadinessPercent: number,
+  scope: ConfigurationHealthScope = {},
 ): ConfigurationHealthItem[] => {
   const items: ConfigurationHealthItem[] = [];
   const add = (
@@ -1682,6 +1761,7 @@ const buildConfigurationHealth = (
   const healthContinuationCurrencyEventsLabel = `${healthSctTerminology.shortLabel} / Currency Events`;
   const crewCompositionSettings = normaliseCrewCompositionSettings(organisationSettings.crewCompositionSettings || null);
   const standardMissionProfiles = normaliseStandardMissionProfiles(organisationSettings.standardMissionProfiles || null);
+  const includeOrganisationWideChecks = scope.includeOrganisationWideChecks !== false;
 
   const activeOrganisationCodes = new Set(activeOrganisations.map((org) => toIdentifier(org.code)));
   const activeLocationCodes = new Set(activeLocations.map((location) => toIdentifier(location.code)));
@@ -1981,36 +2061,38 @@ const buildConfigurationHealth = (
     }
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  if (activeLicences.length === 0) {
-    add('WARNING', 'Licensing', 'No active licence record', 'Operational deployments should have at least one active licence record.', 'licence-none', undefined, { focusSubsectionId: 'platform-license-records' });
-  } else {
-    activeLicences.forEach((license) => {
-      const licenseName = formatCommercialLicenceDisplayName(license);
-      const licenseKey = toIdentifier(license.licenseKey || license.id || licenseName);
-      const validUntil = parseDateOnly(license.validUntil);
-      if (validUntil && validUntil < today) {
-        add('CRITICAL', 'Licensing', `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseKey || licenseName}-expired`, undefined, { focusSubsectionId: 'platform-license-records' });
-      } else if (!validUntil) {
-        add('WARNING', 'Licensing', `${licenseName} has no expiry date`, 'This may be acceptable for a perpetual licence, but it should be deliberate and recorded.', `licence-${licenseKey || licenseName}-no-expiry`, undefined, { focusSubsectionId: 'platform-license-records' });
+  if (includeOrganisationWideChecks) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (activeLicences.length === 0) {
+      add('WARNING', 'Licensing', 'No active licence record', 'Operational deployments should have at least one active licence record.', 'licence-none', undefined, { focusSubsectionId: 'platform-license-records' });
+    } else {
+      activeLicences.forEach((license) => {
+        const licenseName = formatCommercialLicenceDisplayName(license);
+        const licenseKey = toIdentifier(license.licenseKey || license.id || licenseName);
+        const validUntil = parseDateOnly(license.validUntil);
+        if (validUntil && validUntil < today) {
+          add('CRITICAL', 'Licensing', `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseKey || licenseName}-expired`, undefined, { focusSubsectionId: 'platform-license-records' });
+        } else if (!validUntil) {
+          add('WARNING', 'Licensing', `${licenseName} has no expiry date`, 'This may be acceptable for a perpetual licence, but it should be deliberate and recorded.', `licence-${licenseKey || licenseName}-no-expiry`, undefined, { focusSubsectionId: 'platform-license-records' });
+        }
+      });
+      if (!items.some((item) => item.area === 'Licensing' && item.severity === 'CRITICAL')) {
+        add('OK', 'Licensing', 'Active licence record exists', `${activeLicences.length} active licence record${activeLicences.length === 1 ? '' : 's'} found.`, 'licence-active');
       }
-    });
-    if (!items.some((item) => item.area === 'Licensing' && item.severity === 'CRITICAL')) {
-      add('OK', 'Licensing', 'Active licence record exists', `${activeLicences.length} active licence record${activeLicences.length === 1 ? '' : 's'} found.`, 'licence-active');
     }
-  }
 
-  if (readinessPercent < 100) {
-    add('WARNING', 'Deployment Readiness', 'Deployment checklist incomplete', `Offline and private-network readiness is ${readinessPercent}% complete.`, 'deployment-readiness', undefined, { focusSubsectionId: 'platform-deployment-profile' });
-  } else {
-    add('OK', 'Deployment Readiness', 'Deployment checklist complete', 'All deployment readiness checks are recorded.', 'deployment-readiness-ok');
-  }
+    if (readinessPercent < 100) {
+      add('WARNING', 'Deployment Readiness', 'Deployment checklist incomplete', `Offline and private-network readiness is ${readinessPercent}% complete.`, 'deployment-readiness', undefined, { focusSubsectionId: 'platform-deployment-profile' });
+    } else {
+      add('OK', 'Deployment Readiness', 'Deployment checklist complete', 'All deployment readiness checks are recorded.', 'deployment-readiness-ok');
+    }
 
-  if (operationalReadinessPercent < 100) {
-    add('WARNING', 'Operational Runbook', 'Operational runbook incomplete', `Support, backup, restore, update and evidence readiness is ${operationalReadinessPercent}% complete.`, 'runbook-readiness', undefined, { focusSubsectionId: 'platform-operational-runbook-identity' });
-  } else {
-    add('OK', 'Operational Runbook', 'Operational runbook complete', 'Support, backup, restore, update and evidence records are complete.', 'runbook-readiness-ok');
+    if (operationalReadinessPercent < 100) {
+      add('WARNING', 'Operational Runbook', 'Operational runbook incomplete', `Support, backup, restore, update and evidence readiness is ${operationalReadinessPercent}% complete.`, 'runbook-readiness', undefined, { focusSubsectionId: 'platform-operational-runbook-identity' });
+    } else {
+      add('OK', 'Operational Runbook', 'Operational runbook complete', 'Support, backup, restore, update and evidence records are complete.', 'runbook-readiness-ok');
+    }
   }
 
   const severityRank: Record<ConfigurationHealthSeverity, number> = { CRITICAL: 0, WARNING: 1, OK: 2 };
@@ -5076,9 +5158,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return Array.isArray(profiles) ? profiles : DEFAULT_PERMISSION_PROFILES;
   }, [configOrganisations]);
 
+  const configurationHealthUnitCodes = useMemo(
+    () => parseConfigurationHealthUnitCodes(
+      ...(Array.isArray(activeUnitCodes) ? activeUnitCodes : []),
+      activeCompositeUnitCode,
+      activeUnitCode,
+    ),
+    [activeCompositeUnitCode, activeUnitCode, activeUnitCodes],
+  );
+  const isOrganisationWideConfigurationHealth = currentUserPermission === 'Super Admin';
+  const configurationHealthConfig = useMemo(
+    () => (
+      isOrganisationWideConfigurationHealth
+        ? config
+        : buildScopedConfigurationHealthConfig(config, configurationHealthUnitCodes)
+    ),
+    [config, configurationHealthUnitCodes, isOrganisationWideConfigurationHealth],
+  );
+  const configurationHealthScopeLabel = isOrganisationWideConfigurationHealth
+    ? 'Organisation-wide'
+    : `Current unit: ${configurationHealthUnitCodes.join(' + ') || 'active unit'}`;
   const configurationHealth = useMemo(
-    () => buildConfigurationHealth(config, permissionProfiles, readinessPercent, operationalReadinessPercent),
-    [config, permissionProfiles, readinessPercent, operationalReadinessPercent],
+    () => buildConfigurationHealth(
+      configurationHealthConfig,
+      permissionProfiles,
+      readinessPercent,
+      operationalReadinessPercent,
+      { includeOrganisationWideChecks: isOrganisationWideConfigurationHealth },
+    ),
+    [configurationHealthConfig, isOrganisationWideConfigurationHealth, permissionProfiles, readinessPercent, operationalReadinessPercent],
   );
 
   const configurationHealthSummary = useMemo(() => (
@@ -5092,29 +5200,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const generatedAt = new Date().toISOString();
     const report = {
       generatedAt,
+      scope: {
+        label: configurationHealthScopeLabel,
+        organisationWide: isOrganisationWideConfigurationHealth,
+        unitCodes: configurationHealthUnitCodes,
+      },
       summary: configurationHealthSummary,
       inventory: {
-        organisations: configOrganisations.length,
-        activeOrganisations: configOrganisations.filter(isActiveRecord).length,
-        locations: configLocations.length,
-        activeLocations: configLocations.filter(isActiveRecord).length,
-        units: configUnits.length,
-        activeUnits: configUnits.filter(isActiveRecord).length,
-        resourcePools: configResourcePools.length,
-        activeResourcePools: configResourcePools.filter(isActiveRecord).length,
-        modules: configModules.length,
-        activeModules: configModules.filter(isActiveRecord).length,
-        licences: configLicenses.length,
-        activeLicences: configLicenses.filter(isActiveRecord).length,
-        platformUsers: configPlatformUsers.length,
-        activeUserAccessScopes: configUserAccess.filter(isActiveRecord).length,
+        organisations: configurationHealthConfig.organisations.length,
+        activeOrganisations: configurationHealthConfig.organisations.filter(isActiveRecord).length,
+        locations: configurationHealthConfig.locations.length,
+        activeLocations: configurationHealthConfig.locations.filter(isActiveRecord).length,
+        units: configurationHealthConfig.units.length,
+        activeUnits: configurationHealthConfig.units.filter(isActiveRecord).length,
+        resourcePools: configurationHealthConfig.resourcePools.length,
+        activeResourcePools: configurationHealthConfig.resourcePools.filter(isActiveRecord).length,
+        modules: configurationHealthConfig.modules.length,
+        activeModules: configurationHealthConfig.modules.filter(isActiveRecord).length,
+        licences: configurationHealthConfig.licenses.length,
+        activeLicences: configurationHealthConfig.licenses.filter(isActiveRecord).length,
+        platformUsers: configurationHealthConfig.platformUsers.length,
+        activeUserAccessScopes: configurationHealthConfig.userAccess.filter(isActiveRecord).length,
       },
       readiness: {
         deploymentReadinessPercent: readinessPercent,
         operationalReadinessPercent,
       },
       checks: configurationHealth,
-      note: 'Configuration health is advisory and non-secret. This export intentionally excludes database URLs, passwords, tokens and private licence keys.',
+      note: 'Configuration health is advisory and non-secret. Non-Super-Admin exports are scoped to the current unit context. This export intentionally excludes database URLs, passwords, tokens and private licence keys.',
     };
     downloadTextFile(
       `dfp-neo-configuration-health-${generatedAt.slice(0, 10)}.json`,
@@ -7033,9 +7146,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   This is a management view for administrators. Critical items should be fixed before operational use; warnings are setup gaps or records that should be reviewed before deployment or accreditation evidence export.
                 </p>
               </div>
-              <span className="ml-auto rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
-                Advisory only
-              </span>
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
+                <span className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
+                  {configurationHealthScopeLabel}
+                </span>
+                <span className="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100">
+                  Advisory only
+                </span>
+              </div>
             </div>
           </div>
 
