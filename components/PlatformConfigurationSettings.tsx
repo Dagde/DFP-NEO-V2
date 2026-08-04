@@ -750,7 +750,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
     const name = String(pool?.name || '').trim();
     const unit = String(pool?.unitCode || '').trim();
     const location = String(pool?.locationCode || '').trim();
-    return [code || name || 'Unnamed row set', unit, location].filter(Boolean).join(' / ');
+    return [code || name || 'Unnamed DFP Resource Rows', unit, location].filter(Boolean).join(' / ');
   };
   const describeAircraftType = (aircraftType?: any): string => {
     const code = String(aircraftType?.code || '').trim();
@@ -785,7 +785,7 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
   }
   if (incompleteResourcePool) {
     return {
-      message: `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row code and row name. Open`,
       link: getResourcePoolSettingsLink(
         incompleteResourcePool,
         'open DFP Resource Rows, complete the row code and row name, then save again.'
@@ -794,16 +794,16 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
   }
   if (missingResourcePoolAircraftType) {
     return {
-      message: `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(missingResourcePoolAircraftType)}" need an Aircraft Type. Open`,
       link: getResourcePoolSettingsLink(
         missingResourcePoolAircraftType,
-        'open DFP Resource Rows, choose the Aircraft Type for that row set, then save again.'
+        'open DFP Resource Rows, choose the Aircraft Type, then save again.'
       ),
     };
   }
   if (invalidResourcePoolAircraftType) {
     return {
-      message: `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(invalidResourcePoolAircraftType)}" point to an Aircraft Type that is not active. Open`,
       link: getResourcePoolSettingsLink(
         invalidResourcePoolAircraftType,
         'open DFP Resource Rows, choose an active Aircraft Type, then save again.'
@@ -1596,7 +1596,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
     if (lowerTitle.includes('no usable resources')) {
       return 'Open Settings -> Platform & Deployment -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.';
     }
-    return 'Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the row set location, unit, aircraft type and DFP row quantities so they match active platform records.';
+    return 'Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the location, unit, aircraft type and DFP row quantities so they match active platform records.';
   }
   if (area === 'User Access') {
     if (lowerTitle.includes('no permission profile')) {
@@ -1690,6 +1690,8 @@ const buildConfigurationHealth = (
   const activeResourcePoolAircraftTypeCodes = new Set(
     activeResourcePools.map((pool) => toIdentifier(pool.aircraftTypeCode)).filter(Boolean)
   );
+  const activeResourcePoolKeys = new Map<string, any>();
+  const activeResourcePoolAircraftTypesByUnit = new Map<string, Set<string>>();
   const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
   const platformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const userIds = new Set(platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
@@ -1757,7 +1759,7 @@ const buildConfigurationHealth = (
       || (!toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode)
     ));
     if (matchingPools.length === 0) {
-      add('WARNING', 'DFP Resource Rows', `${unitCode} has no active DFP resource row set`, 'DFP resource rows and scheduling resources need a configured row set for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-dfp-resource-rows' });
+      add('WARNING', 'DFP Resource Rows', `${unitCode} has no active DFP Resource Rows`, 'DFP resource rows and scheduling resources need configured DFP Resource Rows for this unit or location.', `unit-${unitCode}-pools`, undefined, { focusSubsectionId: 'platform-dfp-resource-rows' });
     }
 
     const operationalModel = getUnitOperationalModel(unit);
@@ -1774,9 +1776,9 @@ const buildConfigurationHealth = (
           'WARNING',
           'Unit Separation',
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} has no unit-specific DFP resource row set. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} has no unit-specific DFP Resource Rows. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          'Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.',
+          'Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable unit-specific rows if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.',
           { focusSubsectionId: 'platform-dfp-resource-rows' }
         );
       }
@@ -1807,8 +1809,8 @@ const buildConfigurationHealth = (
       add(
         'WARNING',
         'DFP Resource Rows',
-        `${aircraftLabel} is not used by any DFP resource row set`,
-        `The aircraft type exists, but no active DFP resource row set points to ${aircraftTypeCode}. It will not drive DFP rows until a row set uses it.`,
+        `${aircraftLabel} is not used by any DFP Resource Rows`,
+        `The aircraft type exists, but no active DFP Resource Rows point to ${aircraftTypeCode}. It will not drive DFP rows until DFP Resource Rows use it.`,
         `aircraft-${aircraftTypeCode}-unused-by-pools`,
         undefined,
         { focusAircraftTypeCode: aircraftTypeCode, focusSubsectionId: 'platform-dfp-resource-rows' }
@@ -1817,10 +1819,11 @@ const buildConfigurationHealth = (
   }
 
   activeResourcePools.forEach((pool) => {
-    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || 'DFP resource row set';
+    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || 'DFP Resource Rows';
     const locationCode = toIdentifier(pool.locationCode);
     const unitCode = toIdentifier(pool.unitCode);
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
+    const ownershipKey = `${unitCode || 'SHARED'}__${aircraftTypeCode}`;
 
     if (locationCode && !activeLocationCodes.has(locationCode)) {
       add('CRITICAL', 'DFP Resource Rows', `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
@@ -1846,14 +1849,45 @@ const buildConfigurationHealth = (
     const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add('CRITICAL', 'DFP Resource Rows', `${poolName} has no usable resources`, 'This row set controls DFP resource rows, but all DFP row quantities are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add('CRITICAL', 'DFP Resource Rows', `${poolName} has no usable resources`, 'These DFP Resource Rows control the DFP resource columns, but all row quantities are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+    }
+    if (aircraftTypeCode) {
+      if (activeResourcePoolKeys.has(ownershipKey)) {
+        add(
+          'CRITICAL',
+          'DFP Resource Rows',
+          `${poolName} duplicates unit aircraft rows`,
+          'Only one active DFP Resource Rows record is allowed for each unit and aircraft type.',
+          `pool-${poolName}-duplicate-unit-aircraft`,
+          'Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one active row for this unit and aircraft type, then save.',
+          { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
+        );
+      } else {
+        activeResourcePoolKeys.set(ownershipKey, pool);
+      }
+      if (unitCode) {
+        const aircraftTypesForUnit = activeResourcePoolAircraftTypesByUnit.get(unitCode) || new Set<string>();
+        if (aircraftTypesForUnit.size > 0 && !aircraftTypesForUnit.has(aircraftTypeCode)) {
+          add(
+            'CRITICAL',
+            'DFP Resource Rows',
+            `${unitCode} has DFP Resource Rows for more than one aircraft type`,
+            'NEO Build supports one aircraft type per unit DFP. Create a separate unit for a second aircraft type.',
+            `unit-${unitCode}-multiple-dfp-aircraft-types`,
+            'Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.',
+            { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
+          );
+        }
+        aircraftTypesForUnit.add(aircraftTypeCode);
+        activeResourcePoolAircraftTypesByUnit.set(unitCode, aircraftTypesForUnit);
+      }
     }
   });
 
   if (activeResourcePools.length === 0) {
-    add('WARNING', 'DFP Resource Rows', 'No active DFP resource row set', 'At least one active row set is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-dfp-resource-rows' });
+    add('WARNING', 'DFP Resource Rows', 'No active DFP Resource Rows', 'At least one active DFP Resource Rows record is needed before DFP resource rows can come from platform configuration.', 'runtime-pool-none', undefined, { focusSubsectionId: 'platform-dfp-resource-rows' });
   } else if (!items.some((item) => item.area === 'DFP Resource Rows' && item.severity === 'CRITICAL')) {
-    add('OK', 'DFP Resource Rows', 'DFP resource rows are configured', `${activeResourcePools.length} active row set${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
+    add('OK', 'DFP Resource Rows', 'DFP Resource Rows are configured', `${activeResourcePools.length} active DFP Resource Rows record${activeResourcePools.length === 1 ? '' : 's'} can feed DFP resource rows.`, 'runtime-pool-active');
   }
 
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
@@ -2197,7 +2231,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const resourcePoolDeleteOptions = useMemo(() => (
     (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
       const key = String(pool.id || pool.code || `resource-pool-${index}`);
-      const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Row Set';
+      const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Rows';
       return { key, name };
     })
   ), [config.resourcePools]);
@@ -4467,7 +4501,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
     const password = await showDarkPrompt({
       title: 'Remove Location',
-      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and DFP resource row sets assigned to it will be moved to the first remaining location.`,
+      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and DFP Resource Rows assigned to it will be moved to the first remaining location.`,
       inputLabel: 'Password',
       inputType: 'password',
       inputPlaceholder: 'Enter password',
@@ -4778,7 +4812,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       : 0;
 
     const affectedText = [
-      affectedRows ? `${affectedRows} DFP resource row set${affectedRows === 1 ? '' : 's'}` : '',
+      affectedRows ? `${affectedRows} DFP Resource Rows record${affectedRows === 1 ? '' : 's'}` : '',
       affectedUnits ? `${affectedUnits} unit aircraft assignment${affectedUnits === 1 ? '' : 's'}` : '',
     ].filter(Boolean).join(' and ');
     const confirmed = await showDarkConfirm(
@@ -5627,12 +5661,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const deleteSelectedResourcePool = async () => {
     if (!canEditResourcePools) return;
     if (!selectedResourcePoolDeleteOption) {
-      await showDarkAlert('Select a DFP resource row set to delete.', 'Delete DFP Resource Rows', 'warning');
+      await showDarkAlert('Select DFP Resource Rows to delete.', 'Delete DFP Resource Rows', 'warning');
       return;
     }
 
     const confirmed = await showDarkConfirm(
-      `Delete DFP resource row set "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes it from DFP Resource Rows. Press Save in this section to apply the deletion.`,
+      `Delete DFP Resource Rows "${selectedResourcePoolDeleteOption.name}"?\n\nThis removes them from DFP Resource Rows. Press Save in this section to apply the deletion.`,
       'Delete DFP Resource Rows?',
       'warning',
     );
@@ -5653,11 +5687,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     try {
       const isValid = await verifyCurrentUserPassword(password);
       if (!isValid) {
-        await showDarkAlert('The password was not accepted. The DFP resource row set was not deleted.', 'Password Required', 'warning');
+        await showDarkAlert('The password was not accepted. The DFP Resource Rows were not deleted.', 'Password Required', 'warning');
         return;
       }
     } catch {
-      await showDarkAlert('The app could not verify your password. The DFP resource row set was not deleted.', 'Password Check Failed', 'error');
+      await showDarkAlert('The app could not verify your password. The DFP Resource Rows were not deleted.', 'Password Check Failed', 'error');
       return;
     }
 
@@ -5668,7 +5702,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       )),
     }));
     setSelectedResourcePoolDeleteKey('');
-    onShowSuccess(`DFP resource row set "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
+    onShowSuccess(`DFP Resource Rows "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
 
   const save = async (
@@ -6713,7 +6747,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   ));
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Row Set';
+    const name = String(pool.name || '').trim() || 'Unnamed DFP Resource Rows';
     return { key, name };
   });
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled
@@ -7403,7 +7437,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 {ownershipResourcePoolRows.length > 0 ? ownershipResourcePoolRows.map((pool) => (
                   <div key={`ownership-resource-pool-${pool.code || pool.name}`} className="rounded border border-gray-700 bg-gray-900 px-2 py-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-bold text-white">{pool.name || pool.code || 'Unnamed row set'}</span>
+                      <span className="text-xs font-bold text-white">{pool.name || pool.code || 'Unnamed DFP Resource Rows'}</span>
                       {pool.code ? <span className="rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-100">{pool.code}</span> : null}
                     </div>
                     <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
@@ -7425,7 +7459,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </div>
                   </div>
                 )) : (
-                  <div className="text-xs font-semibold text-gray-400">No DFP resource row set is visible for this unit context.</div>
+                  <div className="text-xs font-semibold text-gray-400">No DFP Resource Rows are visible for this unit context.</div>
                 )}
               </div>
               <div className="mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400">
@@ -7934,7 +7968,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
             {standardMissionProfilesForContext.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400">
-                {activeMissionAircraftTypeCode ? 'No full directed task setups are configured for this unit.' : 'Add an aircraft type and DFP resource row set for this unit before creating Directed Task Setups.'}
+                {activeMissionAircraftTypeCode ? 'No full directed task setups are configured for this unit.' : 'Add an aircraft type and DFP Resource Rows for this unit before creating Directed Task Setups.'}
               </div>
             ) : (
               <div id="platform-standard-mission-records" className="space-y-4">
@@ -8015,7 +8049,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                     crewCompositionMode: nextCrewCompositionId ? 'STANDARD' : 'CUSTOM',
                                   });
                                 }}
-                                info="Uses aircraft types from the selected unit's DFP resource row setup."
+                                info="Uses aircraft types from the selected unit's DFP Resource Rows."
                               />
                               <SelectField label="Type" value={profile.resourceType} disabled={!canEditSection('platform-standard-missions')} options={STANDARD_MISSION_RESOURCE_TYPES} onChange={(value) => updateStandardMissionProfile(profile.id, { resourceType: value as StandardMissionResourceType })} />
                               <SelectField label="Dep" value={profile.departureLocationCode || activeHomeLocationCode} disabled={!canEditSection('platform-standard-missions')} options={visibleLocationOptions.length > 0 ? visibleLocationOptions : configLocations.map((location) => location.code)} onChange={(value) => updateStandardMissionProfile(profile.id, { departureLocationCode: value.toUpperCase() })} />

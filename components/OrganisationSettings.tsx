@@ -1010,7 +1010,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           {/* Fleet Sharing Description and Enable Toggle */}
           <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
             <p className="text-sm text-gray-400 mb-4">
-              Controls whether selected units operate from one shared aircraft row set and one shared DFP context. This does not share staff unless Staff Sharing is also enabled.
+              Controls whether selected units operate from shared DFP Resource Rows and one shared DFP context. This does not share staff unless Staff Sharing is also enabled.
             </p>
             <div className="flex items-center">
               <label className="relative inline-flex items-center cursor-pointer">
@@ -1112,7 +1112,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 </div>
               </div>
               <p className="mt-3 text-xs text-gray-300">
-                Create one arrangement for each shared DFP resource row set in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled.
+                Create one arrangement for each shared DFP Resource Rows setup in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled.
               </p>
               {visibleResourceSharingGroups.length > 1 && (
                 <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -1219,7 +1219,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                         <span className="font-semibold text-white text-sm">Combined Pool Mode</span>
                       </div>
                       <p className="text-xs text-gray-300">
-                        Selected units schedule against one aircraft row set and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled.
+                        Selected units schedule against shared DFP Resource Rows and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled.
                       </p>
                     </button>
                     

@@ -11402,11 +11402,12 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
           UnitSettingsGroup,
           {
             title: "DFP Resource Rows",
-            description: "DFP row sets assigned to this unit or its home location. Edit them from the dedicated aircraft and row page so row changes use the correct effective date.",
+            description: "DFP Resource Rows assigned to this unit or its home location. Edit them from the DFP Resource Rows page so row changes use the correct effective date.",
             action: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: unitSettingsMutedPillClass, children: [
                 resourcePools.length,
-                " row sets"
+                " record",
+                resourcePools.length === 1 ? "" : "s"
               ] }),
               settingsLink("platform-dfp-resource-rows", "Open DFP Resource Rows", { resourcePoolCode: primaryResourcePoolFocusKey })
             ] }),
@@ -11418,10 +11419,10 @@ const OrganisationMyUnitSettings = ({ platformConfig, unitCode, formationCallsig
                 /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "Location", value: pool.locationCode || unit.locationCode || "Not set", muted: !pool.locationCode && !unit.locationCode }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-white/10 bg-slate-950/25 p-3 text-xs font-semibold leading-relaxed text-slate-300", children: "DFP row changes are managed from the DFP Resource Rows page. Saved row changes apply from tomorrow forward, leave today and previous days unchanged, and clear future built schedules that rely on the old rows." })
               ] }, pool.id || pool.code);
-            }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "DFP resource row sets", value: "No DFP resource row sets are assigned to this unit or location.", muted: true })
+            }) : /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsReadRow, { label: "DFP Resource Rows", value: "No DFP Resource Rows are assigned to this unit or location.", muted: true })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's DFP resource row sets.", action: settingsLink("platform-aircraft-setup", "Open Aircraft Setup", { focusSubsectionId: "platform-aircraft-type-settings" }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
+        /* @__PURE__ */ jsxRuntimeExports.jsx(UnitSettingsGroup, { title: "Aircraft Numbering & Configurations", description: "Aircraft type and numbering rules inherited from this unit's DFP Resource Rows.", action: settingsLink("platform-aircraft-setup", "Open Aircraft Setup", { focusSubsectionId: "platform-aircraft-type-settings" }), children: aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft) => {
           const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
           const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-white/10 first:border-t-0", children: [
@@ -11910,7 +11911,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
   }) || crewCompositionSettings.alternateCompositions.length > 0;
   const orgStructureConfigured = organisationStructureLevels.length > 0 && organisationStructureLevels.some((level) => String(level?.name || "").trim() && Array.isArray(level?.options) && level.options.length > 0);
   const primaryAircraftType = activeAircraftTypes[0] || null;
-  const primaryResourcePool = activeResourcePools.find((pool) => normaliseUnitSettingsIdentifier(pool?.unitCode) === normaliseUnitSettingsIdentifier(currentUnit?.code)) || activeResourcePools[0] || null;
+  const primaryResourcePool = activeResourcePools.find((pool) => normaliseUnitSettingsIdentifier(pool?.unitCode) === normaliseUnitSettingsIdentifier(currentUnit?.code)) || activeResourcePools.find((pool) => !normaliseUnitSettingsIdentifier(pool?.unitCode) && normaliseUnitSettingsIdentifier(pool?.locationCode) === normaliseUnitSettingsIdentifier(currentLocation?.code)) || null;
   const primaryUserAccess = activeUserAccess.find((access) => normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code) || normaliseUnitSettingsIdentifier(access?.locationCode || access?.location) === normaliseUnitSettingsIdentifier(currentLocation?.code)) || activeUserAccess[0] || null;
   const primaryMasterLmp = activeMasterLmpCatalogue[0] || null;
   const primaryMasterLmpRule = activeMasterLmpAccess.find((rule) => normaliseUnitSettingsIdentifier(rule?.unitCode || rule?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)) || activeMasterLmpAccess[0] || null;
@@ -12654,27 +12655,30 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     }
     const poolName = String(resourceDraft.poolName || "").trim();
     if (!poolName) {
-      setSaveMessage("Enter a DFP resource row set name before saving.");
+      setSaveMessage("Enter a DFP Resource Rows name before saving.");
       return;
     }
     saveWizardConfig("Aircraft type and DFP resource rows saved into Settings.", (baseConfig) => {
       const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
       const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
       const aircraftExists = aircraftTypes.some((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
-      const poolKey = primaryResourcePool?.id || primaryResourcePool?.code || "";
+      const targetUnitCode = normaliseUnitSettingsIdentifier(resourceDraft.poolUnitCode);
+      const existingUnitPool = resourcePools.find((pool) => String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" && targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode);
+      const targetPool = existingUnitPool || primaryResourcePool || null;
+      const poolKey = targetPool?.id || targetPool?.code || "";
       const generatedPoolCode = makeWizardResourcePoolCode(resourceDraft.poolLocationCode, resourceDraft.poolUnitCode, aircraftCode);
       const nextPool = {
-        id: primaryResourcePool?.id || createWizardRecordId("pool"),
-        code: primaryResourcePool?.code || generatedPoolCode,
+        id: targetPool?.id || createWizardRecordId("pool"),
+        code: targetPool?.code || generatedPoolCode,
         name: poolName,
         organisationCode: activeOrganisation?.code || organisationDraft.code || "DEFAULT",
         locationCode: resourceDraft.poolLocationCode,
         unitCode: resourceDraft.poolUnitCode,
         aircraftTypeCode: aircraftCode,
-        poolType: primaryResourcePool?.poolType || "Dedicated",
+        poolType: targetPool?.poolType || "Dedicated",
         status: "ACTIVE",
         settings: {
-          ...primaryResourcePool?.settings || {},
+          ...targetPool?.settings || {},
           aircraft: parseNumberDraft(resourceDraft.aircraft),
           ftd: parseNumberDraft(resourceDraft.sim),
           cpt: parseNumberDraft(resourceDraft.trainer),
@@ -12682,11 +12686,11 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
           ground: parseNumberDraft(resourceDraft.ground)
         }
       };
-      const poolExists = resourcePools.some((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase());
+      const poolExists = resourcePools.some((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase());
       return {
         ...baseConfig,
         aircraftTypes: aircraftExists ? aircraftTypes.map((aircraft) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode) ? { ...aircraft, name: resourceDraft.aircraftName || aircraftCode, status: aircraft.status || "ACTIVE" } : aircraft) : [...aircraftTypes, { id: createWizardRecordId("aircraft-type"), code: aircraftCode, name: resourceDraft.aircraftName || aircraftCode, category: "Other", status: "ACTIVE", crewComposition: normaliseAircraftCrewComposition(null) }],
-        resourcePools: poolExists ? resourcePools.map((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase() ? { ...pool, ...nextPool, settings: { ...pool.settings || {}, ...nextPool.settings } } : pool) : [...resourcePools, nextPool]
+        resourcePools: poolExists ? resourcePools.map((pool) => poolKey && String(pool?.id || pool?.code || "") === String(poolKey) || targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || "ACTIVE").toUpperCase() !== "INACTIVE" || String(pool?.name || "").trim().toUpperCase() === String(nextPool.name || "").trim().toUpperCase() ? { ...pool, ...nextPool, settings: { ...pool.settings || {}, ...nextPool.settings } } : pool) : [...resourcePools, nextPool]
       };
     });
   };
@@ -12793,7 +12797,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       label: "Aircraft setup and DFP resource rows",
       mandatory: true,
       complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0,
-      summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP resource row set${activeResourcePools.length === 1 ? "" : "s"} configured` : "Aircraft types and DFP resource rows are needed before NEO can build.",
+      summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP Resource Rows record${activeResourcePools.length === 1 ? "" : "s"} configured` : "Aircraft types and DFP Resource Rows are needed before NEO can build.",
       settingsSection: activeAircraftTypes.length > 0 ? "platform-dfp-resource-rows" : "platform-aircraft-setup"
     },
     {
@@ -12914,7 +12918,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       id: "resource-aircraft",
       title: `What aircraft or main resource does ${unitDraft.code || "this unit"} use?`,
       label: "Aircraft",
-      body: "This creates or updates the aircraft type and DFP resource row set name.",
+      body: "This creates or updates the aircraft type and DFP Resource Rows name.",
       checkIds: ["resources"]
     },
     {
@@ -15440,7 +15444,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
           wizardField("Aircraft type code", resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), void 0, "Enter aircraft code"),
           wizardField("Aircraft type name", resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), void 0, "Enter aircraft or resource type"),
-          wizardField("DFP resource row set name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "DFP Resource Rows")
+          wizardField("DFP Resource Rows name", resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), void 0, "DFP Resource Rows")
         ] })
       );
     }
@@ -65314,7 +65318,7 @@ const OrganisationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Aircraft & Resource Sharing" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg border border-gray-600 p-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls whether selected units operate from one shared aircraft row set and one shared DFP context. This does not share staff unless Staff Sharing is also enabled." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mb-4", children: "Controls whether selected units operate from shared DFP Resource Rows and one shared DFP context. This does not share staff unless Staff Sharing is also enabled." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative inline-flex items-center cursor-pointer", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
@@ -65400,7 +65404,7 @@ const OrganisationSettings = ({
                     )
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared DFP resource row set in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-gray-300", children: "Create one arrangement for each shared DFP Resource Rows setup in the organisation. The top-left Location/Unit selector only shows an arrangement at locations where at least two selected units belong. This still does not share staff or trainees unless those settings are separately enabled." }),
                 visibleResourceSharingGroups.length > 1 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 grid grid-cols-1 gap-2 md:grid-cols-2", children: visibleResourceSharingGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "div",
                   {
@@ -65454,7 +65458,7 @@ const OrganisationSettings = ({
                             /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M13 10V3L4 14h7v7l9-11h-7z" }) }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white text-sm", children: "Combined Pool Mode" })
                           ] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units schedule against one aircraft row set and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled." })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-300", children: "Selected units schedule against shared DFP Resource Rows and one shared DFP. Staff still remains unit-restricted unless Staff Sharing is enabled." })
                         ]
                       }
                     ),
@@ -66575,7 +66579,7 @@ const getPlatformConfigSaveBlocker = (config) => {
     const name = String(pool?.name || "").trim();
     const unit = String(pool?.unitCode || "").trim();
     const location = String(pool?.locationCode || "").trim();
-    return [code || name || "Unnamed row set", unit, location].filter(Boolean).join(" / ");
+    return [code || name || "Unnamed DFP Resource Rows", unit, location].filter(Boolean).join(" / ");
   };
   const describeAircraftType = (aircraftType) => {
     const code = String(aircraftType?.code || "").trim();
@@ -66608,7 +66612,7 @@ const getPlatformConfigSaveBlocker = (config) => {
   }
   if (incompleteResourcePool) {
     return {
-      message: `Save blocked: the DFP resource row set "${describeResourcePool(incompleteResourcePool)}" needs a row code and row name. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(incompleteResourcePool)}" need a row code and row name. Open`,
       link: getResourcePoolSettingsLink(
         incompleteResourcePool,
         "open DFP Resource Rows, complete the row code and row name, then save again."
@@ -66617,16 +66621,16 @@ const getPlatformConfigSaveBlocker = (config) => {
   }
   if (missingResourcePoolAircraftType) {
     return {
-      message: `Save blocked: the DFP resource row set "${describeResourcePool(missingResourcePoolAircraftType)}" needs an Aircraft Type. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(missingResourcePoolAircraftType)}" need an Aircraft Type. Open`,
       link: getResourcePoolSettingsLink(
         missingResourcePoolAircraftType,
-        "open DFP Resource Rows, choose the Aircraft Type for that row set, then save again."
+        "open DFP Resource Rows, choose the Aircraft Type, then save again."
       )
     };
   }
   if (invalidResourcePoolAircraftType) {
     return {
-      message: `Save blocked: the DFP resource row set "${describeResourcePool(invalidResourcePoolAircraftType)}" points to an Aircraft Type that is not active. Open`,
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(invalidResourcePoolAircraftType)}" point to an Aircraft Type that is not active. Open`,
       link: getResourcePoolSettingsLink(
         invalidResourcePoolAircraftType,
         "open DFP Resource Rows, choose an active Aircraft Type, then save again."
@@ -67240,7 +67244,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
     if (lowerTitle.includes("no usable resources")) {
       return "Open Settings -> Platform & Deployment -> DFP Resource Rows, enter non-zero row counts such as aircraft, simulator, procedural trainer, standby or ground, then save.";
     }
-    return "Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the row set location, unit, aircraft type and DFP row quantities so they match active platform records.";
+    return "Open Settings -> Platform & Deployment -> DFP Resource Rows and correct the location, unit, aircraft type and DFP row quantities so they match active platform records.";
   }
   if (area === "User Access") {
     if (lowerTitle.includes("no permission profile")) {
@@ -67317,6 +67321,8 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
   const activeResourcePoolAircraftTypeCodes = new Set(
     activeResourcePools.map((pool) => toIdentifier(pool.aircraftTypeCode)).filter(Boolean)
   );
+  const activeResourcePoolKeys = /* @__PURE__ */ new Map();
+  const activeResourcePoolAircraftTypesByUnit = /* @__PURE__ */ new Map();
   const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
   const platformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const userIds = new Set(platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
@@ -67372,7 +67378,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const matchingPools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode || !toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode);
     if (matchingPools.length === 0) {
-      add("WARNING", "DFP Resource Rows", `${unitCode} has no active DFP resource row set`, "DFP resource rows and scheduling resources need a configured row set for this unit or location.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-dfp-resource-rows" });
+      add("WARNING", "DFP Resource Rows", `${unitCode} has no active DFP Resource Rows`, "DFP resource rows and scheduling resources need configured DFP Resource Rows for this unit or location.", `unit-${unitCode}-pools`, void 0, { focusSubsectionId: "platform-dfp-resource-rows" });
     }
     const operationalModel = getUnitOperationalModel(unit);
     if (isFixedCrewLikeOperationalModel(operationalModel)) {
@@ -67383,9 +67389,9 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
           "WARNING",
           "Unit Separation",
           `${unitCode} will use shared resource capacity`,
-          `${unitCode} has no unit-specific DFP resource row set. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
+          `${unitCode} has no unit-specific DFP Resource Rows. It can still schedule using shared or location capacity where that is intended, but separated-unit builds may not reflect a dedicated unit allocation.`,
           `unit-${unitCode}-separation-resource-pool`,
-          "Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable a unit-specific row set if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.",
+          "Open Settings -> Platform & Deployment -> DFP Resource Rows and add or enable unit-specific rows if this unit needs independent aircraft, simulator, trainer, standby or ground capacity.",
           { focusSubsectionId: "platform-dfp-resource-rows" }
         );
       }
@@ -67413,8 +67419,8 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
       add(
         "WARNING",
         "DFP Resource Rows",
-        `${aircraftLabel} is not used by any DFP resource row set`,
-        `The aircraft type exists, but no active DFP resource row set points to ${aircraftTypeCode}. It will not drive DFP rows until a row set uses it.`,
+        `${aircraftLabel} is not used by any DFP Resource Rows`,
+        `The aircraft type exists, but no active DFP Resource Rows point to ${aircraftTypeCode}. It will not drive DFP rows until DFP Resource Rows use it.`,
         `aircraft-${aircraftTypeCode}-unused-by-pools`,
         void 0,
         { focusAircraftTypeCode: aircraftTypeCode, focusSubsectionId: "platform-dfp-resource-rows" }
@@ -67422,10 +67428,11 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     });
   }
   activeResourcePools.forEach((pool) => {
-    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || "DFP resource row set";
+    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || "DFP Resource Rows";
     const locationCode = toIdentifier(pool.locationCode);
     const unitCode = toIdentifier(pool.unitCode);
     const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
+    const ownershipKey = `${unitCode || "SHARED"}__${aircraftTypeCode}`;
     if (locationCode && !activeLocationCodes.has(locationCode)) {
       add("CRITICAL", "DFP Resource Rows", `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
@@ -67449,13 +67456,44 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
     }
     const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
-      add("CRITICAL", "DFP Resource Rows", `${poolName} has no usable resources`, "This row set controls DFP resource rows, but all DFP row quantities are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+      add("CRITICAL", "DFP Resource Rows", `${poolName} has no usable resources`, "These DFP Resource Rows control the DFP resource columns, but all row quantities are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
+    }
+    if (aircraftTypeCode) {
+      if (activeResourcePoolKeys.has(ownershipKey)) {
+        add(
+          "CRITICAL",
+          "DFP Resource Rows",
+          `${poolName} duplicates unit aircraft rows`,
+          "Only one active DFP Resource Rows record is allowed for each unit and aircraft type.",
+          `pool-${poolName}-duplicate-unit-aircraft`,
+          "Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one active row for this unit and aircraft type, then save.",
+          { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
+        );
+      } else {
+        activeResourcePoolKeys.set(ownershipKey, pool);
+      }
+      if (unitCode) {
+        const aircraftTypesForUnit = activeResourcePoolAircraftTypesByUnit.get(unitCode) || /* @__PURE__ */ new Set();
+        if (aircraftTypesForUnit.size > 0 && !aircraftTypesForUnit.has(aircraftTypeCode)) {
+          add(
+            "CRITICAL",
+            "DFP Resource Rows",
+            `${unitCode} has DFP Resource Rows for more than one aircraft type`,
+            "NEO Build supports one aircraft type per unit DFP. Create a separate unit for a second aircraft type.",
+            `unit-${unitCode}-multiple-dfp-aircraft-types`,
+            "Open Settings -> Platform & Deployment -> DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.",
+            { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
+          );
+        }
+        aircraftTypesForUnit.add(aircraftTypeCode);
+        activeResourcePoolAircraftTypesByUnit.set(unitCode, aircraftTypesForUnit);
+      }
     }
   });
   if (activeResourcePools.length === 0) {
-    add("WARNING", "DFP Resource Rows", "No active DFP resource row set", "At least one active row set is needed before DFP resource rows can come from platform configuration.", "runtime-pool-none", void 0, { focusSubsectionId: "platform-dfp-resource-rows" });
+    add("WARNING", "DFP Resource Rows", "No active DFP Resource Rows", "At least one active DFP Resource Rows record is needed before DFP resource rows can come from platform configuration.", "runtime-pool-none", void 0, { focusSubsectionId: "platform-dfp-resource-rows" });
   } else if (!items.some((item) => item.area === "DFP Resource Rows" && item.severity === "CRITICAL")) {
-    add("OK", "DFP Resource Rows", "DFP resource rows are configured", `${activeResourcePools.length} active row set${activeResourcePools.length === 1 ? "" : "s"} can feed DFP resource rows.`, "runtime-pool-active");
+    add("OK", "DFP Resource Rows", "DFP Resource Rows are configured", `${activeResourcePools.length} active DFP Resource Rows record${activeResourcePools.length === 1 ? "" : "s"} can feed DFP resource rows.`, "runtime-pool-active");
   }
   const missingAlternateClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.alternateCompositions);
   const missingCurrencyClones = countMissingCompositeUnitProfileClones(crewCompositionSettings.currencyProfiles);
@@ -67741,7 +67779,7 @@ const PlatformConfigurationSettings = ({
   }), [config.aircraftTypes, config.resourcePools]);
   const resourcePoolDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Row Set";
+    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
     return { key, name };
   }), [config.resourcePools]);
   const aircraftTypeDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.aircraftTypes) ? config.aircraftTypes : []).map((aircraft, index) => {
@@ -69575,7 +69613,7 @@ This permanently removes the organisation record from platform configuration and
     }
     const password = await showDarkPrompt({
       title: "Remove Location",
-      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and DFP resource row sets assigned to it will be moved to the first remaining location.`,
+      message: `Enter your password to remove ${getPlatformLocationAuditLabel(location)}. Units and DFP Resource Rows assigned to it will be moved to the first remaining location.`,
       inputLabel: "Password",
       inputType: "password",
       inputPlaceholder: "Enter password",
@@ -69812,7 +69850,7 @@ This permanently removes the organisation record from platform configuration and
     const affectedRows = removedCode ? resourcePools.filter((pool) => normaliseUnitCode2(pool.aircraftTypeCode) === removedCode).length : 0;
     const affectedUnits = removedCode ? units.filter((unit) => normaliseUnitCode2(unit.settings?.aircraftTypeCode || unit.settings?.aircraftType) === removedCode).length : 0;
     const affectedText = [
-      affectedRows ? `${affectedRows} DFP resource row set${affectedRows === 1 ? "" : "s"}` : "",
+      affectedRows ? `${affectedRows} DFP Resource Rows record${affectedRows === 1 ? "" : "s"}` : "",
       affectedUnits ? `${affectedUnits} unit aircraft assignment${affectedUnits === 1 ? "" : "s"}` : ""
     ].filter(Boolean).join(" and ");
     const confirmed = await showDarkConfirm(
@@ -70463,13 +70501,13 @@ This removes the reusable permission profile from Settings. Users assigned only 
   const deleteSelectedResourcePool = async () => {
     if (!canEditResourcePools) return;
     if (!selectedResourcePoolDeleteOption) {
-      await showDarkAlert("Select a DFP resource row set to delete.", "Delete DFP Resource Rows", "warning");
+      await showDarkAlert("Select DFP Resource Rows to delete.", "Delete DFP Resource Rows", "warning");
       return;
     }
     const confirmed = await showDarkConfirm(
-      `Delete DFP resource row set "${selectedResourcePoolDeleteOption.name}"?
+      `Delete DFP Resource Rows "${selectedResourcePoolDeleteOption.name}"?
 
-This removes it from DFP Resource Rows. Press Save in this section to apply the deletion.`,
+This removes them from DFP Resource Rows. Press Save in this section to apply the deletion.`,
       "Delete DFP Resource Rows?",
       "warning"
     );
@@ -70488,11 +70526,11 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
     try {
       const isValid = await verifyCurrentUserPassword(password);
       if (!isValid) {
-        await showDarkAlert("The password was not accepted. The DFP resource row set was not deleted.", "Password Required", "warning");
+        await showDarkAlert("The password was not accepted. The DFP Resource Rows were not deleted.", "Password Required", "warning");
         return;
       }
     } catch {
-      await showDarkAlert("The app could not verify your password. The DFP resource row set was not deleted.", "Password Check Failed", "error");
+      await showDarkAlert("The app could not verify your password. The DFP Resource Rows were not deleted.", "Password Check Failed", "error");
       return;
     }
     setConfig((prev) => ({
@@ -70500,7 +70538,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
       resourcePools: (Array.isArray(prev.resourcePools) ? prev.resourcePools : []).filter((pool, index) => String(pool.id || pool.code || `resource-pool-${index}`) !== selectedResourcePoolDeleteOption.key)
     }));
     setSelectedResourcePoolDeleteKey("");
-    onShowSuccess(`DFP resource row set "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
+    onShowSuccess(`DFP Resource Rows "${selectedResourcePoolDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
   const save = async (configOverride, restoreSection, options) => {
     const candidateConfig = fillSingleAircraftTypeForResourceRows(
@@ -71369,7 +71407,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
   const visibleSelectedAccessRows = visibleUserAccessRows.filter(({ access }) => String(access.userId || "").trim() === selectedAccessUserId);
   const visibleResourcePoolDeleteOptions = visibleResourcePoolRows.map(({ pool, index }) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
-    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Row Set";
+    const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
     return { key, name };
   });
   const activeResourcePoolDeleteOptions = settingsVisibilityEnabled ? visibleResourcePoolDeleteOptions : resourcePoolDeleteOptions;
@@ -71966,7 +72004,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80", children: "DFP Resource Rows" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 space-y-2", children: ownershipResourcePoolRows.length > 0 ? ownershipResourcePoolRows.map((pool) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900 px-2 py-1.5", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: pool.name || pool.code || "Unnamed row set" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-white", children: pool.name || pool.code || "Unnamed DFP Resource Rows" }),
                 pool.code ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded border border-cyan-400/25 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-100", children: pool.code }) : null
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400", children: [
@@ -71982,7 +72020,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
                 `Standby ${pool.rows.standby}`,
                 `Ground ${pool.rows.ground}`
               ].join(" · ") })
-            ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP resource row set is visible for this unit context." }) }),
+            ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP Resource Rows are visible for this unit context." }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400", children: [
               "DFP row counts, row ownership, resource labels and aircraft assignment are managed in",
               " ",
@@ -72503,7 +72541,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "New Directed Task Setups start with the unit home location and unit callsign. Use these when a recurring task needs aircraft, crew, timing or callsign details, not just a name in the Directed Task box." })
         ] }),
-        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: activeMissionAircraftTypeCode ? "No full directed task setups are configured for this unit." : "Add an aircraft type and DFP resource row set for this unit before creating Directed Task Setups." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
+        standardMissionProfilesForContext.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-dashed border-gray-700 bg-gray-900/60 p-5 text-sm text-gray-400", children: activeMissionAircraftTypeCode ? "No full directed task setups are configured for this unit." : "Add an aircraft type and DFP Resource Rows for this unit before creating Directed Task Setups." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-standard-mission-records", className: "space-y-4", children: standardMissionProfilesForContext.map((profile) => {
           const missionAircraftTypeCode = String(profile.aircraftTypeCode || getUnitAircraftTypeCode(profile.unitCode || activePrimaryUnitCode) || activeMissionAircraftTypeCode || "").trim().toUpperCase();
           const missionCrewOptions = getStandardMissionCrewOptions(missionAircraftTypeCode);
           const aircraftConfigOptions = getAircraftConfigOptions(missionAircraftTypeCode);
@@ -72574,7 +72612,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
                             crewCompositionMode: nextCrewCompositionId ? "STANDARD" : "CUSTOM"
                           });
                         },
-                        info: "Uses aircraft types from the selected unit's DFP resource row setup."
+                        info: "Uses aircraft types from the selected unit's DFP Resource Rows."
                       }
                     ),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Type", value: profile.resourceType, disabled: !canEditSection("platform-standard-missions"), options: STANDARD_MISSION_RESOURCE_TYPES, onChange: (value) => updateStandardMissionProfile(profile.id, { resourceType: value }) }),

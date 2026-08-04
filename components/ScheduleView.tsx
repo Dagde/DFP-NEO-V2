@@ -2013,8 +2013,8 @@ const OrganisationMyUnitSettings: React.FC<{
                 <div className="space-y-4">
                     <UnitSettingsGroup
                         title="DFP Resource Rows"
-                        description="DFP row sets assigned to this unit or its home location. Edit them from the dedicated aircraft and row page so row changes use the correct effective date."
-                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} row sets</span>{settingsLink('platform-dfp-resource-rows', 'Open DFP Resource Rows', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
+                        description="DFP Resource Rows assigned to this unit or its home location. Edit them from the DFP Resource Rows page so row changes use the correct effective date."
+                        action={<div className="flex flex-wrap justify-end gap-2"><span className={unitSettingsMutedPillClass}>{resourcePools.length} record{resourcePools.length === 1 ? '' : 's'}</span>{settingsLink('platform-dfp-resource-rows', 'Open DFP Resource Rows', { resourcePoolCode: primaryResourcePoolFocusKey })}</div>}
                     >
                         {resourcePools.length > 0 ? resourcePools.map((pool: any) => {
                             return (
@@ -2028,9 +2028,9 @@ const OrganisationMyUnitSettings: React.FC<{
                                     </div>
                                 </div>
                             );
-                        }) : <UnitSettingsReadRow label="DFP resource row sets" value="No DFP resource row sets are assigned to this unit or location." muted />}
+                        }) : <UnitSettingsReadRow label="DFP Resource Rows" value="No DFP Resource Rows are assigned to this unit or location." muted />}
                     </UnitSettingsGroup>
-                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP resource row sets." action={settingsLink('platform-aircraft-setup', 'Open Aircraft Setup', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
+                    <UnitSettingsGroup title="Aircraft Numbering & Configurations" description="Aircraft type and numbering rules inherited from this unit's DFP Resource Rows." action={settingsLink('platform-aircraft-setup', 'Open Aircraft Setup', { focusSubsectionId: 'platform-aircraft-type-settings' })}>
                         {aircraftTypesForUnit.length > 0 ? aircraftTypesForUnit.map((aircraft: any) => {
                             const composition = normaliseAircraftCrewComposition(aircraft.crewComposition);
                             const configurations = Array.isArray(aircraft.settings?.aircraftConfigurations) ? aircraft.settings.aircraftConfigurations : [];
@@ -2621,7 +2621,10 @@ const InitialSetupWizard: React.FC<{
     const primaryAircraftType = activeAircraftTypes[0] || null;
     const primaryResourcePool = activeResourcePools.find((pool: any) => (
         normaliseUnitSettingsIdentifier(pool?.unitCode) === normaliseUnitSettingsIdentifier(currentUnit?.code)
-    )) || activeResourcePools[0] || null;
+    )) || activeResourcePools.find((pool: any) => (
+        !normaliseUnitSettingsIdentifier(pool?.unitCode)
+        && normaliseUnitSettingsIdentifier(pool?.locationCode) === normaliseUnitSettingsIdentifier(currentLocation?.code)
+    )) || null;
     const primaryUserAccess = activeUserAccess.find((access: any) => (
         normaliseUnitSettingsIdentifier(access?.unitCode || access?.unit) === normaliseUnitSettingsIdentifier(currentUnit?.code)
         || normaliseUnitSettingsIdentifier(access?.locationCode || access?.location) === normaliseUnitSettingsIdentifier(currentLocation?.code)
@@ -3473,27 +3476,34 @@ const InitialSetupWizard: React.FC<{
         }
         const poolName = String(resourceDraft.poolName || '').trim();
         if (!poolName) {
-            setSaveMessage('Enter a DFP resource row set name before saving.');
+            setSaveMessage('Enter a DFP Resource Rows name before saving.');
             return;
         }
         saveWizardConfig('Aircraft type and DFP resource rows saved into Settings.', (baseConfig) => {
             const aircraftTypes = Array.isArray(baseConfig.aircraftTypes) ? baseConfig.aircraftTypes : [];
             const resourcePools = Array.isArray(baseConfig.resourcePools) ? baseConfig.resourcePools : [];
             const aircraftExists = aircraftTypes.some((aircraft: any) => normaliseUnitSettingsIdentifier(aircraft?.code) === normaliseUnitSettingsIdentifier(aircraftCode));
-            const poolKey = primaryResourcePool?.id || primaryResourcePool?.code || '';
+            const targetUnitCode = normaliseUnitSettingsIdentifier(resourceDraft.poolUnitCode);
+            const existingUnitPool = resourcePools.find((pool: any) => (
+                String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+                && targetUnitCode
+                && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode
+            ));
+            const targetPool = existingUnitPool || primaryResourcePool || null;
+            const poolKey = targetPool?.id || targetPool?.code || '';
             const generatedPoolCode = makeWizardResourcePoolCode(resourceDraft.poolLocationCode, resourceDraft.poolUnitCode, aircraftCode);
             const nextPool = {
-                id: primaryResourcePool?.id || createWizardRecordId('pool'),
-                code: primaryResourcePool?.code || generatedPoolCode,
+                id: targetPool?.id || createWizardRecordId('pool'),
+                code: targetPool?.code || generatedPoolCode,
                 name: poolName,
                 organisationCode: activeOrganisation?.code || organisationDraft.code || 'DEFAULT',
                 locationCode: resourceDraft.poolLocationCode,
                 unitCode: resourceDraft.poolUnitCode,
                 aircraftTypeCode: aircraftCode,
-                poolType: primaryResourcePool?.poolType || 'Dedicated',
+                poolType: targetPool?.poolType || 'Dedicated',
                 status: 'ACTIVE',
                 settings: {
-                    ...(primaryResourcePool?.settings || {}),
+                    ...(targetPool?.settings || {}),
                     aircraft: parseNumberDraft(resourceDraft.aircraft),
                     ftd: parseNumberDraft(resourceDraft.sim),
                     cpt: parseNumberDraft(resourceDraft.trainer),
@@ -3503,6 +3513,7 @@ const InitialSetupWizard: React.FC<{
             };
             const poolExists = resourcePools.some((pool: any) => (
                 (poolKey && String(pool?.id || pool?.code || '') === String(poolKey))
+                || (targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
                 || String(pool?.name || '').trim().toUpperCase() === String(nextPool.name || '').trim().toUpperCase()
             ));
             return {
@@ -3513,6 +3524,7 @@ const InitialSetupWizard: React.FC<{
                 resourcePools: poolExists
                     ? resourcePools.map((pool: any) => (
                         (poolKey && String(pool?.id || pool?.code || '') === String(poolKey))
+                        || (targetUnitCode && normaliseUnitSettingsIdentifier(pool?.unitCode) === targetUnitCode && String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
                         || String(pool?.name || '').trim().toUpperCase() === String(nextPool.name || '').trim().toUpperCase()
                             ? { ...pool, ...nextPool, settings: { ...(pool.settings || {}), ...nextPool.settings } }
                             : pool
@@ -3638,7 +3650,7 @@ const InitialSetupWizard: React.FC<{
             label: 'Aircraft setup and DFP resource rows',
             mandatory: true,
             complete: activeAircraftTypes.length > 0 && activeResourcePools.length > 0,
-            summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP resource row set${activeResourcePools.length === 1 ? '' : 's'} configured` : 'Aircraft types and DFP resource rows are needed before NEO can build.',
+            summary: activeResourcePools.length > 0 ? `${activeResourcePools.length} DFP Resource Rows record${activeResourcePools.length === 1 ? '' : 's'} configured` : 'Aircraft types and DFP Resource Rows are needed before NEO can build.',
             settingsSection: activeAircraftTypes.length > 0 ? 'platform-dfp-resource-rows' : 'platform-aircraft-setup',
         },
         {
@@ -3760,7 +3772,7 @@ const InitialSetupWizard: React.FC<{
             id: 'resource-aircraft',
             title: `What aircraft or main resource does ${unitDraft.code || 'this unit'} use?`,
             label: 'Aircraft',
-            body: 'This creates or updates the aircraft type and DFP resource row set name.',
+            body: 'This creates or updates the aircraft type and DFP Resource Rows name.',
             checkIds: ['resources'],
         },
         {
@@ -6581,7 +6593,7 @@ const InitialSetupWizard: React.FC<{
                 <div className="grid gap-3 md:grid-cols-2">
                     {wizardField('Aircraft type code', resourceDraft.aircraftCode, (value) => setResourceDraft((draft) => ({ ...draft, aircraftCode: value.toUpperCase(), aircraftName: draft.aircraftName || value })), undefined, 'Enter aircraft code')}
                     {wizardField('Aircraft type name', resourceDraft.aircraftName, (value) => setResourceDraft((draft) => ({ ...draft, aircraftName: value })), undefined, 'Enter aircraft or resource type')}
-                    {wizardField('DFP resource row set name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'DFP Resource Rows')}
+                    {wizardField('DFP Resource Rows name', resourceDraft.poolName, (value) => setResourceDraft((draft) => ({ ...draft, poolName: value })), undefined, 'DFP Resource Rows')}
                 </div>,
             );
         }
