@@ -70419,9 +70419,12 @@ This removes the reusable permission profile from Settings. Users assigned only 
     return normaliseAircraftConfigurationDefinitions(mergedDefinitions);
   };
   const getAircraftTypeConfigurationDefinitions = (aircraftType) => {
+    if (Array.isArray(aircraftType?.settings?.aircraftConfigurations)) {
+      return mergeAircraftConfigurationDefinitions(aircraftType.settings.aircraftConfigurations);
+    }
     const aircraftTypeCode = String(aircraftType?.code || "").trim().toUpperCase();
     const legacyResourcePoolDefinitions = (Array.isArray(config.resourcePools) ? config.resourcePools : []).filter((pool) => String(pool?.aircraftTypeCode || "").trim().toUpperCase() === aircraftTypeCode).map((pool) => pool?.settings?.aircraftConfigurations);
-    return mergeAircraftConfigurationDefinitions(aircraftType?.settings?.aircraftConfigurations, legacyResourcePoolDefinitions);
+    return mergeAircraftConfigurationDefinitions(void 0, legacyResourcePoolDefinitions);
   };
   const updateAircraftTypeConfigurationDefinitions = (aircraftIndex, aircraftConfigurations) => {
     const userDefinitions = aircraftConfigurations.filter((definition) => definition.id !== "CONFIG-0");

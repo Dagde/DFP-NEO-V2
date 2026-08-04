@@ -5574,11 +5574,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const getAircraftTypeConfigurationDefinitions = (aircraftType: any): AircraftConfigurationDefinition[] => {
+    if (Array.isArray(aircraftType?.settings?.aircraftConfigurations)) {
+      return mergeAircraftConfigurationDefinitions(aircraftType.settings.aircraftConfigurations);
+    }
     const aircraftTypeCode = String(aircraftType?.code || '').trim().toUpperCase();
     const legacyResourcePoolDefinitions = (Array.isArray(config.resourcePools) ? config.resourcePools : [])
       .filter((pool) => String(pool?.aircraftTypeCode || '').trim().toUpperCase() === aircraftTypeCode)
       .map((pool) => pool?.settings?.aircraftConfigurations);
-    return mergeAircraftConfigurationDefinitions(aircraftType?.settings?.aircraftConfigurations, legacyResourcePoolDefinitions);
+    return mergeAircraftConfigurationDefinitions(undefined, legacyResourcePoolDefinitions);
   };
 
   const updateAircraftTypeConfigurationDefinitions = (aircraftIndex: number, aircraftConfigurations: AircraftConfigurationDefinition[]) => {
