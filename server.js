@@ -4116,7 +4116,9 @@ app.get('/api/audit/currency/:personId', async (req, res) => {
 // GET /api/audit/logs - General durable audit history for admin review
 app.get('/api/audit/logs', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const limit = Math.max(1, Math.min(Number(req.query.limit || 200), 500));
     const entityType = req.query.entityType ? String(req.query.entityType) : '';
     const action = req.query.action ? String(req.query.action) : '';
