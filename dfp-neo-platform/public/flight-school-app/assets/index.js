@@ -60827,6 +60827,7 @@ const CancellationCodesTable = ({
     isActive: true
   });
   const standardActionButtonClass = "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50";
+  const getStatusClass = (isActive) => isActive ? "bg-green-900/50 text-green-400 border-green-500/40" : "bg-red-900/50 text-red-400 border-red-500/40";
   const handleStartAdd = () => {
     if (!isEditUnlocked) return;
     setFormData({
@@ -61121,7 +61122,15 @@ const CancellationCodesTable = ({
                   ]
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block px-2 py-1 rounded text-xs font-semibold ${formData.isActive ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"}`, children: formData.isActive ? "Active" : "Inactive" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setFormData({ ...formData, isActive: !formData.isActive }),
+                  className: `inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold ${getStatusClass(formData.isActive)}`,
+                  children: formData.isActive ? "Active" : "Inactive"
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
@@ -61147,7 +61156,17 @@ const CancellationCodesTable = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.category }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.description }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: formatAppliesToLabel(code.appliesTo) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block px-2 py-1 rounded text-xs font-semibold ${code.isActive ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"}`, children: code.isActive ? "Active" : "Inactive" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => onToggleActive(code.code),
+                disabled: !isEditUnlocked || isAddingNew || editingCode !== null,
+                className: `inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${getStatusClass(code.isActive)}`,
+                title: isEditUnlocked ? "Click to switch Active or Inactive" : "Click Edit above to unlock status changes",
+                children: code.isActive ? "Active" : "Inactive"
+              }
+            ) }),
             canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
@@ -61350,6 +61369,7 @@ const ACHistoryPage = ({
       setCancellationCodes(
         (prev) => prev.map((c) => c.code === code ? { ...c, isActive: !c.isActive } : c)
       );
+      await loadCodesFromDB();
     } catch (err) {
       console.error("Failed to toggle cancellation code:", err);
       await showDarkAlert("Failed to update code. Please try again.", "Cancellation Code Update Failed", "error");

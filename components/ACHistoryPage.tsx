@@ -157,6 +157,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       setCancellationCodes(prev =>
         prev.map(c => c.code === code ? { ...c, isActive: !c.isActive } : c)
       );
+      await loadCodesFromDB();
     } catch (err: any) {
       console.error('Failed to toggle cancellation code:', err);
       await showDarkAlert('Failed to update code. Please try again.', 'Cancellation Code Update Failed', 'error');

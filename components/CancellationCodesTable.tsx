@@ -38,6 +38,11 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
     isActive: true,
   });
   const standardActionButtonClass = 'w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:cursor-not-allowed disabled:opacity-50';
+  const getStatusClass = (isActive?: boolean) => (
+    isActive
+      ? 'bg-green-900/50 text-green-400 border-green-500/40'
+      : 'bg-red-900/50 text-red-400 border-red-500/40'
+  );
 
   const handleStartAdd = () => {
     if (!isEditUnlocked) return;
@@ -368,13 +373,13 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                       </select>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                        formData.isActive
-                          ? 'bg-green-900/50 text-green-400'
-                          : 'bg-red-900/50 text-red-400'
-                      }`}>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+                        className={`inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold ${getStatusClass(formData.isActive)}`}
+                      >
                         {formData.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-center space-x-2">
@@ -403,13 +408,15 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                   <td className="py-3 px-4 text-gray-300">{code.description}</td>
                   <td className="py-3 px-4 text-gray-300">{formatAppliesToLabel(code.appliesTo)}</td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      code.isActive
-                        ? 'bg-green-900/50 text-green-400'
-                        : 'bg-red-900/50 text-red-400'
-                    }`}>
+                    <button
+                      type="button"
+                      onClick={() => onToggleActive(code.code)}
+                      disabled={!isEditUnlocked || isAddingNew || editingCode !== null}
+                      className={`inline-flex min-w-[74px] items-center justify-center rounded border px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${getStatusClass(code.isActive)}`}
+                      title={isEditUnlocked ? 'Click to switch Active or Inactive' : 'Click Edit above to unlock status changes'}
+                    >
                       {code.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    </button>
                   </td>
                   {canEdit && (
                     <td className="py-3 px-4">
