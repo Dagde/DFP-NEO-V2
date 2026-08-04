@@ -27278,19 +27278,8 @@ const App: React.FC = () => {
         }
     };
 
-    // Cancellation Codes State
-    const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>(() => {
-        try {
-            const stored = localStorage.getItem('cancellationCodes');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                return Array.isArray(parsed) ? parsed : [];
-            }
-        } catch (error) {
-            console.warn('[CancellationCodes] Ignoring invalid browser cancellation-code cache:', error);
-        }
-        return [];
-    });
+    // Cancellation codes are loaded from saved settings; do not restore deleted starter codes from old browser caches.
+    const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
     const [showNightFlyingInfo, setShowNightFlyingInfo] = useState(false);
     const [nightFlyingTraineeCount, setNightFlyingTraineeCount] = useState(0);
     const [showUnavailabilityReport, setShowUnavailabilityReport] = useState(false);

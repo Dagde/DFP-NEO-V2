@@ -109078,18 +109078,7 @@ const App = () => {
       console.error("[CourseAcademicProgress] Failed to save:", error);
     }
   };
-  const [cancellationCodes, setCancellationCodes] = reactExports.useState(() => {
-    try {
-      const stored = localStorage.getItem("cancellationCodes");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch (error) {
-      console.warn("[CancellationCodes] Ignoring invalid browser cancellation-code cache:", error);
-    }
-    return [];
-  });
+  const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [showNightFlyingInfo, setShowNightFlyingInfo] = reactExports.useState(false);
   const [nightFlyingTraineeCount, setNightFlyingTraineeCount] = reactExports.useState(0);
   const [showUnavailabilityReport, setShowUnavailabilityReport] = reactExports.useState(false);
