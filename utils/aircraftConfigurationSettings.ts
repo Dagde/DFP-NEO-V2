@@ -62,8 +62,11 @@ export const normaliseAircraftConfigurationDefinitions = (
 
 export const getAircraftConfigurationDefinitions = (
   resourcePool?: PlatformResourcePool | null,
+  aircraftType?: any,
 ): AircraftConfigurationDefinition[] => (
-  normaliseAircraftConfigurationDefinitions(resourcePool?.settings?.aircraftConfigurations)
+  Array.isArray(aircraftType?.settings?.aircraftConfigurations)
+    ? normaliseAircraftConfigurationDefinitions(aircraftType.settings.aircraftConfigurations)
+    : normaliseAircraftConfigurationDefinitions(resourcePool?.settings?.aircraftConfigurations)
 );
 
 export const normaliseSelectedAircraftConfigurations = (

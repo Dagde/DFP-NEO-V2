@@ -53,7 +53,7 @@ import {
   type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { normaliseAircraftConfigurationDefinitions } from '../utils/aircraftConfigurationSettings';
+import { normaliseAircraftConfigurationDefinitions, type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import {
   AIRCRAFT_CREW_RESOURCE_KINDS,
   DEFAULT_AIRCRAFT_CREW_COMPOSITION,
@@ -723,6 +723,27 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       !activeAircraftTypeCodes.has(aircraftTypeCode)
     );
   });
+  const activeResourcePoolKeys = new Map<string, any>();
+  const activeResourcePoolAircraftTypesByUnit = new Map<string, Set<string>>();
+  let multiAircraftTypeResourcePool: any = null;
+  const duplicateResourcePool = (Array.isArray(config.resourcePools) ? config.resourcePools : []).find((pool) => {
+    if (String(pool?.status || 'ACTIVE').toUpperCase() === 'INACTIVE') return false;
+    const unitCode = String(pool?.unitCode || '').trim().toUpperCase();
+    const aircraftTypeCode = String(pool?.aircraftTypeCode || '').trim().toUpperCase();
+    if (!aircraftTypeCode) return false;
+    const key = `${unitCode || 'SHARED'}__${aircraftTypeCode}`;
+    if (activeResourcePoolKeys.has(key)) return true;
+    activeResourcePoolKeys.set(key, pool);
+    if (unitCode) {
+      const aircraftTypesForUnit = activeResourcePoolAircraftTypesByUnit.get(unitCode) || new Set<string>();
+      if (aircraftTypesForUnit.size > 0 && !aircraftTypesForUnit.has(aircraftTypeCode) && !multiAircraftTypeResourcePool) {
+        multiAircraftTypeResourcePool = pool;
+      }
+      aircraftTypesForUnit.add(aircraftTypeCode);
+      activeResourcePoolAircraftTypesByUnit.set(unitCode, aircraftTypesForUnit);
+    }
+    return false;
+  });
   const isDeliberatelyEmptyStructure = !hasActiveOrganisations && !hasActiveLocations && !hasActiveUnits;
   const describeResourcePool = (pool?: any): string => {
     const code = String(pool?.code || '').trim();
@@ -786,6 +807,24 @@ const getPlatformConfigSaveBlocker = (config: PlatformConfig): PlatformConfigSav
       link: getResourcePoolSettingsLink(
         invalidResourcePoolAircraftType,
         'open DFP Resource Rows, choose an active Aircraft Type, then save again.'
+      ),
+    };
+  }
+  if (duplicateResourcePool) {
+    return {
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(duplicateResourcePool)}" duplicates another active row for the same unit and aircraft type. Open`,
+      link: getResourcePoolSettingsLink(
+        duplicateResourcePool,
+        'open DFP Resource Rows, keep only one active row for each unit and aircraft type, then save again.'
+      ),
+    };
+  }
+  if (multiAircraftTypeResourcePool) {
+    return {
+      message: `Save blocked: the DFP Resource Rows "${describeResourcePool(multiAircraftTypeResourcePool)}" gives one unit rows for more than one aircraft type. Open`,
+      link: getResourcePoolSettingsLink(
+        multiAircraftTypeResourcePool,
+        'open DFP Resource Rows, keep one aircraft type for this unit, or create a separate unit for the second aircraft type.'
       ),
     };
   }
@@ -4852,7 +4891,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     onShowSuccess(`Aircraft type "${selectedAircraftTypeDeleteOption.name}" removed. Press Save to apply the deletion.`);
   };
 
-  const addResourcePool = () => {
+  const addResourcePool = async () => {
     clearLinkedPlatformConfigError();
     const activeUnitCode = String(activePrimaryUnitCode || activeContextUnitCodes[0] || '').trim().toUpperCase();
     const selectedUnit = configUnits.find((unit) => String(unit.code || '').trim().toUpperCase() === activeUnitCode)
@@ -4884,6 +4923,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         || defaultAircraftType?.code
         || defaultAircraftTypeCode,
       ).trim();
+      const existingUnitPool = previousResourcePools.find((pool) => (
+        String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE'
+        && String(pool?.unitCode || '').trim().toUpperCase() === defaultUnitCode
+      ));
+      if (existingUnitPool && defaultUnitCode) {
+        pendingResourcePoolScrollIdRef.current = existingUnitPool.id || null;
+        const existingAircraftTypeCode = String(existingUnitPool?.aircraftTypeCode || '').trim().toUpperCase();
+        const aircraftTypeNote = existingAircraftTypeCode
+          ? ` for ${existingAircraftTypeCode}`
+          : '';
+        window.setTimeout(() => {
+          void showDarkAlert(
+            `${defaultUnitCode} already has DFP Resource Rows${aircraftTypeNote}. Edit the existing row, or create a separate unit for a second aircraft type.`,
+            'DFP Resource Rows Already Exist',
+            'warning',
+          );
+        }, 0);
+        return prev;
+      }
       const newPoolCode = [defaultLocation, defaultUnitCode, defaultAircraftTypeCode || 'ROWS']
         .filter(Boolean)
         .join('-');
@@ -4913,7 +4971,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               aircraftNumberUsePrefix: true,
               aircraftNumberPrefixes: [],
               aircraftNumberDefaultPrefix: '',
-              aircraftConfigurations: [],
               ftdLabel: 'FTD',
               cptLabel: 'CPT',
               aircraft: 0,
@@ -5484,35 +5541,84 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
   };
 
-  const updateAircraftConfiguration = (poolIndex: number, configIndex: number, definition: string) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+  const mergeAircraftConfigurationDefinitions = (
+    primaryDefinitions?: unknown,
+    legacyDefinitions: unknown[] = [],
+  ): AircraftConfigurationDefinition[] => {
+    const definitionTexts = new Set<string>();
+    const mergedDefinitions = normaliseAircraftConfigurationDefinitions(primaryDefinitions)
+      .filter((definition) => definition.id !== 'CONFIG-0')
+      .map((definition, index) => {
+        const text = String(definition.definition || '').trim();
+        if (text) definitionTexts.add(text.toUpperCase());
+        return {
+          id: `CONFIG-${index + 1}`,
+          label: `CONFIG ${index + 1}`,
+          definition: text,
+        };
+      });
+    legacyDefinitions.flatMap((definitions) => normaliseAircraftConfigurationDefinitions(definitions)).forEach((definition) => {
+      if (definition.id === 'CONFIG-0') return;
+      const text = String(definition.definition || '').trim();
+      const key = text.toUpperCase();
+      if (!key || definitionTexts.has(key)) return;
+      definitionTexts.add(key);
+      const nextNumber = mergedDefinitions.length + 1;
+      mergedDefinitions.push({
+        id: `CONFIG-${nextNumber}`,
+        label: `CONFIG ${nextNumber}`,
+        definition: text,
+      });
+    });
+    return normaliseAircraftConfigurationDefinitions(mergedDefinitions);
+  };
+
+  const getAircraftTypeConfigurationDefinitions = (aircraftType: any): AircraftConfigurationDefinition[] => {
+    const aircraftTypeCode = String(aircraftType?.code || '').trim().toUpperCase();
+    const legacyResourcePoolDefinitions = (Array.isArray(config.resourcePools) ? config.resourcePools : [])
+      .filter((pool) => String(pool?.aircraftTypeCode || '').trim().toUpperCase() === aircraftTypeCode)
+      .map((pool) => pool?.settings?.aircraftConfigurations);
+    return mergeAircraftConfigurationDefinitions(aircraftType?.settings?.aircraftConfigurations, legacyResourcePoolDefinitions);
+  };
+
+  const updateAircraftTypeConfigurationDefinitions = (aircraftIndex: number, aircraftConfigurations: AircraftConfigurationDefinition[]) => {
+    const userDefinitions = aircraftConfigurations.filter((definition) => definition.id !== 'CONFIG-0');
+    const aircraftType = config.aircraftTypes[aircraftIndex] || {};
+    updateRow('aircraftTypes', aircraftIndex, {
+      settings: {
+        ...(aircraftType.settings || {}),
+        aircraftConfigurations: userDefinitions,
+      },
+    });
+  };
+
+  const updateAircraftConfiguration = (aircraftIndex: number, configIndex: number, definition: string) => {
+    const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
     const targetId = aircraftConfigurations[configIndex]?.id;
     if (!targetId || targetId === 'CONFIG-0') return;
     const nextAircraftConfigurations = aircraftConfigurations.map((configDefinition) => (
       configDefinition.id === targetId ? { ...configDefinition, definition } : configDefinition
     ));
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
+    updateAircraftTypeConfigurationDefinitions(aircraftIndex, nextAircraftConfigurations);
   };
 
-  const addAircraftConfiguration = (poolIndex: number) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+  const addAircraftConfiguration = (aircraftIndex: number) => {
+    const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
     const existingIds = new Set(aircraftConfigurations.map(configDefinition => configDefinition.id));
     let nextNumber = 1;
     while (existingIds.has(`CONFIG-${nextNumber}`)) nextNumber += 1;
-    updateResourcePoolSettings(poolIndex, {
-      aircraftConfigurations: [
-        ...aircraftConfigurations,
-        { id: `CONFIG-${nextNumber}`, label: `CONFIG ${nextNumber}`, definition: '' },
-      ],
-    });
+    updateAircraftTypeConfigurationDefinitions(aircraftIndex, [
+      ...aircraftConfigurations,
+      { id: `CONFIG-${nextNumber}`, label: `CONFIG ${nextNumber}`, definition: '' },
+    ]);
   };
 
-  const removeAircraftConfiguration = (poolIndex: number, configIndex: number) => {
-    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(config.resourcePools[poolIndex]?.settings?.aircraftConfigurations || []);
+  const removeAircraftConfiguration = (aircraftIndex: number, configIndex: number) => {
+    const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(config.aircraftTypes[aircraftIndex]);
     const targetId = aircraftConfigurations[configIndex]?.id;
     if (!targetId || targetId === 'CONFIG-0') return;
     const nextAircraftConfigurations = aircraftConfigurations.filter((configDefinition) => configDefinition.id !== targetId);
-    updateResourcePoolSettings(poolIndex, { aircraftConfigurations: nextAircraftConfigurations });
+    updateAircraftTypeConfigurationDefinitions(aircraftIndex, nextAircraftConfigurations);
   };
 
   const deleteSelectedResourcePool = async () => {
@@ -6362,6 +6468,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       scopedLocationSet.add(normaliseUnitCode(activeSettingsVisibilityLocationCode));
     }
     const scopedAircraftTypeSet = getStrictUnitAircraftTypeCodeSet(sourceConfig, scopedUnitCodes);
+    const unitSpecificAircraftTypeSet = new Set(
+      sourceResourcePools
+        .filter((pool) => String(pool?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE')
+        .filter((pool) => scopedUnitSet.has(normaliseUnitCode(pool?.unitCode)))
+        .map((pool) => normaliseUnitCode(pool?.aircraftTypeCode))
+        .filter(Boolean)
+    );
 
     return sourceResourcePools
       .map((pool, index) => ({ pool, index }))
@@ -6372,6 +6485,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const poolAircraftTypeCode = normaliseUnitCode(pool?.aircraftTypeCode);
         if (poolUnitCode) return scopedUnitSet.has(poolUnitCode);
         if (!poolAircraftTypeCode || scopedAircraftTypeSet.size === 0) return false;
+        if (unitSpecificAircraftTypeSet.has(poolAircraftTypeCode)) return false;
         const locationMatches = !poolLocationCode || scopedLocationSet.size === 0 || scopedLocationSet.has(poolLocationCode);
         return locationMatches && scopedAircraftTypeSet.has(poolAircraftTypeCode);
       })
@@ -6693,9 +6807,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
   const getAircraftConfigOptions = (aircraftTypeCode: string): string[] => Array.from(new Set([
     'ANY',
-    ...configResourcePools
-      .filter((pool) => !aircraftTypeCode || String(pool.aircraftTypeCode || '').trim().toUpperCase() === String(aircraftTypeCode || '').trim().toUpperCase())
-      .flatMap((pool) => Array.isArray(pool.settings?.aircraftConfigurations) ? pool.settings.aircraftConfigurations : [])
+    ...getAircraftTypeConfigurationDefinitions(
+      configAircraftTypes.find((aircraft) => String(aircraft.code || '').trim().toUpperCase() === String(aircraftTypeCode || '').trim().toUpperCase())
+    )
       .map((item: any) => String(item.label || item.definition || item.id || '').trim())
       .filter(Boolean),
   ]));
@@ -8748,24 +8862,30 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <div className={resourceSectionPanelHintClass}>Aircraft fit states that LMP events may require. Use ANY when configuration does not matter.</div>
                 </div>
               </div>
-              {visibleResourcePoolRows.length === 0 ? (
+              {visibleAircraftTypeRows.length === 0 ? (
                 <div className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400">
-                  Add DFP Resource Rows before defining aircraft configurations for this unit context.
+                  Add an aircraft type before defining aircraft configurations for this unit context.
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {visibleResourcePoolRows.map(({ pool, index }) => {
-                    const aircraftConfigurations = normaliseAircraftConfigurationDefinitions(pool.settings?.aircraftConfigurations || []);
+                  {visibleAircraftTypeRows.map(({ aircraft, index }) => {
+                    const aircraftConfigurations = getAircraftTypeConfigurationDefinitions(aircraft);
+                    const aircraftCode = String(aircraft.code || '').trim().toUpperCase();
+                    const matchingResourceRows = visibleResourcePoolRows.filter(({ pool }) => (
+                      String(pool.aircraftTypeCode || '').trim().toUpperCase() === aircraftCode
+                    ));
                     return (
-                      <div key={`aircraft-configurations-${pool.id || pool.code || index}`} className="rounded-lg border border-gray-800 bg-gray-900/80 p-3">
+                      <div key={`aircraft-configurations-${aircraft.id || aircraft.code || index}`} className="rounded-lg border border-gray-800 bg-gray-900/80 p-3">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-800 pb-2">
                           <div>
                             <div className="text-xs font-black uppercase tracking-wide text-orange-100">
-                              {pool.aircraftTypeCode || pool.settings?.aircraftLabel || pool.name || pool.code || 'Aircraft'} Configurations
+                              {aircraftCode || aircraft.name || 'Aircraft'} Configurations
                             </div>
-                            <div className={resourceSectionPanelHintClass}>{pool.name || pool.code || 'DFP Resource Rows'}</div>
+                            <div className={resourceSectionPanelHintClass}>{aircraft.name || aircraftCode || 'Aircraft type'}</div>
                             <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                              {getDfpResourceRowsOwnershipLabel(pool)}
+                              {matchingResourceRows.length > 0
+                                ? matchingResourceRows.map(({ pool }) => getDfpResourceRowsOwnershipLabel(pool)).join(' | ')
+                                : 'No DFP Resource Rows use this aircraft type in the current context'}
                             </div>
                           </div>
                           <button

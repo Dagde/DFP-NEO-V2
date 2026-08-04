@@ -26556,8 +26556,8 @@ const App: React.FC = () => {
         [activePlatformResourcePool]
     );
     const aircraftConfigurations = useMemo(() => {
-        return getAircraftConfigurationDefinitions(activePlatformResourcePool);
-    }, [activePlatformResourcePool]);
+        return getAircraftConfigurationDefinitions(activePlatformResourcePool, activeRuntimeAircraftType);
+    }, [activePlatformResourcePool, activeRuntimeAircraftType]);
     const aircraftConfigCapacityDefinitions = useMemo(() => ([
         BASE_AIRCRAFT_CONFIG,
         ...aircraftConfigurations.filter(definition => definition.id !== 'CONFIG-0'),
