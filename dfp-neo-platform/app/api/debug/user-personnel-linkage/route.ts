@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { debugRoutesDisabledResponse } from '../guard';
 
 const prisma = new PrismaClient();
 
 // GET /api/debug/user-personnel-linkage - Check linkage between User and Personnel
 export async function GET() {
+  const disabled = debugRoutesDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const session = await auth();
     

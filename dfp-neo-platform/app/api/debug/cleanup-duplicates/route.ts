@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { debugRoutesDisabledResponse } from '../guard';
 
 const prisma = new PrismaClient();
 
 // POST /api/debug/cleanup-duplicates - Clean up duplicate Personnel records
 export async function POST(request: Request) {
+  const disabled = debugRoutesDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const session = await auth();
     

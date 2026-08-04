@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { debugRoutesDisabledResponse } from '../guard';
 
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
+  const disabled = debugRoutesDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     console.log('Connecting to Railway Postgres database...');
     

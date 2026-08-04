@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { debugRoutesDisabledResponse } from '../guard';
 
 const prisma = new PrismaClient();
 
 // GET /api/debug/database-connection - Check database connection and Alexander Burns' data
 export async function GET() {
+  const disabled = debugRoutesDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     // Get database URL (without password)
     const dbUrl = process.env.DATABASE_URL || 'Not set';

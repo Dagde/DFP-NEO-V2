@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { auth } from '@/lib/auth';
+import { debugRoutesDisabledResponse } from '../guard';
 
 export async function GET(request: NextRequest) {
+  const disabled = debugRoutesDisabledResponse();
+  if (disabled) return disabled;
+
   try {
     const session = await auth();
     
