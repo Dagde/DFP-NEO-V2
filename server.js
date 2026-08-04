@@ -6012,6 +6012,7 @@ app.get('/api/version', (req, res) => {
 // GET /api/debug/courses - Show distinct courses and their unit values in DB
 app.get('/api/debug/courses', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -6045,6 +6046,7 @@ app.get('/api/debug/courses', async (req, res) => {
 // GET /api/debug/trainees/:course - Show trainees for a specific course
 app.get('/api/debug/trainees/:course', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -6063,6 +6065,7 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
 // GET /api/debug/solo-syllabus - Show solo syllabus items from DB (BGF11, BGF18 + sortieType='Solo')
 app.get('/api/debug/solo-syllabus', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -6083,6 +6086,7 @@ app.get('/api/debug/solo-syllabus', async (req, res) => {
 // GET /api/debug/snapshots - Show all saved DailySnapshot records (id, date, event count, savedAt)
 app.get('/api/debug/snapshots', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -6135,6 +6139,7 @@ app.get('/api/admin/fix-academics-courses', async (req, res) => {
 // GET /api/debug/academics - Diagnostic: show all Academics-type syllabus items and their courses[] field
 app.get('/api/debug/academics', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -6166,6 +6171,7 @@ app.get('/api/debug/academics', async (req, res) => {
 // ============================================================
 app.get('/api/debug/check-table-structure', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -6185,6 +6191,7 @@ app.get('/api/debug/check-table-structure', async (req, res) => {
 
 app.get('/api/debug/check-daily-average', async (req, res) => {
   try {
+    if (rejectDisabledDebugRoute(res)) return;
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
@@ -7265,6 +7272,14 @@ async function requireDirectAdmin(req, res) {
     return null;
   }
   return { db, admin, sessionToken };
+}
+
+function rejectDisabledDebugRoute(res) {
+  if (process.env.NODE_ENV === 'production' && process.env.DFP_ENABLE_DEBUG_ROUTES !== 'true') {
+    res.status(404).json({ error: 'Not found' });
+    return true;
+  }
+  return false;
 }
 
 const toDirectAdminUser = (user) => ({
