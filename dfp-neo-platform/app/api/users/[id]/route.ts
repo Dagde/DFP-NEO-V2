@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -18,6 +20,7 @@ export async function DELETE(
         { status: 401 }
       );
     }
+    await requireCapability('users:manage');
 
     const { id } = await params;
 
@@ -27,6 +30,22 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Password is required to delete a user' },
         { status: 400 }
+      );
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { password: true, isActive: true },
+    });
+    const passwordValid = Boolean(
+      currentUser?.isActive &&
+      currentUser.password &&
+      await bcrypt.compare(String(body.password), currentUser.password)
+    );
+    if (!passwordValid) {
+      return NextResponse.json(
+        { error: 'Password was not accepted' },
+        { status: 403 }
       );
     }
 
@@ -73,8 +92,14 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting user:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete users' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to delete user' },
       { status: 500 }

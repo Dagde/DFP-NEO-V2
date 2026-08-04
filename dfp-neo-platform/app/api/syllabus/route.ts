@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 const db = prisma as any;
@@ -48,6 +50,15 @@ export async function GET(request: NextRequest) {
 // POST /api/syllabus - Create a new syllabus item
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+    await requireCapability('training:manage');
+
     const body = await request.json();
 
     if (!body.code || !body.eventDescription || !body.type) {
@@ -123,8 +134,14 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ [API] Created syllabus item: ${newItem.code}`);
     return NextResponse.json({ syllabusItem: newItem }, { status: 201, headers: getCorsHeaders(request) });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error creating syllabus item:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to create syllabus items' },
+        { status: 403, headers: getCorsHeaders(request) }
+      );
+    }
     return NextResponse.json({ error: 'Failed to create syllabus item' }, { status: 500, headers: getCorsHeaders(request) });
   }
 }

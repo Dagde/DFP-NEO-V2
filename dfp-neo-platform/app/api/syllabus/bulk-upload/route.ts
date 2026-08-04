@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 const db = prisma as any;
@@ -208,6 +210,15 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+    await requireCapability('training:manage');
+
     const formData = await request.formData();
     const file = formData.get('file');
     let selectedCourseCode = String(formData.get('courseCode') || '').trim();
@@ -500,6 +511,12 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error('Error bulk uploading syllabus:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to upload syllabus packages' },
+        { status: 403, headers: getCorsHeaders(request) }
+      );
+    }
     return NextResponse.json(
       { error: error?.message || 'Failed to bulk upload syllabus events' },
       { status: 500, headers: getCorsHeaders(request) }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -88,6 +89,7 @@ export async function GET(
         { status: 401 }
       );
     }
+    await requireCapability('users:manage');
 
     const { id } = await params;
 
@@ -175,8 +177,14 @@ export async function DELETE(
         idNumber: deletedPersonnel.idNumber
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [DELETE] Error deleting personnel:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete personnel' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to delete personnel', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -200,6 +208,7 @@ export async function PATCH(
         { status: 401 }
       );
     }
+    await requireCapability('personnel:manage');
 
     const { id } = await params;
     const body = normalisePersonnelPayload(await request.json());
@@ -253,8 +262,14 @@ export async function PATCH(
       message: 'Personnel updated successfully',
       personnel: updatedPersonnel
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [PATCH] Error updating personnel:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to update personnel' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to update personnel', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

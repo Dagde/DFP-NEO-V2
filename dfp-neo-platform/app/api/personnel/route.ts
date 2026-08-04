@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -101,6 +103,15 @@ export async function GET(request: NextRequest) {
 // POST /api/personnel - Create new personnel record
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+    await requireCapability('personnel:manage');
+
     console.log('🔍 [API POST] Creating new personnel record');
     
     const body = normalisePersonnelPayload(await request.json());
@@ -174,8 +185,14 @@ export async function POST(request: NextRequest) {
       success: true,
       personnel: newPersonnel 
     }, { headers: getCorsHeaders(request) });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [API POST] Error creating personnel:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to create personnel' },
+        { status: 403, headers: getCorsHeaders(request) }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to create personnel', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500, headers: getCorsHeaders(request) }

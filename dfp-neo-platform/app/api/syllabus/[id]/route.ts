@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 const db = prisma as any;
@@ -37,6 +39,15 @@ export async function PUT(
   { params }: RouteContext
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+    await requireCapability('training:manage');
+
     const { id } = await params;
     const body = await request.json();
 
@@ -65,8 +76,14 @@ export async function PUT(
 
     console.log(`✅ [API] Updated syllabus item: ${updated.code}`);
     return NextResponse.json({ syllabusItem: updated }, { headers: getCorsHeaders(request) });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error updating syllabus item:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to update syllabus items' },
+        { status: 403, headers: getCorsHeaders(request) }
+      );
+    }
     return NextResponse.json({ error: 'Failed to update syllabus item' }, { status: 500, headers: getCorsHeaders(request) });
   }
 }
@@ -79,6 +96,15 @@ export async function DELETE(
   { params }: RouteContext
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+    await requireCapability('training:manage');
+
     const { id } = await params;
 
     const previous = await db.syllabusItem.findFirst({
@@ -98,8 +124,14 @@ export async function DELETE(
       { success: true, message: `Syllabus item ${previous.code} deleted`, syllabusItem: previous },
       { headers: getCorsHeaders(request) }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error deleting syllabus item:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete syllabus items' },
+        { status: 403, headers: getCorsHeaders(request) }
+      );
+    }
     return NextResponse.json({ error: 'Failed to delete syllabus item' }, { status: 500, headers: getCorsHeaders(request) });
   }
 }

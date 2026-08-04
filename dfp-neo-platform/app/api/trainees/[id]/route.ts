@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -14,6 +15,7 @@ export async function GET(
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await requireCapability('personnel:manage');
 
     const { id } = await params;
 
@@ -75,8 +77,14 @@ export async function PATCH(
 
     console.log(`[Trainee PATCH/:id] ✅ Updated trainee: ${trainee.name}`);
     return NextResponse.json({ success: true, trainee });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Trainee PATCH/:id] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to update trainees' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to update trainee', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -96,6 +104,7 @@ export async function DELETE(
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await requireCapability('users:manage');
 
     const { id } = await params;
 
@@ -108,8 +117,14 @@ export async function DELETE(
 
     console.log(`[Trainee DELETE/:id] ✅ Deleted trainee: ${trainee.name}`);
     return NextResponse.json({ success: true, message: 'Trainee deleted successfully' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Trainee DELETE/:id] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete trainees' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ error: 'Failed to delete trainee' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
