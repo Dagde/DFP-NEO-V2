@@ -2600,7 +2600,9 @@ app.post('/api/platform-license/verify', async (req, res) => {
 
 app.post('/api/platform-license/import', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const organisations = await db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`);
     const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
     const operationalRunbook = activeOrganisation.settings?.operationalRunbook || {};
@@ -2675,6 +2677,9 @@ app.post('/api/platform-license/import', async (req, res) => {
 
 app.post('/api/platform-license/generate-development', async (req, res) => {
   try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+
     const privateKeyPem = process.env.DFP_LICENSE_PRIVATE_KEY || process.env.DFP_LICENCE_PRIVATE_KEY;
     const allowDevGenerator = process.env.DFP_ENABLE_DEV_LICENSE_GENERATOR === 'true' || getLicenseRuntimeMode() === 'development';
     if (!allowDevGenerator || !privateKeyPem) {
@@ -2832,7 +2837,9 @@ app.get('/api/platform-deployment/manifest', async (req, res) => {
 
 app.post('/api/platform-config', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const payload = req.body || {};
     const {
       organisations: rawOrganisations = [],
@@ -12121,7 +12128,9 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
 // DELETE /api/daily-snapshot/future - Clear future DFP snapshots after row layout changes
 app.delete('/api/daily-snapshot/future', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const startDate = String(req.body?.startDate || req.query.startDate || '').slice(0, 10);
     const school = String(req.body?.school || req.query.school || '').trim().replace(/[^A-Za-z0-9_-]/g, '-').toUpperCase();
     const unit = String(req.body?.unit || req.query.unit || '').trim().replace(/[^A-Za-z0-9_-]/g, '-').toUpperCase();
