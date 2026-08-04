@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
+import { auth } from '@/lib/auth';
 import { prisma } from '../../../lib/db/prisma';
 
+const canManagePlatformSettings = (role?: string | null): boolean =>
+  role === 'SUPER_ADMIN' || role === 'ADMIN';
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
@@ -34,8 +37,25 @@ export async function GET(request: NextRequest) {
 // POST /api/settings - Save app settings
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Authentication is required to save settings' },
+        { status: 401, headers: getCorsHeaders(request) }
+      );
+    }
+
+    if (!canManagePlatformSettings(session.user.role)) {
+      return NextResponse.json(
+        { error: 'Administrator permission is required to save settings' },
+        { status: 403, headers: getCorsHeaders(request) }
+      );
+    }
+
     const body = await request.json();
     const { orgId = 'default', settings, updatedBy } = body;
+    const auditUser = updatedBy || session.user.userId || session.user.username || session.user.id || null;
 
     if (!settings) {
       return NextResponse.json(
@@ -48,13 +68,13 @@ export async function POST(request: NextRequest) {
       where: { orgId },
       update: {
         data: settings,
-        updatedBy: updatedBy || null,
+        updatedBy: auditUser,
         updatedAt: new Date(),
       },
       create: {
         orgId,
         data: settings,
-        updatedBy: updatedBy || null,
+        updatedBy: auditUser,
       }
     });
 
