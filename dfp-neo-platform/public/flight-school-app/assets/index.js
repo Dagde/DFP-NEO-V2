@@ -2242,7 +2242,7 @@ const normaliseMasterLmpAccessRules = (config) => {
   return source.map((rule, index) => ({
     id: String(rule.id || `master-lmp-access-${index + 1}`),
     lmpCode: String(rule.lmpCode || rule.masterLmp || rule.course || "").trim(),
-    organisationCode: rule.organisationCode || "DEFAULT",
+    organisationCode: String(rule.organisationCode || "").trim(),
     locationCode: rule.locationCode || null,
     unitCode: rule.unitCode || null,
     aircraftTypeCode: rule.aircraftTypeCode || null,
