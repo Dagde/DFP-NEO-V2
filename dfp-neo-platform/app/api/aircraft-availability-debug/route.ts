@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
+import { auth } from '@/lib/auth';
 import { prisma } from '../../../lib/db/prisma';
+import { debugRoutesDisabledResponse } from '../debug/guard';
 
+const canUseAvailabilityDebug = (role?: string | null): boolean =>
+  role === 'SUPER_ADMIN' || role === 'ADMIN';
+
+async function requireAvailabilityDebugAccess(request: NextRequest) {
+  const disabled = debugRoutesDisabledResponse();
+  if (disabled) return disabled;
+
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json(
+      { error: 'Authentication is required for aircraft availability diagnostics' },
+      { status: 401, headers: getCorsHeaders(request) }
+    );
+  }
+
+  if (!canUseAvailabilityDebug(session.user.role)) {
+    return NextResponse.json(
+      { error: 'Administrator permission is required for aircraft availability diagnostics' },
+      { status: 403, headers: getCorsHeaders(request) }
+    );
+  }
+
+  return null;
+}
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
@@ -12,6 +38,9 @@ export async function OPTIONS(request: NextRequest) {
  * Diagnostic endpoint to verify database connectivity and table status
  */
 export async function GET(request: NextRequest) {
+  const denied = await requireAvailabilityDebugAccess(request);
+  if (denied) return denied;
+
   const requestId = `debug_${Date.now()}`;
   console.log(`\n${'='.repeat(80)}`);
   console.log(`[AV-DEBUG] 🔍 Diagnostic request ${requestId}`);
@@ -207,6 +236,9 @@ export async function GET(request: NextRequest) {
  * Force insert a test record and verify the full flow
  */
 export async function POST(request: NextRequest) {
+  const denied = await requireAvailabilityDebugAccess(request);
+  if (denied) return denied;
+
   const requestId = `debug_post_${Date.now()}`;
   console.log(`\n${'='.repeat(80)}`);
   console.log(`[AV-DEBUG] 🧪 Force insert test ${requestId}`);
