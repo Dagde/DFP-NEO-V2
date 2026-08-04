@@ -8568,15 +8568,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
               <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Setup</div>
-              <div className="mt-1 text-lg font-black text-orange-100">{visibleAircraftTypeRows.length}</div>
+              <div className="mt-1 text-lg font-black text-cyan-100">{visibleAircraftTypeRows.length}</div>
               <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Capability, cruise planning and crew seats.</div>
             </div>
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div id="platform-aircraft-type-settings" className="space-y-3 rounded-lg border-2 border-orange-300 bg-gray-950/35 p-3">
+          <div id="platform-aircraft-type-settings" className="space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3">
             <div>
-              <h4 className="text-sm font-black uppercase tracking-wide text-orange-100">Aircraft Setup</h4>
+              <h4 className="text-sm font-black uppercase tracking-wide text-gray-100">Aircraft Setup</h4>
               <p className="mt-1 text-xs text-gray-500">Define aircraft identity, cruise planning values and normal crew-seat eligibility.</p>
             </div>
             {canEditResourcePools && (
@@ -8747,7 +8747,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               {visibleResourcePoolRows.length === 0 ? (
                 <div className="rounded-md border border-gray-800 bg-gray-900/70 px-3 py-2 text-xs text-gray-400">
-                  Add a DFP resource row set before defining aircraft configurations for this unit context.
+                  Add DFP Resource Rows before defining aircraft configurations for this unit context.
                 </div>
               ) : (
                 <div className="grid gap-3">
@@ -8761,7 +8761,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                               {pool.aircraftTypeCode || pool.settings?.aircraftLabel || pool.name || pool.code || 'Aircraft'} Configurations
                             </div>
                             <div className={resourceSectionPanelHintClass}>
-                              {pool.name || pool.code || 'DFP resource row set'}
+                              {pool.name || pool.code || 'DFP Resource Rows'}
                             </div>
                           </div>
                           <button
@@ -8829,7 +8829,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={() => setShowResourcePoolDeletePanel((current) => !current)}
                     className={platformActionButtonClass}
-                    title="Show or hide DFP resource row set deletion controls"
+                    title="Show or hide DFP Resource Rows deletion controls"
                   >
                     <span className="text-[9px] leading-tight">Delete<br />Rows</span>
                   </button>
@@ -8837,7 +8837,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     type="button"
                     onClick={addResourcePool}
                     className={platformActionButtonClass}
-                    title="Add DFP resource row set"
+                    title="Add DFP Resource Rows"
                   >
                     <span className="text-[9px] leading-tight">Add<br />Rows</span>
                   </button>
@@ -8873,34 +8873,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="p-4">
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">DFP Row Sets</div>
+              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">DFP Resource Rows</div>
               <div className="mt-1 text-lg font-black text-cyan-100">{config.resourcePools.length}</div>
               <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Rows, labels, numbering and ownership.</div>
             </div>
           </div>
         </div>
         <div className="px-4 pb-4">
-          <div id="platform-dfp-resource-row-settings" className="space-y-3 rounded-lg border-2 border-lime-300 bg-gray-950/35 p-3">
+          <div id="platform-dfp-resource-row-settings" className="space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3">
             <div>
-              <h4 className="text-sm font-black uppercase tracking-wide text-lime-100">DFP Row Sets</h4>
+              <h4 className="text-sm font-black uppercase tracking-wide text-gray-100">DFP Resource Rows</h4>
               <p className="mt-1 text-xs text-gray-500">Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering.</p>
             </div>
             {showResourcePoolDeletePanel && (
               <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
                 <div className="mb-3">
-                  <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete DFP Resource Row Set Entered In Error</div>
+                  <div className="text-xs font-black uppercase tracking-wide text-red-100">Delete DFP Resource Rows Entered In Error</div>
                   <div className="mt-1 text-[11px] leading-relaxed text-red-100/70">
-                    Select by DFP resource row set name only. Deletion requires your password and is applied only when this section is saved.
+                    Select by DFP Resource Rows name only. Deletion requires your password and is applied only when this section is saved.
                   </div>
                 </div>
                 <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                   <SelectField
-                    label="DFP Resource Row Set"
+                    label="DFP Resource Rows"
                     value={selectedResourcePoolDeleteKey}
                     disabled={!canEditResourcePools || activeResourcePoolDeleteOptions.length === 0}
                     options={['', ...activeResourcePoolDeleteOptions.map((option) => option.key)]}
                     optionLabels={Object.fromEntries(activeResourcePoolDeleteOptions.map((option) => [option.key, option.name]))}
-                    emptyLabel="Select DFP resource row set"
+                    emptyLabel="Select DFP Resource Rows"
                     onChange={setSelectedResourcePoolDeleteKey}
                   />
                   <button
@@ -8916,7 +8916,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             )}
             {visibleResourcePoolRows.length === 0 && (
               <div className="rounded-lg border border-dashed border-cyan-400/35 bg-cyan-500/10 p-4">
-                <div className="text-sm font-black text-cyan-100">No DFP resource row sets configured.</div>
+                <div className="text-sm font-black text-cyan-100">No DFP Resource Rows configured.</div>
                 <p className="mt-1 text-xs leading-relaxed text-cyan-50/75">
                   Press Edit, then Add Rows to create the rows that drive the DFP resource columns.
                 </p>
@@ -8947,10 +8947,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-md border border-cyan-400/35 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100">{pool.code || 'NEW'}</span>
-                        <span className="text-sm font-bold text-white">{pool.name || 'Unnamed DFP resource row set'}</span>
+                        <span className="text-sm font-bold text-white">{pool.name || 'Unnamed DFP Resource Rows'}</span>
                       </div>
                       <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">
-                        {pool.poolType || 'Dedicated'} row set {pool.unitCode ? `for ${pool.unitCode}` : ''}
+                        {pool.poolType || 'Dedicated'} DFP Resource Rows {pool.unitCode ? `for ${pool.unitCode}` : ''}
                       </div>
                     </div>
                     <div className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-right">
@@ -8980,7 +8980,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
                           <div className={resourceSectionPanelTitleClass}>Unit, Location & Aircraft</div>
-                          <div className={resourceSectionPanelHintClass}>Connect this row set to the unit, base and aircraft type it supports.</div>
+                          <div className={resourceSectionPanelHintClass}>Connect these DFP Resource Rows to the unit, base and aircraft type they support.</div>
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
@@ -9069,13 +9069,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className={resourceSectionPanelClass}>
                       <div className={resourceSectionPanelHeaderClass}>
                         <div>
-                          <div className={resourceSectionPanelTitleClass}>Row Set Administration</div>
-                          <div className={resourceSectionPanelHintClass}>Administrative identity and whether this row set is dedicated or shared.</div>
+                          <div className={resourceSectionPanelTitleClass}>DFP Resource Row Administration</div>
+                          <div className={resourceSectionPanelHintClass}>Administrative identity and whether these DFP Resource Rows are dedicated or shared.</div>
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <DraftField label="Row Set Code" value={pool.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { code: value })} />
-                        <DraftField label="Row Set Name" value={pool.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { name: value })} />
+                        <DraftField label="Resource Row Code" value={pool.code} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { code: value })} />
+                        <DraftField label="Resource Row Name" value={pool.name} disabled={!canEditResourcePools} onCommit={(value) => updateRow('resourcePools', index, { name: value })} />
                         <SelectField label="Sharing" value={pool.poolType || 'Dedicated'} disabled={!canEditResourcePools} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
                       </div>
                     </div>
