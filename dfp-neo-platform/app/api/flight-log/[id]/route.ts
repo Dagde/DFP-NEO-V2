@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -31,6 +33,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await requireCapability('training:manage');
+
     const { id } = await params;
     const body = await request.json();
 
@@ -40,8 +48,14 @@ export async function PATCH(
     });
 
     return NextResponse.json({ entry });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FlightLog PATCH/:id] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to update flight log entries' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to update flight log entry', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -57,12 +71,24 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await requireCapability('training:manage');
+
     const { id } = await params;
     await prisma.flightLogEntry.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FlightLog DELETE/:id] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete flight log entries' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ error: 'Failed to delete flight log entry' }, { status: 500 });
   } finally {
     await prisma.$disconnect();

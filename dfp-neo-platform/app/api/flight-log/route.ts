@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -47,6 +49,12 @@ export async function GET(request: NextRequest) {
 // so re-saving the same post-flight form overwrites rather than duplicates.
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await requireCapability('training:manage');
+
     const body = await request.json();
 
     const {
@@ -172,8 +180,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ entry, created }, { status: created ? 201 : 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FlightLog POST] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to save flight log entries' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to save flight log entry', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

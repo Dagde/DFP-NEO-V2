@@ -18,6 +18,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 import {
   getEventCompletionById,
   getEventCompletionByScheduleEventId,
@@ -88,6 +90,15 @@ export async function PATCH(
   { params }: RouteContext,
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) },
+      );
+    }
+    await requireCapability('training:manage');
+
     const { id } = await params;
     // Resolve actual DB id first
     const existing = await resolveCompletion(id);
@@ -118,8 +129,14 @@ export async function PATCH(
     const completion = await updateEventCompletion(existing.id, safePayload);
 
     return NextResponse.json({ completion }, { headers: getCorsHeaders(request) });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[EventCompletion PATCH] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to update event completions' },
+        { status: 403, headers: getCorsHeaders(request) },
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to update event completion' },
       { status: 500, headers: getCorsHeaders(request) },
@@ -140,6 +157,15 @@ export async function DELETE(
   { params }: RouteContext,
 ) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) },
+      );
+    }
+    await requireCapability('training:manage');
+
     const { id } = await params;
     // Safety guard
     let confirm = false;
@@ -170,8 +196,14 @@ export async function DELETE(
       { success: true, id: result.id },
       { headers: getCorsHeaders(request) },
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[EventCompletion DELETE] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete event completions' },
+        { status: 403, headers: getCorsHeaders(request) },
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to delete event completion' },
       { status: 500, headers: getCorsHeaders(request) },

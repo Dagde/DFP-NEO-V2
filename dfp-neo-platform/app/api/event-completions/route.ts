@@ -14,6 +14,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders } from '@/lib/cors';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 import {
   listEventCompletions,
   upsertEventCompletion,
@@ -113,6 +115,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: getCorsHeaders(request) },
+      );
+    }
+    await requireCapability('training:manage');
+
     const body = await request.json() as CreateEventCompletionPayload;
 
     // ── Validate required fields ──────────────────────────────────────────
@@ -159,8 +170,14 @@ export async function POST(request: NextRequest) {
       { completion, created: !isUpdate, updated: isUpdate },
       { status: isUpdate ? 200 : 201, headers: getCorsHeaders(request) },
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[EventCompletion POST] Error:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to save event completions' },
+        { status: 403, headers: getCorsHeaders(request) },
+      );
+    }
 
     // Surface unique-constraint violations clearly
     const errMsg = error instanceof Error ? error.message : String(error);

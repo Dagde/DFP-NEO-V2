@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
@@ -78,6 +80,12 @@ export async function GET(request: NextRequest) {
 // POST /api/scores - Create or update one trainee score
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await requireCapability('training:manage');
+
     const body = await request.json();
     const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = body;
 
@@ -151,8 +159,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, score: scoreRecord });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating score:', error);
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to save scores' },
+        { status: 403 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to create score' },
       { status: 500 }
