@@ -6417,6 +6417,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     const aircraftType = configAircraftTypes.find((aircraft) => normaliseUnitCode(aircraft.code) === normalisedAircraftCode);
     return String(aircraftType?.name || aircraftType?.code || normalisedAircraftCode || 'Aircraft').trim();
   };
+  const getDfpResourceRowsOwnershipLabel = (pool: any): string => {
+    const unitCode = normaliseUnitCode(pool?.unitCode);
+    const locationCode = normaliseUnitCode(pool?.locationCode);
+    const aircraftTypeCode = normaliseUnitCode(pool?.aircraftTypeCode);
+    const sharing = String(pool?.poolType || 'Dedicated').trim() || 'Dedicated';
+    return [
+      unitCode ? `Unit: ${unitCode}` : 'Unit: shared/location-level',
+      locationCode ? `Location: ${locationCode}` : 'Location: not set',
+      aircraftTypeCode ? `Aircraft: ${aircraftTypeCode}` : 'Aircraft: not set',
+      `Sharing: ${sharing}`,
+    ].join(' - ');
+  };
   const ownershipScopedUnitCodeSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode).filter(Boolean));
   const scopedOwnershipUnitRowsBase = visibleUnitRows.filter(({ unit, index }) => {
     if (index === editingUnitIndex) return true;
@@ -8565,15 +8577,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="p-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">Aircraft Setup</div>
-              <div className="mt-1 text-lg font-black text-cyan-100">{visibleAircraftTypeRows.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Capability, cruise planning and crew seats.</div>
-            </div>
-          </div>
-        </div>
-        <div className="px-4 pb-4">
           <div id="platform-aircraft-type-settings" className="space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-gray-100">Aircraft Setup</h4>
@@ -8760,8 +8763,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                             <div className="text-xs font-black uppercase tracking-wide text-orange-100">
                               {pool.aircraftTypeCode || pool.settings?.aircraftLabel || pool.name || pool.code || 'Aircraft'} Configurations
                             </div>
-                            <div className={resourceSectionPanelHintClass}>
-                              {pool.name || pool.code || 'DFP Resource Rows'}
+                            <div className={resourceSectionPanelHintClass}>{pool.name || pool.code || 'DFP Resource Rows'}</div>
+                            <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                              {getDfpResourceRowsOwnershipLabel(pool)}
                             </div>
                           </div>
                           <button
@@ -8871,15 +8875,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ) : null}
         />
         <div className="p-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2">
-              <div className="text-[10px] font-black uppercase tracking-wide text-gray-500">DFP Resource Rows</div>
-              <div className="mt-1 text-lg font-black text-cyan-100">{config.resourcePools.length}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-gray-500">Rows, labels, numbering and ownership.</div>
-            </div>
-          </div>
-        </div>
-        <div className="px-4 pb-4">
           <div id="platform-dfp-resource-row-settings" className="space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3">
             <div>
               <h4 className="text-sm font-black uppercase tracking-wide text-gray-100">DFP Resource Rows</h4>
@@ -8950,7 +8945,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <span className="text-sm font-bold text-white">{pool.name || 'Unnamed DFP Resource Rows'}</span>
                       </div>
                       <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">
-                        {pool.poolType || 'Dedicated'} DFP Resource Rows {pool.unitCode ? `for ${pool.unitCode}` : ''}
+                        {getDfpResourceRowsOwnershipLabel(pool)}
                       </div>
                     </div>
                     <div className="rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-right">

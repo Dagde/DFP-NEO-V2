@@ -71130,6 +71130,18 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
     const aircraftType = configAircraftTypes.find((aircraft) => normaliseUnitCode2(aircraft.code) === normalisedAircraftCode);
     return String(aircraftType?.name || aircraftType?.code || normalisedAircraftCode || "Aircraft").trim();
   };
+  const getDfpResourceRowsOwnershipLabel = (pool) => {
+    const unitCode = normaliseUnitCode2(pool?.unitCode);
+    const locationCode = normaliseUnitCode2(pool?.locationCode);
+    const aircraftTypeCode = normaliseUnitCode2(pool?.aircraftTypeCode);
+    const sharing = String(pool?.poolType || "Dedicated").trim() || "Dedicated";
+    return [
+      unitCode ? `Unit: ${unitCode}` : "Unit: shared/location-level",
+      locationCode ? `Location: ${locationCode}` : "Location: not set",
+      aircraftTypeCode ? `Aircraft: ${aircraftTypeCode}` : "Aircraft: not set",
+      `Sharing: ${sharing}`
+    ].join(" - ");
+  };
   const ownershipScopedUnitCodeSet = new Set(activeSettingsVisibilityUnitCodes.map(normaliseUnitCode2).filter(Boolean));
   const scopedOwnershipUnitRowsBase = visibleUnitRows.filter(({ unit, index }) => {
     if (index === editingUnitIndex) return true;
@@ -73101,12 +73113,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
           ) }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "Aircraft Setup" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: visibleAircraftTypeRows.length }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Capability, cruise planning and crew seats." })
-      ] }) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-aircraft-type-settings", className: "space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-aircraft-type-settings", className: "space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-gray-100", children: "Aircraft Setup" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define aircraft identity, cruise planning values and normal crew-seat eligibility." })
@@ -73282,7 +73289,8 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
                     pool.aircraftTypeCode || pool.settings?.aircraftLabel || pool.name || pool.code || "Aircraft",
                     " Configurations"
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: pool.name || pool.code || "DFP Resource Rows" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: resourceSectionPanelHintClass, children: pool.name || pool.code || "DFP Resource Rows" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: getDfpResourceRowsOwnershipLabel(pool) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
@@ -73391,12 +73399,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
           ) }) : null
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 md:grid-cols-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/60 px-3 py-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-wide text-gray-500", children: "DFP Resource Rows" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-lg font-black text-cyan-100", children: config.resourcePools.length }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: "Rows, labels, numbering and ownership." })
-      ] }) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-dfp-resource-row-settings", className: "space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-dfp-resource-row-settings", className: "space-y-3 rounded-lg border border-gray-700 bg-gray-950/35 p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-black uppercase tracking-wide text-gray-100", children: "DFP Resource Rows" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-500", children: "Define the row counts shown on the DFP, then connect those rows to a unit, location, aircraft type, labels and numbering." })
@@ -73459,11 +73462,7 @@ This removes it from DFP Resource Rows. Press Save in this section to apply the 
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded-md border border-cyan-400/35 bg-cyan-500/15 px-2 py-1 text-xs font-black text-cyan-100", children: pool.code || "NEW" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: pool.name || "Unnamed DFP Resource Rows" })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: [
-                      pool.poolType || "Dedicated",
-                      " DFP Resource Rows ",
-                      pool.unitCode ? `for ${pool.unitCode}` : ""
-                    ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-[11px] uppercase tracking-wide text-gray-500", children: getDfpResourceRowsOwnershipLabel(pool) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-right", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-black uppercase tracking-wide text-gray-500", children: "DFP" }),
