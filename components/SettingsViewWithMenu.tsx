@@ -1219,6 +1219,14 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             .trim()
     );
 
+    const getSearchQueryTokens = (): string[] => (
+        normaliseSearchText(settingsSearch).split(' ').filter(Boolean)
+    );
+
+    const searchTokensMatchText = (tokens: string[], text: string): boolean => (
+        tokens.length > 0 && tokens.every(token => text.includes(token))
+    );
+
     const getSettingsSearchText = (section: SettingsMenuSection, groupLabel: string): string => normaliseSearchText([
         groupLabel,
         getSectionLabel(section),
@@ -1230,12 +1238,21 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         ...(settingsDataSearchTermsBySection[section] || []),
     ].join(' '));
 
+    const getSettingsDataOnlySearchText = (section: SettingsMenuSection): string => normaliseSearchText([
+        ...(settingsDataSearchTermsBySection[section] || []),
+    ].join(' '));
+
+    const hasInContextSearchMatch = (section: SettingsMenuSection): boolean => {
+        const queryTokens = getSearchQueryTokens();
+        if (queryTokens.length === 0) return false;
+        return searchTokensMatchText(queryTokens, getSettingsDataOnlySearchText(section));
+    };
+
     const matchesSettingsSearch = (section: SettingsMenuSection, groupLabel: string) => {
-        const query = normaliseSearchText(settingsSearch);
-        if (!query) return true;
-        const queryTokens = query.split(' ').filter(Boolean);
+        const queryTokens = getSearchQueryTokens();
+        if (queryTokens.length === 0) return true;
         const searchText = getSettingsSearchText(section, groupLabel);
-        return queryTokens.every(token => searchText.includes(token));
+        return searchTokensMatchText(queryTokens, searchText);
     };
 
     const getAccentClasses = (accent: string) => {
@@ -1391,11 +1408,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <div className="space-y-[1px] py-[1px]">
                                             {group.visibleSections.map(section => {
                                                 const sectionActive = activeSection === section;
+                                                const showInContext = isSearchActive && hasInContextSearchMatch(section);
                                                 return (
                                                     <button
                                                         key={section}
                                                         onClick={() => selectSettingsSectionFromMenu(section)}
-                                                        className={`flex min-h-[32px] w-[175px] items-center gap-1 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${
+                                                        className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
                                                             sectionActive
                                                                 ? 'border-transparent bg-transparent text-sky-300'
                                                                 : section === 'emergency'
@@ -1408,6 +1426,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                         ) : null}
                                                         <span className="min-w-0">
                                                             <span className="block truncate">{getSectionLabel(section)}</span>
+                                                            {showInContext && (
+                                                                <span className="mt-0.5 block text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
+                                                                    (in context)
+                                                                </span>
+                                                            )}
                                                         </span>
                                                     </button>
                                                 );
