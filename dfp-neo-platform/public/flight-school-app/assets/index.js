@@ -77737,6 +77737,499 @@ const sectionDescriptions = {
   "appearance": "Choose dark or light display theme",
   "emergency": "System freeze and emergency controls"
 };
+const sectionSearchKeywords = {
+  "scoring-matrix": [
+    "score",
+    "scoring",
+    "matrix",
+    "grades",
+    "grade",
+    "elements",
+    "airmanship",
+    "preparation",
+    "technique",
+    "assessment",
+    "standards",
+    "rubric",
+    "performance text",
+    "overall assessment",
+    "pass fail",
+    "satisfactory"
+  ],
+  "training-report-template": [
+    "training report",
+    "reports",
+    "trg rep",
+    "pt051",
+    "pt-051",
+    "assessment report",
+    "mission status",
+    "results",
+    "grades",
+    "completion results",
+    "phrase bank",
+    "organisation form name",
+    "generic form name",
+    "instructor",
+    "overall assessment",
+    "delete report",
+    "add training report",
+    "staff profile"
+  ],
+  "currencies": [
+    "currency",
+    "currencies",
+    "recency",
+    "expiry",
+    "expiration",
+    "currency requirements",
+    "logic tree",
+    "primitive",
+    "composite",
+    "post flight currency",
+    "post flight recency",
+    "checklist",
+    "qualification"
+  ],
+  "sct-events": [
+    "contt",
+    "continuation",
+    "continuation training",
+    "currency events",
+    "sct",
+    "ctt",
+    "event profiles",
+    "currency ride",
+    "recency event",
+    "training event",
+    "continuation currency"
+  ],
+  "currency-profiles": [
+    "contt",
+    "continuation",
+    "continuation training",
+    "currency events",
+    "sct",
+    "ctt",
+    "event profiles",
+    "currency ride",
+    "recency event",
+    "training event",
+    "continuation currency"
+  ],
+  "people-profile": [
+    "course exclusions",
+    "excluded courses",
+    "neo build exclusions",
+    "leave out",
+    "exclude course",
+    "course filter",
+    "do not schedule",
+    "build exclude"
+  ],
+  "scheduling-rules": [
+    "schedule rules",
+    "scheduling",
+    "neo build rules",
+    "build rules",
+    "limits",
+    "turnaround",
+    "dispatch",
+    "stagger",
+    "duty",
+    "rest",
+    "business rules",
+    "aircraft turnaround",
+    "pre flight",
+    "post flight"
+  ],
+  "event-limits": [
+    "daily limits",
+    "event limits",
+    "max events",
+    "maximum events",
+    "student limits",
+    "instructor limits",
+    "duty supervisor sessions",
+    "sessions per day",
+    "daily event limits"
+  ],
+  "duty-turnaround": [
+    "duty",
+    "turnaround",
+    "rest",
+    "crew duty",
+    "max crew duty",
+    "preferred duty",
+    "flight turnaround",
+    "ftd turnaround",
+    "cpt turnaround",
+    "pre flight",
+    "post flight",
+    "booking window"
+  ],
+  "business-rules": [
+    "business rules",
+    "dispatch",
+    "dispatch rate",
+    "dispatch stagger",
+    "stagger",
+    "hourly event rate",
+    "warning colours",
+    "tile warnings",
+    "authorisation warning",
+    "departure density"
+  ],
+  "data-loaders": [
+    "template",
+    "templates",
+    "download",
+    "upload",
+    "bulk upload",
+    "csv",
+    "spreadsheet",
+    "blank template",
+    "staff template",
+    "trainee template",
+    "data import"
+  ],
+  "user-list": [
+    "users",
+    "user list",
+    "accounts",
+    "login",
+    "password",
+    "change password",
+    "sign in",
+    "access",
+    "roles",
+    "staff account",
+    "trainee account",
+    "active access"
+  ],
+  "staff-database": [
+    "staff",
+    "staff database",
+    "instructors",
+    "qfi",
+    "ofi",
+    "cfi",
+    "archive staff",
+    "restore staff",
+    "qualifications",
+    "rank",
+    "service number",
+    "id number",
+    "staff records"
+  ],
+  "trainee-database": [
+    "trainee",
+    "trainees",
+    "student",
+    "students",
+    "trainee database",
+    "archive trainee",
+    "restore trainee",
+    "course",
+    "lmp",
+    "primary instructor",
+    "secondary instructor",
+    "trainee records"
+  ],
+  "trainee-reallocation": [
+    "reallocate",
+    "reallocation",
+    "allocate trainee",
+    "instructor allocation",
+    "primary instructor",
+    "secondary instructor",
+    "preview allocation",
+    "course supervisor"
+  ],
+  "validation": [
+    "cancellation",
+    "cancellation codes",
+    "cancel codes",
+    "dnco",
+    "dpco",
+    "dco",
+    "cancelled",
+    "validation",
+    "analytics cancellation",
+    "active code",
+    "inactive code"
+  ],
+  "organisation": [
+    "resource sharing",
+    "fleet sharing",
+    "staff sharing",
+    "multi unit",
+    "combined unit",
+    "allocation",
+    "organisation settings",
+    "shared pool",
+    "combined pool",
+    "fixed allocation"
+  ],
+  "crew-composition": [
+    "crew composition",
+    "crew",
+    "crew seats",
+    "seat roles",
+    "pilot",
+    "wso",
+    "loadmaster",
+    "mpro",
+    "awo",
+    "aro",
+    "ewo",
+    "trainee",
+    "alternate crew",
+    "crew groups",
+    "fixed crew"
+  ],
+  "standard-missions": [
+    "directed task",
+    "directed task setup",
+    "mission",
+    "standard mission",
+    "task setup",
+    "duration",
+    "callsign",
+    "formation",
+    "role requirements",
+    "mission profiles"
+  ],
+  "platform-configuration-health": [
+    "configuration health",
+    "health",
+    "warnings",
+    "advisories",
+    "critical",
+    "assurance",
+    "setup gaps",
+    "commercial configuration",
+    "save blocker",
+    "remediation",
+    "audit"
+  ],
+  "platform-organisation-locations": [
+    "organisation",
+    "organization",
+    "parent organisation",
+    "bases",
+    "areas",
+    "locations",
+    "airfields",
+    "icao",
+    "iata",
+    "timezone",
+    "utc",
+    "latitude",
+    "longitude",
+    "training areas",
+    "base",
+    "airfield"
+  ],
+  "platform-units": [
+    "units",
+    "ownership",
+    "unit ownership",
+    "aircraft operated",
+    "operational model",
+    "flight school",
+    "air combat",
+    "fixed crew",
+    "pooled crew",
+    "unit type",
+    "home base",
+    "location ownership"
+  ],
+  "platform-task-profiles": [
+    "directed task list",
+    "task lists",
+    "task abbreviations",
+    "task names",
+    "model task",
+    "operational model tasks",
+    "directed tasks"
+  ],
+  "platform-master-lmp-access": [
+    "master lmp",
+    "lmp access",
+    "master lmp access",
+    "syllabus access",
+    "course access",
+    "assign lmp",
+    "view lmp",
+    "manage lmp"
+  ],
+  "platform-aircraft-setup": [
+    "aircraft setup",
+    "aircraft type",
+    "aircraft code",
+    "aircraft name",
+    "category",
+    "cruise speed",
+    "cruise level",
+    "altitude",
+    "crew seats",
+    "role eligibility",
+    "aircraft configurations",
+    "configuration",
+    "delete aircraft",
+    "add aircraft",
+    "pc-21",
+    "c-17",
+    "p-8"
+  ],
+  "platform-dfp-resource-rows": [
+    "dfp resource rows",
+    "resource rows",
+    "row sets",
+    "dfp rows",
+    "aircraft rows",
+    "row count",
+    "simulator rows",
+    "ftd",
+    "cpt",
+    "trainer",
+    "standby",
+    "ground",
+    "prefix",
+    "numbering",
+    "display labels",
+    "resource row labels",
+    "duty sup",
+    "duty supervisor",
+    "twr di",
+    "tower duty instructor",
+    "resource ownership",
+    "aircraft availability rows"
+  ],
+  "platform-unit-modules": [
+    "unit features",
+    "modules",
+    "feature modules",
+    "enable module",
+    "disable module",
+    "unit capability",
+    "features"
+  ],
+  "platform-settings-visibility": [
+    "settings visibility",
+    "visibility",
+    "filters",
+    "unit filter",
+    "location filter",
+    "aircraft type filter",
+    "organisation filter",
+    "record visibility"
+  ],
+  "platform-deployment-readiness": [
+    "deployment readiness",
+    "readiness",
+    "saas",
+    "on prem",
+    "on-prem",
+    "offline",
+    "hybrid",
+    "secure operation",
+    "diagnostics",
+    "accreditation",
+    "deployment checks"
+  ],
+  "platform-operational-runbook": [
+    "operational runbook",
+    "runbook",
+    "support",
+    "backup",
+    "restore",
+    "updates",
+    "evidence",
+    "incident",
+    "maintenance",
+    "operations record"
+  ],
+  "platform-licensing": [
+    "licensing",
+    "licence",
+    "license",
+    "deployment",
+    "entitlements",
+    "signed licence",
+    "validation status",
+    "subscription",
+    "activation"
+  ],
+  "platform-permission-profiles": [
+    "permission profiles",
+    "permissions",
+    "permission",
+    "roles",
+    "access role",
+    "admin rights",
+    "scheduler rights",
+    "viewer",
+    "profile"
+  ],
+  "platform-rank-terminology": [
+    "rank",
+    "terminology",
+    "labels",
+    "instructor label",
+    "trainee label",
+    "staff sort",
+    "rank order",
+    "service ranks",
+    "people labels"
+  ],
+  "platform-user-access": [
+    "user access",
+    "access scopes",
+    "scope",
+    "location access",
+    "unit access",
+    "module access",
+    "active access",
+    "login access",
+    "user permissions"
+  ],
+  "platform-scheduling-rule-sets": [
+    "scheduling rule sets",
+    "rule sets",
+    "scheduler rules",
+    "aircraft rules",
+    "unit rules",
+    "operating areas",
+    "course priority",
+    "package priority",
+    "build rules"
+  ],
+  "appearance": [
+    "appearance",
+    "theme",
+    "dark",
+    "light",
+    "display",
+    "colour",
+    "color",
+    "fixed crew tile colour",
+    "tile colour",
+    "visual style"
+  ],
+  "emergency": [
+    "emergency",
+    "freeze",
+    "system freeze",
+    "pause",
+    "lock",
+    "unlock",
+    "authority",
+    "emergency freeze",
+    "qualification authority"
+  ]
+};
 const sectionColors = {
   // SYSTEM CONFIGURATION - sky blue icons
   "scoring-matrix": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
@@ -77992,6 +78485,10 @@ const SettingsViewWithMenu = (props) => {
     }
     setActiveSection(section);
   };
+  const selectSettingsSectionFromMenu = (section) => {
+    changeActiveSection(section);
+    if (settingsSearch.trim()) setSettingsSearch("");
+  };
   reactExports.useEffect(() => {
     const request = props.requestedSettingsSection;
     if (!request?.sectionId) return;
@@ -78026,14 +78523,22 @@ const SettingsViewWithMenu = (props) => {
       clearTimeout(settingsGroupOpenTimerRef.current);
     }
   }, []);
+  const normaliseSearchText = (value) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  const getSettingsSearchText = (section, groupLabel) => normaliseSearchText([
+    groupLabel,
+    getSectionLabel(section),
+    getSectionDescription(section),
+    sectionLabels[section],
+    sectionDescriptions[section],
+    section,
+    ...sectionSearchKeywords[section] || []
+  ].join(" "));
   const matchesSettingsSearch = (section, groupLabel) => {
-    const query = settingsSearch.trim().toLowerCase();
+    const query = normaliseSearchText(settingsSearch);
     if (!query) return true;
-    return [
-      groupLabel,
-      getSectionLabel(section),
-      getSectionDescription(section)
-    ].some((value) => value.toLowerCase().includes(query));
+    const queryTokens = query.split(" ").filter(Boolean);
+    const searchText = getSettingsSearchText(section, groupLabel);
+    return queryTokens.every((token) => searchText.includes(token));
   };
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   const visibleSettingGroups = sectionGroups.map((group) => ({
@@ -78151,7 +78656,7 @@ const SettingsViewWithMenu = (props) => {
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
-                    onClick: () => changeActiveSection(section),
+                    onClick: () => selectSettingsSectionFromMenu(section),
                     className: `flex min-h-[32px] w-[175px] items-center gap-1 rounded-md border px-3 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
                     children: [
                       sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
