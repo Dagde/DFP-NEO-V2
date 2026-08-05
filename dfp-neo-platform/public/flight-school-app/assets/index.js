@@ -9752,7 +9752,12 @@ const AircraftAvailabilityOverlay = ({
     return (hours - startHour) * pixelsPerHour;
   };
   const getEndOfDayX = () => getXPosition(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59));
-  const formatHoverTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const formatHoverTimeFromX = (x) => {
+    const totalMinutes = Math.max(0, Math.round(startHour * 60 + x / pixelsPerHour * 60));
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
   const updateHoverInfo = (event, available, label) => {
     if (!overlayRef.current) return;
     const rect = overlayRef.current.getBoundingClientRect();
@@ -9761,7 +9766,7 @@ const AircraftAvailabilityOverlay = ({
       x: Math.max(72, Math.min(rect.width - 72, x)),
       y: Math.max(48, Math.min(gridHeight - 8, getYPosition(available))),
       available,
-      label
+      label: formatHoverTimeFromX(x)
     });
   };
   const [isDragging, setIsDragging] = reactExports.useState(false);
@@ -9920,8 +9925,8 @@ const AircraftAvailabilityOverlay = ({
               stroke: "transparent",
               strokeWidth: "16",
               style: { pointerEvents: "auto", cursor: "default" },
-              onMouseMove: (event) => updateHoverInfo(event, snap2.available, `${formatHoverTime(snap2.timestamp)} availability`),
-              onMouseEnter: (event) => updateHoverInfo(event, snap2.available, `${formatHoverTime(snap2.timestamp)} availability`),
+              onMouseMove: (event) => updateHoverInfo(event, snap2.available),
+              onMouseEnter: (event) => updateHoverInfo(event, snap2.available),
               onMouseLeave: () => setHoverInfo(null)
             }
           )
@@ -9992,8 +9997,8 @@ const AircraftAvailabilityOverlay = ({
               stroke: "transparent",
               strokeWidth: "20",
               style: { pointerEvents: "auto", cursor: "ns-resize" },
-              onMouseMove: (event) => updateHoverInfo(event, currentAvailable, "Current availability"),
-              onMouseEnter: (event) => updateHoverInfo(event, currentAvailable, "Current availability"),
+              onMouseMove: (event) => updateHoverInfo(event, currentAvailable),
+              onMouseEnter: (event) => updateHoverInfo(event, currentAvailable),
               onMouseLeave: () => setHoverInfo(null),
               onMouseDown: handleLineMouseDown
             }

@@ -177,10 +177,14 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const getEndOfDayX = (): number =>
         getXPosition(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59));
 
-    const formatHoverTime = (date: Date): string =>
-        `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const formatHoverTimeFromX = (x: number): string => {
+        const totalMinutes = Math.max(0, Math.round((startHour * 60) + (x / pixelsPerHour) * 60));
+        const hours = Math.floor(totalMinutes / 60) % 24;
+        const minutes = totalMinutes % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
 
-    const updateHoverInfo = (event: React.MouseEvent<SVGLineElement>, available: number, label: string) => {
+    const updateHoverInfo = (event: React.MouseEvent<SVGLineElement>, available: number, label?: string) => {
         if (!overlayRef.current) return;
         const rect = overlayRef.current.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -188,7 +192,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             x: Math.max(72, Math.min(rect.width - 72, x)),
             y: Math.max(48, Math.min(gridHeight - 8, getYPosition(available))),
             available,
-            label,
+            label: label || formatHoverTimeFromX(x),
         });
     };
 
@@ -342,8 +346,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                         x1={startX} y1={y} x2={clampedEndX} y2={y}
                         stroke="transparent" strokeWidth="16"
                         style={{ pointerEvents: 'auto', cursor: 'default' }}
-                        onMouseMove={(event) => updateHoverInfo(event, snap.available, `${formatHoverTime(snap.timestamp)} availability`)}
-                        onMouseEnter={(event) => updateHoverInfo(event, snap.available, `${formatHoverTime(snap.timestamp)} availability`)}
+                        onMouseMove={(event) => updateHoverInfo(event, snap.available)}
+                        onMouseEnter={(event) => updateHoverInfo(event, snap.available)}
                         onMouseLeave={() => setHoverInfo(null)}
                     />
                 </g>
@@ -404,8 +408,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                         x2={endOfDayX}   y2={displayY}
                         stroke="transparent" strokeWidth="20"
                         style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                        onMouseMove={(event) => updateHoverInfo(event, currentAvailable, 'Current availability')}
-                        onMouseEnter={(event) => updateHoverInfo(event, currentAvailable, 'Current availability')}
+                        onMouseMove={(event) => updateHoverInfo(event, currentAvailable)}
+                        onMouseEnter={(event) => updateHoverInfo(event, currentAvailable)}
                         onMouseLeave={() => setHoverInfo(null)}
                         onMouseDown={handleLineMouseDown}
                     />
