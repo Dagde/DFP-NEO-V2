@@ -105411,6 +105411,7 @@ const DfpContextMenu = ({ menu, onClose }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
+      "data-dfp-context-menu": "true",
       className: "fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-slate-500/45 bg-slate-950/98 text-slate-100 shadow-2xl shadow-black/45 backdrop-blur",
       style: { left, top },
       role: "menu",
@@ -122218,6 +122219,8 @@ ${error instanceof Error ? error.message : String(error)}`,
     showValidation
   ]);
   const handleDfpWorkspaceMouseDownCapture = reactExports.useCallback((event) => {
+    const target = event.target;
+    if (target?.closest('[data-dfp-context-menu="true"]')) return;
     if (event.button === 0 && dfpContextMenu) {
       closeDfpContextMenu();
     }
