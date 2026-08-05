@@ -52,6 +52,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(initialAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
+    const [hoverInfo, setHoverInfo] = useState<{ x: number; y: number; available: number; label: string } | null>(null);
     const overlayRef = useRef<SVGSVGElement>(null);
 
     // Stable ref for onAvailabilityChange
@@ -175,6 +176,21 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     const getEndOfDayX = (): number =>
         getXPosition(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59));
+
+    const formatHoverTime = (date: Date): string =>
+        `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+    const updateHoverInfo = (event: React.MouseEvent<SVGLineElement>, available: number, label: string) => {
+        if (!overlayRef.current) return;
+        const rect = overlayRef.current.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        setHoverInfo({
+            x: Math.max(72, Math.min(rect.width - 72, x)),
+            y: Math.max(48, Math.min(gridHeight - 8, getYPosition(available))),
+            available,
+            label,
+        });
+    };
 
     // ── Drag state ──────────────────────────────────────────────────────────────
     const [isDragging, setIsDragging] = useState(false);
@@ -315,12 +331,22 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             if (clampedEndX <= startX) continue;
 
             lines.push(
-                <line key={`h-${i}`}
-                    x1={startX} y1={y} x2={clampedEndX} y2={y}
-                    stroke="rgba(236, 72, 153, 0.5)"
-                    strokeWidth="2" strokeDasharray="8 4"
-                    className="pointer-events-none"
-                />
+                <g key={`h-${i}`}>
+                    <line
+                        x1={startX} y1={y} x2={clampedEndX} y2={y}
+                        stroke="rgba(236, 72, 153, 0.5)"
+                        strokeWidth="2" strokeDasharray="8 4"
+                        className="pointer-events-none"
+                    />
+                    <line
+                        x1={startX} y1={y} x2={clampedEndX} y2={y}
+                        stroke="transparent" strokeWidth="16"
+                        style={{ pointerEvents: 'auto', cursor: 'default' }}
+                        onMouseMove={(event) => updateHoverInfo(event, snap.available, `${formatHoverTime(snap.timestamp)} availability`)}
+                        onMouseEnter={(event) => updateHoverInfo(event, snap.available, `${formatHoverTime(snap.timestamp)} availability`)}
+                        onMouseLeave={() => setHoverInfo(null)}
+                    />
+                </g>
             );
 
             if (i > 0 && sortedSnaps[i - 1].available !== snap.available) {
@@ -378,9 +404,45 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                         x2={endOfDayX}   y2={displayY}
                         stroke="transparent" strokeWidth="20"
                         style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
+                        onMouseMove={(event) => updateHoverInfo(event, currentAvailable, 'Current availability')}
+                        onMouseEnter={(event) => updateHoverInfo(event, currentAvailable, 'Current availability')}
+                        onMouseLeave={() => setHoverInfo(null)}
                         onMouseDown={handleLineMouseDown}
                     />
                 </g>}
+                {hoverInfo && (
+                    <g className="pointer-events-none">
+                        <rect
+                            x={hoverInfo.x - 65}
+                            y={hoverInfo.y - 52}
+                            width="130"
+                            height="44"
+                            rx="6"
+                            fill="#1f2937"
+                            stroke="#374151"
+                            strokeWidth="1"
+                        />
+                        <text
+                            x={hoverInfo.x}
+                            y={hoverInfo.y - 36}
+                            textAnchor="middle"
+                            fontSize="11"
+                            fill="#9ca3af"
+                        >
+                            {hoverInfo.label}
+                        </text>
+                        <text
+                            x={hoverInfo.x}
+                            y={hoverInfo.y - 19}
+                            textAnchor="middle"
+                            fontSize="13"
+                            fontWeight="bold"
+                            fill="#ec4899"
+                        >
+                            {hoverInfo.available} aircraft
+                        </text>
+                    </g>
+                )}
             </svg>
         </>
     );

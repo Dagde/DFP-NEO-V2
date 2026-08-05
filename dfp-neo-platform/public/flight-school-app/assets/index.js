@@ -9657,6 +9657,7 @@ const AircraftAvailabilityOverlay = ({
 }) => {
   const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
+  const [hoverInfo, setHoverInfo] = reactExports.useState(null);
   const overlayRef = reactExports.useRef(null);
   const onAvailabilityChangeRef = reactExports.useRef(onAvailabilityChange);
   reactExports.useEffect(() => {
@@ -9751,6 +9752,18 @@ const AircraftAvailabilityOverlay = ({
     return (hours - startHour) * pixelsPerHour;
   };
   const getEndOfDayX = () => getXPosition(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59));
+  const formatHoverTime = (date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const updateHoverInfo = (event, available, label) => {
+    if (!overlayRef.current) return;
+    const rect = overlayRef.current.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    setHoverInfo({
+      x: Math.max(72, Math.min(rect.width - 72, x)),
+      y: Math.max(48, Math.min(gridHeight - 8, getYPosition(available))),
+      available,
+      label
+    });
+  };
   const [isDragging, setIsDragging] = reactExports.useState(false);
   const [dragY, setDragY] = reactExports.useState(0);
   const isDraggingRef = reactExports.useRef(false);
@@ -9883,20 +9896,36 @@ const AircraftAvailabilityOverlay = ({
       const clampedEndX = Math.min(endX, historyEndX2);
       if (clampedEndX <= startX) continue;
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "line",
-          {
-            x1: startX,
-            y1: y,
-            x2: clampedEndX,
-            y2: y,
-            stroke: "rgba(236, 72, 153, 0.5)",
-            strokeWidth: "2",
-            strokeDasharray: "8 4",
-            className: "pointer-events-none"
-          },
-          `h-${i}`
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "line",
+            {
+              x1: startX,
+              y1: y,
+              x2: clampedEndX,
+              y2: y,
+              stroke: "rgba(236, 72, 153, 0.5)",
+              strokeWidth: "2",
+              strokeDasharray: "8 4",
+              className: "pointer-events-none"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "line",
+            {
+              x1: startX,
+              y1: y,
+              x2: clampedEndX,
+              y2: y,
+              stroke: "transparent",
+              strokeWidth: "16",
+              style: { pointerEvents: "auto", cursor: "default" },
+              onMouseMove: (event) => updateHoverInfo(event, snap2.available, `${formatHoverTime(snap2.timestamp)} availability`),
+              onMouseEnter: (event) => updateHoverInfo(event, snap2.available, `${formatHoverTime(snap2.timestamp)} availability`),
+              onMouseLeave: () => setHoverInfo(null)
+            }
+          )
+        ] }, `h-${i}`)
       );
       if (i > 0 && sortedSnaps[i - 1].available !== snap2.available) {
         const prevY = getYPosition(sortedSnaps[i - 1].available);
@@ -9963,7 +9992,51 @@ const AircraftAvailabilityOverlay = ({
               stroke: "transparent",
               strokeWidth: "20",
               style: { pointerEvents: "auto", cursor: "ns-resize" },
+              onMouseMove: (event) => updateHoverInfo(event, currentAvailable, "Current availability"),
+              onMouseEnter: (event) => updateHoverInfo(event, currentAvailable, "Current availability"),
+              onMouseLeave: () => setHoverInfo(null),
               onMouseDown: handleLineMouseDown
+            }
+          )
+        ] }),
+        hoverInfo && /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { className: "pointer-events-none", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "rect",
+            {
+              x: hoverInfo.x - 65,
+              y: hoverInfo.y - 52,
+              width: "130",
+              height: "44",
+              rx: "6",
+              fill: "#1f2937",
+              stroke: "#374151",
+              strokeWidth: "1"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "text",
+            {
+              x: hoverInfo.x,
+              y: hoverInfo.y - 36,
+              textAnchor: "middle",
+              fontSize: "11",
+              fill: "#9ca3af",
+              children: hoverInfo.label
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "text",
+            {
+              x: hoverInfo.x,
+              y: hoverInfo.y - 19,
+              textAnchor: "middle",
+              fontSize: "13",
+              fontWeight: "bold",
+              fill: "#ec4899",
+              children: [
+                hoverInfo.available,
+                " aircraft"
+              ]
             }
           )
         ] })
