@@ -71,21 +71,29 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
   const yScale = (v: number) => PAD.top + chartH - ((v - minVal) / range) * chartH;
 
   // Build polyline points
-  const points = plottedData.map(d => {
-    const i = data.findIndex(point => point.date === d.date);
-    return `${xScale(i)},${yScale(d.value)}`;
-  }).join(' ');
+  const singlePointValue = plottedData.length === 1 ? plottedData[0].value : null;
+  const points = singlePointValue !== null
+    ? `${xScale(0)},${yScale(singlePointValue)} ${xScale(data.length - 1)},${yScale(singlePointValue)}`
+    : plottedData.map(d => {
+        const i = data.findIndex(point => point.date === d.date);
+        return `${xScale(i)},${yScale(d.value)}`;
+      }).join(' ');
 
   // Build area fill path
-  const firstPlottedIndex = data.findIndex(point => point.date === plottedData[0].date);
-  const lastPlottedIndex = data.findIndex(point => point.date === plottedData[plottedData.length - 1].date);
-  const areaPath =
-    `M ${xScale(firstPlottedIndex)},${yScale(plottedData[0].value)} ` +
-    plottedData.slice(1).map(d => {
-      const i = data.findIndex(point => point.date === d.date);
-      return `L ${xScale(i)},${yScale(d.value)}`;
-    }).join(' ') +
-    ` L ${xScale(lastPlottedIndex)},${PAD.top + chartH} L ${xScale(firstPlottedIndex)},${PAD.top + chartH} Z`;
+  const firstPlottedIndex = singlePointValue !== null
+    ? 0
+    : data.findIndex(point => point.date === plottedData[0].date);
+  const lastPlottedIndex = singlePointValue !== null
+    ? data.length - 1
+    : data.findIndex(point => point.date === plottedData[plottedData.length - 1].date);
+  const areaPath = singlePointValue !== null
+    ? `M ${xScale(0)},${yScale(singlePointValue)} L ${xScale(data.length - 1)},${yScale(singlePointValue)} L ${xScale(data.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`
+    : `M ${xScale(firstPlottedIndex)},${yScale(plottedData[0].value)} ` +
+      plottedData.slice(1).map(d => {
+        const i = data.findIndex(point => point.date === d.date);
+        return `L ${xScale(i)},${yScale(d.value)}`;
+      }).join(' ') +
+      ` L ${xScale(lastPlottedIndex)},${PAD.top + chartH} L ${xScale(firstPlottedIndex)},${PAD.top + chartH} Z`;
 
   // Y-axis grid lines (5 ticks)
   const yTicks = Array.from({ length: 5 }, (_, i) => minVal + (range / 4) * i);
