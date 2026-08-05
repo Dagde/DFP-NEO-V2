@@ -78747,7 +78747,7 @@ const SettingsViewWithMenu = (props) => {
   const normaliseSearchText = (value) => value.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
   const getSearchQueryTokens = () => normaliseSearchText(settingsSearch).split(" ").filter(Boolean);
   const searchTokensMatchText = (tokens, text) => tokens.length > 0 && tokens.every((token) => text.includes(token));
-  const getSettingsSearchText = (section, groupLabel) => normaliseSearchText([
+  const getSettingsSearchParts = (section, groupLabel) => [
     groupLabel,
     getSectionLabel(section),
     getSectionDescription(section),
@@ -78756,14 +78756,35 @@ const SettingsViewWithMenu = (props) => {
     section,
     ...sectionSearchKeywords[section] || [],
     ...settingsDataSearchTermsBySection[section] || []
-  ].join(" "));
-  const getSettingsDataOnlySearchText = (section) => normaliseSearchText([
-    ...settingsDataSearchTermsBySection[section] || []
-  ].join(" "));
-  const hasInContextSearchMatch = (section) => {
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  const getSettingsSearchText = (section, groupLabel) => normaliseSearchText(
+    getSettingsSearchParts(section, groupLabel).join(" ")
+  );
+  const getSearchContextSnippet = (section, groupLabel) => {
     const queryTokens = getSearchQueryTokens();
-    if (queryTokens.length === 0) return false;
-    return searchTokensMatchText(queryTokens, getSettingsDataOnlySearchText(section));
+    if (queryTokens.length === 0) return null;
+    const usefulTokens = queryTokens.filter((token) => token.length >= 2).sort((a, b) => b.length - a.length);
+    for (const token of usefulTokens) {
+      for (const part of getSettingsSearchParts(section, groupLabel)) {
+        const lowerPart = part.toLowerCase();
+        const matchIndex = lowerPart.indexOf(token);
+        if (matchIndex === -1) continue;
+        const wordStartCandidate = part.slice(0, matchIndex).search(/\S+\s*$/);
+        const wordStart = wordStartCandidate >= 0 ? wordStartCandidate : matchIndex;
+        const wordTailMatch = part.slice(matchIndex + token.length).match(/^\S*/);
+        const wordEnd = matchIndex + token.length + (wordTailMatch?.[0]?.length || 0);
+        const previousWordMatch = part.slice(0, wordStart).match(/\S+\s*$/);
+        const contextStart = previousWordMatch ? previousWordMatch.index : wordStart;
+        const nextWordMatch = part.slice(wordEnd).match(/^\s+\S+/);
+        const contextEnd = nextWordMatch ? wordEnd + nextWordMatch[0].length : wordEnd;
+        return {
+          before: part.slice(contextStart, matchIndex),
+          match: part.slice(matchIndex, matchIndex + token.length),
+          after: part.slice(matchIndex + token.length, contextEnd)
+        };
+      }
+    }
+    return null;
   };
   const matchesSettingsSearch = (section, groupLabel) => {
     const queryTokens = getSearchQueryTokens();
@@ -78884,7 +78905,7 @@ const SettingsViewWithMenu = (props) => {
               className: `grid transition-[grid-template-rows,opacity] duration-200 ease-out ${showSubmenu ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`,
               children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-h-0 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-[1px] py-[1px]", children: group.visibleSections.map((section) => {
                 const sectionActive = activeSection === section;
-                const showInContext = isSearchActive && hasInContextSearchMatch(section);
+                const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
@@ -78894,7 +78915,11 @@ const SettingsViewWithMenu = (props) => {
                       sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: getSectionLabel(section) }),
-                        showInContext && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: "(in context)" })
+                        contextSnippet && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.before }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-cyan-200", children: contextSnippet.match.toUpperCase() }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: contextSnippet.after })
+                        ] })
                       ] })
                     ]
                   },

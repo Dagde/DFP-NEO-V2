@@ -1227,7 +1227,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         tokens.length > 0 && tokens.every(token => text.includes(token))
     );
 
-    const getSettingsSearchText = (section: SettingsMenuSection, groupLabel: string): string => normaliseSearchText([
+    const getSettingsSearchParts = (section: SettingsMenuSection, groupLabel: string): string[] => [
         groupLabel,
         getSectionLabel(section),
         getSectionDescription(section),
@@ -1236,16 +1236,47 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         section,
         ...(sectionSearchKeywords[section] || []),
         ...(settingsDataSearchTermsBySection[section] || []),
-    ].join(' '));
+    ].map(value => String(value || '').trim()).filter(Boolean);
 
-    const getSettingsDataOnlySearchText = (section: SettingsMenuSection): string => normaliseSearchText([
-        ...(settingsDataSearchTermsBySection[section] || []),
-    ].join(' '));
+    const getSettingsSearchText = (section: SettingsMenuSection, groupLabel: string): string => normaliseSearchText(
+        getSettingsSearchParts(section, groupLabel).join(' ')
+    );
 
-    const hasInContextSearchMatch = (section: SettingsMenuSection): boolean => {
+    const getSearchContextSnippet = (section: SettingsMenuSection, groupLabel: string): {
+        before: string;
+        match: string;
+        after: string;
+    } | null => {
         const queryTokens = getSearchQueryTokens();
-        if (queryTokens.length === 0) return false;
-        return searchTokensMatchText(queryTokens, getSettingsDataOnlySearchText(section));
+        if (queryTokens.length === 0) return null;
+        const usefulTokens = queryTokens
+            .filter(token => token.length >= 2)
+            .sort((a, b) => b.length - a.length);
+
+        for (const token of usefulTokens) {
+            for (const part of getSettingsSearchParts(section, groupLabel)) {
+                const lowerPart = part.toLowerCase();
+                const matchIndex = lowerPart.indexOf(token);
+                if (matchIndex === -1) continue;
+
+                const wordStartCandidate = part.slice(0, matchIndex).search(/\S+\s*$/);
+                const wordStart = wordStartCandidate >= 0 ? wordStartCandidate : matchIndex;
+                const wordTailMatch = part.slice(matchIndex + token.length).match(/^\S*/);
+                const wordEnd = matchIndex + token.length + (wordTailMatch?.[0]?.length || 0);
+                const previousWordMatch = part.slice(0, wordStart).match(/\S+\s*$/);
+                const contextStart = previousWordMatch ? previousWordMatch.index : wordStart;
+                const nextWordMatch = part.slice(wordEnd).match(/^\s+\S+/);
+                const contextEnd = nextWordMatch ? wordEnd + nextWordMatch[0].length : wordEnd;
+
+                return {
+                    before: part.slice(contextStart, matchIndex),
+                    match: part.slice(matchIndex, matchIndex + token.length),
+                    after: part.slice(matchIndex + token.length, contextEnd),
+                };
+            }
+        }
+
+        return null;
     };
 
     const matchesSettingsSearch = (section: SettingsMenuSection, groupLabel: string) => {
@@ -1408,7 +1439,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <div className="space-y-[1px] py-[1px]">
                                             {group.visibleSections.map(section => {
                                                 const sectionActive = activeSection === section;
-                                                const showInContext = isSearchActive && hasInContextSearchMatch(section);
+                                                const contextSnippet = isSearchActive ? getSearchContextSnippet(section, group.label) : null;
                                                 return (
                                                     <button
                                                         key={section}
@@ -1426,9 +1457,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                         ) : null}
                                                         <span className="min-w-0">
                                                             <span className="block truncate">{getSectionLabel(section)}</span>
-                                                            {showInContext && (
-                                                                <span className="mt-0.5 block text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
-                                                                    (in context)
+                                                            {contextSnippet && (
+                                                                <span className="mt-0.5 block truncate text-[9px] font-medium normal-case leading-tight text-cyan-300/80">
+                                                                    <span>{contextSnippet.before}</span>
+                                                                    <span className="font-bold text-cyan-200">{contextSnippet.match.toUpperCase()}</span>
+                                                                    <span>{contextSnippet.after}</span>
                                                                 </span>
                                                             )}
                                                         </span>
