@@ -27,6 +27,8 @@ interface ACHistoryAircraftAvailabilityProps {
   timezoneOffset?: number;  // UTC offset in hours (e.g. 11 for AEDT). Used for timezone-correct averages.
   dayFlyingStart?: string;  // HH:mm
   dayFlyingEnd?: string;    // HH:mm
+  locationCode?: string;
+  unitCode?: string;
 }
 
 // ─── Tiny SVG line/area chart ────────────────────────────────────────────────
@@ -271,6 +273,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   timezoneOffset = 0,
   dayFlyingStart = '08:00',
   dayFlyingEnd = '17:00',
+  locationCode,
+  unitCode,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const [records, setRecords] = useState<AvailabilityRecord[]>([]);
@@ -287,6 +291,10 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   const [newFleetSize, setNewFleetSize] = useState(totalAircraft.toString());
 
   const canEditFleetSize = currentUserRole === 'Super Admin' || currentUserRole === 'Admin';
+  const availabilityContext = useMemo(() => ({
+    locationCode: String(locationCode || '').trim().toUpperCase(),
+    unitCode: String(unitCode || '').trim().toUpperCase(),
+  }), [locationCode, unitCode]);
 
   // Fetch configured fleet size from database
   useEffect(() => {
@@ -483,6 +491,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           date: today,
           flyingWindowStart: dayFlyingStart,
           flyingWindowEnd: dayFlyingEnd,
+          locationCode: availabilityContext.locationCode || undefined,
+          unitCode: availabilityContext.unitCode || undefined,
           clientTimezoneOffsetHours: timezoneOffset,
         }),
       });
@@ -591,6 +601,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         startDate: toISODate(start),
         endDate: toISODate(end),
       });
+      if (availabilityContext.locationCode) params.set('locationCode', availabilityContext.locationCode);
+      if (availabilityContext.unitCode) params.set('unitCode', availabilityContext.unitCode);
       const res = await fetch(`/api/aircraft-availability-history?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -601,7 +613,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, getDateRange]);
+  }, [selectedPeriod, getDateRange, availabilityContext.locationCode, availabilityContext.unitCode]);
 
   useEffect(() => {
     fetchRecords();
@@ -677,6 +689,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
             date: today,
             flyingWindowStart: dayFlyingStart,
             flyingWindowEnd: dayFlyingEnd,
+            locationCode: availabilityContext.locationCode || undefined,
+            unitCode: availabilityContext.unitCode || undefined,
             clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
@@ -733,7 +747,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
     return () => clearInterval(interval);
   // timezoneOffset must be in deps so the closure captures the correct value
-  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd, availabilityContext.locationCode, availabilityContext.unitCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh today's average when currentAircraftAvailable changes
   useEffect(() => {
@@ -748,6 +762,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
             date: today,
             flyingWindowStart: dayFlyingStart,
             flyingWindowEnd: dayFlyingEnd,
+            locationCode: availabilityContext.locationCode || undefined,
+            unitCode: availabilityContext.unitCode || undefined,
             clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
@@ -777,7 +793,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
 
     return () => clearTimeout(timeoutId);
   // timezoneOffset in deps so closure captures correct value
-  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd, availabilityContext.locationCode, availabilityContext.unitCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPeriodLabel = (period: TimePeriod): string => {
     const labels: Record<TimePeriod, string> = {

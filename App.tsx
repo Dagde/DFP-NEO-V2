@@ -27471,6 +27471,21 @@ const App: React.FC = () => {
                     logAvailabilityDebug(`[AV] Event skipped: ${data.reason}`);
                 } else {
                     logAvailabilityDebug(`[AV] Event recorded successfully!`);
+                    fetch(`${apiBase}/aircraft-availability-recalculate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            date: dateStr,
+                            flyingWindowStart: windowStart,
+                            flyingWindowEnd: windowEnd,
+                            locationCode: school,
+                            unitCode: activeUnitCode,
+                            clientTimezoneOffsetHours: timezoneOffset,
+                        }),
+                    }).catch((err) => {
+                        console.error('[AV] ❌ Failed to refresh daily availability average after event:', err);
+                    });
                 }
                 logAvailabilityDebug(`${'='.repeat(60)}\n`);
                 return { success: true, data };

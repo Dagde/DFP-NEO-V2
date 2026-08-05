@@ -49672,7 +49672,9 @@ const ACHistoryAircraftAvailability = ({
   currentUserRole,
   timezoneOffset = 0,
   dayFlyingStart = "08:00",
-  dayFlyingEnd = "17:00"
+  dayFlyingEnd = "17:00",
+  locationCode,
+  unitCode
 }) => {
   const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
   const [records, setRecords] = reactExports.useState([]);
@@ -49686,6 +49688,10 @@ const ACHistoryAircraftAvailability = ({
   const [showFleetSizeEditor, setShowFleetSizeEditor] = reactExports.useState(false);
   const [newFleetSize, setNewFleetSize] = reactExports.useState(totalAircraft.toString());
   const canEditFleetSize = currentUserRole === "Super Admin" || currentUserRole === "Admin";
+  const availabilityContext = reactExports.useMemo(() => ({
+    locationCode: String(locationCode || "").trim().toUpperCase(),
+    unitCode: String(unitCode || "").trim().toUpperCase()
+  }), [locationCode, unitCode]);
   reactExports.useEffect(() => {
     const fetchFleetSize = async () => {
       setFleetSizeLoading(true);
@@ -49854,6 +49860,8 @@ const ACHistoryAircraftAvailability = ({
           date: today,
           flyingWindowStart: dayFlyingStart,
           flyingWindowEnd: dayFlyingEnd,
+          locationCode: availabilityContext.locationCode || void 0,
+          unitCode: availabilityContext.unitCode || void 0,
           clientTimezoneOffsetHours: timezoneOffset
         })
       });
@@ -49951,6 +49959,8 @@ const ACHistoryAircraftAvailability = ({
         startDate: toISODate(start),
         endDate: toISODate(end)
       });
+      if (availabilityContext.locationCode) params.set("locationCode", availabilityContext.locationCode);
+      if (availabilityContext.unitCode) params.set("unitCode", availabilityContext.unitCode);
       const res = await fetch(`/api/aircraft-availability-history?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -49961,7 +49971,7 @@ const ACHistoryAircraftAvailability = ({
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod, getDateRange]);
+  }, [selectedPeriod, getDateRange, availabilityContext.locationCode, availabilityContext.unitCode]);
   reactExports.useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
@@ -50027,6 +50037,8 @@ const ACHistoryAircraftAvailability = ({
             date: today,
             flyingWindowStart: dayFlyingStart,
             flyingWindowEnd: dayFlyingEnd,
+            locationCode: availabilityContext.locationCode || void 0,
+            unitCode: availabilityContext.unitCode || void 0,
             clientTimezoneOffsetHours: timezoneOffset
           })
         });
@@ -50073,7 +50085,7 @@ const ACHistoryAircraftAvailability = ({
     fetchTodaysAverage();
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1e3);
     return () => clearInterval(interval);
-  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]);
+  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd, availabilityContext.locationCode, availabilityContext.unitCode]);
   reactExports.useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const today = getLocalDateString2();
@@ -50086,6 +50098,8 @@ const ACHistoryAircraftAvailability = ({
             date: today,
             flyingWindowStart: dayFlyingStart,
             flyingWindowEnd: dayFlyingEnd,
+            locationCode: availabilityContext.locationCode || void 0,
+            unitCode: availabilityContext.unitCode || void 0,
             clientTimezoneOffsetHours: timezoneOffset
           })
         });
@@ -50108,7 +50122,7 @@ const ACHistoryAircraftAvailability = ({
       }
     }, 2e3);
     return () => clearTimeout(timeoutId);
-  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd]);
+  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd, availabilityContext.locationCode, availabilityContext.unitCode]);
   const formatPeriodLabel = (period) => {
     const labels = {
       week: "Past Week",
@@ -50725,6 +50739,7 @@ const ACHistoryIntelligencePanel = ({
   timezoneOffset = 0,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
+  operationalContext,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
@@ -50774,7 +50789,9 @@ const ACHistoryIntelligencePanel = ({
         currentUserRole,
         timezoneOffset,
         dayFlyingStart,
-        dayFlyingEnd
+        dayFlyingEnd,
+        locationCode: operationalContext?.locationCode,
+        unitCode: operationalContext?.unitCode
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -50920,6 +50937,7 @@ const BuildIntelligenceView = (props) => {
           timezoneOffset: props.timezoneOffset,
           dayFlyingStart: props.dayFlyingStart,
           dayFlyingEnd: props.dayFlyingEnd,
+          operationalContext: props.operationalContext,
           resourceDisplayNames
         }
       ),
@@ -109564,6 +109582,21 @@ ${"=".repeat(60)}`);
           logAvailabilityDebug(`[AV] Event skipped: ${data.reason}`);
         } else {
           logAvailabilityDebug(`[AV] Event recorded successfully!`);
+          fetch(`${apiBase}/aircraft-availability-recalculate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              date: dateStr,
+              flyingWindowStart: windowStart,
+              flyingWindowEnd: windowEnd,
+              locationCode: school,
+              unitCode: activeUnitCode,
+              clientTimezoneOffsetHours: timezoneOffset
+            })
+          }).catch((err) => {
+            console.error("[AV] ❌ Failed to refresh daily availability average after event:", err);
+          });
         }
         logAvailabilityDebug(`${"=".repeat(60)}
 `);

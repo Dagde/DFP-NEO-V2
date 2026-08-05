@@ -257,6 +257,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 timezoneOffset={props.timezoneOffset}
                 dayFlyingStart={props.dayFlyingStart}
                 dayFlyingEnd={props.dayFlyingEnd}
+                operationalContext={props.operationalContext}
                 resourceDisplayNames={resourceDisplayNames}
               />
             )}

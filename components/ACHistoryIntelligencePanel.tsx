@@ -14,6 +14,10 @@ interface ACHistoryIntelligencePanelProps {
   timezoneOffset?: number;
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
+  operationalContext?: {
+    locationCode?: string;
+    unitCode?: string;
+  };
   resourceDisplayNames?: ResourceDisplayNames;
 }
 
@@ -26,6 +30,7 @@ const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
   timezoneOffset = 0,
   dayFlyingStart = '08:00',
   dayFlyingEnd = '17:00',
+  operationalContext,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
@@ -84,6 +89,8 @@ const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
         timezoneOffset={timezoneOffset}
         dayFlyingStart={dayFlyingStart}
         dayFlyingEnd={dayFlyingEnd}
+        locationCode={operationalContext?.locationCode}
+        unitCode={operationalContext?.unitCode}
       />
 
       <RecentCancellationsTable
