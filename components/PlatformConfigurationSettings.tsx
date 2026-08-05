@@ -9301,14 +9301,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           checked={editableDfpRows.dutySupervisor > 0}
                           disabled={!canEditResourcePools}
                           onChange={(checked) => updateResourcePoolSettings(index, { dutySupervisor: checked ? 1 : 0 })}
-                          info="Adds one Duty Sup row to the DFP for the flight supervisor managing live program execution."
+                          info="Adds one Duty Sup row to the DFP. The Duty Supervisor is the flight supervisor responsible for real-time execution of the flying program, coordinating aircraft, instructors, trainees, maintenance and support agencies, authorising flights, managing operational changes, and keeping the program safe and efficient."
                         />
                         <ToggleField
                           label="Tower Duty Instructor row"
                           checked={editableDfpRows.towerDutyInstructor > 0}
                           disabled={!canEditResourcePools}
                           onChange={(checked) => updateResourcePoolSettings(index, { towerDutyInstructor: checked ? 1 : 0 })}
-                          info="Adds one TWR DI row to the DFP for the instructor supervising aircraft near the airfield."
+                          info="Adds one TWR DI row to the DFP. The Tower Duty Instructor is positioned at or near the control tower and maintains visual and radio contact with aircraft operating around the airfield, providing live supervision and support, especially for solo student pilots."
                         />
                       </div>
                     </div>
