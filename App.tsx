@@ -44569,6 +44569,7 @@ appliedUpdates.forEach(update => {
                     units={units}
                     platformUnits={platformUnitCodes}
                     platformUnitContexts={platformUnitContexts}
+                    platformConfig={platformConfig}
                     settingsVisibilityPolicy={platformSettingsVisibilityPolicy}
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}

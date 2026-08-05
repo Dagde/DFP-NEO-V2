@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
@@ -28,6 +28,7 @@ import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { DEFAULT_SCT_TERMINOLOGY, type SctTerminology } from '../utils/sctTerminology';
 import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
+import type { PlatformConfig } from '../utils/platformConfigService';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -45,6 +46,7 @@ interface SettingsViewWithMenuProps {
         parentOrganisationCode?: string | null;
         operationalModel?: string | null;
     }>;
+    platformConfig?: PlatformConfig | null;
     settingsVisibilityPolicy?: {
         enabled?: boolean;
         filters?: Array<'unit' | 'location' | 'aircraftType' | 'parentOrganisation'>;
@@ -665,6 +667,62 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
   ],
 };
 
+const SEARCH_VALUE_KEY_HINTS = [
+  'code', 'name', 'label', 'title', 'description', 'category', 'type', 'model', 'status', 'role',
+  'unit', 'location', 'organisation', 'organization', 'aircraft', 'resource', 'pool', 'prefix',
+  'callsign', 'course', 'lmp', 'mission', 'task', 'currency', 'qualification', 'rank', 'service',
+  'username', 'email', 'id', 'iata', 'icao', 'timezone', 'area', 'module', 'permission', 'profile',
+  'licence', 'license', 'deployment', 'result', 'grade', 'cancellation', 'reason', 'configuration',
+  'definition',
+];
+
+const isSearchableDataKey = (key: string): boolean => {
+  const normalisedKey = key.toLowerCase();
+  return SEARCH_VALUE_KEY_HINTS.some(hint => normalisedKey.includes(hint));
+};
+
+const addSearchDataValue = (terms: Set<string>, value: unknown) => {
+  if (value === null || value === undefined) return;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    const text = String(value).trim();
+    if (text) terms.add(text);
+  }
+};
+
+const collectSearchDataTerms = (value: unknown, maxDepth = 3): string[] => {
+  const terms = new Set<string>();
+  const visit = (current: unknown, depth: number, parentKey = '') => {
+    if (current === null || current === undefined || depth > maxDepth) return;
+    if (typeof current === 'string' || typeof current === 'number' || typeof current === 'boolean') {
+      if (!parentKey || isSearchableDataKey(parentKey)) addSearchDataValue(terms, current);
+      return;
+    }
+    if (Array.isArray(current)) {
+      current.forEach(item => visit(item, depth + 1, parentKey));
+      return;
+    }
+    if (typeof current === 'object') {
+      Object.entries(current as Record<string, unknown>).forEach(([key, nestedValue]) => {
+        if (isSearchableDataKey(key)) {
+          addSearchDataValue(terms, nestedValue);
+        }
+        if (nestedValue && typeof nestedValue === 'object') {
+          visit(nestedValue, depth + 1, key);
+        } else if (isSearchableDataKey(key)) {
+          addSearchDataValue(terms, nestedValue);
+        }
+      });
+    }
+  };
+
+  visit(value, 0);
+  return Array.from(terms);
+};
+
+const collectSelectedSearchDataTerms = (...values: unknown[]): string[] => (
+  Array.from(new Set(values.flatMap(value => collectSearchDataTerms(value))))
+);
+
 // Icon accent colours per section - grouped by category for consistent icon colours
 // SYSTEM CONFIGURATION: scoring-matrix, currencies, sct-events (sky blue)
 // OPERATIONS RULES: event-limits, duty-turnaround, business-rules (amber)
@@ -1016,6 +1074,142 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         }
     }, []);
 
+    const settingsDataSearchTermsBySection = useMemo<Partial<Record<SettingsMenuSection, string[]>>>(() => {
+        const platformConfig = props.platformConfig || null;
+        const platformOrganisations = platformConfig?.organisations || [];
+        const platformLocations = platformConfig?.locations || [];
+        const platformUnits = platformConfig?.units || [];
+        const platformAircraftTypes = platformConfig?.aircraftTypes || [];
+        const platformResourcePools = platformConfig?.resourcePools || [];
+        const organisationSettings = platformOrganisations.map((organisation: any) => organisation?.settings || {});
+
+        const peopleTerms = collectSelectedSearchDataTerms(props.instructorsData, props.traineesData);
+        const unitContextTerms = collectSelectedSearchDataTerms(
+            props.units,
+            props.platformUnits,
+            props.platformUnitContexts,
+            props.unitLocations,
+            props.activeUnitCode,
+            props.activeUnitCodes,
+            props.activeCompositeUnitCode,
+            props.activeAircraftTypeCode,
+            props.activeOperationalModel,
+        );
+        const locationTerms = collectSelectedSearchDataTerms(
+            props.locations,
+            props.locationAbbreviations,
+            props.locationOpAreas,
+            platformOrganisations,
+            platformLocations,
+        );
+        const aircraftTerms = collectSelectedSearchDataTerms(
+            platformAircraftTypes,
+            props.aircraftCrewComposition,
+            props.aircraftConfigurationDefinitions,
+            props.crewPositionTerminology,
+            props.activeAircraftTypeCode,
+        );
+        const resourceRowTerms = collectSelectedSearchDataTerms(
+            platformResourcePools,
+            props.resourceDisplayNames,
+            props.activeAircraftTypeCode,
+            props.activeUnitCode,
+            props.activeUnitCodes,
+            props.activeCompositeUnitCode,
+        );
+        const currencyTerms = collectSelectedSearchDataTerms(
+            props.masterCurrencies,
+            props.currencyRequirements,
+            props.unitCurrencyDefinitions,
+            props.currencyImportUnitOptions,
+            props.activeCurrencyUnitCode,
+        );
+        const trainingReportTerms = collectSelectedSearchDataTerms(
+            props.phraseBank,
+            props.trainingReportDisplayName,
+            organisationSettings.map((settings: any) => settings.trainingReports),
+            organisationSettings.map((settings: any) => settings.trainingReportTemplate),
+            props.syllabusDetails,
+        );
+        const cancellationTerms = collectSelectedSearchDataTerms(props.cancellationCodes, props.cancellationRecords);
+        const continuationTerms = collectSelectedSearchDataTerms(props.sctEvents, props.sctTerminology);
+        const taskTerms = collectSelectedSearchDataTerms(
+            props.formationCallsigns,
+            organisationSettings.map((settings: any) => settings.taskProfiles),
+            organisationSettings.map((settings: any) => settings.taskProfileAbbreviations),
+        );
+        const permissionTerms = collectSelectedSearchDataTerms(
+            platformConfig?.userAccess,
+            platformConfig?.platformUsers,
+            organisationSettings.map((settings: any) => settings.permissionProfiles),
+        );
+        const moduleTerms = collectSelectedSearchDataTerms(platformConfig?.modules, platformConfig?.unitModules);
+        const licensingTerms = collectSelectedSearchDataTerms(platformConfig?.licenses);
+        const schedulingRuleSetTerms = collectSelectedSearchDataTerms(platformConfig?.schedulingRuleSets);
+        const rankTerminologyTerms = collectSelectedSearchDataTerms(
+            props.serviceDefinitions,
+            props.personnelDisplaySettings,
+            props.instructorLabel,
+            props.qualificationOptions,
+            props.instructorsData.map((person: any) => ({ rank: person?.rank, service: person?.service, unit: person?.unit })),
+            props.traineesData.map((person: any) => ({ rank: person?.rank, course: person?.course, unit: person?.unit })),
+        );
+
+        return {
+            'platform-configuration-health': collectSelectedSearchDataTerms(
+                locationTerms,
+                unitContextTerms,
+                aircraftTerms,
+                resourceRowTerms,
+                permissionTerms,
+                licensingTerms,
+            ),
+            'platform-organisation-locations': locationTerms,
+            'platform-units': collectSelectedSearchDataTerms(unitContextTerms, platformUnits, platformOrganisations),
+            'platform-task-profiles': taskTerms,
+            'standard-missions': taskTerms,
+            'platform-master-lmp-access': collectSelectedSearchDataTerms(props.syllabusDetails, organisationSettings.map((settings: any) => settings.masterLmpCatalogue)),
+            'platform-aircraft-setup': aircraftTerms,
+            'platform-dfp-resource-rows': resourceRowTerms,
+            'platform-unit-modules': collectSelectedSearchDataTerms(moduleTerms, unitContextTerms),
+            'platform-settings-visibility': collectSelectedSearchDataTerms(props.settingsVisibilityPolicy, unitContextTerms, locationTerms, aircraftTerms),
+            'platform-deployment-readiness': collectSelectedSearchDataTerms(licensingTerms, platformOrganisations, platformLocations, platformUnits),
+            'platform-operational-runbook': collectSelectedSearchDataTerms(organisationSettings.map((settings: any) => settings.operationalRunbook), licensingTerms),
+            'platform-licensing': licensingTerms,
+            'platform-permission-profiles': permissionTerms,
+            'platform-rank-terminology': rankTerminologyTerms,
+            'platform-user-access': collectSelectedSearchDataTerms(permissionTerms, peopleTerms, unitContextTerms),
+            'platform-scheduling-rule-sets': collectSelectedSearchDataTerms(schedulingRuleSetTerms, unitContextTerms, aircraftTerms, locationTerms),
+            'scoring-matrix': collectSelectedSearchDataTerms(props.syllabusDetails, props.phraseBank),
+            'training-report-template': trainingReportTerms,
+            'currencies': currencyTerms,
+            'sct-events': collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
+            'currency-profiles': collectSelectedSearchDataTerms(continuationTerms, currencyTerms),
+            'people-profile': collectSelectedSearchDataTerms(props.excludedCourses, props.courseColors, unitContextTerms),
+            'scheduling-rules': collectSelectedSearchDataTerms(props.eventLimits, props.dispatchStaggerSettings, schedulingRuleSetTerms, unitContextTerms),
+            'event-limits': collectSelectedSearchDataTerms(props.eventLimits, unitContextTerms),
+            'duty-turnaround': collectSelectedSearchDataTerms(
+                props.preferredDutyPeriod,
+                props.maxCrewDutyPeriod,
+                props.flightTurnaround,
+                props.ftdTurnaround,
+                props.cptTurnaround,
+                props.dayFlyingStart,
+                props.dayFlyingEnd,
+            ),
+            'business-rules': collectSelectedSearchDataTerms(props.dispatchStaggerSettings, props.tileStatusSettings, props.maxDispatchPerHour, props.showDepartureDensityOverlay),
+            'user-list': collectSelectedSearchDataTerms(peopleTerms, permissionTerms),
+            'staff-database': collectSelectedSearchDataTerms(props.instructorsData, rankTerminologyTerms),
+            'trainee-database': collectSelectedSearchDataTerms(props.traineesData, props.courseColors),
+            'trainee-reallocation': collectSelectedSearchDataTerms(props.traineesData, props.instructorsData, unitContextTerms),
+            'validation': cancellationTerms,
+            'organisation': collectSelectedSearchDataTerms(props.organisationSettings, unitContextTerms, resourceRowTerms),
+            'crew-composition': collectSelectedSearchDataTerms(aircraftTerms, props.aircraftCrewComposition, props.crewPositionTerminology),
+            'appearance': collectSelectedSearchDataTerms(props.fixedCrewTileColourMode, props.activeOperationalModel),
+            'emergency': collectSelectedSearchDataTerms(props.emergencyFreezeAuthority, props.qualificationOptions, props.currentUserQualificationIds),
+        };
+    }, [props]);
+
     const normaliseSearchText = (value: string): string => (
         value
             .toLowerCase()
@@ -1033,6 +1227,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         sectionDescriptions[section],
         section,
         ...(sectionSearchKeywords[section] || []),
+        ...(settingsDataSearchTermsBySection[section] || []),
     ].join(' '));
 
     const matchesSettingsSearch = (section: SettingsMenuSection, groupLabel: string) => {
