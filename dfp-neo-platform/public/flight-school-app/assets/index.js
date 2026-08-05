@@ -9667,27 +9667,75 @@ const AircraftAvailabilityOverlay = ({
   }, [onAvailabilityChange]);
   const sortSnapshots = (snaps) => [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   const makeDayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
+  const getLocalDateString2 = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const isSelectedDateToday = (dateKey) => dateKey === getLocalDateString2(/* @__PURE__ */ new Date());
+  const isStoredSyntheticInitialOnly = (loaded) => loaded.length === 1 && /initial availability at start of day/i.test(String(loaded[0]?.notes || ""));
+  const snapshotsFromDbEvents = (events) => sortSnapshots(
+    events.map((event) => {
+      const available = Number(event.availableCount);
+      const total = Number(event.totalAircraft ?? event.totalFleet ?? totalAircraft);
+      const timestamp = new Date(event.timestamp);
+      if (!Number.isFinite(available) || Number.isNaN(timestamp.getTime())) return null;
+      return {
+        timestamp,
+        available,
+        total: Number.isFinite(total) ? total : totalAircraft,
+        notes: event.notes || event.changeType || "Recorded aircraft availability"
+      };
+    }).filter(Boolean)
+  );
   reactExports.useEffect(() => {
     let cancelled = false;
     const dateKey = dateString ?? formatDate$5(currentDate);
     const contextKey = [locationCode || "default-location", unitCode || "default-unit", dateKey].join("|");
-    const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
-    if (stored) {
+    const loadStoredSnapshots = () => {
+      const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
+      if (!stored) return [];
       try {
         const data = JSON.parse(stored);
-        const loaded = sortSnapshots(
-          data.snapshots.map((s) => ({ ...s, timestamp: new Date(s.timestamp) }))
+        return sortSnapshots(
+          (Array.isArray(data.snapshots) ? data.snapshots : []).map((s) => ({ ...s, timestamp: new Date(s.timestamp) })).filter((s) => !Number.isNaN(new Date(s.timestamp).getTime()))
         );
-        if (!cancelled && loaded.length > 0) {
-          const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
-          setSnapshots(loaded);
-          setCurrentAvailable(lastAvailable);
+      } catch {
+        return [];
+      }
+    };
+    const loadAvailabilityForDate = async () => {
+      if (apiBase) {
+        try {
+          const params = new URLSearchParams();
+          params.set("date", dateKey);
+          if (locationCode) params.set("locationCode", locationCode);
+          if (unitCode) params.set("unitCode", unitCode);
+          const res = await fetch(`${apiBase}/aircraft-availability-events?${params.toString()}`, { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            const dbSnapshots = snapshotsFromDbEvents(Array.isArray(data.events) ? data.events : []);
+            if (!cancelled && dbSnapshots.length > 0) {
+              const lastAvailable = dbSnapshots[dbSnapshots.length - 1]?.available ?? initialAvailability;
+              setSnapshots(dbSnapshots);
+              setCurrentAvailable(lastAvailable);
+              return;
+            }
+          }
+        } catch {
+        }
+      }
+      const storedSnapshots = loadStoredSnapshots();
+      if (!cancelled && storedSnapshots.length > 0) {
+        if (!isSelectedDateToday(dateKey) && isStoredSyntheticInitialOnly(storedSnapshots)) {
+          setSnapshots([]);
           return;
         }
-      } catch {
+        const lastAvailable = storedSnapshots[storedSnapshots.length - 1]?.available ?? initialAvailability;
+        setSnapshots(storedSnapshots);
+        setCurrentAvailable(lastAvailable);
+        return;
       }
-    }
-    const loadFromDb = async () => {
+      if (!isSelectedDateToday(dateKey)) {
+        if (!cancelled) setSnapshots([]);
+        return;
+      }
       let seed = initialAvailability;
       if (apiBase) {
         try {
@@ -9698,9 +9746,7 @@ const AircraftAvailabilityOverlay = ({
           const res = await fetch(`${apiBase}/aircraft-availability-current${query ? `?${query}` : ""}`, { credentials: "include" });
           if (res.ok) {
             const data = await res.json();
-            if (data.success && !data.isDefault && typeof data.availableCount === "number") {
-              seed = data.availableCount;
-            }
+            if (data.success && !data.isDefault && typeof data.availableCount === "number") seed = data.availableCount;
           }
         } catch {
         }
@@ -9722,7 +9768,7 @@ const AircraftAvailabilityOverlay = ({
         });
       }
     };
-    loadFromDb();
+    loadAvailabilityForDate();
     return () => {
       cancelled = true;
     };

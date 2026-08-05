@@ -67,9 +67,36 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const makeDayStart = (date: Date): Date =>
         new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
 
-    // ── Load from localStorage on mount / date change ────────────────────────────
-    // If no localStorage data, fetch from DB; if DB also has nothing, use initialAvailability.
-    // NOTE: We do NOT gate on isDirty — always load from storage to ensure correct restore.
+    const getLocalDateString = (date: Date): string =>
+        `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+
+    const isSelectedDateToday = (dateKey: string): boolean => dateKey === getLocalDateString(new Date());
+
+    const isStoredSyntheticInitialOnly = (loaded: AircraftAvailabilitySnapshot[]): boolean => (
+        loaded.length === 1
+        && /initial availability at start of day/i.test(String(loaded[0]?.notes || ''))
+    );
+
+    const snapshotsFromDbEvents = (events: any[]): AircraftAvailabilitySnapshot[] => sortSnapshots(
+        events
+            .map((event: any) => {
+                const available = Number(event.availableCount);
+                const total = Number(event.totalAircraft ?? event.totalFleet ?? totalAircraft);
+                const timestamp = new Date(event.timestamp);
+                if (!Number.isFinite(available) || Number.isNaN(timestamp.getTime())) return null;
+                return {
+                    timestamp,
+                    available,
+                    total: Number.isFinite(total) ? total : totalAircraft,
+                    notes: event.notes || event.changeType || 'Recorded aircraft availability',
+                } as AircraftAvailabilitySnapshot;
+            })
+            .filter(Boolean) as AircraftAvailabilitySnapshot[]
+    );
+
+    // ── Load from exact-date DB events / localStorage on mount or date change ─────
+    // Historical dotted traces must be fixed records for that date. Past/future dates
+    // must never seed from the latest current-day availability.
     // dateString prop is preferred over formatDate(currentDate) to avoid UTC/local timezone issues.
     useEffect(() => {
         let cancelled = false;
@@ -79,27 +106,62 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         // the date string, but dateString (the canonical YYYY-MM-DD from App.tsx) is always correct.
         const dateKey = dateString ?? formatDate(currentDate);
         const contextKey = [locationCode || 'default-location', unitCode || 'default-unit', dateKey].join('|');
-        const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
 
-        if (stored) {
+        const loadStoredSnapshots = (): AircraftAvailabilitySnapshot[] => {
+            const stored = localStorage.getItem(`aircraft-availability-${contextKey}`);
+            if (!stored) return [];
             try {
                 const data = JSON.parse(stored);
-                const loaded: AircraftAvailabilitySnapshot[] = sortSnapshots(
-                    data.snapshots.map((s: any) => ({ ...s, timestamp: new Date(s.timestamp) }))
+                return sortSnapshots(
+                    (Array.isArray(data.snapshots) ? data.snapshots : [])
+                        .map((s: any) => ({ ...s, timestamp: new Date(s.timestamp) }))
+                        .filter((s: AircraftAvailabilitySnapshot) => !Number.isNaN(new Date(s.timestamp).getTime()))
                 );
-                if (!cancelled && loaded.length > 0) {
-                    const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
-                    setSnapshots(loaded);
-                    setCurrentAvailable(lastAvailable);
+            } catch {
+                return [];
+            }
+        };
+
+        const loadAvailabilityForDate = async () => {
+            if (apiBase) {
+                try {
+                    const params = new URLSearchParams();
+                    params.set('date', dateKey);
+                    if (locationCode) params.set('locationCode', locationCode);
+                    if (unitCode) params.set('unitCode', unitCode);
+                    const res = await fetch(`${apiBase}/aircraft-availability-events?${params.toString()}`, { credentials: 'include' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        const dbSnapshots = snapshotsFromDbEvents(Array.isArray(data.events) ? data.events : []);
+                        if (!cancelled && dbSnapshots.length > 0) {
+                            const lastAvailable = dbSnapshots[dbSnapshots.length - 1]?.available ?? initialAvailability;
+                            setSnapshots(dbSnapshots);
+                            setCurrentAvailable(lastAvailable);
+                            return;
+                        }
+                    }
+                } catch {
+                    // ignore — use local stored data or today seed
+                }
+            }
+
+            const storedSnapshots = loadStoredSnapshots();
+            if (!cancelled && storedSnapshots.length > 0) {
+                if (!isSelectedDateToday(dateKey) && isStoredSyntheticInitialOnly(storedSnapshots)) {
+                    setSnapshots([]);
                     return;
                 }
-            } catch {
-                // Corrupted data — fall through to DB
+                const lastAvailable = storedSnapshots[storedSnapshots.length - 1]?.available ?? initialAvailability;
+                setSnapshots(storedSnapshots);
+                setCurrentAvailable(lastAvailable);
+                return;
             }
-        }
 
-        // No localStorage — fetch persisted value from DB
-        const loadFromDb = async () => {
+            if (!isSelectedDateToday(dateKey)) {
+                if (!cancelled) setSnapshots([]);
+                return;
+            }
+
             let seed = initialAvailability;
             if (apiBase) {
                 try {
@@ -110,14 +172,13 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     const res = await fetch(`${apiBase}/aircraft-availability-current${query ? `?${query}` : ''}`, { credentials: 'include' });
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.success && !data.isDefault && typeof data.availableCount === 'number') {
-                            seed = data.availableCount;
-                        }
+                        if (data.success && !data.isDefault && typeof data.availableCount === 'number') seed = data.availableCount;
                     }
                 } catch {
-                    // ignore — use seed
+                    // ignore — use configured initial availability
                 }
             }
+
             if (!cancelled) {
                 const initial: AircraftAvailabilitySnapshot = {
                     timestamp: makeDayStart(currentDate),
@@ -136,7 +197,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             }
         };
 
-        loadFromDb();
+        loadAvailabilityForDate();
         return () => { cancelled = true; };
     // Use dateString if provided (canonical date, no timezone issues), otherwise use local date fields
     }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`, locationCode, unitCode]); // eslint-disable-line react-hooks/exhaustive-deps
