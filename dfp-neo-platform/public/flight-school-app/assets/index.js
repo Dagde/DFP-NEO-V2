@@ -9837,8 +9837,8 @@ const AircraftAvailabilityOverlay = ({
         total: totalAircraftRef.current,
         notes: `Availability changed to ${snappedCount}`
       };
-      if (onUserChange) onUserChange(snappedCount);
       setSnapshots((prev) => sortSnapshots([...prev, newSnap]));
+      if (onUserChange) onUserChange(snappedCount, snapshotTime);
     }
   };
   const handleDragMoveRef = reactExports.useRef(handleDragMove);
@@ -49868,7 +49868,8 @@ const ACHistoryAircraftAvailability = ({
       if (recalcRes.ok) {
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
-          setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          const resolvedSummary = await resolveSummaryWithLocalRecovery(recalcData.summary, today);
+          setTodaysAverageWithMetadata({ ...resolvedSummary, date: today });
           await fetchRecords();
           return;
         }
@@ -49977,7 +49978,12 @@ const ACHistoryAircraftAvailability = ({
   }, [fetchRecords]);
   const computeAverageFromLocalStorage = (today) => {
     try {
-      const stored = localStorage.getItem(`aircraft-availability-${today}`);
+      const contextKey = [
+        availabilityContext.locationCode || "default-location",
+        availabilityContext.unitCode || "default-unit",
+        today
+      ].join("|");
+      const stored = localStorage.getItem(`aircraft-availability-${contextKey}`) || localStorage.getItem(`aircraft-availability-${today}`);
       if (!stored) return null;
       const data = JSON.parse(stored);
       const snaps = data.snapshots || [];
@@ -50024,6 +50030,42 @@ const ACHistoryAircraftAvailability = ({
       return null;
     }
   };
+  const persistLocalDailyAverage = async (date, dailyAverage) => {
+    try {
+      await fetch("/api/aircraft-availability-history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          date,
+          totalAircraft,
+          dailyAverage,
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
+          locationCode: availabilityContext.locationCode || void 0,
+          unitCode: availabilityContext.unitCode || void 0
+        })
+      });
+    } catch (err) {
+      console.error("Failed to persist recovered aircraft availability average:", err);
+    }
+  };
+  const resolveSummaryWithLocalRecovery = async (summary, date) => {
+    const localAvg = computeAverageFromLocalStorage(date);
+    if (localAvg === null) return summary;
+    const serverAvg = Number(summary?.dailyAverage);
+    if (Number.isFinite(serverAvg) && Math.abs(serverAvg - localAvg) < 0.01) return summary;
+    await persistLocalDailyAverage(date, localAvg);
+    return {
+      ...summary || {},
+      date,
+      dailyAverage: localAvg,
+      totalAircraft: Number(summary?.totalAircraft ?? summary?.totalFleet ?? totalAircraft ?? 0),
+      availabilityPct: totalAircraft > 0 ? localAvg / totalAircraft * 100 : Number(summary?.availabilityPct ?? 0),
+      flyingWindowStart: summary?.flyingWindowStart || dayFlyingStart,
+      flyingWindowEnd: summary?.flyingWindowEnd || dayFlyingEnd
+    };
+  };
   reactExports.useEffect(() => {
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
@@ -50045,7 +50087,8 @@ const ACHistoryAircraftAvailability = ({
         if (recalcRes.ok) {
           const recalcData = await recalcRes.json();
           if (recalcData.summary) {
-            setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+            const resolvedSummary = await resolveSummaryWithLocalRecovery(recalcData.summary, today);
+            setTodaysAverageWithMetadata({ ...resolvedSummary, date: today });
             await fetchRecords();
             return;
           }
@@ -50105,7 +50148,8 @@ const ACHistoryAircraftAvailability = ({
         });
         const data = await res.json();
         if (data.summary) {
-          setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          const resolvedSummary = await resolveSummaryWithLocalRecovery(data.summary, today);
+          setTodaysAverageWithMetadata({ ...resolvedSummary, date: today });
           await fetchRecords();
           return;
         }
@@ -109534,7 +109578,7 @@ ${"=".repeat(60)}`);
     const windowEnd = formatWindowTime(flyingEndTime);
     const today = /* @__PURE__ */ new Date();
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const ts = /* @__PURE__ */ new Date();
+    const ts = timestampOverride ?? /* @__PURE__ */ new Date();
     logAvailabilityDebug(`[AV] Event details:`, {
       requestId,
       type: changeType,
@@ -122028,7 +122072,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               const lastSnapshot = record.snapshots[record.snapshots.length - 1];
               logAvailabilityDebug(`[AV] onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
             },
-            onUserAvailabilityChange: async (count) => {
+            onUserAvailabilityChange: async (count, timestamp) => {
               if (isViewingPastDfp) {
                 denyPastDfpEdit("change aircraft availability");
                 return;
@@ -122042,7 +122086,8 @@ ${error instanceof Error ? error.message : String(error)}`,
                 count,
                 "change",
                 configuredAirframeCount,
-                `Aircraft availability updated via overlay: ${count}`
+                `Aircraft availability updated via overlay: ${count}`,
+                timestamp
               );
               logAvailabilityDebug(`[AV] DB event posted for user drag: ${count}`);
             },

@@ -100,7 +100,7 @@ interface ScheduleViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
-  onUserAvailabilityChange?: (count: number) => void; // called ONLY when user drags the line
+  onUserAvailabilityChange?: (count: number, timestamp: Date) => void; // called ONLY when user drags the line
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;

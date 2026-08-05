@@ -18,7 +18,7 @@ interface AircraftAvailabilityOverlayProps {
     startHour: number;
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
     // onUserChange: called ONLY when user drags the line (for DB posting)
-    onUserChange?: (count: number) => void;
+    onUserChange?: (count: number, timestamp: Date) => void;
     // initialAvailability: last-resort fallback when no localStorage AND no DB data
     initialAvailability?: number;
     // apiBase: for DB fetch on first load of a date with no localStorage data
@@ -259,9 +259,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 notes: `Availability changed to ${snappedCount}`
             };
 
-            // Notify parent of user-driven change (for DB posting)
-            if (onUserChange) onUserChange(snappedCount);
             setSnapshots(prev => sortSnapshots([...prev, newSnap]));
+            // Notify parent of user-driven change (for DB posting) with the exact snapshot time.
+            if (onUserChange) onUserChange(snappedCount, snapshotTime);
         }
     };
 

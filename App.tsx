@@ -42838,7 +42838,7 @@ appliedUpdates.forEach(update => {
                                const lastSnapshot = record.snapshots[record.snapshots.length - 1];
                                logAvailabilityDebug(`[AV] onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
                            }}
-                           onUserAvailabilityChange={async (count: number) => {
+                           onUserAvailabilityChange={async (count: number, timestamp?: Date) => {
                                if (isViewingPastDfp) {
                                    denyPastDfpEdit('change aircraft availability');
                                    return;
@@ -42854,7 +42854,8 @@ appliedUpdates.forEach(update => {
                                    count,
                                    'change',
                                    configuredAirframeCount,
-                                   `Aircraft availability updated via overlay: ${count}`
+                                   `Aircraft availability updated via overlay: ${count}`,
+                                   timestamp
                                );
                                logAvailabilityDebug(`[AV] DB event posted for user drag: ${count}`);
                            }}

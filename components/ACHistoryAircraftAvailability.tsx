@@ -500,7 +500,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       if (recalcRes.ok) {
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
-          setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          const resolvedSummary = await resolveSummaryWithLocalRecovery(recalcData.summary, today);
+          setTodaysAverageWithMetadata({ ...resolvedSummary, date: today });
           await fetchRecords();
           return;
         }
@@ -623,7 +624,13 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   // Used when DB has no events yet (e.g. first session of the day before startup event is posted)
   const computeAverageFromLocalStorage = (today: string): number | null => {
     try {
-      const stored = localStorage.getItem(`aircraft-availability-${today}`);
+      const contextKey = [
+        availabilityContext.locationCode || 'default-location',
+        availabilityContext.unitCode || 'default-unit',
+        today,
+      ].join('|');
+      const stored = localStorage.getItem(`aircraft-availability-${contextKey}`)
+        || localStorage.getItem(`aircraft-availability-${today}`);
       if (!stored) return null;
       const data = JSON.parse(stored);
       const snaps: Array<{ timestamp: string; available: number }> = data.snapshots || [];
@@ -672,6 +679,44 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     }
   };
 
+  const persistLocalDailyAverage = async (date: string, dailyAverage: number) => {
+    try {
+      await fetch('/api/aircraft-availability-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          date,
+          totalAircraft,
+          dailyAverage,
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
+          locationCode: availabilityContext.locationCode || undefined,
+          unitCode: availabilityContext.unitCode || undefined,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to persist recovered aircraft availability average:', err);
+    }
+  };
+
+  const resolveSummaryWithLocalRecovery = async (summary: any, date: string): Promise<any> => {
+    const localAvg = computeAverageFromLocalStorage(date);
+    if (localAvg === null) return summary;
+    const serverAvg = Number(summary?.dailyAverage);
+    if (Number.isFinite(serverAvg) && Math.abs(serverAvg - localAvg) < 0.01) return summary;
+    await persistLocalDailyAverage(date, localAvg);
+    return {
+      ...(summary || {}),
+      date,
+      dailyAverage: localAvg,
+      totalAircraft: Number(summary?.totalAircraft ?? summary?.totalFleet ?? totalAircraft ?? 0),
+      availabilityPct: totalAircraft > 0 ? (localAvg / totalAircraft) * 100 : Number(summary?.availabilityPct ?? 0),
+      flyingWindowStart: summary?.flyingWindowStart || dayFlyingStart,
+      flyingWindowEnd: summary?.flyingWindowEnd || dayFlyingEnd,
+    };
+  };
+
   // Fetch today's average from the database
   // Falls back to localStorage computation if DB has no events yet
   useEffect(() => {
@@ -698,7 +743,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         if (recalcRes.ok) {
             const recalcData = await recalcRes.json();
             if (recalcData.summary) {
-              setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+              const resolvedSummary = await resolveSummaryWithLocalRecovery(recalcData.summary, today);
+              setTodaysAverageWithMetadata({ ...resolvedSummary, date: today });
               await fetchRecords();
               return;
             }
@@ -769,7 +815,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         });
         const data = await res.json();
         if (data.summary) {
-          setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          const resolvedSummary = await resolveSummaryWithLocalRecovery(data.summary, today);
+          setTodaysAverageWithMetadata({ ...resolvedSummary, date: today });
           await fetchRecords();
           return;
         }

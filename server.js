@@ -9505,9 +9505,29 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
           : 0
       )),
     }));
-    console.log(`✅ GET /api/aircraft-availability-history - context=${context.locationCode || '*'}-${context.unitCode || '*'} returning ${records.length} records`);
+
+    const contextRank = (record) => {
+      let rank = 0;
+      const recordLocation = String(record.locationCode || '').trim().toUpperCase();
+      const recordUnit = String(record.unitCode || '').trim().toUpperCase();
+      if (context.locationCode && recordLocation === context.locationCode) rank += 2;
+      else if (!recordLocation) rank += 1;
+      if (context.unitCode && recordUnit === context.unitCode) rank += 2;
+      else if (!recordUnit) rank += 1;
+      return rank;
+    };
+    const recordsByDate = new Map();
+    for (const record of records) {
+      const existing = recordsByDate.get(record.date);
+      if (!existing || contextRank(record) >= contextRank(existing)) {
+        recordsByDate.set(record.date, record);
+      }
+    }
+    const dedupedRecords = Array.from(recordsByDate.values());
+
+    console.log(`✅ GET /api/aircraft-availability-history - context=${context.locationCode || '*'}-${context.unitCode || '*'} returning ${dedupedRecords.length} records`);
     // Return both 'records' (expected by frontend) and 'history' (legacy) for compatibility
-    res.json({ records, history: records });
+    res.json({ records: dedupedRecords, history: dedupedRecords });
   } catch (error) {
     console.error('❌ GET /api/aircraft-availability-history error:', error);
     res.status(500).json({ error: 'Failed to fetch aircraft availability history', details: error.message });
