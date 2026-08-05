@@ -78561,6 +78561,7 @@ const SettingsViewWithMenu = (props) => {
   const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   const settingsGroupOpenTimerRef = reactExports.useRef(null);
   const [settingsFocusTarget, setSettingsFocusTarget] = reactExports.useState(null);
+  const [settingsSearchFocus, setSettingsSearchFocus] = reactExports.useState(null);
   const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = reactExports.useState(false);
   const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY$1;
   const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY$1.shortLabel || "ContT").trim() || "ContT"} / Currency Events`;
@@ -78573,7 +78574,16 @@ const SettingsViewWithMenu = (props) => {
     }
     setActiveSection(section);
   };
-  const selectSettingsSectionFromMenu = (section) => {
+  const selectSettingsSectionFromMenu = (section, groupLabel) => {
+    const contextSnippet = groupLabel && settingsSearch.trim() ? getSearchContextSnippet(section, groupLabel) : null;
+    const fallbackToken = getSearchQueryTokens().filter((token) => token.length >= 2).sort((a, b) => b.length - a.length)[0] || "";
+    if (contextSnippet?.match || fallbackToken) {
+      setSettingsSearchFocus({
+        section,
+        token: contextSnippet?.match || fallbackToken,
+        requestId: Date.now()
+      });
+    }
     changeActiveSection(section);
     if (settingsSearch.trim()) setSettingsSearch("");
   };
@@ -78792,6 +78802,99 @@ const SettingsViewWithMenu = (props) => {
     const searchText = getSettingsSearchText(section, groupLabel);
     return searchTokensMatchText(queryTokens, searchText);
   };
+  const applyTemporarySearchHighlight = (element, token) => {
+    const cleanToken2 = String(token || "").trim();
+    if (!cleanToken2) return false;
+    const inputElement = element.matches("input, textarea, select") ? element : element.querySelector("input, textarea, select");
+    if (inputElement instanceof HTMLElement) {
+      const previousOutline = inputElement.style.outline;
+      const previousBoxShadow = inputElement.style.boxShadow;
+      const previousTransition = inputElement.style.transition;
+      inputElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      inputElement.style.transition = "outline-color 160ms ease, box-shadow 160ms ease";
+      inputElement.style.outline = "2px solid rgba(250, 204, 21, 0.95)";
+      inputElement.style.boxShadow = "0 0 0 4px rgba(250, 204, 21, 0.22)";
+      window.setTimeout(() => {
+        inputElement.style.outline = previousOutline;
+        inputElement.style.boxShadow = previousBoxShadow;
+        inputElement.style.transition = previousTransition;
+      }, 2200);
+      return true;
+    }
+    const textNodes = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.closest("script, style, textarea, select, input, mark")) return NodeFilter.FILTER_REJECT;
+        if (!node.textContent?.toLowerCase().includes(cleanToken2.toLowerCase())) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode);
+    }
+    const targetNode = textNodes[0];
+    const targetText = targetNode?.textContent || "";
+    const matchIndex = targetText.toLowerCase().indexOf(cleanToken2.toLowerCase());
+    if (!targetNode || matchIndex < 0) return false;
+    const range = document.createRange();
+    range.setStart(targetNode, matchIndex);
+    range.setEnd(targetNode, matchIndex + cleanToken2.length);
+    const marker = document.createElement("mark");
+    marker.style.background = "rgba(250, 204, 21, 0.92)";
+    marker.style.color = "#111827";
+    marker.style.borderRadius = "3px";
+    marker.style.padding = "0 2px";
+    marker.style.boxShadow = "0 0 0 3px rgba(250, 204, 21, 0.24)";
+    marker.style.transition = "background-color 240ms ease, box-shadow 240ms ease";
+    range.surroundContents(marker);
+    marker.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => {
+      marker.style.background = "transparent";
+      marker.style.boxShadow = "none";
+      window.setTimeout(() => {
+        marker.replaceWith(document.createTextNode(marker.textContent || ""));
+        element.normalize();
+      }, 320);
+    }, 2200);
+    return true;
+  };
+  const focusSearchMatchOnRenderedPage = (token) => {
+    const container = contentScrollRef.current;
+    const cleanToken2 = String(token || "").trim().toLowerCase();
+    if (!container || cleanToken2.length < 2) return false;
+    const skipSelector = 'script, style, [aria-hidden="true"]';
+    const candidates = Array.from(container.querySelectorAll("input, textarea, select, button, label, h1, h2, h3, h4, p, span, td, th, li, div")).filter((element) => {
+      if (element.closest(skipSelector)) return false;
+      const fieldValue = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement ? String(element.value || "") : "";
+      const text = `${element.textContent || ""} ${fieldValue}`.toLowerCase();
+      return text.includes(cleanToken2);
+    }).sort((a, b) => {
+      const aText = `${a.textContent || ""} ${a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement || a instanceof HTMLSelectElement ? a.value || "" : ""}`;
+      const bText = `${b.textContent || ""} ${b instanceof HTMLInputElement || b instanceof HTMLTextAreaElement || b instanceof HTMLSelectElement ? b.value || "" : ""}`;
+      return aText.length - bText.length;
+    });
+    const target = candidates[0];
+    return target ? applyTemporarySearchHighlight(target, token) : false;
+  };
+  reactExports.useEffect(() => {
+    if (!settingsSearchFocus || settingsSearchFocus.section !== activeSection) return;
+    let cancelled = false;
+    let attempts = 0;
+    const tryFocus = () => {
+      if (cancelled) return;
+      attempts += 1;
+      if (focusSearchMatchOnRenderedPage(settingsSearchFocus.token) || attempts >= 12) {
+        return;
+      }
+      window.setTimeout(tryFocus, 180);
+    };
+    window.setTimeout(tryFocus, 120);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, settingsSearchFocus]);
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   const visibleSettingGroups = sectionGroups.map((group) => ({
     ...group,
@@ -78909,7 +79012,7 @@ const SettingsViewWithMenu = (props) => {
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "button",
                   {
-                    onClick: () => selectSettingsSectionFromMenu(section),
+                    onClick: () => selectSettingsSectionFromMenu(section, group.label),
                     className: `flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${sectionActive ? "border-transparent bg-transparent text-sky-300" : section === "emergency" ? "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200" : "border-gray-800 bg-gray-950/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200"}`,
                     children: [
                       sectionActive ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-0 w-0 flex-shrink-0 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-300", "aria-hidden": "true" }) : null,

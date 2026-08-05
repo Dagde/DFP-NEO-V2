@@ -1009,6 +1009,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         userId?: string;
         focusSubsectionId?: string;
     } | null>(null);
+    const [settingsSearchFocus, setSettingsSearchFocus] = useState<{
+        section: SettingsMenuSection;
+        token: string;
+        requestId: number;
+    } | null>(null);
     const [embeddedCurrencyBuilderOpen, setEmbeddedCurrencyBuilderOpen] = useState(false);
     const sctTerminology = props.sctTerminology || DEFAULT_SCT_TERMINOLOGY;
     const continuationCurrencyLabel = `${String(sctTerminology.shortLabel || DEFAULT_SCT_TERMINOLOGY.shortLabel || 'ContT').trim() || 'ContT'} / Currency Events`;
@@ -1032,7 +1037,21 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         setActiveSection(section);
     };
 
-    const selectSettingsSectionFromMenu = (section: SettingsMenuSection) => {
+    const selectSettingsSectionFromMenu = (section: SettingsMenuSection, groupLabel?: string) => {
+        const contextSnippet = groupLabel && settingsSearch.trim()
+            ? getSearchContextSnippet(section, groupLabel)
+            : null;
+        const fallbackToken = getSearchQueryTokens()
+            .filter(token => token.length >= 2)
+            .sort((a, b) => b.length - a.length)[0] || '';
+
+        if (contextSnippet?.match || fallbackToken) {
+            setSettingsSearchFocus({
+                section,
+                token: contextSnippet?.match || fallbackToken,
+                requestId: Date.now(),
+            });
+        }
         changeActiveSection(section);
         if (settingsSearch.trim()) setSettingsSearch('');
     };
@@ -1286,6 +1305,116 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return searchTokensMatchText(queryTokens, searchText);
     };
 
+    const applyTemporarySearchHighlight = (element: HTMLElement, token: string): boolean => {
+        const cleanToken = String(token || '').trim();
+        if (!cleanToken) return false;
+
+        const inputElement = element.matches('input, textarea, select')
+            ? element
+            : element.querySelector('input, textarea, select');
+
+        if (inputElement instanceof HTMLElement) {
+            const previousOutline = inputElement.style.outline;
+            const previousBoxShadow = inputElement.style.boxShadow;
+            const previousTransition = inputElement.style.transition;
+            inputElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            inputElement.style.transition = 'outline-color 160ms ease, box-shadow 160ms ease';
+            inputElement.style.outline = '2px solid rgba(250, 204, 21, 0.95)';
+            inputElement.style.boxShadow = '0 0 0 4px rgba(250, 204, 21, 0.22)';
+            window.setTimeout(() => {
+                inputElement.style.outline = previousOutline;
+                inputElement.style.boxShadow = previousBoxShadow;
+                inputElement.style.transition = previousTransition;
+            }, 2200);
+            return true;
+        }
+
+        const textNodes: Text[] = [];
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+                const parent = node.parentElement;
+                if (!parent) return NodeFilter.FILTER_REJECT;
+                if (parent.closest('script, style, textarea, select, input, mark')) return NodeFilter.FILTER_REJECT;
+                if (!node.textContent?.toLowerCase().includes(cleanToken.toLowerCase())) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            },
+        });
+
+        while (walker.nextNode()) {
+            textNodes.push(walker.currentNode as Text);
+        }
+
+        const targetNode = textNodes[0];
+        const targetText = targetNode?.textContent || '';
+        const matchIndex = targetText.toLowerCase().indexOf(cleanToken.toLowerCase());
+        if (!targetNode || matchIndex < 0) return false;
+
+        const range = document.createRange();
+        range.setStart(targetNode, matchIndex);
+        range.setEnd(targetNode, matchIndex + cleanToken.length);
+        const marker = document.createElement('mark');
+        marker.style.background = 'rgba(250, 204, 21, 0.92)';
+        marker.style.color = '#111827';
+        marker.style.borderRadius = '3px';
+        marker.style.padding = '0 2px';
+        marker.style.boxShadow = '0 0 0 3px rgba(250, 204, 21, 0.24)';
+        marker.style.transition = 'background-color 240ms ease, box-shadow 240ms ease';
+        range.surroundContents(marker);
+        marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.setTimeout(() => {
+            marker.style.background = 'transparent';
+            marker.style.boxShadow = 'none';
+            window.setTimeout(() => {
+                marker.replaceWith(document.createTextNode(marker.textContent || ''));
+                element.normalize();
+            }, 320);
+        }, 2200);
+        return true;
+    };
+
+    const focusSearchMatchOnRenderedPage = (token: string): boolean => {
+        const container = contentScrollRef.current;
+        const cleanToken = String(token || '').trim().toLowerCase();
+        if (!container || cleanToken.length < 2) return false;
+
+        const skipSelector = 'script, style, [aria-hidden="true"]';
+        const candidates = Array.from(container.querySelectorAll<HTMLElement>('input, textarea, select, button, label, h1, h2, h3, h4, p, span, td, th, li, div'))
+            .filter((element) => {
+                if (element.closest(skipSelector)) return false;
+                const fieldValue = element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement
+                    ? String(element.value || '')
+                    : '';
+                const text = `${element.textContent || ''} ${fieldValue}`.toLowerCase();
+                return text.includes(cleanToken);
+            })
+            .sort((a, b) => {
+                const aText = `${a.textContent || ''} ${a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement || a instanceof HTMLSelectElement ? a.value || '' : ''}`;
+                const bText = `${b.textContent || ''} ${b instanceof HTMLInputElement || b instanceof HTMLTextAreaElement || b instanceof HTMLSelectElement ? b.value || '' : ''}`;
+                return aText.length - bText.length;
+            });
+        const target = candidates[0];
+
+        return target ? applyTemporarySearchHighlight(target, token) : false;
+    };
+
+    useEffect(() => {
+        if (!settingsSearchFocus || settingsSearchFocus.section !== activeSection) return;
+        let cancelled = false;
+        let attempts = 0;
+        const tryFocus = () => {
+            if (cancelled) return;
+            attempts += 1;
+            if (focusSearchMatchOnRenderedPage(settingsSearchFocus.token) || attempts >= 12) {
+                return;
+            }
+            window.setTimeout(tryFocus, 180);
+        };
+        window.setTimeout(tryFocus, 120);
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection, settingsSearchFocus]);
+
     const getAccentClasses = (accent: string) => {
         const classes: Record<string, { rail: string; badge: string; text: string; border: string; shadow: string }> = {
             cyan: { rail: 'bg-cyan-400', badge: 'bg-cyan-500/10 border-cyan-500/30', text: 'text-cyan-300', border: 'border-cyan-500/30', shadow: 'hover:shadow-cyan-950/30' },
@@ -1443,7 +1572,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                 return (
                                                     <button
                                                         key={section}
-                                                        onClick={() => selectSettingsSectionFromMenu(section)}
+                                                        onClick={() => selectSettingsSectionFromMenu(section, group.label)}
                                                         className={`flex min-h-[36px] w-[175px] items-center gap-1 rounded-md border px-3 py-1.5 text-left text-[10px] font-semibold leading-tight transition-colors ${
                                                             sectionActive
                                                                 ? 'border-transparent bg-transparent text-sky-300'
