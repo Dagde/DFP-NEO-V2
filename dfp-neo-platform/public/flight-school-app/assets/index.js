@@ -49511,12 +49511,14 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
               fill: "transparent",
               style: { cursor: "pointer" },
               onMouseMove: (event) => {
+                setHovered(null);
                 const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
                 if (!rect) return;
                 const viewX = (event.clientX - rect.left) / rect.width * W;
                 setAverageHover({ x: Math.max(PAD.left, Math.min(PAD.left + chartW, viewX)), y: yScale(avg) });
               },
               onMouseEnter: (event) => {
+                setHovered(null);
                 const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
                 if (!rect) {
                   setAverageHover({ x: PAD.left + chartW / 2, y: yScale(avg) });
@@ -49575,7 +49577,8 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
                   width: 24,
                   height: chartH,
                   fill: "transparent",
-                  onMouseEnter: () => setHovered(i)
+                  onMouseEnter: () => setHovered(i),
+                  onMouseLeave: () => setHovered((current) => current === i ? null : current)
                 }
               )
             ] }, i);
