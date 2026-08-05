@@ -62261,6 +62261,31 @@ const EmergencyPage = ({
   ] });
 };
 const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
+const formatCurrencyExpiryCalculation = (value) => {
+  const normalised = String(value || "").trim().toUpperCase();
+  if (normalised === "LATEST_CHILD") {
+    return "Use the latest expiry date from the requirements in this rule.";
+  }
+  if (normalised === "EARLIEST_CHILD") {
+    return "Use the earliest expiry date from the requirements in this rule.";
+  }
+  return "Expiry is not configured for this combined currency.";
+};
+const getCurrencyDisplayNameById = (currencyId, allCurrencies) => {
+  const match = allCurrencies.find((currency) => currency.id === currencyId || currency.name === currencyId);
+  return match?.name || currencyId;
+};
+const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
+  if (!node || typeof node !== "object" || !Array.isArray(node.children) || node.children.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No requirements have been added to this combined currency." });
+  }
+  const operator = String(node.operator || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+  const heading = operator === "AND" ? "All of these requirements must be current:" : "Any one of these requirements is enough:";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: depth > 0 ? "mt-2 border-l border-gray-600 pl-3" : "", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: heading }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
+  ] });
+};
 const INITIAL_ELEMENTS_LIST_INLINE = [
   "Generic Flying Elements",
   "Pre-Post Flight",
@@ -63434,13 +63459,16 @@ const SettingsView = ({
               ] })
             ] }),
             selectedCurrency.type === "composite" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Logic Tree" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap", children: JSON.stringify(selectedCurrency.logicTree, null, 2) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-2", children: "Rule" }),
+                renderCurrencyLogicNode(
+                  selectedCurrency.logicTree,
+                  [...currencyRequirements, ...masterCurrencies]
+                )
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Expiry Calculation" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { className: "bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap", children: JSON.stringify(selectedCurrency.expiryCalculation, null, 2) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/70 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-2", children: "Expiry" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300", children: formatCurrencyExpiryCalculation(selectedCurrency.expiryCalculation) })
               ] })
             ] })
           ] })

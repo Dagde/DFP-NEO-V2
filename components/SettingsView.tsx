@@ -41,6 +41,55 @@ declare var XLSX: any;
 
 const TEMPLATE_OVERRIDE_FOLDER_ID = 'template_overrides';
 
+const formatCurrencyExpiryCalculation = (value: unknown): string => {
+    const normalised = String(value || '').trim().toUpperCase();
+    if (normalised === 'LATEST_CHILD') {
+        return 'Use the latest expiry date from the requirements in this rule.';
+    }
+    if (normalised === 'EARLIEST_CHILD') {
+        return 'Use the earliest expiry date from the requirements in this rule.';
+    }
+    return 'Expiry is not configured for this combined currency.';
+};
+
+const getCurrencyDisplayNameById = (
+    currencyId: string,
+    allCurrencies: Array<MasterCurrency | CurrencyRequirement>,
+): string => {
+    const match = allCurrencies.find(currency => currency.id === currencyId || currency.name === currencyId);
+    return match?.name || currencyId;
+};
+
+const renderCurrencyLogicNode = (
+    node: any,
+    allCurrencies: Array<MasterCurrency | CurrencyRequirement>,
+    depth = 0,
+): React.ReactNode => {
+    if (!node || typeof node !== 'object' || !Array.isArray(node.children) || node.children.length === 0) {
+        return <p className="text-sm text-gray-500">No requirements have been added to this combined currency.</p>;
+    }
+
+    const operator = String(node.operator || 'AND').toUpperCase() === 'OR' ? 'OR' : 'AND';
+    const heading = operator === 'AND'
+        ? 'All of these requirements must be current:'
+        : 'Any one of these requirements is enough:';
+
+    return (
+        <div className={depth > 0 ? 'mt-2 border-l border-gray-600 pl-3' : ''}>
+            <p className="text-sm font-semibold text-gray-200">{heading}</p>
+            <ul className="mt-2 space-y-2">
+                {node.children.map((child: any, index: number) => (
+                    <li key={`${depth}-${index}`} className="text-sm text-gray-300">
+                        {typeof child === 'string'
+                            ? <span>{getCurrencyDisplayNameById(child, allCurrencies)}</span>
+                            : renderCurrencyLogicNode(child, allCurrencies, depth + 1)}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
 interface SettingsViewProps {
     activeSection?: 'scoring-matrix' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'validation' | 'emergency';
     onShowSuccess: (message: string) => void;
@@ -1424,17 +1473,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     )}
                                     {selectedCurrency.type === 'composite' && (
                                         <>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-400 block mb-1">Logic Tree</label>
-                                                <pre className="bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                                                    {JSON.stringify((selectedCurrency as MasterCurrency).logicTree, null, 2)}
-                                                </pre>
+                                            <div className="rounded-lg border border-gray-700 bg-gray-900/70 p-3">
+                                                <label className="text-sm font-medium text-gray-400 block mb-2">Rule</label>
+                                                {renderCurrencyLogicNode(
+                                                    (selectedCurrency as MasterCurrency).logicTree,
+                                                    [...currencyRequirements, ...masterCurrencies],
+                                                )}
                                             </div>
-                                            <div>
-                                                <label className="text-sm font-medium text-gray-400 block mb-1">Expiry Calculation</label>
-                                                <pre className="bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                                                    {JSON.stringify((selectedCurrency as MasterCurrency).expiryCalculation, null, 2)}
-                                                </pre>
+                                            <div className="rounded-lg border border-gray-700 bg-gray-900/70 p-3">
+                                                <label className="text-sm font-medium text-gray-400 block mb-2">Expiry</label>
+                                                <p className="text-sm text-gray-300">
+                                                    {formatCurrencyExpiryCalculation((selectedCurrency as MasterCurrency).expiryCalculation)}
+                                                </p>
                                             </div>
                                         </>
                                     )}
