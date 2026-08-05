@@ -1764,12 +1764,14 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           formData.append('uploadMode', isTrainingPackagesTab ? uploadMode : 'update');
           formData.append('lmpType', activeLmpType);
           formData.append('operationalModel', activeOperationalModel);
+          const sessionToken = localStorage.getItem('dfp_session_token') || '';
           if (shouldScopeCreatedItemsToActiveUnit) {
               formData.append('locationCode', activeLocationNormalised);
               formData.append('unitCode', activeUnitNormalised);
           }
           const resp = await fetch('/api/syllabus/bulk-upload', {
               method: 'POST',
+              headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
               body: formData,
           });
           const responseText = await resp.text();

@@ -3270,7 +3270,9 @@ app.get('/api/settings/course-settings', async (req, res) => {
 // PUT /api/settings/course-settings - Update course settings (selectedAcademicLmp and/or excludedCourses)
 app.put('/api/settings/course-settings', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { selectedAcademicLmp, excludedCourses } = req.body;
     // At least one field must be present (allow empty string/array to clear a value)
     if (selectedAcademicLmp === undefined && excludedCourses === undefined) {
@@ -3395,7 +3397,9 @@ app.get('/api/currencies', async (req, res) => {
 // POST /api/currencies - Save currency settings (dedicated endpoint for reliability)
 app.post('/api/currencies', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { orgId = 'default', masterCurrencies, currencyRequirements, updatedBy } = req.body;
     if (!masterCurrencies && !currencyRequirements) {
       return res.status(400).json({ error: 'Missing currency data' });
@@ -3487,7 +3491,9 @@ app.get('/api/courses', async (req, res) => {
 // POST /api/courses - Create or update a course in the database
 app.post('/api/courses', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, status } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const course = await db.course.upsert({
@@ -3532,7 +3538,9 @@ app.post('/api/courses', async (req, res) => {
 // DELETE /api/courses/:name - Delete a course from the database
 app.delete('/api/courses/:name', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const name = decodeURIComponent(req.params.name);
     await db.course.deleteMany({ where: { code: name } });
     res.json({ success: true });
@@ -6451,7 +6459,9 @@ function getUploadDuplicateSourceDetails(item) {
 // POST /api/syllabus/bulk-upload - Import/update syllabus events from workbook
 app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { randomUUID } = await import('crypto');
     let selectedCourseCode = String(req.body?.courseCode || '').trim();
     const packageName = String(req.body?.packageName || '').trim();
@@ -6832,7 +6842,9 @@ app.get('/api/syllabus/codes', async (req, res) => {
 // POST /api/syllabus - Create a new syllabus item
 app.post('/api/syllabus', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const body = req.body;
     const { randomUUID } = await import('crypto');
     const id = randomUUID();
@@ -6913,7 +6925,9 @@ app.post('/api/syllabus', async (req, res) => {
 // PUT /api/syllabus/:id - Update a syllabus item
 app.put('/api/syllabus/:id', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { id } = req.params;
     const originalBody = req.body || {};
     const existingRows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1 LIMIT 1`, id);

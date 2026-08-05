@@ -3050,9 +3050,13 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
   try {
     const apiBase = getApiBase$1();
     const url = `${apiBase}/currencies`;
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+      },
       body: JSON.stringify({
         orgId: ORG_ID,
         masterCurrencies,
@@ -56751,12 +56755,14 @@ const SyllabusView = ({
       formData.append("uploadMode", isTrainingPackagesTab ? uploadMode : "update");
       formData.append("lmpType", activeLmpType);
       formData.append("operationalModel", activeOperationalModel);
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       if (shouldScopeCreatedItemsToActiveUnit) {
         formData.append("locationCode", activeLocationNormalised);
         formData.append("unitCode", activeUnitNormalised);
       }
       const resp = await fetch("/api/syllabus/bulk-upload", {
         method: "POST",
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0,
         body: formData
       });
       const responseText = await resp.text();
@@ -107509,9 +107515,13 @@ const App = () => {
             const fallbackColor = defaultColors[(Object.keys(courseColors).length + index) % defaultColors.length];
             const recoveredCourse = getRecoveredFlightSchoolCourse(courseName, fallbackColor);
             try {
+              const sessionToken = localStorage.getItem("dfp_session_token") || "";
               const response = await fetch(`${apiBase}/courses`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+                },
                 credentials: "include",
                 body: JSON.stringify(recoveredCourse)
               });
@@ -109240,9 +109250,13 @@ const App = () => {
   const handleUpdateExcludedCourses = async (courses2) => {
     setExcludedCourses(courses2);
     try {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       await fetch(`${getApiBase2()}/settings/course-settings`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
         body: JSON.stringify({ excludedCourses: courses2 })
       });
     } catch (error) {
@@ -109252,9 +109266,13 @@ const App = () => {
   const handleUpdatePersistedAcademicLmp = async (lmp) => {
     setPersistedAcademicLmp(lmp);
     try {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
       await fetch(`${getApiBase2()}/settings/course-settings`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
         body: JSON.stringify({ selectedAcademicLmp: lmp })
       });
     } catch (error) {

@@ -25179,9 +25179,13 @@ const App: React.FC = () => {
                         const fallbackColor = defaultColors[(Object.keys(courseColors).length + index) % defaultColors.length];
                         const recoveredCourse = getRecoveredFlightSchoolCourse(courseName, fallbackColor);
                         try {
+                            const sessionToken = localStorage.getItem('dfp_session_token') || '';
                             const response = await fetch(`${apiBase}/courses`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                                },
                                 credentials: 'include',
                                 body: JSON.stringify(recoveredCourse),
                             });
@@ -27189,9 +27193,13 @@ const App: React.FC = () => {
     const handleUpdateExcludedCourses = async (courses: string[]) => {
         setExcludedCourses(courses);
         try {
+            const sessionToken = localStorage.getItem('dfp_session_token') || '';
             await fetch(`${getApiBase()}/settings/course-settings`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                },
                 body: JSON.stringify({ excludedCourses: courses })
             });
         } catch (error) {
@@ -27202,9 +27210,13 @@ const App: React.FC = () => {
     const handleUpdatePersistedAcademicLmp = async (lmp: string) => {
         setPersistedAcademicLmp(lmp);
         try {
+            const sessionToken = localStorage.getItem('dfp_session_token') || '';
             await fetch(`${getApiBase()}/settings/course-settings`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                },
                 body: JSON.stringify({ selectedAcademicLmp: lmp })
             });
         } catch (error) {
