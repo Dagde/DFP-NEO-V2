@@ -62603,33 +62603,7 @@ const EmergencyPage = ({
     ] }) })
   ] });
 };
-const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
-const formatCurrencyExpiryCalculation = (value) => {
-  const normalised = String(value || "").trim().toUpperCase();
-  if (normalised === "LATEST_CHILD") {
-    return "Use the latest expiry date from the requirements in this rule.";
-  }
-  if (normalised === "EARLIEST_CHILD") {
-    return "Use the earliest expiry date from the requirements in this rule.";
-  }
-  return "Expiry is not configured for this combined currency.";
-};
-const getCurrencyDisplayNameById = (currencyId, allCurrencies) => {
-  const match = allCurrencies.find((currency) => currency.id === currencyId || currency.name === currencyId);
-  return match?.name || currencyId;
-};
-const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
-  if (!node || typeof node !== "object" || !Array.isArray(node.children) || node.children.length === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No requirements have been added to this combined currency." });
-  }
-  const operator = String(node.operator || "AND").toUpperCase() === "OR" ? "OR" : "AND";
-  const heading = operator === "AND" ? "All of these requirements must be current:" : "Any one of these requirements is enough:";
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: depth > 0 ? "mt-2 border-l border-gray-600 pl-3" : "", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: heading }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
-  ] });
-};
-const INITIAL_ELEMENTS_LIST_INLINE = [
+const INITIAL_SCORING_MATRIX_ELEMENTS = [
   "Generic Flying Elements",
   "Pre-Post Flight",
   "Walk Around",
@@ -62690,15 +62664,15 @@ const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
   Knowledge: "Domestics"
 };
 const SCORING_MATRIX_SECTION_HELP = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
+const normaliseScoringMatrixElementName = (value) => String(value || "").trim();
+const dedupeScoringMatrixElements = (elements) => elements.map(normaliseScoringMatrixElementName).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
 const getConfiguredScoringMatrixElements = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
   if (Array.isArray(savedElements)) {
-    return savedElements.map((element) => String(element || "").trim()).filter(Boolean).filter((element, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
+    return dedupeScoringMatrixElements(savedElements);
   }
-  const customElements = Object.keys(phraseBank || {}).filter(
-    (key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$1 && !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
-  );
-  return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
+  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$1 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 && !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
+  return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);
 };
 const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
   const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1];
@@ -62716,6 +62690,32 @@ const getScoringMatrixElementGroup = (element, groups, hasExplicitGroups) => {
     return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements";
   }
   return "Additional Elements";
+};
+const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
+const formatCurrencyExpiryCalculation = (value) => {
+  const normalised = String(value || "").trim().toUpperCase();
+  if (normalised === "LATEST_CHILD") {
+    return "Use the latest expiry date from the requirements in this rule.";
+  }
+  if (normalised === "EARLIEST_CHILD") {
+    return "Use the earliest expiry date from the requirements in this rule.";
+  }
+  return "Expiry is not configured for this combined currency.";
+};
+const getCurrencyDisplayNameById = (currencyId, allCurrencies) => {
+  const match = allCurrencies.find((currency) => currency.id === currencyId || currency.name === currencyId);
+  return match?.name || currencyId;
+};
+const renderCurrencyLogicNode = (node, allCurrencies, depth = 0) => {
+  if (!node || typeof node !== "object" || !Array.isArray(node.children) || node.children.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: "No requirements have been added to this combined currency." });
+  }
+  const operator = String(node.operator || "AND").toUpperCase() === "OR" ? "OR" : "AND";
+  const heading = operator === "AND" ? "All of these requirements must be current:" : "Any one of these requirements is enough:";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: depth > 0 ? "mt-2 border-l border-gray-600 pl-3" : "", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-200", children: heading }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-2 space-y-2", children: node.children.map((child, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-300", children: typeof child === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: getCurrencyDisplayNameById(child, allCurrencies) }) : renderCurrencyLogicNode(child, allCurrencies, depth + 1) }, `${depth}-${index}`)) })
+  ] });
 };
 const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false, onElementAdded }) => {
   const [showAddElementFlyout, setShowAddElementFlyout] = reactExports.useState(false);
@@ -66834,13 +66834,6 @@ const FormationCallsignsSection = ({
 const DFP_RESOURCE_ROW_KEYS = ["aircraft", "ftd", "cpt", "standby", "ground", "dutySupervisor", "towerDutyInstructor"];
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
-const TRAINING_REPORT_ELEMENT_LIST_KEY = "__scoringMatrixElements";
-const DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
-const getTrainingReportElementPreviewList = (bank) => {
-  const configuredElements = bank?.[TRAINING_REPORT_ELEMENT_LIST_KEY];
-  const source = Array.isArray(configuredElements) ? configuredElements : DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS;
-  return source.map((element) => String(element || "").trim()).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
-};
 const emptyConfig = {
   organisations: [],
   locations: [],
@@ -68368,6 +68361,9 @@ const PlatformConfigurationSettings = ({
   const unitTypeOptions = reactExports.useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = reactExports.useState({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = reactExports.useState({});
+  const [trainingReportElementNameDrafts, setTrainingReportElementNameDrafts] = reactExports.useState({});
+  const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = reactExports.useState({});
+  const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = reactExports.useState("");
   const showPlatformConfigError = reactExports.useCallback((message, link = null) => {
     setError(message);
     setErrorLink(link);
@@ -68877,9 +68873,18 @@ const PlatformConfigurationSettings = ({
     phraseBank
   );
   const trainingReportPreviewElements = reactExports.useMemo(
-    () => getTrainingReportElementPreviewList(trainingReportPhraseBank),
+    () => getConfiguredScoringMatrixElements(trainingReportPhraseBank),
     [trainingReportPhraseBank]
   );
+  const trainingReportElementGroups = reactExports.useMemo(
+    () => getConfiguredScoringMatrixElementGroups(trainingReportPhraseBank),
+    [trainingReportPhraseBank]
+  );
+  const trainingReportElementSectionOptions = reactExports.useMemo(() => Array.from(new Set([
+    ...trainingReportElementGroups.hasExplicitGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
+    ...Object.values(trainingReportElementGroups.groups).map((value) => String(value || "").trim()).filter(Boolean),
+    ...trainingReportPreviewElements.map((element) => getScoringMatrixElementGroup(element, trainingReportElementGroups.groups, trainingReportElementGroups.hasExplicitGroups))
+  ].filter(Boolean))), [trainingReportElementGroups, trainingReportPreviewElements]);
   const trainingReportSyncOptions = configUnits.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
     code: String(unit.code || "").trim(),
     label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""}`
@@ -69683,6 +69688,132 @@ This permanently removes the organisation record from platform configuration and
           }
         } : unit)
       };
+    });
+  };
+  const updateTrainingReportPhraseBank = (updater) => {
+    if (activeTrainingReportUnitIndex < 0) return;
+    setConfig((prev) => {
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetUnit = previousUnits[activeTrainingReportUnitIndex];
+      if (!targetUnit) return prev;
+      const currentBank = getUnitTrainingReportPhraseBank(
+        prev,
+        targetUnit.code || activeTrainingReportUnitCode,
+        phraseBank
+      );
+      const nextBank = typeof updater === "function" ? updater(currentBank) : updater;
+      return {
+        ...prev,
+        units: previousUnits.map((unit, index) => index === activeTrainingReportUnitIndex ? {
+          ...unit,
+          settings: {
+            ...unit.settings || {},
+            trainingReportPhraseBank: nextBank
+          }
+        } : unit)
+      };
+    });
+  };
+  const trainingReportElementNameExists = (name, exceptName = "") => trainingReportPreviewElements.some((element) => element.toLowerCase() === name.toLowerCase() && element.toLowerCase() !== exceptName.toLowerCase());
+  const addTrainingReportElement = async () => {
+    const name = trainingReportNewElementDraft.trim();
+    if (!canEditTrainingReportTemplate) return;
+    if (!name) {
+      await showDarkAlert("Enter the assessment element name first.", "Element Name Required", "warning");
+      return;
+    }
+    if (trainingReportElementNameExists(name)) {
+      await showDarkAlert("That assessment element is already selected for this report.", "Duplicate Element", "warning");
+      return;
+    }
+    updateTrainingReportPhraseBank((bank) => {
+      const elements = getConfiguredScoringMatrixElements(bank);
+      const { groups } = getConfiguredScoringMatrixElementGroups(bank);
+      return {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: [...elements, name],
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+          ...groups,
+          [name]: "Additional Elements"
+        },
+        [name]: bank[name] || { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] }
+      };
+    });
+    setTrainingReportNewElementDraft("");
+  };
+  const renameTrainingReportElement = async (element, rawName) => {
+    const nextName = String(trainingReportElementNameDrafts[element] ?? element).trim();
+    setTrainingReportElementNameDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+    if (!canEditTrainingReportTemplate || nextName === element) return;
+    if (!nextName) {
+      await showDarkAlert("Assessment element names cannot be blank.", "Element Name Required", "warning");
+      return;
+    }
+    if (trainingReportElementNameExists(nextName, element)) {
+      await showDarkAlert("That assessment element is already selected for this report.", "Duplicate Element", "warning");
+      return;
+    }
+    updateTrainingReportPhraseBank((bank) => {
+      const elements = getConfiguredScoringMatrixElements(bank).map((item) => item === element ? nextName : item);
+      const { groups, hasExplicitGroups } = getConfiguredScoringMatrixElementGroups(bank);
+      const nextGroups = { ...groups };
+      nextGroups[nextName] = getScoringMatrixElementGroup(element, groups, hasExplicitGroups);
+      delete nextGroups[element];
+      const nextBank = {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: elements,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: nextGroups
+      };
+      if (bank[element] && !bank[nextName]) {
+        nextBank[nextName] = bank[element];
+      }
+      delete nextBank[element];
+      return nextBank;
+    });
+  };
+  const updateTrainingReportElementSection = (element, rawGroup) => {
+    if (!canEditTrainingReportTemplate) return;
+    const nextGroup = String(trainingReportElementGroupDrafts[element] ?? "").trim() || "Additional Elements";
+    setTrainingReportElementGroupDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+    updateTrainingReportPhraseBank((bank) => {
+      const { groups } = getConfiguredScoringMatrixElementGroups(bank);
+      return {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+          ...groups,
+          [element]: nextGroup
+        }
+      };
+    });
+  };
+  const deleteTrainingReportElement = async (element) => {
+    if (!canEditTrainingReportTemplate) return;
+    const confirmed = await showDarkConfirm(
+      `Delete "${element}" from this unit's training report elements? Existing scoring phrases for this element will also be removed.`,
+      "Delete Assessment Element",
+      "Delete Element"
+    );
+    if (!confirmed) return;
+    updateTrainingReportPhraseBank((bank) => {
+      const elements = getConfiguredScoringMatrixElements(bank).filter((item) => item !== element);
+      const { groups } = getConfiguredScoringMatrixElementGroups(bank);
+      const nextGroups = { ...groups };
+      delete nextGroups[element];
+      const nextBank = {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: elements,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: nextGroups
+      };
+      delete nextBank[element];
+      return nextBank;
     });
   };
   const applyTrainingReportNameDraftsToConfig = (sourceConfig, drafts) => {
@@ -75429,10 +75560,151 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.assessmentMatrix.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Configured Elements" }),
-                  trainingReportPreviewElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 md:grid-cols-3", children: trainingReportPreviewElements.map((dimension) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100", children: dimension }, dimension)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-gray-800 bg-gray-950/70 px-3 py-2 text-sm italic text-gray-500", children: "No assessment elements configured." })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Selected Elements" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "These are the assessment elements that appear in the report. Descriptors and phrases are still edited in Scoring Matrix." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cyan-100", children: [
+                      trainingReportPreviewElements.length,
+                      " selected"
+                    ] })
+                  ] }),
+                  trainingReportPreviewElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 space-y-2", children: [
+                    trainingReportPreviewElements.map((dimension) => {
+                      const savedSection = getScoringMatrixElementGroup(
+                        dimension,
+                        trainingReportElementGroups.groups,
+                        trainingReportElementGroups.hasExplicitGroups
+                      );
+                      const nameDraft = trainingReportElementNameDrafts[dimension] ?? dimension;
+                      const sectionDraft = trainingReportElementGroupDrafts[dimension] ?? savedSection;
+                      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 rounded border border-gray-800 bg-gray-900/70 p-2 md:grid-cols-[minmax(180px,1fr)_minmax(180px,0.85fr)_auto]", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Element Name" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              value: nameDraft,
+                              disabled: !canEditTrainingReportTemplate,
+                              onFocus: () => setTrainingReportElementNameDrafts((previous) => ({
+                                ...previous,
+                                [dimension]: previous[dimension] ?? dimension
+                              })),
+                              onChange: (event) => setTrainingReportElementNameDrafts((previous) => ({
+                                ...previous,
+                                [dimension]: event.target.value
+                              })),
+                              onBlur: () => {
+                                void renameTrainingReportElement(dimension);
+                              },
+                              onKeyDown: (event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  event.currentTarget.blur();
+                                }
+                              },
+                              onKeyDownCapture: handleEditableTextKeyDownCapture,
+                              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setTrainingReportElementNameDrafts((previous) => ({
+                                ...previous,
+                                [dimension]: value
+                              }))),
+                              onClick: stopEditableKeyPropagation,
+                              className: `${fieldClass} py-1.5 text-xs`
+                            }
+                          )
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Report Section" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              list: "training-report-element-sections",
+                              value: sectionDraft,
+                              disabled: !canEditTrainingReportTemplate,
+                              onFocus: () => setTrainingReportElementGroupDrafts((previous) => ({
+                                ...previous,
+                                [dimension]: previous[dimension] ?? savedSection
+                              })),
+                              onChange: (event) => setTrainingReportElementGroupDrafts((previous) => ({
+                                ...previous,
+                                [dimension]: event.target.value
+                              })),
+                              onBlur: () => updateTrainingReportElementSection(dimension),
+                              onKeyDown: (event) => {
+                                if (event.key === "Enter") {
+                                  event.preventDefault();
+                                  event.currentTarget.blur();
+                                }
+                              },
+                              onKeyDownCapture: handleEditableTextKeyDownCapture,
+                              onBeforeInput: (event) => handleEditableTextBeforeInput(event, (value) => setTrainingReportElementGroupDrafts((previous) => ({
+                                ...previous,
+                                [dimension]: value
+                              }))),
+                              onClick: stopEditableKeyPropagation,
+                              className: `${fieldClass} py-1.5 text-xs`
+                            }
+                          )
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            disabled: !canEditTrainingReportTemplate,
+                            onClick: () => {
+                              void deleteTrainingReportElement(dimension);
+                            },
+                            className: "rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-50",
+                            children: "Delete"
+                          }
+                        ) })
+                      ] }, dimension);
+                    }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "training-report-element-sections", children: trainingReportElementSectionOptions.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: section }, section)) })
+                  ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-gray-800 bg-gray-950/70 px-3 py-2 text-sm italic text-gray-500", children: "No assessment elements configured." })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs leading-relaxed text-gray-400", children: "Descriptors and phrases are edited in Settings - Training & Standards - Scoring Matrix." })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/20 bg-cyan-500/10 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-cyan-100/70", children: "Add Element" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-col gap-2 sm:flex-row", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        value: trainingReportNewElementDraft,
+                        disabled: !canEditTrainingReportTemplate,
+                        placeholder: "Element name",
+                        onChange: (event) => setTrainingReportNewElementDraft(event.target.value),
+                        onKeyDown: (event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void addTrainingReportElement();
+                          }
+                        },
+                        onKeyDownCapture: handleEditableTextKeyDownCapture,
+                        onBeforeInput: (event) => handleEditableTextBeforeInput(event, setTrainingReportNewElementDraft),
+                        onClick: stopEditableKeyPropagation,
+                        className: `${fieldClass} flex-1`
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        disabled: !canEditTrainingReportTemplate || !trainingReportNewElementDraft.trim(),
+                        onClick: () => {
+                          void addTrainingReportElement();
+                        },
+                        className: platformActionButtonClass,
+                        children: "Add Element"
+                      }
+                    )
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: "Report Preview" }),
+                  trainingReportPreviewElements.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 grid gap-2 md:grid-cols-3", children: trainingReportPreviewElements.map((dimension) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-100", children: dimension }, dimension)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-gray-800 bg-gray-950/70 px-3 py-2 text-sm italic text-gray-500", children: "No assessment elements configured." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs leading-relaxed text-gray-400", children: "To edit scoring descriptors and phrases for these elements, open Settings - Training & Standards - Scoring Matrix." })
               ] }) })
             ] })
           ] })

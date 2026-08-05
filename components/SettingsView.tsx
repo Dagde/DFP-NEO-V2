@@ -35,6 +35,15 @@ import { normaliseContinuationEventSettings } from '../utils/continuationEvents'
 import { downloadOrganisationStructureTemplateFile } from '../utils/organisationStructureTemplate';
 import type { EmergencyFreezeAuthoritySettings } from '../utils/emergencyFreezeAuthority';
 import type { StaffQualificationDefinition } from '../utils/staffQualifications';
+import {
+    DEFAULT_SCORING_MATRIX_SECTIONS,
+    SCORING_MATRIX_ELEMENT_GROUPS_KEY,
+    SCORING_MATRIX_ELEMENT_LIST_KEY,
+    SCORING_MATRIX_SECTION_HELP,
+    getConfiguredScoringMatrixElementGroups,
+    getConfiguredScoringMatrixElements,
+    getScoringMatrixElementGroup,
+} from '../utils/scoringMatrixElements';
 
 
 declare var XLSX: any;
@@ -147,96 +156,6 @@ interface SettingsViewProps {
     activeCompositeUnitCode?: string;
     activeAircraftTypeCode?: string | null;
 }
-
-// ─── Inline Scoring Matrix Component ────────────────────────────────────────
-const INITIAL_ELEMENTS_LIST_INLINE = [
-    'Generic Flying Elements',
-    'Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks',
-    'Stationary', 'Visual', 'Effects of Control', 'Trimming', 'Straight and Level',
-    'Level medium Turn', 'Level Steep turn', 'Visual - Initial & Pitch', 'Landing',
-    'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
-];
-const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
-const DEFAULT_SCORING_MATRIX_SECTIONS = [
-    'Core Dimensions',
-    'Procedural Framework',
-    'Takeoff',
-    'Departure',
-    'Core Handling Skills',
-    'Turns',
-    'Recovery',
-    'Landing',
-    'Domestics',
-    'Additional Elements',
-];
-const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS: Record<string, string> = {
-    Airmanship: 'Core Dimensions',
-    Preparation: 'Core Dimensions',
-    Technique: 'Core Dimensions',
-    'Pre-Post Flight': 'Procedural Framework',
-    'Walk Around': 'Procedural Framework',
-    'Strap-in': 'Procedural Framework',
-    'Ground Checks': 'Procedural Framework',
-    'Airborne Checks': 'Procedural Framework',
-    Stationary: 'Takeoff',
-    Visual: 'Departure',
-    'Effects of Control': 'Core Handling Skills',
-    Trimming: 'Core Handling Skills',
-    'Straight and Level': 'Core Handling Skills',
-    'Level medium Turn': 'Turns',
-    'Level Steep turn': 'Turns',
-    'Visual - Initial & Pitch': 'Recovery',
-    Landing: 'Landing',
-    Crosswind: 'Landing',
-    'Radio Comms': 'Domestics',
-    'Situational Awareness': 'Domestics',
-    Lookout: 'Domestics',
-    Knowledge: 'Domestics',
-};
-const SCORING_MATRIX_SECTION_HELP = 'Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.';
-
-const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank): string[] => {
-    const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
-    if (Array.isArray(savedElements)) {
-        return savedElements
-            .map(element => String(element || '').trim())
-            .filter(Boolean)
-            .filter((element, index, arr) => arr.findIndex(candidate => candidate.toLowerCase() === element.toLowerCase()) === index);
-    }
-    const customElements = Object.keys(phraseBank || {}).filter(key =>
-        key !== SCORING_MATRIX_ELEMENT_LIST_KEY &&
-        !['Airmanship', 'Preparation', 'Technique'].includes(key) &&
-        !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
-    );
-    return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
-};
-
-const getConfiguredScoringMatrixElementGroups = (phraseBank: PhraseBank): {
-    groups: Record<string, string>;
-    hasExplicitGroups: boolean;
-} => {
-    const savedGroups = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY];
-    const hasExplicitGroups = !!savedGroups && typeof savedGroups === 'object' && !Array.isArray(savedGroups);
-    return {
-        groups: hasExplicitGroups ? savedGroups as Record<string, string> : {},
-        hasExplicitGroups,
-    };
-};
-
-const getScoringMatrixElementGroup = (
-    element: string,
-    groups: Record<string, string>,
-    hasExplicitGroups: boolean,
-): string => {
-    if (Object.prototype.hasOwnProperty.call(groups, element)) {
-        return String(groups[element] || '').trim() || 'Additional Elements';
-    }
-    if (!hasExplicitGroups) {
-        return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || 'Additional Elements';
-    }
-    return 'Additional Elements';
-};
 
 interface ScoringMatrixInlineProps {
     activeTab: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';

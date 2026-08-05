@@ -103,7 +103,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import type { CurrencyRequirement, FormationCallsign, MasterCurrency, SyllabusItemDetail } from '../types';
+import type { CurrencyRequirement, FormationCallsign, MasterCurrency, PhraseBank, SyllabusItemDetail } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
   normaliseInsertEventTypes,
@@ -119,6 +119,14 @@ import {
   isValidTimeZone,
 } from '../utils/sunTimes.js';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
+import {
+  DEFAULT_SCORING_MATRIX_SECTIONS,
+  SCORING_MATRIX_ELEMENT_GROUPS_KEY,
+  SCORING_MATRIX_ELEMENT_LIST_KEY,
+  getConfiguredScoringMatrixElementGroups,
+  getConfiguredScoringMatrixElements,
+  getScoringMatrixElementGroup,
+} from '../utils/scoringMatrixElements';
 
 declare const XLSX: any;
 
@@ -192,19 +200,6 @@ type AirfieldCatalogueLookup = {
 
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
-const TRAINING_REPORT_ELEMENT_LIST_KEY = '__scoringMatrixElements';
-const DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
-
-const getTrainingReportElementPreviewList = (bank?: Record<string, any>): string[] => {
-  const configuredElements = bank?.[TRAINING_REPORT_ELEMENT_LIST_KEY];
-  const source = Array.isArray(configuredElements) ? configuredElements : DEFAULT_TRAINING_REPORT_PREVIEW_ELEMENTS;
-  return source
-    .map((element) => String(element || '').trim())
-    .filter(Boolean)
-    .filter((element, index, all) => (
-      all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index
-    ));
-};
 
 const emptyConfig: PlatformConfig = {
   organisations: [],
@@ -2225,6 +2220,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const unitTypeOptions = useMemo(() => normaliseUnitTypes(config.unitTypes, config.units), [config.unitTypes, config.units]);
   const [trainingReportNameDrafts, setTrainingReportNameDrafts] = useState<Partial<Pick<TrainingReportTemplate, 'genericName' | 'displayName'>>>({});
   const [trainingReportTextDrafts, setTrainingReportTextDrafts] = useState<Record<string, string>>({});
+  const [trainingReportElementNameDrafts, setTrainingReportElementNameDrafts] = useState<Record<string, string>>({});
+  const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = useState<Record<string, string>>({});
+  const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = useState('');
 
   const showPlatformConfigError = useCallback((message: string, link: PlatformConfigSaveBlocker['link'] | null = null) => {
     setError(message);
@@ -2803,9 +2801,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     phraseBank,
   );
   const trainingReportPreviewElements = useMemo(
-    () => getTrainingReportElementPreviewList(trainingReportPhraseBank),
+    () => getConfiguredScoringMatrixElements(trainingReportPhraseBank),
     [trainingReportPhraseBank],
   );
+  const trainingReportElementGroups = useMemo(
+    () => getConfiguredScoringMatrixElementGroups(trainingReportPhraseBank),
+    [trainingReportPhraseBank],
+  );
+  const trainingReportElementSectionOptions = useMemo(() => Array.from(new Set([
+    ...(trainingReportElementGroups.hasExplicitGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS),
+    ...Object.values(trainingReportElementGroups.groups).map((value) => String(value || '').trim()).filter(Boolean),
+    ...trainingReportPreviewElements.map((element) => (
+      getScoringMatrixElementGroup(element, trainingReportElementGroups.groups, trainingReportElementGroups.hasExplicitGroups)
+    )),
+  ].filter(Boolean))), [trainingReportElementGroups, trainingReportPreviewElements]);
   const trainingReportSyncOptions = configUnits
     .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
     .map((unit) => ({
@@ -3816,6 +3825,146 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             }
           : unit),
       };
+    });
+  };
+
+  const updateTrainingReportPhraseBank = (
+    updater: PhraseBank | ((bank: PhraseBank) => PhraseBank),
+  ) => {
+    if (activeTrainingReportUnitIndex < 0) return;
+    setConfig((prev) => {
+      const previousUnits = Array.isArray(prev.units) ? prev.units : [];
+      const targetUnit = previousUnits[activeTrainingReportUnitIndex];
+      if (!targetUnit) return prev;
+      const currentBank = getUnitTrainingReportPhraseBank(
+        prev as any,
+        targetUnit.code || activeTrainingReportUnitCode,
+        phraseBank,
+      ) as PhraseBank;
+      const nextBank = typeof updater === 'function' ? updater(currentBank) : updater;
+      return {
+        ...prev,
+        units: previousUnits.map((unit, index) => index === activeTrainingReportUnitIndex
+          ? {
+              ...unit,
+              settings: {
+                ...(unit.settings || {}),
+                trainingReportPhraseBank: nextBank,
+              },
+            }
+          : unit),
+      };
+    });
+  };
+
+  const trainingReportElementNameExists = (name: string, exceptName = '') => trainingReportPreviewElements.some((element) => (
+    element.toLowerCase() === name.toLowerCase() && element.toLowerCase() !== exceptName.toLowerCase()
+  ));
+
+  const addTrainingReportElement = async () => {
+    const name = trainingReportNewElementDraft.trim();
+    if (!canEditTrainingReportTemplate) return;
+    if (!name) {
+      await showDarkAlert('Enter the assessment element name first.', 'Element Name Required', 'warning');
+      return;
+    }
+    if (trainingReportElementNameExists(name)) {
+      await showDarkAlert('That assessment element is already selected for this report.', 'Duplicate Element', 'warning');
+      return;
+    }
+    updateTrainingReportPhraseBank((bank) => {
+      const elements = getConfiguredScoringMatrixElements(bank);
+      const { groups } = getConfiguredScoringMatrixElementGroups(bank);
+      return {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_LIST_KEY]: [...elements, name],
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+          ...groups,
+          [name]: 'Additional Elements',
+        },
+        [name]: (bank as any)[name] || { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] },
+      } as PhraseBank;
+    });
+    setTrainingReportNewElementDraft('');
+  };
+
+  const renameTrainingReportElement = async (element: string, rawName?: string) => {
+    const nextName = String(rawName ?? trainingReportElementNameDrafts[element] ?? element).trim();
+    setTrainingReportElementNameDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+    if (!canEditTrainingReportTemplate || nextName === element) return;
+    if (!nextName) {
+      await showDarkAlert('Assessment element names cannot be blank.', 'Element Name Required', 'warning');
+      return;
+    }
+    if (trainingReportElementNameExists(nextName, element)) {
+      await showDarkAlert('That assessment element is already selected for this report.', 'Duplicate Element', 'warning');
+      return;
+    }
+    updateTrainingReportPhraseBank((bank) => {
+      const elements = getConfiguredScoringMatrixElements(bank).map((item) => (item === element ? nextName : item));
+      const { groups, hasExplicitGroups } = getConfiguredScoringMatrixElementGroups(bank);
+      const nextGroups = { ...groups };
+      nextGroups[nextName] = getScoringMatrixElementGroup(element, groups, hasExplicitGroups);
+      delete nextGroups[element];
+      const nextBank: PhraseBank = {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_LIST_KEY]: elements,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: nextGroups,
+      } as PhraseBank;
+      if ((bank as any)[element] && !(bank as any)[nextName]) {
+        (nextBank as any)[nextName] = (bank as any)[element];
+      }
+      delete (nextBank as any)[element];
+      return nextBank;
+    });
+  };
+
+  const updateTrainingReportElementSection = (element: string, rawGroup?: string) => {
+    if (!canEditTrainingReportTemplate) return;
+    const nextGroup = String(rawGroup ?? trainingReportElementGroupDrafts[element] ?? '').trim() || 'Additional Elements';
+    setTrainingReportElementGroupDrafts((previous) => {
+      if (!(element in previous)) return previous;
+      const { [element]: _committedDraft, ...remainingDrafts } = previous;
+      return remainingDrafts;
+    });
+    updateTrainingReportPhraseBank((bank) => {
+      const { groups } = getConfiguredScoringMatrixElementGroups(bank);
+      return {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
+          ...groups,
+          [element]: nextGroup,
+        },
+      } as PhraseBank;
+    });
+  };
+
+  const deleteTrainingReportElement = async (element: string) => {
+    if (!canEditTrainingReportTemplate) return;
+    const confirmed = await showDarkConfirm(
+      `Delete "${element}" from this unit's training report elements? Existing scoring phrases for this element will also be removed.`,
+      'Delete Assessment Element',
+      'Delete Element',
+      'Cancel',
+      'danger',
+    );
+    if (!confirmed) return;
+    updateTrainingReportPhraseBank((bank) => {
+      const elements = getConfiguredScoringMatrixElements(bank).filter((item) => item !== element);
+      const { groups } = getConfiguredScoringMatrixElementGroups(bank);
+      const nextGroups = { ...groups };
+      delete nextGroups[element];
+      const nextBank: PhraseBank = {
+        ...bank,
+        [SCORING_MATRIX_ELEMENT_LIST_KEY]: elements,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: nextGroups,
+      } as PhraseBank;
+      delete (nextBank as any)[element];
+      return nextBank;
     });
   };
 
@@ -10373,11 +10522,148 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.assessmentMatrix.title}>
                   <div className="space-y-3">
                     <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
-                      <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Configured Elements</div>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Selected Elements</div>
+                          <p className="mt-1 text-xs text-gray-400">
+                            These are the assessment elements that appear in the report. Descriptors and phrases are still edited in Scoring Matrix.
+                          </p>
+                        </div>
+                        <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-cyan-100">
+                          {trainingReportPreviewElements.length} selected
+                        </span>
+                      </div>
+                      {trainingReportPreviewElements.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                          {trainingReportPreviewElements.map((dimension) => {
+                            const savedSection = getScoringMatrixElementGroup(
+                              dimension,
+                              trainingReportElementGroups.groups,
+                              trainingReportElementGroups.hasExplicitGroups,
+                            );
+                            const nameDraft = trainingReportElementNameDrafts[dimension] ?? dimension;
+                            const sectionDraft = trainingReportElementGroupDrafts[dimension] ?? savedSection;
+                            return (
+                              <div key={dimension} className="grid gap-2 rounded border border-gray-800 bg-gray-900/70 p-2 md:grid-cols-[minmax(180px,1fr)_minmax(180px,0.85fr)_auto]">
+                                <label className="block">
+                                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-gray-500">Element Name</span>
+                                  <input
+                                    value={nameDraft}
+                                    disabled={!canEditTrainingReportTemplate}
+                                    onFocus={() => setTrainingReportElementNameDrafts((previous) => ({
+                                      ...previous,
+                                      [dimension]: previous[dimension] ?? dimension,
+                                    }))}
+                                    onChange={(event) => setTrainingReportElementNameDrafts((previous) => ({
+                                      ...previous,
+                                      [dimension]: event.target.value,
+                                    }))}
+                                    onBlur={() => { void renameTrainingReportElement(dimension); }}
+                                    onKeyDown={(event) => {
+                                      if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        event.currentTarget.blur();
+                                      }
+                                    }}
+                                    onKeyDownCapture={handleEditableTextKeyDownCapture}
+                                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setTrainingReportElementNameDrafts((previous) => ({
+                                      ...previous,
+                                      [dimension]: value,
+                                    })))}
+                                    onClick={stopEditableKeyPropagation}
+                                    className={`${fieldClass} py-1.5 text-xs`}
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-gray-500">Report Section</span>
+                                  <input
+                                    list="training-report-element-sections"
+                                    value={sectionDraft}
+                                    disabled={!canEditTrainingReportTemplate}
+                                    onFocus={() => setTrainingReportElementGroupDrafts((previous) => ({
+                                      ...previous,
+                                      [dimension]: previous[dimension] ?? savedSection,
+                                    }))}
+                                    onChange={(event) => setTrainingReportElementGroupDrafts((previous) => ({
+                                      ...previous,
+                                      [dimension]: event.target.value,
+                                    }))}
+                                    onBlur={() => updateTrainingReportElementSection(dimension)}
+                                    onKeyDown={(event) => {
+                                      if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        event.currentTarget.blur();
+                                      }
+                                    }}
+                                    onKeyDownCapture={handleEditableTextKeyDownCapture}
+                                    onBeforeInput={(event) => handleEditableTextBeforeInput(event, (value) => setTrainingReportElementGroupDrafts((previous) => ({
+                                      ...previous,
+                                      [dimension]: value,
+                                    })))}
+                                    onClick={stopEditableKeyPropagation}
+                                    className={`${fieldClass} py-1.5 text-xs`}
+                                  />
+                                </label>
+                                <div className="flex items-end justify-end">
+                                  <button
+                                    type="button"
+                                    disabled={!canEditTrainingReportTemplate}
+                                    onClick={() => { void deleteTrainingReportElement(dimension); }}
+                                    className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <datalist id="training-report-element-sections">
+                            {trainingReportElementSectionOptions.map((section) => (
+                              <option key={section} value={section} />
+                            ))}
+                          </datalist>
+                        </div>
+                      ) : (
+                        <div className="mt-2 rounded border border-gray-800 bg-gray-950/70 px-3 py-2 text-sm italic text-gray-500">
+                          No assessment elements configured.
+                        </div>
+                      )}
+                    </div>
+                    <div className="rounded border border-cyan-500/20 bg-cyan-500/10 p-3">
+                      <div className="text-[9px] font-bold uppercase tracking-wide text-cyan-100/70">Add Element</div>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <input
+                          value={trainingReportNewElementDraft}
+                          disabled={!canEditTrainingReportTemplate}
+                          placeholder="Element name"
+                          onChange={(event) => setTrainingReportNewElementDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void addTrainingReportElement();
+                            }
+                          }}
+                          onKeyDownCapture={handleEditableTextKeyDownCapture}
+                          onBeforeInput={(event) => handleEditableTextBeforeInput(event, setTrainingReportNewElementDraft)}
+                          onClick={stopEditableKeyPropagation}
+                          className={`${fieldClass} flex-1`}
+                        />
+                        <button
+                          type="button"
+                          disabled={!canEditTrainingReportTemplate || !trainingReportNewElementDraft.trim()}
+                          onClick={() => { void addTrainingReportElement(); }}
+                          className={platformActionButtonClass}
+                        >
+                          Add Element
+                        </button>
+                      </div>
+                    </div>
+                    <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                      <div className="text-[9px] font-bold uppercase tracking-wide text-gray-500">Report Preview</div>
                       {trainingReportPreviewElements.length > 0 ? (
                         <div className="mt-2 grid gap-2 md:grid-cols-3">
                           {trainingReportPreviewElements.map((dimension) => (
-                            <div key={dimension} className="rounded bg-gray-900 px-3 py-2 text-sm font-semibold text-gray-100">
+                            <div key={dimension} className="rounded bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-100">
                               {dimension}
                             </div>
                           ))}
@@ -10389,7 +10675,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       )}
                     </div>
                     <div className="text-xs leading-relaxed text-gray-400">
-                      Descriptors and phrases are edited in Settings - Training & Standards - Scoring Matrix.
+                      To edit scoring descriptors and phrases for these elements, open Settings - Training & Standards - Scoring Matrix.
                     </div>
                   </div>
                 </TrainingReportModulePreview>
