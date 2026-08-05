@@ -71403,6 +71403,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         onShowSuccess(
           `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSaveTomorrowDisplay} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? "" : "s"} deleted)` : ""}.`
         );
+        if (!reloadPage) return true;
       }
       if (!reloadPage) {
         await reloadPlatformConfig();

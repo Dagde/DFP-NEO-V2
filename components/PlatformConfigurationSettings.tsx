@@ -6054,6 +6054,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         onShowSuccess(
           `DFP resource rows saved. Current day and past days are unchanged. Future schedules from ${rowSaveTomorrowDisplay} were cleared for affected units${deletedCount ? ` (${deletedCount} snapshot${deletedCount === 1 ? '' : 's'} deleted)` : ''}.`
         );
+        if (!reloadPage) return true;
       }
       if (!reloadPage) {
         await reloadPlatformConfig();
