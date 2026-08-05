@@ -105412,7 +105412,7 @@ const DfpContextMenu = ({ menu, onClose }) => {
     "div",
     {
       "data-dfp-context-menu": "true",
-      className: "fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-slate-500/45 bg-slate-950/98 text-slate-100 shadow-2xl shadow-black/45 backdrop-blur",
+      className: "fixed z-[900] min-w-[230px] max-w-[280px] overflow-hidden rounded-md border border-gray-300 bg-gray-100 text-gray-900 shadow-2xl shadow-black/30",
       style: { left, top },
       role: "menu",
       "aria-label": "DFP NEO context menu",
@@ -105420,10 +105420,10 @@ const DfpContextMenu = ({ menu, onClose }) => {
       onClick: (event) => event.stopPropagation(),
       onContextMenu: (event) => event.preventDefault(),
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-slate-700/80 bg-slate-900/80 px-3 py-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300", children: "DFP NEO" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-sm font-bold text-white", children: menu.title }),
-          menu.subtitle && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-slate-400", children: menu.subtitle })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-300 bg-gray-200 px-3 py-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.16em] text-gray-500", children: "DFP NEO" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-sm font-bold text-gray-950", children: menu.title }),
+          menu.subtitle && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-gray-600", children: menu.subtitle })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-1", children: menu.items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
@@ -105436,10 +105436,10 @@ const DfpContextMenu = ({ menu, onClose }) => {
               onClose();
               item.onSelect?.();
             },
-            className: `block w-full px-3 py-2 text-left transition ${item.disabled ? "cursor-not-allowed text-slate-500" : item.danger ? "text-red-200 hover:bg-red-950/55" : "text-slate-100 hover:bg-cyan-500/12"}`,
+            className: `block w-full px-3 py-2 text-left transition ${item.disabled ? "cursor-not-allowed text-gray-400" : item.danger ? "text-red-700 hover:bg-red-100" : "text-gray-900 hover:bg-gray-200"}`,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold", children: item.label }),
-              item.detail && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold leading-3 text-slate-500", children: item.detail })
+              item.detail && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-[10px] font-semibold leading-3 text-gray-500", children: item.detail })
             ]
           },
           `${item.label}-${index}`
@@ -122081,30 +122081,36 @@ ${error instanceof Error ? error.message : String(error)}`,
     const epsilon = 1e-3;
     return Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon || Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon || candidateEvent.resourceId !== baselineEvent.resourceId || candidateEvent.instructor !== baselineEvent.instructor || candidateEvent.student !== baselineEvent.student || candidateEvent.pilot !== baselineEvent.pilot || (candidateEvent.area || "") !== (baselineEvent.area || "");
   }, [activeBaselineKey, baselineSchedules, date]);
-  const handleRemoveChangeBarNotification = reactExports.useCallback((candidateEvent) => {
+  const handleRemoveChangeBarNotification = reactExports.useCallback((candidateEvents) => {
     if (isPastDfpDate(date)) {
       denyPastDfpEdit("remove change bar notifications");
       return;
     }
+    const candidates = Array.isArray(candidateEvents) ? candidateEvents : [candidateEvents];
     const currentEventsForDate = publishedSchedules[date] || [];
-    const currentEvent = currentEventsForDate.find((scheduleEvent) => scheduleEvent.id === candidateEvent.id) || candidateEvent;
+    const currentEventsById = new Map(currentEventsForDate.map((scheduleEvent) => [scheduleEvent.id, scheduleEvent]));
+    const acknowledgedEvents = candidates.map((candidateEvent) => currentEventsById.get(candidateEvent.id) || candidateEvent).filter((candidateEvent, index, events2) => candidateEvent?.id && events2.findIndex((event) => event.id === candidateEvent.id) === index && hasChangeBarNotification(candidateEvent));
+    if (acknowledgedEvents.length === 0) return;
+    const acknowledgedIds = new Set(acknowledgedEvents.map((event) => event.id));
     const previousBaselineEvents = baselineSchedules[activeBaselineKey] || [];
     const nextBaselineEvents = [
-      ...previousBaselineEvents.filter((baselineEvent) => baselineEvent.id !== currentEvent.id),
-      JSON.parse(JSON.stringify(currentEvent))
+      ...previousBaselineEvents.filter((baselineEvent) => !acknowledgedIds.has(baselineEvent.id)),
+      ...acknowledgedEvents.map((event) => JSON.parse(JSON.stringify(event)))
     ];
     setBaselineSchedules((prev) => ({
       ...prev,
       [activeBaselineKey]: nextBaselineEvents
     }));
-    if (alertsDataByDate[date]?.[currentEvent.id]) {
-      void handleClearAlert(currentEvent.id);
-    }
+    acknowledgedEvents.forEach((event) => {
+      if (alertsDataByDate[date]?.[event.id]) void handleClearAlert(event.id);
+    });
     if (currentEventsForDate.length > 0) {
       persistScheduleForDate(date, currentEventsForDate, nextBaselineEvents);
     }
-    setSuccessMessage(`Change bar notification removed for ${currentEvent.flightNumber || currentEvent.resourceId || "selected tile"}.`);
-  }, [activeBaselineKey, alertsDataByDate, baselineSchedules, date, handleClearAlert, persistScheduleForDate, publishedSchedules]);
+    setSuccessMessage(
+      acknowledgedEvents.length === 1 ? `Change bar notification removed for ${acknowledgedEvents[0].flightNumber || acknowledgedEvents[0].resourceId || "selected tile"}.` : `Change bar notifications removed for ${acknowledgedEvents.length} selected tiles.`
+    );
+  }, [activeBaselineKey, alertsDataByDate, baselineSchedules, date, handleClearAlert, hasChangeBarNotification, persistScheduleForDate, publishedSchedules]);
   const copyContextSummary = reactExports.useCallback((summary) => {
     if (!summary) return;
     navigator.clipboard?.writeText(summary).catch(() => {
@@ -122136,7 +122142,13 @@ ${error instanceof Error ? error.message : String(error)}`,
     const openEventDetails = () => {
       if (selectedEvent2) handleOpenModal(selectedEvent2);
     };
-    const selectedEventHasChangeBar = hasChangeBarNotification(selectedEvent2);
+    const allEventsForContextActions = [
+      ...eventSegmentsForDate || [],
+      ...publishedSchedules[date] || []
+    ].filter((candidateEvent, index, events2) => candidateEvent?.id && events2.findIndex((event2) => event2.id === candidateEvent.id) === index);
+    const selectedContextEvents = selectedEvent2 && selectedEventIds.has(selectedEvent2.id) && selectedEventIds.size > 1 ? allEventsForContextActions.filter((candidateEvent) => selectedEventIds.has(candidateEvent.id)) : selectedEvent2 ? [selectedEvent2] : [];
+    const selectedChangeBarEvents = selectedContextEvents.filter((candidateEvent) => hasChangeBarNotification(candidateEvent));
+    const selectedEventHasChangeBar = selectedChangeBarEvents.length > 0;
     const eventSummary = selectedEvent2 ? `${selectedEvent2.flightNumber || eventLabel || selectedEvent2.id} ${selectedEvent2.resourceId || ""} ${formatContextMenuTime(selectedEvent2.startTime)}-${formatContextMenuTime(selectedEvent2.startTime + selectedEvent2.duration)}`.trim() : "";
     if (selectedEvent2 && contextKind !== "aircraft" && contextKind !== "aircraft-slot") {
       const isSimulatorEvent = selectedEvent2.type === "ftd" || selectedEvent2.type === "cpt";
@@ -122162,10 +122174,10 @@ ${error instanceof Error ? error.message : String(error)}`,
       );
       if (selectedEventHasChangeBar) {
         menuItems.push({
-          label: "Remove Change Bar Notification",
-          detail: "Acknowledge this tile change and remove the change bar.",
+          label: selectedChangeBarEvents.length > 1 ? `Remove Change Bar Notifications (${selectedChangeBarEvents.length})` : "Remove Change Bar Notification",
+          detail: selectedChangeBarEvents.length > 1 ? "Acknowledge selected tile changes and remove their change bars." : "Acknowledge this tile change and remove the change bar.",
           disabled: !canEditActiveDfp,
-          onSelect: () => handleRemoveChangeBarNotification(selectedEvent2)
+          onSelect: () => handleRemoveChangeBarNotification(selectedChangeBarEvents)
         });
       }
       if (canUseValidation) {
@@ -122250,6 +122262,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     canRunValidation,
     closeDfpContextMenu,
     copyContextSummary,
+    eventSegmentsForDate,
     formatContextMenuTime,
     getContextMenuEvent,
     handleRemoveChangeBarNotification,
