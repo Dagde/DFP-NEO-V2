@@ -755,7 +755,7 @@ const MiniLine: React.FC<{ series: ChartPoint[]; color: string; height?: number 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-14 w-full overflow-visible" role="img" aria-label="Metric trend preview">
       <polyline points={`0,${height} ${points} ${width},${height}`} fill={`${color}22`} stroke="none" />
-      <polyline points={points} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 };
@@ -794,9 +794,9 @@ const FullLineChart: React.FC<{ series: ChartPoint[]; color: string; label: stri
           );
         })}
         <polyline points={`${padding.left},${padding.top + chartHeight} ${pointString} ${width - padding.right},${padding.top + chartHeight}`} fill={`${color}20`} />
-        <polyline points={pointString} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={pointString} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         {points.map((point, index) => (
-          <circle key={`${point.date}-${index}`} cx={point.x} cy={point.y} r="3" fill={color}>
+          <circle key={`${point.date}-${index}`} cx={point.x} cy={point.y} r="1.5" fill={color}>
             <title>{dateLabel(point.date)}: {compactNumber(point.value, 1)}{unit || ''}</title>
           </circle>
         ))}

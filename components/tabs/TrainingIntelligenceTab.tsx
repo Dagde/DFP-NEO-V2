@@ -484,7 +484,7 @@ const SparkLine: React.FC<{
           );
         })}
 
-        <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 2 : 1.5} strokeLinejoin="round" />
+        <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 1 : 0.75} strokeLinejoin="round" />
 
         {interactive && (
           <polygon
@@ -499,8 +499,8 @@ const SparkLine: React.FC<{
           const isHov = tooltip?.i === i;
           return (
             <g key={i}>
-              <circle cx={x} cy={y} r={interactive ? (isHov ? 6 : 4) : 2} fill={color}
-                stroke={isHov ? '#fff' : 'none'} strokeWidth={1.5} />
+              <circle cx={x} cy={y} r={interactive ? (isHov ? 3 : 2) : 1} fill={color}
+                stroke={isHov ? '#fff' : 'none'} strokeWidth={0.75} />
               {interactive && (
                 <circle
                   cx={x} cy={y} r={14} fill="transparent"
@@ -594,9 +594,9 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
   return (
     <div className="flex items-center justify-center gap-6 py-2">
       <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#374151" strokeWidth="22" />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#374151" strokeWidth="11" />
         {arcs.map((a, i) => (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={a.color} strokeWidth="22"
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={a.color} strokeWidth="11"
             strokeDasharray={`${a.dash} ${circ}`} strokeDashoffset={a.dashOff}
             transform={`rotate(-90 ${cx} ${cy})`} />
         ))}
@@ -675,8 +675,8 @@ const RadarChart: React.FC<{ data: Record<string, number>; size?: number }> = ({
           fill="none" stroke="#374151" strokeWidth="1" />
       ))}
       {entries.map((_, i) => { const p = axisPt(i); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#4b5563" strokeWidth="1" />; })}
-      <polygon points={polyStr} fill="#3b82f630" stroke="#3b82f6" strokeWidth="2" />
-      {poly.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#3b82f6" />)}
+      <polygon points={polyStr} fill="#3b82f630" stroke="#3b82f6" strokeWidth="1" />
+      {poly.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="#3b82f6" />)}
       {entries.map(([lbl], i) => {
         const lx = cx + (r + 16) * Math.cos(angle(i));
         const ly = cy + (r + 16) * Math.sin(angle(i));

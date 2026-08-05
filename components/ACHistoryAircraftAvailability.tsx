@@ -46,6 +46,7 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
   const chartH = H - PAD.top - PAD.bottom;
 
   const [hovered, setHovered] = useState<number | null>(null);
+  const [averageHover, setAverageHover] = useState<{ x: number; y: number } | null>(null);
 
   if (data.length === 0) {
     return (
@@ -113,7 +114,10 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
         style={{ minWidth: 320 }}
-        onMouseLeave={() => setHovered(null)}
+        onMouseLeave={() => {
+          setHovered(null);
+          setAverageHover(null);
+        }}
       >
         <defs>
           <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -147,7 +151,31 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
         <line
           x1={PAD.left} y1={yScale(avg)}
           x2={PAD.left + chartW} y2={yScale(avg)}
-          stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="6 3" opacity="0.7"
+          stroke="#f59e0b" strokeWidth="0.75" strokeDasharray="6 3" opacity="0.7"
+        />
+        <rect
+          x={PAD.left}
+          y={yScale(avg) - 8}
+          width={chartW}
+          height={16}
+          fill="transparent"
+          style={{ cursor: 'pointer' }}
+          onMouseMove={(event) => {
+            const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+            if (!rect) return;
+            const viewX = ((event.clientX - rect.left) / rect.width) * W;
+            setAverageHover({ x: Math.max(PAD.left, Math.min(PAD.left + chartW, viewX)), y: yScale(avg) });
+          }}
+          onMouseEnter={(event) => {
+            const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+            if (!rect) {
+              setAverageHover({ x: PAD.left + chartW / 2, y: yScale(avg) });
+              return;
+            }
+            const viewX = ((event.clientX - rect.left) / rect.width) * W;
+            setAverageHover({ x: Math.max(PAD.left, Math.min(PAD.left + chartW, viewX)), y: yScale(avg) });
+          }}
+          onMouseLeave={() => setAverageHover(null)}
         />
         <text
           x={PAD.left + chartW + 4} y={yScale(avg) + 4}
@@ -164,7 +192,7 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
           points={points}
           fill="none"
           stroke="url(#lineGrad)"
-          strokeWidth="2.5"
+          strokeWidth="1.25"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
@@ -176,10 +204,10 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
           <g key={i}>
             <circle
               cx={xScale(i)} cy={yScale(d.value)}
-              r={hovered === i ? 6 : 3.5}
+              r={hovered === i ? 3 : 1.75}
               fill={hovered === i ? '#38bdf8' : '#0ea5e9'}
               stroke={hovered === i ? '#fff' : '#1e3a5f'}
-              strokeWidth={hovered === i ? 2 : 1}
+              strokeWidth={hovered === i ? 1 : 0.5}
               style={{ cursor: 'pointer', transition: 'r 0.1s' }}
               onMouseEnter={() => setHovered(i)}
             />
@@ -213,6 +241,26 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
               <text x={tipX + tipW / 2} y={tipY + 33} textAnchor="middle"
                 fontSize="13" fontWeight="bold" fill="#38bdf8">
                 {d.value.toFixed(2)} ac
+              </text>
+            </g>
+          );
+        })()}
+
+        {/* Average tooltip */}
+        {averageHover && (() => {
+          const tipW = 130;
+          const tipH = 44;
+          const tipX = Math.min(Math.max(averageHover.x - tipW / 2, PAD.left), W - PAD.right - tipW);
+          const tipY = averageHover.y - tipH - 10 < PAD.top ? averageHover.y + 14 : averageHover.y - tipH - 10;
+          return (
+            <g>
+              <rect x={tipX} y={tipY} width={tipW} height={tipH} rx="6"
+                fill="#1f2937" stroke="#374151" strokeWidth="1" />
+              <text x={tipX + tipW / 2} y={tipY + 16} textAnchor="middle"
+                fontSize="11" fill="#9ca3af">Period Average</text>
+              <text x={tipX + tipW / 2} y={tipY + 33} textAnchor="middle"
+                fontSize="13" fontWeight="bold" fill="#f59e0b">
+                {avg.toFixed(2)} ac
               </text>
             </g>
           );

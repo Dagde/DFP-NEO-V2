@@ -45381,7 +45381,7 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
               showYAxisLabels && Number.isInteger(v) && v >= 1 && v <= 5 && /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: -12, y: y + 4, textAnchor: "end", fontSize: "11", fontWeight: "600", fill: "#cbd5e1", children: v })
             ] }, v);
           }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: pts, fill: "none", stroke: color, strokeWidth: interactive ? 2 : 1.5, strokeLinejoin: "round" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: pts, fill: "none", stroke: color, strokeWidth: interactive ? 1 : 0.75, strokeLinejoin: "round" }),
           interactive && /* @__PURE__ */ jsxRuntimeExports.jsx(
             "polygon",
             {
@@ -45400,10 +45400,10 @@ const SparkLine = ({ data, labels, width = 100, height = 32, color = "#60a5fa", 
                 {
                   cx: x,
                   cy: y,
-                  r: interactive ? isHov ? 6 : 4 : 2,
+                  r: interactive ? isHov ? 3 : 2 : 1,
                   fill: color,
                   stroke: isHov ? "#fff" : "none",
-                  strokeWidth: 1.5
+                  strokeWidth: 0.75
                 }
               ),
               interactive && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -45488,7 +45488,7 @@ const DonutChart = ({ segments, size = 140 }) => {
   });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-6 py-2", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: size, height: size, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx, cy, r, fill: "none", stroke: "#374151", strokeWidth: "22" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx, cy, r, fill: "none", stroke: "#374151", strokeWidth: "11" }),
       arcs.map((a, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "circle",
         {
@@ -45497,7 +45497,7 @@ const DonutChart = ({ segments, size = 140 }) => {
           r,
           fill: "none",
           stroke: a.color,
-          strokeWidth: "22",
+          strokeWidth: "11",
           strokeDasharray: `${a.dash} ${circ}`,
           strokeDashoffset: a.dashOff,
           transform: `rotate(-90 ${cx} ${cy})`
@@ -45588,8 +45588,8 @@ const RadarChart = ({ data, size = 180 }) => {
       const p = axisPt(i);
       return /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: cx, y1: cy, x2: p.x, y2: p.y, stroke: "#4b5563", strokeWidth: "1" }, i);
     }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: polyStr, fill: "#3b82f630", stroke: "#3b82f6", strokeWidth: "2" }),
-    poly.map((p, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: p.x, cy: p.y, r: "3", fill: "#3b82f6" }, i)),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("polygon", { points: polyStr, fill: "#3b82f630", stroke: "#3b82f6", strokeWidth: "1" }),
+    poly.map((p, i) => /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: p.x, cy: p.y, r: "1.5", fill: "#3b82f6" }, i)),
     entries.map(([lbl], i) => {
       const lx = cx + (r + 16) * Math.cos(angle(i));
       const ly = cy + (r + 16) * Math.sin(angle(i));
@@ -48223,7 +48223,7 @@ const MiniLine = ({ series, color, height = 54 }) => {
   }).join(" ");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: `0 0 ${width} ${height}`, className: "h-14 w-full overflow-visible", role: "img", "aria-label": "Metric trend preview", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: `0,${height} ${points} ${width},${height}`, fill: `${color}22`, stroke: "none" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points, fill: "none", stroke: color, strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round" })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points, fill: "none", stroke: color, strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" })
   ] });
 };
 const FullLineChart = ({ series, color, label, unit }) => {
@@ -48256,8 +48256,8 @@ const FullLineChart = ({ series, color, label, unit }) => {
       ] }, level);
     }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: `${padding.left},${padding.top + chartHeight} ${pointString} ${width - padding.right},${padding.top + chartHeight}`, fill: `${color}20` }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: pointString, fill: "none", stroke: color, strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round" }),
-    points.map((point, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: point.x, cy: point.y, r: "3", fill: color, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("title", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: pointString, fill: "none", stroke: color, strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }),
+    points.map((point, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: point.x, cy: point.y, r: "1.5", fill: color, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("title", { children: [
       dateLabel$1(point.date),
       ": ",
       compactNumber(point.value, 1),
@@ -49412,6 +49412,7 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
   const [hovered, setHovered] = reactExports.useState(null);
+  const [averageHover, setAverageHover] = reactExports.useState(null);
   if (data.length === 0) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No data available for the selected period" });
   }
@@ -49447,7 +49448,10 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
         viewBox: `0 0 ${W} ${H}`,
         className: "w-full",
         style: { minWidth: 320 },
-        onMouseLeave: () => setHovered(null),
+        onMouseLeave: () => {
+          setHovered(null);
+          setAverageHover(null);
+        },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("defs", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "areaGrad", x1: "0", y1: "0", x2: "0", y2: "1", children: [
@@ -49492,9 +49496,36 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
               x2: PAD.left + chartW,
               y2: yScale(avg),
               stroke: "#f59e0b",
-              strokeWidth: "1.5",
+              strokeWidth: "0.75",
               strokeDasharray: "6 3",
               opacity: "0.7"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "rect",
+            {
+              x: PAD.left,
+              y: yScale(avg) - 8,
+              width: chartW,
+              height: 16,
+              fill: "transparent",
+              style: { cursor: "pointer" },
+              onMouseMove: (event) => {
+                const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                if (!rect) return;
+                const viewX = (event.clientX - rect.left) / rect.width * W;
+                setAverageHover({ x: Math.max(PAD.left, Math.min(PAD.left + chartW, viewX)), y: yScale(avg) });
+              },
+              onMouseEnter: (event) => {
+                const rect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                if (!rect) {
+                  setAverageHover({ x: PAD.left + chartW / 2, y: yScale(avg) });
+                  return;
+                }
+                const viewX = (event.clientX - rect.left) / rect.width * W;
+                setAverageHover({ x: Math.max(PAD.left, Math.min(PAD.left + chartW, viewX)), y: yScale(avg) });
+              },
+              onMouseLeave: () => setAverageHover(null)
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -49515,7 +49546,7 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
               points,
               fill: "none",
               stroke: "url(#lineGrad)",
-              strokeWidth: "2.5",
+              strokeWidth: "1.25",
               strokeLinejoin: "round",
               strokeLinecap: "round"
             }
@@ -49528,10 +49559,10 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
                 {
                   cx: xScale(i),
                   cy: yScale(d.value),
-                  r: hovered === i ? 6 : 3.5,
+                  r: hovered === i ? 3 : 1.75,
                   fill: hovered === i ? "#38bdf8" : "#0ea5e9",
                   stroke: hovered === i ? "#fff" : "#1e3a5f",
-                  strokeWidth: hovered === i ? 2 : 1,
+                  strokeWidth: hovered === i ? 1 : 0.5,
                   style: { cursor: "pointer", transition: "r 0.1s" },
                   onMouseEnter: () => setHovered(i)
                 }
@@ -49594,6 +49625,53 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
                   fill: "#38bdf8",
                   children: [
                     d.value.toFixed(2),
+                    " ac"
+                  ]
+                }
+              )
+            ] });
+          })(),
+          averageHover && (() => {
+            const tipW = 130;
+            const tipH = 44;
+            const tipX = Math.min(Math.max(averageHover.x - tipW / 2, PAD.left), W - PAD.right - tipW);
+            const tipY = averageHover.y - tipH - 10 < PAD.top ? averageHover.y + 14 : averageHover.y - tipH - 10;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "rect",
+                {
+                  x: tipX,
+                  y: tipY,
+                  width: tipW,
+                  height: tipH,
+                  rx: "6",
+                  fill: "#1f2937",
+                  stroke: "#374151",
+                  strokeWidth: "1"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "text",
+                {
+                  x: tipX + tipW / 2,
+                  y: tipY + 16,
+                  textAnchor: "middle",
+                  fontSize: "11",
+                  fill: "#9ca3af",
+                  children: "Period Average"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "text",
+                {
+                  x: tipX + tipW / 2,
+                  y: tipY + 33,
+                  textAnchor: "middle",
+                  fontSize: "13",
+                  fontWeight: "bold",
+                  fill: "#f59e0b",
+                  children: [
+                    avg.toFixed(2),
                     " ac"
                   ]
                 }

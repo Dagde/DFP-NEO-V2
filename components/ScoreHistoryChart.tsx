@@ -91,7 +91,7 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
                 <polyline
                     fill="none"
                     stroke="#38bdf8" // sky-400
-                    strokeWidth="3"
+                    strokeWidth="1.5"
                     points={polylinePoints}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -103,10 +103,10 @@ const ScoreHistoryChart: React.FC<ScoreHistoryChartProps> = ({ scores }) => {
                         key={`point-${i}`}
                         cx={point.x}
                         cy={point.y}
-                        r="5"
+                        r="2.5"
                         fill={getScoreColor(point.score)}
                         stroke="#1f2937" // gray-800
-                        strokeWidth="2"
+                        strokeWidth="1"
                     >
                       <title>{`Event: ${point.event}, Score: ${point.score}`}</title>
                     </circle>
