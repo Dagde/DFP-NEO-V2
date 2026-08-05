@@ -511,14 +511,23 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             .catch(err => console.warn('[PostFlight] Could not load EventCompletion:', err));
     }, [event?.id]);
 
-    // Auto-populate Instructor and Captain times based on Dual status
-    // Only auto-populate if the fields are currently empty (don't overwrite restored values)
+    // Captain hours are always the sortie total for the PIC/Captain on flight logs.
+    // Simulator/instructor time remains separate.
     useEffect(() => {
-        if (isDual && !captainTime && !instructorTime) {
-            setInstructorTime(totalTime);
+        if (isFlightLog && captainTime !== totalTime) {
             setCaptainTime(totalTime);
+        } else if (!isFlightLog && captainTime) {
+            setCaptainTime('');
         }
-    }, [isDual, totalTime]);
+    }, [captainTime, isFlightLog, totalTime]);
+
+    // Auto-populate Instructor time based on Dual status.
+    // Only auto-populate if the field is currently empty (don't overwrite restored values)
+    useEffect(() => {
+        if (isDual && !instructorTime) {
+            setInstructorTime(totalTime);
+        }
+    }, [isDual, instructorTime, totalTime]);
 
     // --- LOGBOOK OVERRIDE STATE ---
     // Each key corresponds to a logbook field. These are auto-populated from
@@ -717,7 +726,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     // Captain logs P1 in both Solo (Pilot) and Dual (Instructor) scenarios for flights
                     dayP1 = day;
                     nightP1 = night;
-                    logCaptTime = isFixedCrewLogbookPreview ? totalTime : (captainTime || (isDual ? totalTime : ''));
+                    logCaptTime = totalTime;
                     if (isDual) {
                         logInstTime = instructorTime || totalTime;
                     }
@@ -867,7 +876,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             takeoffTime,
             landTime,
             totalTime,
-            captainTime,
+            captainTime: isFlightLog ? totalTime : captainTime,
             instructorTime,
             nightTime: effectiveNightTime,
             ifActualTime,
@@ -1641,10 +1650,11 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             <label className="block text-sm font-medium text-gray-400">Captain</label>
                             <input
                                 type="text"
-                                value={captainTime}
+                                value={isFlightLog ? totalTime : captainTime}
                                 onChange={e => setCaptainTime(e.target.value)}
+                                readOnly={isFlightLog}
                                 placeholder="0.0"
-                                className="mt-1 block w-20 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono"
+                                className={`mt-1 block w-20 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center font-mono ${isFlightLog ? 'bg-gray-900/50 cursor-default' : 'bg-gray-700'}`}
                             />
                         </div>
                          {/* Configured training staff time */}
