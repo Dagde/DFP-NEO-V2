@@ -42556,6 +42556,49 @@ appliedUpdates.forEach(update => {
         ) as ScheduleEvent | null;
     }, [date, eventSegmentsForDate, publishedSchedules]);
 
+    const hasChangeBarNotification = useCallback((candidateEvent: ScheduleEvent | null): boolean => {
+        if (!candidateEvent || date !== getLocalDateString()) return false;
+        const baselineEvents = baselineSchedules[activeBaselineKey];
+        if (!Array.isArray(baselineEvents)) return false;
+        const baselineEvent = baselineEvents.find((baseline) => baseline.id === candidateEvent.id);
+        if (!baselineEvent) return true;
+        const epsilon = 0.001;
+        return (
+            Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon ||
+            Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon ||
+            candidateEvent.resourceId !== baselineEvent.resourceId ||
+            candidateEvent.instructor !== baselineEvent.instructor ||
+            candidateEvent.student !== baselineEvent.student ||
+            candidateEvent.pilot !== baselineEvent.pilot ||
+            (candidateEvent.area || '') !== (baselineEvent.area || '')
+        );
+    }, [activeBaselineKey, baselineSchedules, date]);
+
+    const handleRemoveChangeBarNotification = useCallback((candidateEvent: ScheduleEvent) => {
+        if (isPastDfpDate(date)) {
+            denyPastDfpEdit('remove change bar notifications');
+            return;
+        }
+        const currentEventsForDate = publishedSchedules[date] || [];
+        const currentEvent = currentEventsForDate.find((scheduleEvent) => scheduleEvent.id === candidateEvent.id) || candidateEvent;
+        const previousBaselineEvents = baselineSchedules[activeBaselineKey] || [];
+        const nextBaselineEvents = [
+            ...previousBaselineEvents.filter((baselineEvent) => baselineEvent.id !== currentEvent.id),
+            JSON.parse(JSON.stringify(currentEvent)),
+        ];
+        setBaselineSchedules((prev) => ({
+            ...prev,
+            [activeBaselineKey]: nextBaselineEvents,
+        }));
+        if (alertsDataByDate[date]?.[currentEvent.id]) {
+            void handleClearAlert(currentEvent.id);
+        }
+        if (currentEventsForDate.length > 0) {
+            persistScheduleForDate(date, currentEventsForDate, nextBaselineEvents);
+        }
+        setSuccessMessage(`Change bar notification removed for ${currentEvent.flightNumber || currentEvent.resourceId || 'selected tile'}.`);
+    }, [activeBaselineKey, alertsDataByDate, baselineSchedules, date, handleClearAlert, persistScheduleForDate, publishedSchedules]);
+
     const copyContextSummary = useCallback((summary: string) => {
         if (!summary) return;
         navigator.clipboard?.writeText(summary).catch(() => {});
@@ -42590,6 +42633,7 @@ appliedUpdates.forEach(update => {
         const openEventDetails = () => {
             if (selectedEvent) handleOpenModal(selectedEvent);
         };
+        const selectedEventHasChangeBar = hasChangeBarNotification(selectedEvent);
         const eventSummary = selectedEvent
             ? `${selectedEvent.flightNumber || eventLabel || selectedEvent.id} ${selectedEvent.resourceId || ''} ${formatContextMenuTime(selectedEvent.startTime)}-${formatContextMenuTime(selectedEvent.startTime + selectedEvent.duration)}`.trim()
             : '';
@@ -42622,6 +42666,14 @@ appliedUpdates.forEach(update => {
                 }},
                 { label: 'Copy Event Summary', detail: eventSummary, onSelect: () => copyContextSummary(eventSummary) }
             );
+            if (selectedEventHasChangeBar) {
+                menuItems.push({
+                    label: 'Remove Change Bar Notification',
+                    detail: 'Acknowledge this tile change and remove the change bar.',
+                    disabled: !canEditActiveDfp,
+                    onSelect: () => handleRemoveChangeBarNotification(selectedEvent),
+                });
+            }
             if (canUseValidation) {
                 menuItems.push({ label: showValidation ? 'Hide Validation' : 'Show Validation', detail: 'Toggle schedule validation overlay.', onSelect: () => setShowValidation(!showValidation) });
             }
@@ -42713,8 +42765,10 @@ appliedUpdates.forEach(update => {
         copyContextSummary,
         formatContextMenuTime,
         getContextMenuEvent,
+        handleRemoveChangeBarNotification,
         handleNavigation,
         handleOpenModal,
+        hasChangeBarNotification,
         isViewingPastDfp,
         selectedEventIds,
         sessionUser?.role,

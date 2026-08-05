@@ -122072,6 +122072,39 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!eventId) return null;
     return (eventSegmentsForDate || []).find((event) => event.id === eventId) || (publishedSchedules[date] || []).find((event) => event.id === eventId) || null;
   }, [date, eventSegmentsForDate, publishedSchedules]);
+  const hasChangeBarNotification = reactExports.useCallback((candidateEvent) => {
+    if (!candidateEvent || date !== getLocalDateString2()) return false;
+    const baselineEvents = baselineSchedules[activeBaselineKey];
+    if (!Array.isArray(baselineEvents)) return false;
+    const baselineEvent = baselineEvents.find((baseline) => baseline.id === candidateEvent.id);
+    if (!baselineEvent) return true;
+    const epsilon = 1e-3;
+    return Math.abs(candidateEvent.startTime - baselineEvent.startTime) > epsilon || Math.abs(candidateEvent.duration - baselineEvent.duration) > epsilon || candidateEvent.resourceId !== baselineEvent.resourceId || candidateEvent.instructor !== baselineEvent.instructor || candidateEvent.student !== baselineEvent.student || candidateEvent.pilot !== baselineEvent.pilot || (candidateEvent.area || "") !== (baselineEvent.area || "");
+  }, [activeBaselineKey, baselineSchedules, date]);
+  const handleRemoveChangeBarNotification = reactExports.useCallback((candidateEvent) => {
+    if (isPastDfpDate(date)) {
+      denyPastDfpEdit("remove change bar notifications");
+      return;
+    }
+    const currentEventsForDate = publishedSchedules[date] || [];
+    const currentEvent = currentEventsForDate.find((scheduleEvent) => scheduleEvent.id === candidateEvent.id) || candidateEvent;
+    const previousBaselineEvents = baselineSchedules[activeBaselineKey] || [];
+    const nextBaselineEvents = [
+      ...previousBaselineEvents.filter((baselineEvent) => baselineEvent.id !== currentEvent.id),
+      JSON.parse(JSON.stringify(currentEvent))
+    ];
+    setBaselineSchedules((prev) => ({
+      ...prev,
+      [activeBaselineKey]: nextBaselineEvents
+    }));
+    if (alertsDataByDate[date]?.[currentEvent.id]) {
+      void handleClearAlert(currentEvent.id);
+    }
+    if (currentEventsForDate.length > 0) {
+      persistScheduleForDate(date, currentEventsForDate, nextBaselineEvents);
+    }
+    setSuccessMessage(`Change bar notification removed for ${currentEvent.flightNumber || currentEvent.resourceId || "selected tile"}.`);
+  }, [activeBaselineKey, alertsDataByDate, baselineSchedules, date, handleClearAlert, persistScheduleForDate, publishedSchedules]);
   const copyContextSummary = reactExports.useCallback((summary) => {
     if (!summary) return;
     navigator.clipboard?.writeText(summary).catch(() => {
@@ -122103,6 +122136,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const openEventDetails = () => {
       if (selectedEvent2) handleOpenModal(selectedEvent2);
     };
+    const selectedEventHasChangeBar = hasChangeBarNotification(selectedEvent2);
     const eventSummary = selectedEvent2 ? `${selectedEvent2.flightNumber || eventLabel || selectedEvent2.id} ${selectedEvent2.resourceId || ""} ${formatContextMenuTime(selectedEvent2.startTime)}-${formatContextMenuTime(selectedEvent2.startTime + selectedEvent2.duration)}`.trim() : "";
     if (selectedEvent2 && contextKind !== "aircraft" && contextKind !== "aircraft-slot") {
       const isSimulatorEvent = selectedEvent2.type === "ftd" || selectedEvent2.type === "cpt";
@@ -122126,6 +122160,14 @@ ${error instanceof Error ? error.message : String(error)}`,
         } },
         { label: "Copy Event Summary", detail: eventSummary, onSelect: () => copyContextSummary(eventSummary) }
       );
+      if (selectedEventHasChangeBar) {
+        menuItems.push({
+          label: "Remove Change Bar Notification",
+          detail: "Acknowledge this tile change and remove the change bar.",
+          disabled: !canEditActiveDfp,
+          onSelect: () => handleRemoveChangeBarNotification(selectedEvent2)
+        });
+      }
       if (canUseValidation) {
         menuItems.push({ label: showValidation ? "Hide Validation" : "Show Validation", detail: "Toggle schedule validation overlay.", onSelect: () => setShowValidation(!showValidation) });
       }
@@ -122210,8 +122252,10 @@ ${error instanceof Error ? error.message : String(error)}`,
     copyContextSummary,
     formatContextMenuTime,
     getContextMenuEvent,
+    handleRemoveChangeBarNotification,
     handleNavigation,
     handleOpenModal,
+    hasChangeBarNotification,
     isViewingPastDfp,
     selectedEventIds,
     sessionUser?.role,
