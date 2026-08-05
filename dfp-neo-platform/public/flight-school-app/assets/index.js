@@ -70942,7 +70942,7 @@ This removes the reusable permission profile from Settings. Users assigned only 
   }), { ...settings });
   const normaliseDfpResourceRowsHistory = (settings = {}) => Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
   const sameDfpResourceRowsHistory = (leftSettings = {}, rightSettings = {}) => JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings));
-  const getEditableDfpResourceRows = (pool) => getDfpResourceRowsForDate(pool, getLocalDateString2(1));
+  const getEditableDfpResourceRows = (pool) => resourcePoolsUnlocked ? normaliseDfpResourceRowsSnapshot(pool?.settings || {}) : getDfpResourceRowsForDate(pool, getLocalDateString2());
   const clonePlatformConfigForResourceRowBaseline = (sourceConfig) => JSON.parse(JSON.stringify(sourceConfig));
   const enterResourcePoolsEditMode = () => {
     resourcePoolEditBaselineRef.current = clonePlatformConfigForResourceRowBaseline(loadedConfigRef.current);

@@ -5498,7 +5498,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   const getEditableDfpResourceRows = (pool: any): DfpResourceRowsSnapshot => (
-    getDfpResourceRowsForDate(pool, getLocalDateString(1))
+    resourcePoolsUnlocked
+      ? normaliseDfpResourceRowsSnapshot(pool?.settings || {})
+      : getDfpResourceRowsForDate(pool, getLocalDateString())
   );
 
   const clonePlatformConfigForResourceRowBaseline = (sourceConfig: PlatformConfig): PlatformConfig => (
