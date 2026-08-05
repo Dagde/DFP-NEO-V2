@@ -78,8 +78,9 @@ assert(
 );
 
 assert(
-  appSource.includes('placeTrainingForKind(preferredKind, roundedTileTime)') &&
-    appSource.includes('placeTrainingForKind(fallbackKind, roundedTileTime)'),
+  appSource.includes('for (const stream of preferredStreams)') &&
+    appSource.includes('placeTrainingForKind(stream.kind, roundedTileTime, undefined, stream.code)') &&
+    appSource.includes('placeTrainingForKind(stream.kind, roundedTileTime, simulatorTypes, stream.code)'),
   'Air Combat weighted course/package placement must attempt the current tile only.'
 );
 
