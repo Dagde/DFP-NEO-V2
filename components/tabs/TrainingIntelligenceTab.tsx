@@ -374,24 +374,27 @@ const riskReasonLabel = (reason: string): string => {
 };
 
 const summarizeStatusTriggers = (
-  evaluations: Array<{ riskLevel: string; reasons: string[] }>,
+  evaluations: Array<{ name: string; riskLevel: string; reasons: string[] }>,
   status: 'at_risk' | 'monitor'
 ) => {
-  const counts = new Map<string, number>();
+  const counts = new Map<string, { count: number; names: string[] }>();
   evaluations
     .filter(evaluation => {
       const riskLevel = evaluation.riskLevel === 'watch' ? 'monitor' : evaluation.riskLevel;
       return riskLevel === status;
     })
-    .flatMap(evaluation => evaluation.reasons.length ? evaluation.reasons : ['manual review signal'])
-    .forEach(reason => {
+    .forEach(evaluation => (evaluation.reasons.length ? evaluation.reasons : ['manual review signal']).forEach(reason => {
       const label = riskReasonLabel(reason);
-      counts.set(label, (counts.get(label) || 0) + 1);
-    });
+      const existing = counts.get(label) || { count: 0, names: [] };
+      counts.set(label, {
+        count: existing.count + 1,
+        names: existing.names.includes(evaluation.name) ? existing.names : [...existing.names, evaluation.name],
+      });
+    }));
   return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
     .slice(0, 3)
-    .map(([label, count]) => ({ label, count }));
+    .map(([label, detail]) => ({ label, count: detail.count, names: detail.names }));
 };
 
 // ── SparkBar ────────────────────────────────────────────────────────────────────
@@ -611,6 +614,42 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
         ))}
       </div>
     </div>
+  );
+};
+
+const CircularProgress: React.FC<{ value: number; size?: number }> = ({ value, size = 34 }) => {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  const stroke = 3;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+  return (
+    <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          className="text-slate-600"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="text-cyan-300 transition-all duration-500"
+        />
+      </svg>
+      <span className="absolute text-[8px] font-bold leading-none text-cyan-100">{pct}%</span>
+    </span>
   );
 };
 
@@ -1377,7 +1416,11 @@ const CourseTab: React.FC<{
 }> = ({ summary, trainees, events, trainingReportDisplayName }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = useState(false);
-  const evaluatedRisks = trainees.map(t => evaluateTraineeRisk(t, thresholds));
+  const [openStatusFlyout, setOpenStatusFlyout] = useState<'at_risk' | 'monitor' | null>(null);
+  const evaluatedRisks = trainees.map(t => ({
+    name: t.traineeFullName,
+    ...evaluateTraineeRisk(t, thresholds),
+  }));
   const riskLevels = evaluatedRisks.map(r => r.riskLevel === 'watch' ? 'monitor' : r.riskLevel);
   const atRisk = riskLevels.filter(r => r === 'at_risk').length;
   const exceeding = riskLevels.filter(r => r === 'exceeding').length;
@@ -1385,6 +1428,8 @@ const CourseTab: React.FC<{
   const normal = trainees.length - atRisk - exceeding - monitor;
   const atRiskSummary = summarizeStatusTriggers(evaluatedRisks, 'at_risk');
   const monitorSummary = summarizeStatusTriggers(evaluatedRisks, 'monitor');
+  const statusFlyoutSummary = openStatusFlyout === 'at_risk' ? atRiskSummary : monitorSummary;
+  const statusFlyoutTitle = openStatusFlyout === 'at_risk' ? 'At Risk names' : 'Monitor names';
   const avgGrade = trainees.length > 0 ? trainees.reduce((s, t) => s + safeN(t.avgOverallGrade), 0) / trainees.length : 0;
   const passRate = trainees.length > 0
     ? (trainees.filter(t => safeN(t.avgOverallGrade) >= thresholds.concernThresholdGrade).length / trainees.length) * 100
@@ -1439,21 +1484,67 @@ const CourseTab: React.FC<{
             ].filter(s => s.value > 0)} />
           </div>
           <div className="grid grid-cols-1 gap-2 border-t border-gray-700 pt-3 text-xs md:grid-cols-2">
-            <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3">
+            <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenStatusFlyout(openStatusFlyout === 'at_risk' ? null : 'at_risk')}
+              className="w-full rounded-md border border-red-500/20 bg-red-500/5 p-3 text-left transition-colors hover:border-red-400/50 hover:bg-red-500/10"
+            >
               <p className="font-semibold text-red-300">At Risk summary</p>
               <p className="mt-1 text-gray-400">
                 {atRisk === 0
                   ? 'No trainees are below the At Risk average threshold.'
                   : atRiskSummary.map(item => `${item.count} ${item.label}`).join('; ')}
               </p>
+              <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-red-200/70">Click for names</p>
+            </button>
+            {openStatusFlyout === 'at_risk' && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-2 rounded-md border border-red-500/30 bg-slate-950 p-3 shadow-2xl">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="font-semibold text-red-200">{statusFlyoutTitle}</p>
+                  <button type="button" onClick={() => setOpenStatusFlyout(null)} className="text-slate-500 hover:text-white">&times;</button>
+                </div>
+                {statusFlyoutSummary.length === 0 ? (
+                  <p className="text-slate-500">No trainees to list.</p>
+                ) : statusFlyoutSummary.map(item => (
+                  <div key={item.label} className="border-t border-slate-800 py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-slate-300">{item.count} {item.label}</p>
+                    <p className="mt-1 text-slate-500">{item.names.slice(0, 8).join('; ')}{item.names.length > 8 ? `; +${item.names.length - 8} more` : ''}</p>
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
-            <div className="rounded-md border border-yellow-500/20 bg-yellow-500/5 p-3">
+            <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenStatusFlyout(openStatusFlyout === 'monitor' ? null : 'monitor')}
+              className="w-full rounded-md border border-yellow-500/20 bg-yellow-500/5 p-3 text-left transition-colors hover:border-yellow-400/50 hover:bg-yellow-500/10"
+            >
               <p className="font-semibold text-yellow-300">Monitor summary</p>
               <p className="mt-1 text-gray-400">
                 {monitor === 0
                   ? 'No trainees have Monitor signals.'
                   : monitorSummary.map(item => `${item.count} ${item.label}`).join('; ')}
               </p>
+              <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-yellow-200/70">Click for names</p>
+            </button>
+            {openStatusFlyout === 'monitor' && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-2 rounded-md border border-yellow-500/30 bg-slate-950 p-3 shadow-2xl">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="font-semibold text-yellow-200">{statusFlyoutTitle}</p>
+                  <button type="button" onClick={() => setOpenStatusFlyout(null)} className="text-slate-500 hover:text-white">&times;</button>
+                </div>
+                {statusFlyoutSummary.length === 0 ? (
+                  <p className="text-slate-500">No trainees to list.</p>
+                ) : statusFlyoutSummary.map(item => (
+                  <div key={item.label} className="border-t border-slate-800 py-2 first:border-t-0 first:pt-0">
+                    <p className="font-semibold text-slate-300">{item.count} {item.label}</p>
+                    <p className="mt-1 text-slate-500">{item.names.slice(0, 8).join('; ')}{item.names.length > 8 ? `; +${item.names.length - 8} more` : ''}</p>
+                  </div>
+                ))}
+              </div>
+            )}
             </div>
           </div>
           {/* Status definitions */}
@@ -2601,6 +2692,7 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
   const [recentRuns, setRecentRuns] = useState<TIERun[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [runProgress, setRunProgress] = useState<string>('');
+  const [runProgressPercent, setRunProgressPercent] = useState(0);
   const [activeTab, setActiveTab] = useState<'course' | 'trainee' | 'events'>('course');
 
   const [summary, setSummary] = useState<TIECourseSummary | null>(null);
@@ -2703,11 +2795,13 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
         const r = await fetch(`/api/tie/status${selectedCourse ? `?course=${encodeURIComponent(selectedCourse)}` : ''}`);
         const data = await r.json();
         if (data.status === 'complete') {
+          setRunProgressPercent(100);
           setRunProgress(`Complete \u2014 ${data.recordsProcessed ?? '?'} records processed`);
           clearInterval(pollRef.current!);
           pollRef.current = null;
           setTimeout(() => {
             setRunProgress('');
+            setRunProgressPercent(0);
             setIsRunning(false);
             fetchRecentRuns();
             fetchCourses();
@@ -2716,10 +2810,12 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
         } else if (data.status === 'failed') {
           setError(`Run failed: ${data.errorMessage || 'unknown error'}`);
           setRunProgress('');
+          setRunProgressPercent(0);
           setIsRunning(false);
           clearInterval(pollRef.current!);
           pollRef.current = null;
         } else if (data.status === 'running') {
+          setRunProgressPercent(prev => Math.max(prev, 15));
           setRunProgress(`Processing ${reportRecordName} records\u2026`);
         }
       } catch { /* poll silently */ }
@@ -2729,6 +2825,7 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
   const handleRunAnalytics = async () => {
     if (isRunning) return;
     setIsRunning(true);
+    setRunProgressPercent(0);
     setRunProgress('Initialising analytics engine\u2026');
     setError(null);
     try {
@@ -2743,12 +2840,15 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
       });
       const result = await r.json();
       if (result.started) {
+        setRunProgressPercent(8);
         setRunProgress('Analytics run started \u2014 processing in background\u2026');
         startPolling();
       } else if (result.success) {
+        setRunProgressPercent(100);
         setRunProgress(`Complete \u2014 ${result.recordsProcessed} records`);
         setTimeout(() => {
           setRunProgress('');
+          setRunProgressPercent(0);
           setIsRunning(false);
           fetchRecentRuns();
           fetchCourses();
@@ -2757,14 +2857,29 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
       } else {
         setError(`Run failed: ${result.error || 'unknown error'}`);
         setRunProgress('');
+        setRunProgressPercent(0);
         setIsRunning(false);
       }
     } catch (e: any) {
       setError(`Run failed: ${e.message}`);
       setRunProgress('');
+      setRunProgressPercent(0);
       setIsRunning(false);
     }
   };
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const progressTimer = setInterval(() => {
+      setRunProgressPercent(prev => {
+        if (prev >= 95) return prev;
+        if (prev < 20) return prev + 4;
+        if (prev < 60) return prev + 2;
+        return prev + 1;
+      });
+    }, 900);
+    return () => clearInterval(progressTimer);
+  }, [isRunning]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
@@ -2817,9 +2932,9 @@ const TrainingIntelligenceTab: React.FC<TrainingIntelligenceTabProps> = ({ train
             </svg>
             Thresholds
           </button>
-                    <button onClick={handleRunAnalytics} disabled={isRunning}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer'}`}>
-            {isRunning ? <><span className="animate-spin inline-block">\u27F3</span> Running...</> : 'Run Analytics'}
+          <button onClick={handleRunAnalytics} disabled={isRunning}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? 'bg-slate-700 text-slate-200 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer'}`}>
+            {isRunning ? <><CircularProgress value={runProgressPercent} /> Running...</> : 'Run Analytics'}
           </button>
         </div>
 
