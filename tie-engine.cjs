@@ -1138,37 +1138,39 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         recencyWeight: r.recencyWeight
       }));
 
-      // Risk assessment. The criteria intentionally combine level, trajectory,
-      // recency, and repeated weak elements so managers can tune "At Risk"
-      // without relying on one blunt score threshold.
+      // Risk assessment. "At Risk" is tied to the whole-course average
+      // threshold; trend and weak-element signals move the trainee to Monitor.
       const atRiskReasons = [];
+      const monitorReasons = [];
       const enoughDataForRisk = grades.length >= AT_RISK_MIN_ASSESSMENTS;
       const sustainedDecline = hasSustainedDecline(grades, AT_RISK_SUSTAINED_DECLINE_COUNT);
       const recentDrop = avgGrade - recentAvg;
 
       if (enoughDataForRisk && AT_RISK_AVERAGE_ENABLED && avgGrade < AT_RISK_AVG) {
-        atRiskReasons.push(`Course average ${avgGrade.toFixed(2)} below low-course-average threshold of ${AT_RISK_AVG.toFixed(1)}`);
+        atRiskReasons.push(`Course average ${avgGrade.toFixed(2)} below at-risk threshold of ${AT_RISK_AVG.toFixed(1)}`);
       }
       if (enoughDataForRisk && AT_RISK_SUSTAINED_DECLINE_ENABLED && sustainedDecline) {
-        atRiskReasons.push(`Sustained decline across last ${AT_RISK_SUSTAINED_DECLINE_COUNT} assessments`);
+        monitorReasons.push(`Sustained decline across last ${AT_RISK_SUSTAINED_DECLINE_COUNT} assessments`);
       }
       if (enoughDataForRisk && AT_RISK_RECENT_DROP_ENABLED && recentDrop >= AT_RISK_RECENT_DROP_THRESHOLD) {
-        atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${recentDrop.toFixed(2)} below overall average`);
+        monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${recentDrop.toFixed(2)} below overall average`);
       }
       if (enoughDataForRisk && AT_RISK_LOW_RECENT_ENABLED && recentAvg < AT_RISK_LOW_RECENT_GRADE) {
-        atRiskReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${AT_RISK_LOW_RECENT_GRADE.toFixed(1)}`);
+        monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${AT_RISK_LOW_RECENT_GRADE.toFixed(1)}`);
       }
       if (enoughDataForRisk && AT_RISK_RECURRING_WEAK_ELEMENTS_ENABLED && weakElements.length >= AT_RISK_RECURRING_WEAK_ELEMENT_COUNT) {
-        atRiskReasons.push(`${weakElements.length} weak elements recurring`);
+        monitorReasons.push(`${weakElements.length} weak elements recurring`);
       }
       if (!enoughDataForRisk && (avgGrade < AT_RISK_AVG || recentAvg < AT_RISK_LOW_RECENT_GRADE || trend === 'worsening')) {
-        atRiskReasons.push(`Monitor until ${AT_RISK_MIN_ASSESSMENTS} assessments are available`);
+        monitorReasons.push(`Monitor until ${AT_RISK_MIN_ASSESSMENTS} assessments are available`);
       }
 
       const atRisk = enoughDataForRisk && atRiskReasons.length > 0;
+      const monitor = !atRisk && monitorReasons.length > 0;
       const exceeding = avgGrade >= EXCEEDING_AVG && trend !== 'worsening';
 
-      const riskLevel = atRisk ? 'at_risk' : exceeding ? 'exceeding' : (avgGrade >= NORMAL_MIN_GRADE && trend !== 'worsening') ? 'normal' : 'monitor';
+      const riskLevel = atRisk ? 'at_risk' : monitor ? 'monitor' : exceeding ? 'exceeding' : (avgGrade >= NORMAL_MIN_GRADE && trend !== 'worsening') ? 'normal' : 'monitor';
+      const statusReasons = atRisk ? atRiskReasons : monitorReasons;
       if (atRisk) atRiskTrainees.push(traineeFullName);
       if (exceeding) exceedingTrainees.push(traineeFullName);
 
@@ -1179,7 +1181,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         weakElements, strongElements,
         negTags: negTags.slice(0, 5),
         posTags: posTags.slice(0, 5),
-        atRisk, riskReasons: atRiskReasons
+        atRisk, riskReasons: statusReasons
       });
 
       // Insert trainee summary
@@ -1197,7 +1199,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
          JSON.stringify(weakElements), JSON.stringify(posTags.slice(0, 8)),
          JSON.stringify(negTags.slice(0, 8)), grades.length,
          Number(avgGrade), Number(recentAvg), JSON.stringify(gradeProgression), narrative,
-         JSON.stringify(atRiskReasons)
+         JSON.stringify(statusReasons)
       );
 
       // Trainee-level findings

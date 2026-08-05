@@ -45179,7 +45179,9 @@ const boolSetting = (value, fallback) => {
   return fallback;
 };
 const riskCriteriaRows = (thresholds) => [
-  thresholds.atRiskAverageEnabled ? `Course average below ${thresholds.atRiskAvgGrade.toFixed(1)}` : null,
+  thresholds.atRiskAverageEnabled ? `Course average below ${thresholds.atRiskAvgGrade.toFixed(1)}` : null
+].filter(Boolean);
+const monitorSignalRows = (thresholds) => [
   thresholds.atRiskSustainedDeclineEnabled ? `Sustained decline across the last ${thresholds.sustainedDeclineCount} assessments` : null,
   thresholds.atRiskRecentDropEnabled ? `Recent average ${thresholds.recentDropThreshold.toFixed(1)} or more below overall average` : null,
   thresholds.atRiskLowRecentEnabled ? `Recent average below ${thresholds.lowRecentGrade.toFixed(1)}` : null,
@@ -45255,26 +45257,28 @@ const evaluateTraineeRisk = (trainee, thresholds) => {
   const recentAvg = safeN(trainee.recentAvgGrade);
   const weakElements = parseJ(trainee.recurringWeakElements, []);
   const enoughData = Math.max(grades.length, safeN(trainee.totalPt051Count)) >= thresholds.minAssessmentsForRisk;
-  const reasons = [];
+  const atRiskReasons = [];
+  const monitorReasons = [];
   if (enoughData && thresholds.atRiskAverageEnabled && avgGrade < thresholds.atRiskAvgGrade) {
-    reasons.push(`Course average ${avgGrade.toFixed(2)} below low-course-average threshold of ${thresholds.atRiskAvgGrade.toFixed(1)}`);
+    atRiskReasons.push(`Course average ${avgGrade.toFixed(2)} below at-risk threshold of ${thresholds.atRiskAvgGrade.toFixed(1)}`);
   }
   if (enoughData && thresholds.atRiskSustainedDeclineEnabled && hasSustainedDecline(grades, thresholds.sustainedDeclineCount)) {
-    reasons.push(`Sustained decline across last ${thresholds.sustainedDeclineCount} assessments`);
+    monitorReasons.push(`Sustained decline across last ${thresholds.sustainedDeclineCount} assessments`);
   }
   if (enoughData && thresholds.atRiskRecentDropEnabled && avgGrade - recentAvg >= thresholds.recentDropThreshold) {
-    reasons.push(`Recent average ${recentAvg.toFixed(2)} is ${(avgGrade - recentAvg).toFixed(2)} below overall average`);
+    monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} is ${(avgGrade - recentAvg).toFixed(2)} below overall average`);
   }
   if (enoughData && thresholds.atRiskLowRecentEnabled && recentAvg < thresholds.lowRecentGrade) {
-    reasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
+    monitorReasons.push(`Recent average ${recentAvg.toFixed(2)} below low-recent-average threshold of ${thresholds.lowRecentGrade.toFixed(1)}`);
   }
   if (enoughData && thresholds.atRiskRecurringWeakElementsEnabled && weakElements.length >= thresholds.recurringWeakElementCount) {
-    reasons.push(`${weakElements.length} weak elements recurring`);
+    monitorReasons.push(`${weakElements.length} weak elements recurring`);
   }
   if (!enoughData && (avgGrade < thresholds.atRiskAvgGrade || recentAvg < thresholds.lowRecentGrade || trainee.overallTrend === "worsening")) {
     return { riskLevel: "monitor", reasons: [`Monitor until ${thresholds.minAssessmentsForRisk} assessments are available`] };
   }
-  if (reasons.length > 0) return { riskLevel: "at_risk", reasons };
+  if (atRiskReasons.length > 0) return { riskLevel: "at_risk", reasons: atRiskReasons };
+  if (monitorReasons.length > 0) return { riskLevel: "monitor", reasons: monitorReasons };
   if (avgGrade >= thresholds.exceedingAvgGrade && trainee.overallTrend !== "worsening") {
     return { riskLevel: "exceeding", reasons: [] };
   }
@@ -45938,31 +45942,31 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     {
       enabledKey: "atRiskAverageEnabled",
       title: "Low course average",
-      detail: "Flags trainees whose whole-course score average falls below the at-risk threshold.",
+      detail: "Classifies trainees as At Risk when their whole-course score average falls below the at-risk threshold.",
       control: { key: "atRiskAvgGrade", suffix: "avg", min: 1, max: 4.5, step: 0.1 }
     },
     {
       enabledKey: "atRiskSustainedDeclineEnabled",
       title: "Sustained decline",
-      detail: "Flags a trainee when each of the most recent assessments is lower than the previous one.",
+      detail: "Moves a trainee to Monitor when each of the most recent assessments is lower than the previous one.",
       control: { key: "sustainedDeclineCount", suffix: "events", min: 3, max: 6, step: 1 }
     },
     {
       enabledKey: "atRiskRecentDropEnabled",
       title: "Recent performance drop",
-      detail: "Flags trainees whose recent average has fallen materially below their whole-course average.",
+      detail: "Moves trainees to Monitor when their recent average has fallen materially below their whole-course average.",
       control: { key: "recentDropThreshold", suffix: "drop", min: 0.2, max: 1.5, step: 0.1 }
     },
     {
       enabledKey: "atRiskLowRecentEnabled",
       title: "Low recent average",
-      detail: "Flags trainees whose most recent assessment window is below the configured recent score floor.",
+      detail: "Moves trainees to Monitor when their most recent assessment window is below the configured recent score floor.",
       control: { key: "lowRecentGrade", suffix: "recent avg", min: 1, max: 4.5, step: 0.1 }
     },
     {
       enabledKey: "atRiskRecurringWeakElementsEnabled",
       title: "Recurring weak elements",
-      detail: "Flags repeated weak element patterns even when the overall average has not yet collapsed.",
+      detail: "Moves trainees to Monitor when repeated weak element patterns appear before the overall average has fallen.",
       control: { key: "recurringWeakElementCount", suffix: "elements", min: 2, max: 8, step: 1 }
     }
   ];
@@ -45986,7 +45990,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "At-Risk Criteria" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-400", children: "A trainee is classified as At Risk when the minimum assessment count is met and any enabled criterion below is triggered." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-slate-400", children: "At Risk is controlled by the course average threshold. The other enabled signals move trainees into Monitor so the At Risk count follows the threshold you set." })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-slate-400", children: "Minimum data" }),
@@ -46088,7 +46092,7 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-300 font-semibold", children: "At Risk — " }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                    "Any enabled at-risk criterion is triggered after ",
+                    "Course average is below the at-risk threshold after ",
                     local.minAssessmentsForRisk,
                     " assessment(s). Active criteria: ",
                     riskCriteriaRows(local).join("; ") || "none selected",
@@ -46101,9 +46105,11 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-300 font-semibold", children: "Monitor / Watch — " }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
-                    "Avg grade below ",
+                    "Trend, recent-average, or recurring weak-element signals are triggered, or avg grade is below ",
                     local.normalMinGrade.toFixed(1),
-                    " once not classified At Risk. Performance is acceptable but warrants monitoring."
+                    " once not classified At Risk. Active monitor signals: ",
+                    monitorSignalRows(local).join("; ") || "none selected",
+                    "."
                   ] })
                 ] })
               ] }),
@@ -46227,7 +46233,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-red-500 mt-0.5 flex-shrink-0" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-300 font-semibold", children: "At Risk: " }),
-                "Any enabled criterion is met after ",
+                "Course average is below the at-risk threshold after ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.minAssessmentsForRisk }),
                 " ",
                 "assessment(s): ",
@@ -46239,11 +46245,13 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-yellow-500 mt-0.5 flex-shrink-0" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-yellow-300 font-semibold", children: "Monitor: " }),
-                "Avg grade below ",
+                "Trend, recent-average, or recurring weak-element signals are triggered, or avg grade is below ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: thresholds.normalMinGrade.toFixed(1) }),
                 " once not classified At Risk.",
                 " ",
-                "Below normal — watch closely."
+                "Active monitor signals: ",
+                monitorSignalRows(thresholds).join("; ") || "none selected",
+                "."
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 items-start", children: [
