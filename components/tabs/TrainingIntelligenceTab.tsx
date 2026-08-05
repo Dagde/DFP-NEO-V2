@@ -350,7 +350,48 @@ const evaluateTraineeRisk = (
   if (avgGrade >= thresholds.normalMinGrade && trainee.overallTrend !== 'worsening') {
     return { riskLevel: 'normal', reasons: [] };
   }
-  return { riskLevel: 'monitor', reasons: [] };
+  const reasons: string[] = [];
+  if (avgGrade < thresholds.normalMinGrade) {
+    reasons.push(`Course average ${avgGrade.toFixed(2)} below normal threshold of ${thresholds.normalMinGrade.toFixed(1)}`);
+  }
+  if (trainee.overallTrend === 'worsening') {
+    reasons.push('Overall trend is worsening');
+  }
+  return { riskLevel: 'monitor', reasons: reasons.length ? reasons : ['Monitor status requires review'] };
+};
+
+const riskReasonLabel = (reason: string): string => {
+  const normalized = reason.toLowerCase();
+  if (normalized.includes('below at-risk threshold')) return 'course average below At Risk threshold';
+  if (normalized.includes('sustained decline')) return 'sustained decline';
+  if (normalized.includes('below overall average')) return 'recent average drop';
+  if (normalized.includes('low-recent-average')) return 'low recent average';
+  if (normalized.includes('weak elements')) return 'recurring weak elements';
+  if (normalized.includes('monitor until')) return 'not enough assessment history';
+  if (normalized.includes('below normal threshold')) return 'course average below Normal threshold';
+  if (normalized.includes('trend is worsening')) return 'worsening trend';
+  return 'manual review signal';
+};
+
+const summarizeStatusTriggers = (
+  evaluations: Array<{ riskLevel: string; reasons: string[] }>,
+  status: 'at_risk' | 'monitor'
+) => {
+  const counts = new Map<string, number>();
+  evaluations
+    .filter(evaluation => {
+      const riskLevel = evaluation.riskLevel === 'watch' ? 'monitor' : evaluation.riskLevel;
+      return riskLevel === status;
+    })
+    .flatMap(evaluation => evaluation.reasons.length ? evaluation.reasons : ['manual review signal'])
+    .forEach(reason => {
+      const label = riskReasonLabel(reason);
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 3)
+    .map(([label, count]) => ({ label, count }));
 };
 
 // ── SparkBar ────────────────────────────────────────────────────────────────────
@@ -1336,11 +1377,14 @@ const CourseTab: React.FC<{
 }> = ({ summary, trainees, events, trainingReportDisplayName }) => {
   const { thresholds } = useThresholds();
   const [eventAvgExpanded, setEventAvgExpanded] = useState(false);
-  const evaluatedRisks = trainees.map(t => evaluateTraineeRisk(t, thresholds).riskLevel);
-  const atRisk = evaluatedRisks.filter(r => r === 'at_risk').length;
-  const exceeding = evaluatedRisks.filter(r => r === 'exceeding').length;
-  const monitor = evaluatedRisks.filter(r => r === 'monitor' || r === 'watch').length;
+  const evaluatedRisks = trainees.map(t => evaluateTraineeRisk(t, thresholds));
+  const riskLevels = evaluatedRisks.map(r => r.riskLevel === 'watch' ? 'monitor' : r.riskLevel);
+  const atRisk = riskLevels.filter(r => r === 'at_risk').length;
+  const exceeding = riskLevels.filter(r => r === 'exceeding').length;
+  const monitor = riskLevels.filter(r => r === 'monitor').length;
   const normal = trainees.length - atRisk - exceeding - monitor;
+  const atRiskSummary = summarizeStatusTriggers(evaluatedRisks, 'at_risk');
+  const monitorSummary = summarizeStatusTriggers(evaluatedRisks, 'monitor');
   const avgGrade = trainees.length > 0 ? trainees.reduce((s, t) => s + safeN(t.avgOverallGrade), 0) / trainees.length : 0;
   const passRate = trainees.length > 0
     ? (trainees.filter(t => safeN(t.avgOverallGrade) >= thresholds.concernThresholdGrade).length / trainees.length) * 100
@@ -1393,6 +1437,24 @@ const CourseTab: React.FC<{
               { label: 'Normal', value: normal, color: '#3b82f6' },
               { label: 'Exceeding', value: exceeding, color: '#10b981' },
             ].filter(s => s.value > 0)} />
+          </div>
+          <div className="grid grid-cols-1 gap-2 border-t border-gray-700 pt-3 text-xs md:grid-cols-2">
+            <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3">
+              <p className="font-semibold text-red-300">At Risk summary</p>
+              <p className="mt-1 text-gray-400">
+                {atRisk === 0
+                  ? 'No trainees are below the At Risk average threshold.'
+                  : atRiskSummary.map(item => `${item.count} ${item.label}`).join('; ')}
+              </p>
+            </div>
+            <div className="rounded-md border border-yellow-500/20 bg-yellow-500/5 p-3">
+              <p className="font-semibold text-yellow-300">Monitor summary</p>
+              <p className="mt-1 text-gray-400">
+                {monitor === 0
+                  ? 'No trainees have Monitor signals.'
+                  : monitorSummary.map(item => `${item.count} ${item.label}`).join('; ')}
+              </p>
+            </div>
           </div>
           {/* Status definitions */}
           <div className="mt-3 border-t border-gray-700 pt-3">
