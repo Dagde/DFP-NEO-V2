@@ -38,6 +38,29 @@ interface ChartPoint {
   label: string;
 }
 
+const niceTickStep = (range: number, targetTicks = 4): number => {
+  if (!Number.isFinite(range) || range <= 0) return 1;
+  const rough = range / Math.max(1, targetTicks);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+  const normalised = rough / magnitude;
+  const nice = normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 5 ? 5 : 10;
+  return nice * magnitude;
+};
+
+const niceAxisRange = (values: number[], targetTicks = 4): { min: number; max: number; ticks: number[] } => {
+  const finiteValues = values.filter(value => Number.isFinite(value));
+  const rawMin = Math.max(0, Math.min(...finiteValues) - 1);
+  const rawMax = Math.max(1, Math.max(...finiteValues) + 1);
+  const step = niceTickStep(rawMax - rawMin || rawMax || 1, targetTicks);
+  const min = Math.max(0, Math.floor(rawMin / step) * step);
+  const max = Math.ceil(rawMax / step) * step;
+  const ticks: number[] = [];
+  for (let tick = min; tick <= max + step * 0.001; tick += step) {
+    ticks.push(Number(tick.toFixed(6)));
+  }
+  return { min, max, ticks };
+};
+
 const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }> = ({ data, totalAircraft }) => {
   const W = 900;
   const H = 220;
@@ -66,8 +89,9 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
   }
 
   const values = plottedData.map(d => d.value);
-  const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
-  const maxVal = Math.ceil(Math.max(...values) + 1);
+  const axis = niceAxisRange(values);
+  const minVal = axis.min;
+  const maxVal = axis.max;
   const range = maxVal - minVal || 1;
 
   const xScale = (i: number) => PAD.left + (i / Math.max(data.length - 1, 1)) * chartW;
@@ -97,9 +121,6 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
         return `L ${xScale(i)},${yScale(d.value)}`;
       }).join(' ') +
       ` L ${xScale(lastPlottedIndex)},${PAD.top + chartH} L ${xScale(firstPlottedIndex)},${PAD.top + chartH} Z`;
-
-  // Y-axis grid lines (5 ticks)
-  const yTicks = Array.from({ length: 5 }, (_, i) => minVal + (range / 4) * i);
 
   // X-axis labels: show up to 10 evenly spaced
   const xLabelStep = Math.max(1, Math.ceil(data.length / 10));
@@ -131,8 +152,8 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
         </defs>
 
         {/* Grid lines */}
-        {yTicks.map((tick, i) => (
-          <g key={i}>
+        {axis.ticks.map((tick) => (
+          <g key={tick}>
             <line
               x1={PAD.left} y1={yScale(tick)}
               x2={PAD.left + chartW} y2={yScale(tick)}
@@ -142,7 +163,7 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
               x={PAD.left - 8} y={yScale(tick) + 4}
               textAnchor="end" fontSize="11" fill="#9ca3af"
             >
-              {tick.toFixed(1)}
+              {Number.isInteger(tick) ? tick.toFixed(0) : tick.toFixed(1)}
             </text>
           </g>
         ))}

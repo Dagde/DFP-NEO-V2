@@ -402,6 +402,29 @@ const valueAvg = (series: ChartPoint[]): number | null => {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 };
 
+const niceTickStep = (range: number, targetTicks = 4): number => {
+  if (!Number.isFinite(range) || range <= 0) return 1;
+  const rough = range / Math.max(1, targetTicks);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+  const normalised = rough / magnitude;
+  const nice = normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 5 ? 5 : 10;
+  return nice * magnitude;
+};
+
+const niceAxisRange = (values: number[], targetTicks = 4): { min: number; max: number; ticks: number[] } => {
+  const finiteValues = values.filter(value => Number.isFinite(value));
+  const rawMin = Math.min(0, ...finiteValues);
+  const rawMax = Math.max(1, ...finiteValues);
+  const step = niceTickStep(rawMax - rawMin || rawMax || 1, targetTicks);
+  const min = Math.floor(rawMin / step) * step;
+  const max = Math.ceil(rawMax / step) * step;
+  const ticks: number[] = [];
+  for (let tick = min; tick <= max + step * 0.001; tick += step) {
+    ticks.push(Number(tick.toFixed(6)));
+  }
+  return { min, max, ticks };
+};
+
 const seriesStats = (series: ChartPoint[]): SeriesStats => {
   const values = series
     .filter(point => point.value !== null && Number.isFinite(Number(point.value)))
@@ -767,8 +790,9 @@ const FullLineChart: React.FC<{ series: ChartPoint[]; color: string; label: stri
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   const values = series.map(point => Number(point.value) || 0);
-  const max = Math.max(1, ...values);
-  const min = Math.min(0, ...values);
+  const axis = niceAxisRange(values);
+  const max = axis.max;
+  const min = axis.min;
   const range = max - min || 1;
   const points = values.map((value, index) => {
     const x = padding.left + (series.length <= 1 ? 0 : (index / (series.length - 1)) * chartWidth);
@@ -776,16 +800,14 @@ const FullLineChart: React.FC<{ series: ChartPoint[]; color: string; label: stri
     return { x, y, value, date: series[index].date };
   });
   const pointString = points.map(point => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
-  const gridLines = [0, 0.25, 0.5, 0.75, 1];
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-950/45 p-3">
       <svg width={width} height={height} role="img" aria-label={`${label} chart`}>
-        {gridLines.map(level => {
-          const y = padding.top + chartHeight - level * chartHeight;
-          const value = min + level * range;
+        {axis.ticks.map(value => {
+          const y = padding.top + chartHeight - ((value - min) / range) * chartHeight;
           return (
-            <g key={level}>
+            <g key={value}>
               <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke="rgba(148,163,184,0.25)" strokeWidth="1" />
               <text x={padding.left - 10} y={y + 4} textAnchor="end" fill="rgb(148,163,184)" fontSize="11">
                 {compactNumber(value, max < 10 ? 1 : 0)}{unit || ''}

@@ -47942,6 +47942,27 @@ const valueAvg = (series) => {
   if (values.length === 0) return null;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 };
+const niceTickStep$1 = (range, targetTicks = 4) => {
+  if (!Number.isFinite(range) || range <= 0) return 1;
+  const rough = range / Math.max(1, targetTicks);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+  const normalised = rough / magnitude;
+  const nice = normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 5 ? 5 : 10;
+  return nice * magnitude;
+};
+const niceAxisRange$1 = (values, targetTicks = 4) => {
+  const finiteValues = values.filter((value) => Number.isFinite(value));
+  const rawMin = Math.min(0, ...finiteValues);
+  const rawMax = Math.max(1, ...finiteValues);
+  const step = niceTickStep$1(rawMax - rawMin || rawMax || 1, targetTicks);
+  const min = Math.floor(rawMin / step) * step;
+  const max = Math.ceil(rawMax / step) * step;
+  const ticks = [];
+  for (let tick = min; tick <= max + step * 1e-3; tick += step) {
+    ticks.push(Number(tick.toFixed(6)));
+  }
+  return { min, max, ticks };
+};
 const seriesStats = (series) => {
   const values = series.filter((point) => point.value !== null && Number.isFinite(Number(point.value))).map((point) => ({ ...point, value: Number(point.value) }));
   if (values.length === 0) {
@@ -48233,8 +48254,9 @@ const FullLineChart = ({ series, color, label, unit }) => {
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   const values = series.map((point) => Number(point.value) || 0);
-  const max = Math.max(1, ...values);
-  const min = Math.min(0, ...values);
+  const axis = niceAxisRange$1(values);
+  const max = axis.max;
+  const min = axis.min;
   const range = max - min || 1;
   const points = values.map((value, index) => {
     const x = padding.left + (series.length <= 1 ? 0 : index / (series.length - 1) * chartWidth);
@@ -48242,18 +48264,16 @@ const FullLineChart = ({ series, color, label, unit }) => {
     return { x, y, value, date: series[index].date };
   });
   const pointString = points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
-  const gridLines = [0, 0.25, 0.5, 0.75, 1];
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-950/45 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width, height, role: "img", "aria-label": `${label} chart`, children: [
-    gridLines.map((level) => {
-      const y = padding.top + chartHeight - level * chartHeight;
-      const value = min + level * range;
+    axis.ticks.map((value) => {
+      const y = padding.top + chartHeight - (value - min) / range * chartHeight;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: padding.left, x2: width - padding.right, y1: y, y2: y, stroke: "rgba(148,163,184,0.25)", strokeWidth: "1" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("text", { x: padding.left - 10, y: y + 4, textAnchor: "end", fill: "rgb(148,163,184)", fontSize: "11", children: [
           compactNumber(value, max < 10 ? 1 : 0),
           unit || ""
         ] })
-      ] }, level);
+      ] }, value);
     }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: `${padding.left},${padding.top + chartHeight} ${pointString} ${width - padding.right},${padding.top + chartHeight}`, fill: `${color}20` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: pointString, fill: "none", stroke: color, strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }),
@@ -49405,6 +49425,27 @@ const ACHistoryAnalytics = ({
     ] })
   ] });
 };
+const niceTickStep = (range, targetTicks = 4) => {
+  if (!Number.isFinite(range) || range <= 0) return 1;
+  const rough = range / Math.max(1, targetTicks);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+  const normalised = rough / magnitude;
+  const nice = normalised <= 1 ? 1 : normalised <= 2 ? 2 : normalised <= 5 ? 5 : 10;
+  return nice * magnitude;
+};
+const niceAxisRange = (values, targetTicks = 4) => {
+  const finiteValues = values.filter((value) => Number.isFinite(value));
+  const rawMin = Math.max(0, Math.min(...finiteValues) - 1);
+  const rawMax = Math.max(1, Math.max(...finiteValues) + 1);
+  const step = niceTickStep(rawMax - rawMin || rawMax || 1, targetTicks);
+  const min = Math.max(0, Math.floor(rawMin / step) * step);
+  const max = Math.ceil(rawMax / step) * step;
+  const ticks = [];
+  for (let tick = min; tick <= max + step * 1e-3; tick += step) {
+    ticks.push(Number(tick.toFixed(6)));
+  }
+  return { min, max, ticks };
+};
 const AvailabilityChart = ({ data, totalAircraft }) => {
   const W = 900;
   const H = 220;
@@ -49421,8 +49462,9 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No aircraft availability records found inside this date range" });
   }
   const values = plottedData.map((d) => d.value);
-  const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
-  const maxVal = Math.ceil(Math.max(...values) + 1);
+  const axis = niceAxisRange(values);
+  const minVal = axis.min;
+  const maxVal = axis.max;
   const range = maxVal - minVal || 1;
   const xScale = (i) => PAD.left + i / Math.max(data.length - 1, 1) * chartW;
   const yScale = (v) => PAD.top + chartH - (v - minVal) / range * chartH;
@@ -49437,7 +49479,6 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
     const i = data.findIndex((point) => point.date === d.date);
     return `L ${xScale(i)},${yScale(d.value)}`;
   }).join(" ") + ` L ${xScale(lastPlottedIndex)},${PAD.top + chartH} L ${xScale(firstPlottedIndex)},${PAD.top + chartH} Z`;
-  const yTicks = Array.from({ length: 5 }, (_, i) => minVal + range / 4 * i);
   const xLabelStep = Math.max(1, Math.ceil(data.length / 10));
   const xLabels = data.filter((_, i) => i % xLabelStep === 0 || i === data.length - 1);
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
@@ -49463,7 +49504,7 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
               /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#0ea5e9" })
             ] })
           ] }),
-          yTicks.map((tick, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+          axis.ticks.map((tick) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "line",
               {
@@ -49484,10 +49525,10 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
                 textAnchor: "end",
                 fontSize: "11",
                 fill: "#9ca3af",
-                children: tick.toFixed(1)
+                children: Number.isInteger(tick) ? tick.toFixed(0) : tick.toFixed(1)
               }
             )
-          ] }, i)),
+          ] }, tick)),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "line",
             {
