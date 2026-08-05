@@ -46337,9 +46337,11 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
                   " ",
                   item.label
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-slate-500", children: [
-                  item.names.slice(0, 8).join("; "),
-                  item.names.length > 8 ? `; +${item.names.length - 8} more` : ""
+                /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500", children: item.names.slice(0, 12).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: name }, name)) }),
+                item.names.length > 12 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-slate-600", children: [
+                  "+",
+                  item.names.length - 12,
+                  " more"
                 ] })
               ] }, item.label))
             ] })
@@ -46369,9 +46371,11 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
                   " ",
                   item.label
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-slate-500", children: [
-                  item.names.slice(0, 8).join("; "),
-                  item.names.length > 8 ? `; +${item.names.length - 8} more` : ""
+                /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500", children: item.names.slice(0, 12).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: name }, name)) }),
+                item.names.length > 12 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-slate-600", children: [
+                  "+",
+                  item.names.length - 12,
+                  " more"
                 ] })
               ] }, item.label))
             ] })

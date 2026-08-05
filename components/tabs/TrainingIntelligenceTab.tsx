@@ -1509,7 +1509,14 @@ const CourseTab: React.FC<{
                 ) : statusFlyoutSummary.map(item => (
                   <div key={item.label} className="border-t border-slate-800 py-2 first:border-t-0 first:pt-0">
                     <p className="font-semibold text-slate-300">{item.count} {item.label}</p>
-                    <p className="mt-1 text-slate-500">{item.names.slice(0, 8).join('; ')}{item.names.length > 8 ? `; +${item.names.length - 8} more` : ''}</p>
+                    <ul className="mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500">
+                      {item.names.slice(0, 12).map(name => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                    {item.names.length > 12 && (
+                      <p className="mt-1 text-slate-600">+{item.names.length - 12} more</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1540,7 +1547,14 @@ const CourseTab: React.FC<{
                 ) : statusFlyoutSummary.map(item => (
                   <div key={item.label} className="border-t border-slate-800 py-2 first:border-t-0 first:pt-0">
                     <p className="font-semibold text-slate-300">{item.count} {item.label}</p>
-                    <p className="mt-1 text-slate-500">{item.names.slice(0, 8).join('; ')}{item.names.length > 8 ? `; +${item.names.length - 8} more` : ''}</p>
+                    <ul className="mt-1 max-h-44 space-y-1 overflow-y-auto text-slate-500">
+                      {item.names.slice(0, 12).map(name => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                    {item.names.length > 12 && (
+                      <p className="mt-1 text-slate-600">+{item.names.length - 12} more</p>
+                    )}
                   </div>
                 ))}
               </div>
