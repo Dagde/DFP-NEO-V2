@@ -13879,7 +13879,9 @@ app.get('/api/tie/settings', async (req, res) => {
 // PUT /api/tie/settings - update a TIE setting
 app.put('/api/tie/settings', async (req, res) => {
   try {
-    const db = await getPrisma();
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
     const { key, value } = req.body;
     if (!key) return res.status(400).json({ error: 'key required' });
     await db.$executeRawUnsafe(`

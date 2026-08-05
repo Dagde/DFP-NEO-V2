@@ -1102,11 +1102,15 @@ const ThresholdSettingsPanel: React.FC<{
         recurringWeakElementCount: 'at_risk_recurring_weak_element_count',
         minAssessmentsForRisk: 'at_risk_min_assessments',
       };
+      const sessionToken = localStorage.getItem('dfp_session_token') || '';
       await Promise.all(
         (Object.keys(local) as Array<keyof TIEThresholds>).map(async k => {
           const response = await fetch('/api/tie/settings', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+            },
             body: JSON.stringify({ key: mapping[k], value: local[k] }),
           });
           if (!response.ok) {
