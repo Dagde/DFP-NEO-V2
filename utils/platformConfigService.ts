@@ -49,6 +49,8 @@ export interface PlatformResourcePool {
     cptLabel?: string;
     ground?: number;
     standby?: number;
+    dutySupervisor?: number;
+    towerDutyInstructor?: number;
     applyToV2Runtime?: boolean;
     dfpResourceRowsHistory?: Array<{
       effectiveFrom?: string;
@@ -983,7 +985,7 @@ const getResourceRowsForDate = (
 
 export const getResourcePoolCount = (
   pool: PlatformResourcePool | null,
-  key: 'aircraft' | 'ftd' | 'cpt' | 'ground' | 'standby',
+  key: 'aircraft' | 'ftd' | 'cpt' | 'ground' | 'standby' | 'dutySupervisor' | 'towerDutyInstructor',
   fallback: number,
   targetDate?: string,
 ): number => {
@@ -999,6 +1001,8 @@ export const getResourcePoolCount = (
     cpt: ['cpt', 'trainer', 'trainers', 'proceduralTrainer', 'proceduralTrainers'],
     ground: ['ground'],
     standby: ['standby', 'stby'],
+    dutySupervisor: ['dutySupervisor', 'dutySup', 'dutySupervisorRow'],
+    towerDutyInstructor: ['towerDutyInstructor', 'twrDi', 'twrDiRow'],
   };
   for (const alias of aliases[key]) {
     const value = Number((settings as Record<string, unknown>)[alias]);

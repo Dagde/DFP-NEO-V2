@@ -139,7 +139,7 @@ type PlatformConfig = {
 
 type SettingsVisibilityMode = 'all' | 'unit' | 'location' | 'aircraftType' | 'parentOrganisation';
 type SettingsVisibilityFilter = Exclude<SettingsVisibilityMode, 'all'>;
-const DFP_RESOURCE_ROW_KEYS = ['aircraft', 'ftd', 'cpt', 'standby', 'ground'] as const;
+const DFP_RESOURCE_ROW_KEYS = ['aircraft', 'ftd', 'cpt', 'standby', 'ground', 'dutySupervisor', 'towerDutyInstructor'] as const;
 type DfpResourceRowKey = typeof DFP_RESOURCE_ROW_KEYS[number];
 type DfpResourceRowsSnapshot = Record<DfpResourceRowKey, number>;
 
@@ -1944,7 +1944,7 @@ const buildConfigurationHealth = (
         { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
       );
     }
-    const totalResources = ['aircraft', 'ftd', 'cpt', 'standby', 'ground']
+    const totalResources = DFP_RESOURCE_ROW_KEYS
       .reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
       add('CRITICAL', 'DFP Resource Rows', `${poolName} has no usable resources`, 'These DFP Resource Rows control the DFP resource columns, but all row quantities are zero or blank.', `pool-${poolName}-empty`, undefined, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
@@ -5122,6 +5122,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               cpt: 0,
               standby: 0,
               ground: 0,
+              dutySupervisor: 0,
+              towerDutyInstructor: 0,
             },
           },
         ],
@@ -5455,6 +5457,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     cpt: Math.max(0, Math.floor(Number(settings.cpt ?? 4) || 0)),
     standby: Math.max(0, Math.floor(Number(settings.standby ?? 4) || 0)),
     ground: Math.max(0, Math.floor(Number(settings.ground ?? 6) || 0)),
+    dutySupervisor: Math.max(0, Math.min(1, Math.floor(Number(settings.dutySupervisor ?? settings.dutySup ?? 0) || 0))),
+    towerDutyInstructor: Math.max(0, Math.min(1, Math.floor(Number(settings.towerDutyInstructor ?? settings.twrDi ?? 0) || 0))),
   });
 
   const sameDfpResourceRows = (left: DfpResourceRowsSnapshot, right: DfpResourceRowsSnapshot): boolean => (
@@ -7618,7 +7622,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         `Trainer ${pool.rows.cpt}`,
                         `Standby ${pool.rows.standby}`,
                         `Ground ${pool.rows.ground}`,
-                      ].join(' · ')}
+                        pool.rows.dutySupervisor ? 'Duty Sup' : '',
+                        pool.rows.towerDutyInstructor ? 'TWR DI' : '',
+                      ].filter(Boolean).join(' · ')}
                     </div>
                   </div>
                 )) : (
@@ -9288,6 +9294,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <NumberField label="Trainer" value={editableDfpRows.cpt} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
                         <NumberField label="Standby" value={editableDfpRows.standby} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
                         <NumberField label="Ground" value={editableDfpRows.ground} disabled={!canEditResourcePools} min={0} step={1} commitOnChange onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <ToggleField
+                          label="Duty Supervisor row"
+                          checked={editableDfpRows.dutySupervisor > 0}
+                          disabled={!canEditResourcePools}
+                          onChange={(checked) => updateResourcePoolSettings(index, { dutySupervisor: checked ? 1 : 0 })}
+                          info="Adds one Duty Sup row to the DFP for the flight supervisor managing live program execution."
+                        />
+                        <ToggleField
+                          label="Tower Duty Instructor row"
+                          checked={editableDfpRows.towerDutyInstructor > 0}
+                          disabled={!canEditResourcePools}
+                          onChange={(checked) => updateResourcePoolSettings(index, { towerDutyInstructor: checked ? 1 : 0 })}
+                          info="Adds one TWR DI row to the DFP for the instructor supervising aircraft near the airfield."
+                        />
                       </div>
                     </div>
 

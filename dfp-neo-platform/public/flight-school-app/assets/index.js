@@ -2581,7 +2581,9 @@ const getResourcePoolCount = (pool, key, fallback, targetDate) => {
     ftd: ["ftd", "simulator", "simulators"],
     cpt: ["cpt", "trainer", "trainers", "proceduralTrainer", "proceduralTrainers"],
     ground: ["ground"],
-    standby: ["standby", "stby"]
+    standby: ["standby", "stby"],
+    dutySupervisor: ["dutySupervisor", "dutySup", "dutySupervisorRow"],
+    towerDutyInstructor: ["towerDutyInstructor", "twrDi", "twrDiRow"]
   };
   for (const alias of aliases[key]) {
     const value = Number(settings[alias]);
@@ -66783,7 +66785,7 @@ const FormationCallsignsSection = ({
     ] })
   ] });
 };
-const DFP_RESOURCE_ROW_KEYS = ["aircraft", "ftd", "cpt", "standby", "ground"];
+const DFP_RESOURCE_ROW_KEYS = ["aircraft", "ftd", "cpt", "standby", "ground", "dutySupervisor", "towerDutyInstructor"];
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const TRAINING_REPORT_ELEMENT_LIST_KEY = "__scoringMatrixElements";
@@ -68089,7 +68091,7 @@ const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, 
         { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName }
       );
     }
-    const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
+    const totalResources = DFP_RESOURCE_ROW_KEYS.reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
     if (totalResources <= 0) {
       add("CRITICAL", "DFP Resource Rows", `${poolName} has no usable resources`, "These DFP Resource Rows control the DFP resource columns, but all row quantities are zero or blank.", `pool-${poolName}-empty`, void 0, { focusResourcePoolCode: toIdentifier(pool.id) || toIdentifier(pool.code) || poolName });
     }
@@ -70651,7 +70653,9 @@ This removes the aircraft type from Settings${affectedText ? ` and clears it fro
               ftd: 0,
               cpt: 0,
               standby: 0,
-              ground: 0
+              ground: 0,
+              dutySupervisor: 0,
+              towerDutyInstructor: 0
             }
           }
         ]
@@ -70914,7 +70918,9 @@ This removes the reusable permission profile from Settings. Users assigned only 
     ftd: Math.max(0, Math.floor(Number(settings.ftd ?? 5) || 0)),
     cpt: Math.max(0, Math.floor(Number(settings.cpt ?? 4) || 0)),
     standby: Math.max(0, Math.floor(Number(settings.standby ?? 4) || 0)),
-    ground: Math.max(0, Math.floor(Number(settings.ground ?? 6) || 0))
+    ground: Math.max(0, Math.floor(Number(settings.ground ?? 6) || 0)),
+    dutySupervisor: Math.max(0, Math.min(1, Math.floor(Number(settings.dutySupervisor ?? settings.dutySup ?? 0) || 0))),
+    towerDutyInstructor: Math.max(0, Math.min(1, Math.floor(Number(settings.towerDutyInstructor ?? settings.twrDi ?? 0) || 0)))
   });
   const sameDfpResourceRows = (left, right) => DFP_RESOURCE_ROW_KEYS.every((key) => left[key] === right[key]);
   const getDfpResourceRowsForDate = (pool, targetDate) => {
@@ -72711,8 +72717,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 `Simulator ${pool.rows.ftd}`,
                 `Trainer ${pool.rows.cpt}`,
                 `Standby ${pool.rows.standby}`,
-                `Ground ${pool.rows.ground}`
-              ].join(" · ") })
+                `Ground ${pool.rows.ground}`,
+                pool.rows.dutySupervisor ? "Duty Sup" : "",
+                pool.rows.towerDutyInstructor ? "TWR DI" : ""
+              ].filter(Boolean).join(" · ") })
             ] }, `ownership-resource-pool-${pool.code || pool.name}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold text-gray-400", children: "No DFP Resource Rows are visible for this unit context." }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 border-t border-gray-800 pt-2 text-[11px] leading-relaxed text-gray-400", children: [
               "DFP row counts, row ownership, resource labels and aircraft assignment are managed in",
@@ -74314,6 +74322,28 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Trainer", value: editableDfpRows.cpt, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Standby", value: editableDfpRows.standby, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: editableDfpRows.ground, disabled: !canEditResourcePools, min: 0, step: 1, commitOnChange: true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        ToggleField,
+                        {
+                          label: "Duty Supervisor row",
+                          checked: editableDfpRows.dutySupervisor > 0,
+                          disabled: !canEditResourcePools,
+                          onChange: (checked) => updateResourcePoolSettings(index, { dutySupervisor: checked ? 1 : 0 }),
+                          info: "Adds one Duty Sup row to the DFP for the flight supervisor managing live program execution."
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        ToggleField,
+                        {
+                          label: "Tower Duty Instructor row",
+                          checked: editableDfpRows.towerDutyInstructor > 0,
+                          disabled: !canEditResourcePools,
+                          onChange: (checked) => updateResourcePoolSettings(index, { towerDutyInstructor: checked ? 1 : 0 }),
+                          info: "Adds one TWR DI row to the DFP for the instructor supervising aircraft near the airfield."
+                        }
+                      )
                     ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: resourceSectionPanelClass, children: [
@@ -92831,6 +92861,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     staffSharingUnits,
     staffSharingGroups
   } = config;
+  const showDutySupervisorRow = config.showDutySupervisorRow === true;
+  const showTowerDutyInstructorRow = config.showTowerDutyInstructorRow === true;
   const buildAircraftResourcePrefix = String(
     config.runtimeResourceContext?.runtimeAircraftTypeCode || config.runtimeResourceContext?.resourcePoolAircraftTypeCode || config.runtimeResourceContext?.runtimeAircraftTypeName || config.resourceDisplayNames?.aircraft || "Aircraft"
   ).trim() || "Aircraft";
@@ -92868,8 +92900,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }));
   const buildResources = [
     ...Array.from({ length: buildAircraftResourceCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`),
-    "Duty Sup",
-    "TWR DI",
+    ...showDutySupervisorRow ? ["Duty Sup"] : [],
+    ...showTowerDutyInstructorRow ? ["TWR DI"] : [],
     ...Array.from({ length: 20 }, (_, index) => `STBY ${index + 1}`),
     ...Array.from({ length: Math.max(10, Math.floor(Number(ftdCount) || 0)) }, (_, index) => `FTD ${index + 1}`),
     ...Array.from({ length: Math.max(10, Math.floor(Number(cptCount) || 0)) }, (_, index) => `CPT ${index + 1}`),
@@ -99185,200 +99217,205 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordScheduleAttemptTiming("placed", "PLACED");
     return result;
   };
-  recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
-  generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
-  const dutySupStartTime = flyingStartTime;
-  const dutySupEndTime = flyingEndTime;
-  if (dutySupStartTime >= dutySupEndTime) {
-    recordProgress({ message: "Invalid day flying window", percentage: 90 });
-  }
   let nightDutySup = null;
-  if (isNightFlyingProgrammed()) {
-    buildDebugLog("🌙 Pre-selecting night duty supervisor to prevent day assignments...");
-    const nightFlyingInstructorNames = /* @__PURE__ */ new Set([
-      ...Array.from(nightPairings.values()),
-      ...mandatoryRemedialFlights.filter(isOperationalNightFlight).map((event) => event.instructor || event.pilot || "").filter(Boolean)
-    ]);
-    const nightSupPool = instructors.filter(
-      (s) => (s.isFlyingSupervisor || s.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate)) && !nightFlyingInstructorNames.has(s.name)
-    );
-    buildDebugLog(`🌙 Night supervisor pool: ${nightSupPool.length} candidates`);
-    nightDutySup = nightSupPool.find((sup) => {
-      if (isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, "duty_sup")) {
-        buildDebugLog(`🌙 ❌ ${sup.name} - statically unavailable for night duty`);
-        return false;
-      }
-      if (isPersonScheduledForDayEvents(sup.name)) {
-        buildDebugLog(`🌙 ❌ ${sup.name} - has day events (Active DFP or NEO-Build)`);
-        return false;
-      }
-      if (isPersonScheduledForNightEvents(sup.name)) {
-        buildDebugLog(`🌙 ❌ ${sup.name} - already has night commitment`);
-        return false;
-      }
-      buildDebugLog(`🌙 ✅ ${sup.name} - eligible for night duty supervisor`);
-      return true;
-    }) || null;
-    if (nightDutySup) {
-      markIntendedNightPerson(nightDutySup.name);
-      buildDebugLog(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
-    } else {
-      buildDebugLog(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
+  let dutySupEligible = [];
+  if (showDutySupervisorRow) {
+    recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
+    generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
+    const dutySupStartTime = flyingStartTime;
+    const dutySupEndTime = flyingEndTime;
+    if (dutySupStartTime >= dutySupEndTime) {
+      recordProgress({ message: "Invalid day flying window", percentage: 90 });
     }
-  }
-  const dutySupEligible = instructors.filter(
-    (i) => (i.isFlyingSupervisor || i.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate)) && !isPersonScheduledForNightEvents(i.name)
-  );
-  const tmuffSupervisors = dutySupEligible.filter((i) => i.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate));
-  const normalSupervisors = dutySupEligible.filter((i) => !tmuffSupervisors.find((t) => t.idNumber === i.idNumber));
-  const shuffledNormalSupervisors = orderBuildDeterministically(
-    normalSupervisors,
-    "normal-duty-supervisors",
-    (supervisor) => supervisor.idNumber || supervisor.name
-  );
-  const sortedSupervisors = [...tmuffSupervisors, ...shuffledNormalSupervisors];
-  let currentSupTime = dutySupStartTime;
-  buildDebugLog(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
-  while (currentSupTime < dutySupEndTime) {
-    const isBlockCovered = generatedEvents.some((e) => e.resourceId === "Duty Sup" && currentSupTime >= e.startTime && currentSupTime < e.startTime + e.duration);
-    if (isBlockCovered) {
-      currentSupTime += 0.5;
-      continue;
-    }
-    let bestSupervisor = null;
-    let maxDuration = 0;
-    const supervisorsWithNoDutySup = sortedSupervisors.filter((s) => eventCounts.get(s.name).dutySup === 0);
-    const supervisorsWithDutySup = sortedSupervisors.filter((s) => eventCounts.get(s.name).dutySup > 0);
-    const prioritizedSupervisors = [...supervisorsWithNoDutySup, ...supervisorsWithDutySup];
-    for (const sup of prioritizedSupervisors) {
-      const ipCounts = eventCounts.get(sup.name);
-      const totalEventCount = sup.isExecutive ? eventLimits.exec.maxTotal : eventLimits.instructor.maxTotal;
-      const dutySupSessionLimit = Math.max(
-        0.25,
-        Number(sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup) || 2
+    if (isNightFlyingProgrammed()) {
+      buildDebugLog("🌙 Pre-selecting night duty supervisor to prevent day assignments...");
+      const nightFlyingInstructorNames = /* @__PURE__ */ new Set([
+        ...Array.from(nightPairings.values()),
+        ...mandatoryRemedialFlights.filter(isOperationalNightFlight).map((event) => event.instructor || event.pilot || "").filter(Boolean)
+      ]);
+      const nightSupPool = instructors.filter(
+        (s) => (s.isFlyingSupervisor || s.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate)) && !nightFlyingInstructorNames.has(s.name)
       );
-      if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventCount) continue;
-      if (isPersonStaticallyUnavailable(sup, currentSupTime, currentSupTime + 0.1, buildDate, "duty_sup")) continue;
-      const proposedDutySupEvent = {
-        startTime: currentSupTime,
-        duration: dutySupSessionLimit,
-        flightNumber: "Duty Sup",
-        type: "ground"
-      };
-      const totalDutyHours = calculateInstructorDutyHours(sup.name, proposedDutySupEvent);
-      buildDebugLog(`Duty Sup Check - ${sup.name}: Total Duty = ${totalDutyHours.toFixed(2)}hrs, Soft Limit = ${preferredDutyPeriod}hrs`);
-      if (totalDutyHours > preferredDutyPeriod) {
-        buildDebugLog(`Skipping ${sup.name} - would exceed soft limit of ${preferredDutyPeriod}hrs`);
+      buildDebugLog(`🌙 Night supervisor pool: ${nightSupPool.length} candidates`);
+      nightDutySup = nightSupPool.find((sup) => {
+        if (isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, "duty_sup")) {
+          buildDebugLog(`🌙 ❌ ${sup.name} - statically unavailable for night duty`);
+          return false;
+        }
+        if (isPersonScheduledForDayEvents(sup.name)) {
+          buildDebugLog(`🌙 ❌ ${sup.name} - has day events (Active DFP or NEO-Build)`);
+          return false;
+        }
+        if (isPersonScheduledForNightEvents(sup.name)) {
+          buildDebugLog(`🌙 ❌ ${sup.name} - already has night commitment`);
+          return false;
+        }
+        buildDebugLog(`🌙 ✅ ${sup.name} - eligible for night duty supervisor`);
+        return true;
+      }) || null;
+      if (nightDutySup) {
+        markIntendedNightPerson(nightDutySup.name);
+        buildDebugLog(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
+      } else {
+        buildDebugLog(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
+      }
+    }
+    dutySupEligible = instructors.filter(
+      (i) => (i.isFlyingSupervisor || i.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate)) && !isPersonScheduledForNightEvents(i.name)
+    );
+    const tmuffSupervisors = dutySupEligible.filter((i) => i.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate));
+    const normalSupervisors = dutySupEligible.filter((i) => !tmuffSupervisors.find((t) => t.idNumber === i.idNumber));
+    const shuffledNormalSupervisors = orderBuildDeterministically(
+      normalSupervisors,
+      "normal-duty-supervisors",
+      (supervisor) => supervisor.idNumber || supervisor.name
+    );
+    const sortedSupervisors = [...tmuffSupervisors, ...shuffledNormalSupervisors];
+    let currentSupTime = dutySupStartTime;
+    buildDebugLog(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
+    while (currentSupTime < dutySupEndTime) {
+      const isBlockCovered = generatedEvents.some((e) => e.resourceId === "Duty Sup" && currentSupTime >= e.startTime && currentSupTime < e.startTime + e.duration);
+      if (isBlockCovered) {
+        currentSupTime += 0.5;
         continue;
       }
-      const hasOverlapAtStart = getGeneratedEventsForPerson(sup.name).some((e) => {
-        if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
-        if (!getPersonnel(e).includes(sup.name)) return false;
-        const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-        return currentSupTime < bookingWindow.end && currentSupTime + 0.1 > bookingWindow.start;
-      });
-      if (hasOverlapAtStart) continue;
-      let potentialDuration = 0;
-      const targetDuration = dutySupSessionLimit;
-      for (let t = currentSupTime; t < dutySupEndTime; t += 0.25) {
-        if (potentialDuration >= targetDuration) break;
-        const proposedEnd = t + 0.25;
-        if (isPersonStaticallyUnavailable(sup, t, proposedEnd, buildDate, "duty_sup")) break;
-        const proposedDutySupEvent2 = {
+      let bestSupervisor = null;
+      let maxDuration = 0;
+      const supervisorsWithNoDutySup = sortedSupervisors.filter((s) => eventCounts.get(s.name).dutySup === 0);
+      const supervisorsWithDutySup = sortedSupervisors.filter((s) => eventCounts.get(s.name).dutySup > 0);
+      const prioritizedSupervisors = [...supervisorsWithNoDutySup, ...supervisorsWithDutySup];
+      for (const sup of prioritizedSupervisors) {
+        const ipCounts = eventCounts.get(sup.name);
+        const totalEventCount = sup.isExecutive ? eventLimits.exec.maxTotal : eventLimits.instructor.maxTotal;
+        const dutySupSessionLimit = Math.max(
+          0.25,
+          Number(sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup) || 2
+        );
+        if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventCount) continue;
+        if (isPersonStaticallyUnavailable(sup, currentSupTime, currentSupTime + 0.1, buildDate, "duty_sup")) continue;
+        const proposedDutySupEvent = {
           startTime: currentSupTime,
-          duration: proposedEnd - currentSupTime,
+          duration: dutySupSessionLimit,
           flightNumber: "Duty Sup",
           type: "ground"
         };
-        const proposedEvents = [...getGeneratedEventsForPerson(sup.name), proposedDutySupEvent2];
-        const instructorEventsForDay = proposedEvents.filter((e) => getPersonnel(e).includes(sup.name));
-        if (instructorEventsForDay.length > 0) {
-          const bookingWindows = instructorEventsForDay.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
-          const dayStart = bookingWindows[0].start;
-          const dayEnd = bookingWindows[bookingWindows.length - 1].end;
-          const totalDutyHours2 = dayEnd - dayStart;
-          if (totalDutyHours2 > preferredDutyPeriod) {
-            break;
-          }
+        const totalDutyHours = calculateInstructorDutyHours(sup.name, proposedDutySupEvent);
+        buildDebugLog(`Duty Sup Check - ${sup.name}: Total Duty = ${totalDutyHours.toFixed(2)}hrs, Soft Limit = ${preferredDutyPeriod}hrs`);
+        if (totalDutyHours > preferredDutyPeriod) {
+          buildDebugLog(`Skipping ${sup.name} - would exceed soft limit of ${preferredDutyPeriod}hrs`);
+          continue;
         }
-        const hasFutureOverlap = getGeneratedEventsForPerson(sup.name).some((e) => {
+        const hasOverlapAtStart = getGeneratedEventsForPerson(sup.name).some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!getPersonnel(e).includes(sup.name)) return false;
           const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-          return t < bookingWindow.end && proposedEnd > bookingWindow.start;
+          return currentSupTime < bookingWindow.end && currentSupTime + 0.1 > bookingWindow.start;
         });
-        if (hasFutureOverlap) break;
-        potentialDuration += 0.25;
+        if (hasOverlapAtStart) continue;
+        let potentialDuration = 0;
+        const targetDuration = dutySupSessionLimit;
+        for (let t = currentSupTime; t < dutySupEndTime; t += 0.25) {
+          if (potentialDuration >= targetDuration) break;
+          const proposedEnd = t + 0.25;
+          if (isPersonStaticallyUnavailable(sup, t, proposedEnd, buildDate, "duty_sup")) break;
+          const proposedDutySupEvent2 = {
+            startTime: currentSupTime,
+            duration: proposedEnd - currentSupTime,
+            flightNumber: "Duty Sup",
+            type: "ground"
+          };
+          const proposedEvents = [...getGeneratedEventsForPerson(sup.name), proposedDutySupEvent2];
+          const instructorEventsForDay = proposedEvents.filter((e) => getPersonnel(e).includes(sup.name));
+          if (instructorEventsForDay.length > 0) {
+            const bookingWindows = instructorEventsForDay.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
+            const dayStart = bookingWindows[0].start;
+            const dayEnd = bookingWindows[bookingWindows.length - 1].end;
+            const totalDutyHours2 = dayEnd - dayStart;
+            if (totalDutyHours2 > preferredDutyPeriod) {
+              break;
+            }
+          }
+          const hasFutureOverlap = getGeneratedEventsForPerson(sup.name).some((e) => {
+            if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
+            if (!getPersonnel(e).includes(sup.name)) return false;
+            const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return t < bookingWindow.end && proposedEnd > bookingWindow.start;
+          });
+          if (hasFutureOverlap) break;
+          potentialDuration += 0.25;
+        }
+        if (potentialDuration > maxDuration) {
+          maxDuration = Math.min(potentialDuration, targetDuration);
+          bestSupervisor = sup;
+        }
       }
-      if (potentialDuration > maxDuration) {
-        maxDuration = Math.min(potentialDuration, targetDuration);
-        bestSupervisor = sup;
+      if (bestSupervisor && maxDuration > 0) {
+        pushGeneratedEvent({
+          id: v4(),
+          type: "ground",
+          instructor: bestSupervisor.name,
+          flightNumber: "Duty Sup",
+          duration: maxDuration,
+          startTime: currentSupTime,
+          resourceId: "Duty Sup",
+          color: "bg-amber-500/50",
+          flightType: "Dual",
+          locationType: "Local",
+          origin: school,
+          destination: school,
+          pilot: void 0,
+          student: ""
+        });
+        eventCounts.get(bestSupervisor.name).dutySup++;
+        buildDebugLog(`Duty Sup assigned: ${bestSupervisor.name} from ${currentSupTime} to ${currentSupTime + maxDuration}`);
+        currentSupTime += maxDuration;
+      } else {
+        buildDebugLog(`WARNING: No Duty Supervisor available for ${currentSupTime} to ${currentSupTime + 0.5} - GAP in coverage!`);
+        currentSupTime += 0.5;
       }
     }
-    if (bestSupervisor && maxDuration > 0) {
-      pushGeneratedEvent({
-        id: v4(),
-        type: "ground",
-        instructor: bestSupervisor.name,
-        flightNumber: "Duty Sup",
-        duration: maxDuration,
-        startTime: currentSupTime,
-        resourceId: "Duty Sup",
-        color: "bg-amber-500/50",
-        flightType: "Dual",
-        locationType: "Local",
-        origin: school,
-        destination: school,
-        pilot: void 0,
-        student: ""
+    if (isNightFlyingProgrammed() && nightDutySup) {
+      recordProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
+      buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
+      const existingNightDutySup = generatedEvents.find((e) => {
+        if (e.resourceId !== "Duty Sup") return false;
+        const dutyStart = e.startTime;
+        const dutyEnd = e.startTime + e.duration;
+        return dutyStart < ceaseNightFlying && dutyEnd > commenceNightFlying;
       });
-      eventCounts.get(bestSupervisor.name).dutySup++;
-      buildDebugLog(`Duty Sup assigned: ${bestSupervisor.name} from ${currentSupTime} to ${currentSupTime + maxDuration}`);
-      currentSupTime += maxDuration;
-    } else {
-      buildDebugLog(`WARNING: No Duty Supervisor available for ${currentSupTime} to ${currentSupTime + 0.5} - GAP in coverage!`);
-      currentSupTime += 0.5;
-    }
-  }
-  if (isNightFlyingProgrammed() && nightDutySup) {
-    recordProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
-    buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
-    const existingNightDutySup = generatedEvents.find((e) => {
-      if (e.resourceId !== "Duty Sup") return false;
-      const dutyStart = e.startTime;
-      const dutyEnd = e.startTime + e.duration;
-      return dutyStart < ceaseNightFlying && dutyEnd > commenceNightFlying;
-    });
-    const nightDutySupHasOverlap = getGeneratedEventsForPerson(nightDutySup.name).some((e) => {
-      if (!getPersonnel(e).includes(nightDutySup.name)) return false;
-      const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-      return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
-    });
-    if (existingNightDutySup) {
-      buildDebugLog(`Night Duty Sup already covered by ${existingNightDutySup.instructor || "unknown"} from ${existingNightDutySup.startTime} to ${existingNightDutySup.startTime + existingNightDutySup.duration}; skipping duplicate.`);
-    } else if (nightDutySupHasOverlap) {
-      buildDebugLog(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
-    } else {
-      pushGeneratedEvent({
-        id: v4(),
-        type: "ground",
-        instructor: nightDutySup.name,
-        flightNumber: "Night Duty Sup",
-        duration: ceaseNightFlying - commenceNightFlying,
-        startTime: commenceNightFlying,
-        resourceId: "Duty Sup",
-        color: "bg-amber-700/50",
-        flightType: "Dual",
-        locationType: "Local",
-        origin: school,
-        destination: school,
-        pilot: void 0,
-        student: ""
+      const nightDutySupHasOverlap = getGeneratedEventsForPerson(nightDutySup.name).some((e) => {
+        if (!getPersonnel(e).includes(nightDutySup.name)) return false;
+        const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+        return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
       });
-      eventCounts.get(nightDutySup.name).dutySup++;
+      if (existingNightDutySup) {
+        buildDebugLog(`Night Duty Sup already covered by ${existingNightDutySup.instructor || "unknown"} from ${existingNightDutySup.startTime} to ${existingNightDutySup.startTime + existingNightDutySup.duration}; skipping duplicate.`);
+      } else if (nightDutySupHasOverlap) {
+        buildDebugLog(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
+      } else {
+        pushGeneratedEvent({
+          id: v4(),
+          type: "ground",
+          instructor: nightDutySup.name,
+          flightNumber: "Night Duty Sup",
+          duration: ceaseNightFlying - commenceNightFlying,
+          startTime: commenceNightFlying,
+          resourceId: "Duty Sup",
+          color: "bg-amber-700/50",
+          flightType: "Dual",
+          locationType: "Local",
+          origin: school,
+          destination: school,
+          pilot: void 0,
+          student: ""
+        });
+        eventCounts.get(nightDutySup.name).dutySup++;
+      }
+    } else if (isNightFlyingProgrammed() && !nightDutySup) {
+      buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
     }
-  } else if (isNightFlyingProgrammed() && !nightDutySup) {
-    buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
+  } else {
+    buildDebugLog("Duty Supervisor row is not enabled for these DFP Resource Rows; skipping Duty Sup auto-scheduling.");
   }
   const currencyPriorityEvents = highestPriorityEvents.filter(
     (event) => isCurrencyPriorityEvent(event) && priorityEventMatchesBuildDate(event, buildDate) && (event.type === "flight" || event.type === "ftd")
@@ -103269,7 +103306,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       training: airCombatNightTrainingEvents,
       nightWindow: { start: commenceNightFlying, end: ceaseNightFlying }
     };
-    if (airCombatNightSchedulingActive) {
+    if (airCombatNightSchedulingActive && showDutySupervisorRow) {
       recordProgress({ message: "Scheduling Air Combat night events...", percentage: 43 });
       if (!nightDutySup) {
         nightDutySup = dutySupEligible.find(
@@ -109272,6 +109309,8 @@ const App = () => {
   const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount, date);
   const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4, date);
   const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6, date);
+  const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "dutySupervisor", 0, date) > 0;
+  const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "towerDutyInstructor", 0, date) > 0;
   const getLocalIsoDateForResourceRows = reactExports.useCallback((offsetDays = 0) => {
     const dateValue = /* @__PURE__ */ new Date();
     dateValue.setDate(dateValue.getDate() + offsetDays);
@@ -110658,10 +110697,13 @@ ${"=".repeat(60)}`);
         stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine);
       }
     }
+    const resourceEventsForView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView) ? nextDayBuildEvents : publishedSchedules[date] || [];
+    const hasDutySupervisorEvent = resourceEventsForView.some((event) => event.resourceId === "Duty Sup");
+    const hasTowerDutyInstructorEvent = resourceEventsForView.some((event) => event.resourceId === "TWR DI" || event.flightNumber === "TWR DI");
     const allResources = [
       ...aircraftResources,
-      "Duty Sup",
-      "TWR DI",
+      ...configuredDutySupervisorRowEnabled || hasDutySupervisorEvent ? ["Duty Sup"] : [],
+      ...configuredTowerDutyInstructorRowEnabled || hasTowerDutyInstructorEvent ? ["TWR DI"] : [],
       ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
       ...Array.from({ length: configuredFtdCount }, (_, i) => `FTD ${i + 1}`),
       ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
@@ -110674,6 +110716,8 @@ ${"=".repeat(60)}`);
     configuredCptCount,
     configuredStandbyCount,
     configuredGroundCount,
+    configuredDutySupervisorRowEnabled,
+    configuredTowerDutyInstructorRowEnabled,
     activeAircraftResourcePrefix,
     setupTestProfile,
     activePlatformResourcePool,
@@ -112017,22 +112061,24 @@ ${"=".repeat(60)}`);
         logValidationTrace("Active DFP", event, "clear");
       }
     }
-    for (const event of eventsForDate) {
-      if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
-        if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
-          logValidationTrace("Active DFP", event, "twr-di-exempt", {
-            reason: "Solo STBY events do not require TWR DI until moved to an active aircraft line"
-          });
+    if (configuredTowerDutyInstructorRowEnabled) {
+      for (const event of eventsForDate) {
+        if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+          if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+            logValidationTrace("Active DFP", event, "twr-di-exempt", {
+              reason: "Solo STBY events do not require TWR DI until moved to an active aircraft line"
+            });
+          }
+          continue;
         }
-        continue;
-      }
-      if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
-        conflictingEventIds.add(getValidationEventKey2(event));
-        logValidationTrace("Active DFP", event, "twr-di-missing");
+        if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
+          conflictingEventIds.add(getValidationEventKey2(event));
+          logValidationTrace("Active DFP", event, "twr-di-missing");
+        }
       }
     }
     return conflictingEventIds;
-  }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
+  }, [configuredTowerDutyInstructorRowEnabled, eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
   const nextDayPersonnelAndResourceConflictIds = reactExports.useMemo(() => {
     const conflictingEventIds = /* @__PURE__ */ new Set();
     if (!nextDayBuildEvents || nextDayBuildEvents.length === 0) {
@@ -112056,22 +112102,24 @@ ${"=".repeat(60)}`);
         logValidationTrace("Next Day Build", event, "clear");
       }
     }
-    for (const event of nextDayEventsWithDate) {
-      if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
-        if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
-          logValidationTrace("Next Day Build", event, "twr-di-exempt", {
-            reason: "Solo STBY events do not require TWR DI until moved to an active aircraft line"
-          });
+    if (configuredTowerDutyInstructorRowEnabled) {
+      for (const event of nextDayEventsWithDate) {
+        if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+          if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+            logValidationTrace("Next Day Build", event, "twr-di-exempt", {
+              reason: "Solo STBY events do not require TWR DI until moved to an active aircraft line"
+            });
+          }
+          continue;
         }
-        continue;
-      }
-      if (!hasTwrDiCoverageForSolo(event, nextDayEventsWithDate)) {
-        conflictingEventIds.add(getValidationEventKey2(event));
-        logValidationTrace("Next Day Build", event, "twr-di-missing");
+        if (!hasTwrDiCoverageForSolo(event, nextDayEventsWithDate)) {
+          conflictingEventIds.add(getValidationEventKey2(event));
+          logValidationTrace("Next Day Build", event, "twr-di-missing");
+        }
       }
     }
     return conflictingEventIds;
-  }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
+  }, [configuredTowerDutyInstructorRowEnabled, nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
   const calculateUnavailabilityConflictsForEvents = reactExports.useCallback((eventsToCheck) => {
     const newConflicts = /* @__PURE__ */ new Map();
     const allPersonnel = [...allInstructorsData, ...allTraineesData];
@@ -117690,6 +117738,8 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       availableAircraftCount: neoAvailableAircraftCount,
       ftdCount: configuredFtdCount,
       cptCount: configuredCptCount,
+      showDutySupervisorRow: configuredDutySupervisorRowEnabled,
+      showTowerDutyInstructorRow: configuredTowerDutyInstructorRowEnabled,
       courseColors,
       school,
       dayStart: flyingStartTime,

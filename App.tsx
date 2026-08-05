@@ -5929,6 +5929,8 @@ interface DfpConfig {
   availableAircraftCount: number;
   ftdCount: number;
   cptCount: number;
+  showDutySupervisorRow?: boolean;
+  showTowerDutyInstructorRow?: boolean;
   courseColors: { [key: string]: string };
   school: string;
   dayStart: number;
@@ -7122,6 +7124,8 @@ function generateDfpInternal(
         getEventDayNightClassification,
         staffSharingEnabled, staffSharingUnits, staffSharingGroups
     } = config;
+    const showDutySupervisorRow = config.showDutySupervisorRow === true;
+    const showTowerDutyInstructorRow = config.showTowerDutyInstructorRow === true;
     const buildAircraftResourcePrefix = String(
         config.runtimeResourceContext?.runtimeAircraftTypeCode
         || config.runtimeResourceContext?.resourcePoolAircraftTypeCode
@@ -7167,8 +7171,8 @@ function generateDfpInternal(
         }));
     const buildResources = [
         ...Array.from({ length: buildAircraftResourceCount }, (_, index) => `${buildAircraftResourcePrefix} ${index + 1}`),
-        'Duty Sup',
-        'TWR DI',
+        ...(showDutySupervisorRow ? ['Duty Sup'] : []),
+        ...(showTowerDutyInstructorRow ? ['TWR DI'] : []),
         ...Array.from({ length: 20 }, (_, index) => `STBY ${index + 1}`),
         ...Array.from({ length: Math.max(10, Math.floor(Number(ftdCount) || 0)) }, (_, index) => `FTD ${index + 1}`),
         ...Array.from({ length: Math.max(10, Math.floor(Number(cptCount) || 0)) }, (_, index) => `CPT ${index + 1}`),
@@ -14794,8 +14798,12 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         return result;
     };
 
-    // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
-    recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
+    let nightDutySup: Instructor | null = null;
+    let dutySupEligible: Instructor[] = [];
+
+    // Schedule Duty Supervisors only when the active DFP Resource Rows include that row.
+    if (showDutySupervisorRow) {
+        recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
 
     // Duty Supervisor MUST cover entire Day flying window regardless of flight schedule
     const dayFlights = generatedEvents.filter(e => e.type === 'flight' && !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
@@ -14814,7 +14822,6 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
     // CRITICAL FIX: Determine night duty supervisor FIRST before scheduling day duty supervisors
     // This ensures they are marked as intendedNightStaff and excluded from day scheduling
-    let nightDutySup: Instructor | null = null;
     if (isNightFlyingProgrammed()) {
         buildDebugLog('🌙 Pre-selecting night duty supervisor to prevent day assignments...');
         const nightFlyingInstructorNames = new Set([
@@ -14864,7 +14871,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     }
 
     // NEW RULE: COMPLETE separation - NO day events for instructors with night events
-    const dutySupEligible = instructors.filter(i =>
+    dutySupEligible = instructors.filter(i =>
         (i.isFlyingSupervisor || i.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate)) &&
         !isPersonScheduledForNightEvents(i.name)
     );
@@ -15039,6 +15046,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         }
     } else if (isNightFlyingProgrammed() && !nightDutySup) {
         buildDebugLog('WARNING: Night flying scheduled but no night duty supervisor available!');
+    }
+    } else {
+        buildDebugLog('Duty Supervisor row is not enabled for these DFP Resource Rows; skipping Duty Sup auto-scheduling.');
     }
 
     const currencyPriorityEvents = highestPriorityEvents.filter(event =>
@@ -19370,7 +19380,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             training: airCombatNightTrainingEvents,
             nightWindow: { start: commenceNightFlying, end: ceaseNightFlying },
         };
-        if (airCombatNightSchedulingActive) {
+        if (airCombatNightSchedulingActive && showDutySupervisorRow) {
             recordProgress({ message: 'Scheduling Air Combat night events...', percentage: 43 });
             if (!nightDutySup) {
                 nightDutySup = dutySupEligible.find(sup =>
@@ -26829,6 +26839,8 @@ const App: React.FC = () => {
     const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount, date);
     const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4, date);
     const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6, date);
+    const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'dutySupervisor', 0, date) > 0;
+    const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'towerDutyInstructor', 0, date) > 0;
 
     const getLocalIsoDateForResourceRows = useCallback((offsetDays = 0): string => {
         const dateValue = new Date();
@@ -28444,10 +28456,16 @@ const App: React.FC = () => {
             }
         }
 
+        const resourceEventsForView = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'BuildAnalysis'].includes(activeView)
+            ? nextDayBuildEvents
+            : (publishedSchedules[date] || []);
+        const hasDutySupervisorEvent = resourceEventsForView.some(event => event.resourceId === 'Duty Sup');
+        const hasTowerDutyInstructorEvent = resourceEventsForView.some(event => event.resourceId === 'TWR DI' || event.flightNumber === 'TWR DI');
+
         const allResources = [
             ...aircraftResources,
-            'Duty Sup',
-            'TWR DI',
+            ...(configuredDutySupervisorRowEnabled || hasDutySupervisorEvent ? ['Duty Sup'] : []),
+            ...(configuredTowerDutyInstructorRowEnabled || hasTowerDutyInstructorEvent ? ['TWR DI'] : []),
             ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
             ...Array.from({ length: configuredFtdCount }, (_, i) => `FTD ${i + 1}`),
             ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
@@ -28460,6 +28478,8 @@ const App: React.FC = () => {
         configuredCptCount,
         configuredStandbyCount,
         configuredGroundCount,
+        configuredDutySupervisorRowEnabled,
+        configuredTowerDutyInstructorRowEnabled,
         activeAircraftResourcePrefix,
         setupTestProfile,
         activePlatformResourcePool,
@@ -30294,26 +30314,28 @@ const App: React.FC = () => {
         // console.log('🔴 Conflict check complete. Conflicting event IDs:', Array.from(conflictingEventIds));
         // console.log('🔴 ========== CONFLICT CHECK END ==========');
 
-        // TWR DI Validation Rule: every active trainee solo flight must be fully covered.
-        // Solo events parked on STBY lines are exempt until moved onto an active aircraft line.
-        for (const event of eventsForDate) {
-            if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
-                if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
-                    logValidationTrace('Active DFP', event, 'twr-di-exempt', {
-                        reason: 'Solo STBY events do not require TWR DI until moved to an active aircraft line'
-                    });
+        if (configuredTowerDutyInstructorRowEnabled) {
+            // TWR DI Validation Rule: every active trainee solo flight must be fully covered.
+            // Solo events parked on STBY lines are exempt until moved onto an active aircraft line.
+            for (const event of eventsForDate) {
+                if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+                    if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+                        logValidationTrace('Active DFP', event, 'twr-di-exempt', {
+                            reason: 'Solo STBY events do not require TWR DI until moved to an active aircraft line'
+                        });
+                    }
+                    continue;
                 }
-                continue;
-            }
 
-            if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
-                conflictingEventIds.add(getValidationEventKey(event));
-                logValidationTrace('Active DFP', event, 'twr-di-missing');
+                if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
+                    conflictingEventIds.add(getValidationEventKey(event));
+                    logValidationTrace('Active DFP', event, 'twr-di-missing');
+                }
             }
         }
 
         return conflictingEventIds;
-    }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
+    }, [configuredTowerDutyInstructorRowEnabled, eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
 
     /**
      * Calculate all conflicts for next day build events (used when Validate is checked)
@@ -30346,24 +30368,26 @@ const App: React.FC = () => {
             }
         }
 
-        // TWR DI Validation Rule for Next Day Build: every trainee solo flight must be fully covered.
-        for (const event of nextDayEventsWithDate) {
-            if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
-                if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
-                    logValidationTrace('Next Day Build', event, 'twr-di-exempt', {
-                        reason: 'Solo STBY events do not require TWR DI until moved to an active aircraft line'
-                    });
+        if (configuredTowerDutyInstructorRowEnabled) {
+            // TWR DI Validation Rule for Next Day Build: every trainee solo flight must be fully covered.
+            for (const event of nextDayEventsWithDate) {
+                if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+                    if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+                        logValidationTrace('Next Day Build', event, 'twr-di-exempt', {
+                            reason: 'Solo STBY events do not require TWR DI until moved to an active aircraft line'
+                        });
+                    }
+                    continue;
                 }
-                continue;
-            }
 
-            if (!hasTwrDiCoverageForSolo(event, nextDayEventsWithDate)) {
-                conflictingEventIds.add(getValidationEventKey(event));
-                logValidationTrace('Next Day Build', event, 'twr-di-missing');
+                if (!hasTwrDiCoverageForSolo(event, nextDayEventsWithDate)) {
+                    conflictingEventIds.add(getValidationEventKey(event));
+                    logValidationTrace('Next Day Build', event, 'twr-di-missing');
+                }
             }
         }
         return conflictingEventIds;
-    }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
+    }, [configuredTowerDutyInstructorRowEnabled, nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
 
     /**
      * Unavailability conflicts - personnel assigned during their unavailability periods
@@ -37167,6 +37191,8 @@ const App: React.FC = () => {
             availableAircraftCount: neoAvailableAircraftCount,
             ftdCount: configuredFtdCount,
             cptCount: configuredCptCount,
+            showDutySupervisorRow: configuredDutySupervisorRowEnabled,
+            showTowerDutyInstructorRow: configuredTowerDutyInstructorRowEnabled,
             courseColors,
             school,
             dayStart: flyingStartTime,
