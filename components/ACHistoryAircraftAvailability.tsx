@@ -32,7 +32,7 @@ interface ACHistoryAircraftAvailabilityProps {
 // ─── Tiny SVG line/area chart ────────────────────────────────────────────────
 interface ChartPoint {
   date: string;
-  value: number;
+  value: number | null;
   label: string;
 }
 
@@ -53,7 +53,16 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
     );
   }
 
-  const values = data.map(d => d.value);
+  const plottedData = data.filter((d): d is ChartPoint & { value: number } => d.value !== null);
+  if (plottedData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-gray-500 text-sm">
+        No aircraft availability records found inside this date range
+      </div>
+    );
+  }
+
+  const values = plottedData.map(d => d.value);
   const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
   const maxVal = Math.ceil(Math.max(...values) + 1);
   const range = maxVal - minVal || 1;
@@ -62,13 +71,21 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
   const yScale = (v: number) => PAD.top + chartH - ((v - minVal) / range) * chartH;
 
   // Build polyline points
-  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(' ');
+  const points = plottedData.map(d => {
+    const i = data.findIndex(point => point.date === d.date);
+    return `${xScale(i)},${yScale(d.value)}`;
+  }).join(' ');
 
   // Build area fill path
+  const firstPlottedIndex = data.findIndex(point => point.date === plottedData[0].date);
+  const lastPlottedIndex = data.findIndex(point => point.date === plottedData[plottedData.length - 1].date);
   const areaPath =
-    `M ${xScale(0)},${yScale(data[0].value)} ` +
-    data.slice(1).map((d, i) => `L ${xScale(i + 1)},${yScale(d.value)}`).join(' ') +
-    ` L ${xScale(data.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`;
+    `M ${xScale(firstPlottedIndex)},${yScale(plottedData[0].value)} ` +
+    plottedData.slice(1).map(d => {
+      const i = data.findIndex(point => point.date === d.date);
+      return `L ${xScale(i)},${yScale(d.value)}`;
+    }).join(' ') +
+    ` L ${xScale(lastPlottedIndex)},${PAD.top + chartH} L ${xScale(firstPlottedIndex)},${PAD.top + chartH} Z`;
 
   // Y-axis grid lines (5 ticks)
   const yTicks = Array.from({ length: 5 }, (_, i) => minVal + (range / 4) * i);
@@ -143,7 +160,9 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
         />
 
         {/* Data points + hover */}
-        {data.map((d, i) => (
+        {plottedData.map((d) => {
+          const i = data.findIndex(point => point.date === d.date);
+          return (
           <g key={i}>
             <circle
               cx={xScale(i)} cy={yScale(d.value)}
@@ -162,11 +181,13 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
               onMouseEnter={() => setHovered(i)}
             />
           </g>
-        ))}
+          );
+        })}
 
         {/* Tooltip */}
         {hovered !== null && (() => {
           const d = data[hovered];
+          if (!d || d.value === null) return null;
           const cx = xScale(hovered);
           const cy = yScale(d.value);
           const tipW = 130;
@@ -492,15 +513,15 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
 
   const getDateRange = useCallback((period: TimePeriod): { start: Date; end: Date } => {
     const now = new Date();
-    const end = new Date(now);
-    let start = new Date(now);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let start = new Date(end);
 
     switch (period) {
       case 'week':
-        start.setDate(now.getDate() - 7);
+        start.setDate(end.getDate() - 6);
         break;
       case 'month':
-        start.setMonth(now.getMonth() - 1);
+        start.setDate(end.getDate() - 29);
         break;
       case '6months':
         start.setMonth(now.getMonth() - 6);
@@ -795,12 +816,24 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   }, [records]);
 
   const chartData: ChartPoint[] = useMemo(() =>
-    records.map(r => ({
-      date: r.date,
-      value: r.dailyAverage,
-      label: formatDateLabel(r.date),
-    })),
-    [records]
+    {
+      const { start, end } = getDateRange(selectedPeriod);
+      const recordByDate = new Map(records.map(r => [r.date, r]));
+      const points: ChartPoint[] = [];
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        const date = toISODate(cursor);
+        const record = recordByDate.get(date);
+        points.push({
+          date,
+          value: record ? record.dailyAverage : null,
+          label: formatDateLabel(date),
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return points;
+    },
+    [records, selectedPeriod, getDateRange]
   );
 
   const historicalTotalAircraft = records.length > 0

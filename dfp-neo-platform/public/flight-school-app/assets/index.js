@@ -49415,14 +49415,26 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
   if (data.length === 0) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No data available for the selected period" });
   }
-  const values = data.map((d) => d.value);
+  const plottedData = data.filter((d) => d.value !== null);
+  if (plottedData.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No aircraft availability records found inside this date range" });
+  }
+  const values = plottedData.map((d) => d.value);
   const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
   const maxVal = Math.ceil(Math.max(...values) + 1);
   const range = maxVal - minVal || 1;
   const xScale = (i) => PAD.left + i / Math.max(data.length - 1, 1) * chartW;
   const yScale = (v) => PAD.top + chartH - (v - minVal) / range * chartH;
-  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(" ");
-  const areaPath = `M ${xScale(0)},${yScale(data[0].value)} ` + data.slice(1).map((d, i) => `L ${xScale(i + 1)},${yScale(d.value)}`).join(" ") + ` L ${xScale(data.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`;
+  const points = plottedData.map((d) => {
+    const i = data.findIndex((point) => point.date === d.date);
+    return `${xScale(i)},${yScale(d.value)}`;
+  }).join(" ");
+  const firstPlottedIndex = data.findIndex((point) => point.date === plottedData[0].date);
+  const lastPlottedIndex = data.findIndex((point) => point.date === plottedData[plottedData.length - 1].date);
+  const areaPath = `M ${xScale(firstPlottedIndex)},${yScale(plottedData[0].value)} ` + plottedData.slice(1).map((d) => {
+    const i = data.findIndex((point) => point.date === d.date);
+    return `L ${xScale(i)},${yScale(d.value)}`;
+  }).join(" ") + ` L ${xScale(lastPlottedIndex)},${PAD.top + chartH} L ${xScale(firstPlottedIndex)},${PAD.top + chartH} Z`;
   const yTicks = Array.from({ length: 5 }, (_, i) => minVal + range / 4 * i);
   const xLabelStep = Math.max(1, Math.ceil(data.length / 10));
   const xLabels = data.filter((_, i) => i % xLabelStep === 0 || i === data.length - 1);
@@ -49507,34 +49519,38 @@ const AvailabilityChart = ({ data, totalAircraft }) => {
               strokeLinecap: "round"
             }
           ),
-          data.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "circle",
-              {
-                cx: xScale(i),
-                cy: yScale(d.value),
-                r: hovered === i ? 6 : 3.5,
-                fill: hovered === i ? "#38bdf8" : "#0ea5e9",
-                stroke: hovered === i ? "#fff" : "#1e3a5f",
-                strokeWidth: hovered === i ? 2 : 1,
-                style: { cursor: "pointer", transition: "r 0.1s" },
-                onMouseEnter: () => setHovered(i)
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "rect",
-              {
-                x: xScale(i) - 12,
-                y: PAD.top,
-                width: 24,
-                height: chartH,
-                fill: "transparent",
-                onMouseEnter: () => setHovered(i)
-              }
-            )
-          ] }, i)),
+          plottedData.map((d) => {
+            const i = data.findIndex((point) => point.date === d.date);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "circle",
+                {
+                  cx: xScale(i),
+                  cy: yScale(d.value),
+                  r: hovered === i ? 6 : 3.5,
+                  fill: hovered === i ? "#38bdf8" : "#0ea5e9",
+                  stroke: hovered === i ? "#fff" : "#1e3a5f",
+                  strokeWidth: hovered === i ? 2 : 1,
+                  style: { cursor: "pointer", transition: "r 0.1s" },
+                  onMouseEnter: () => setHovered(i)
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "rect",
+                {
+                  x: xScale(i) - 12,
+                  y: PAD.top,
+                  width: 24,
+                  height: chartH,
+                  fill: "transparent",
+                  onMouseEnter: () => setHovered(i)
+                }
+              )
+            ] }, i);
+          }),
           hovered !== null && (() => {
             const d = data[hovered];
+            if (!d || d.value === null) return null;
             const cx = xScale(hovered);
             const cy = yScale(d.value);
             const tipW = 130;
@@ -49870,14 +49886,14 @@ const ACHistoryAircraftAvailability = ({
   };
   const getDateRange = reactExports.useCallback((period) => {
     const now = /* @__PURE__ */ new Date();
-    const end = new Date(now);
-    let start = new Date(now);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let start = new Date(end);
     switch (period) {
       case "week":
-        start.setDate(now.getDate() - 7);
+        start.setDate(end.getDate() - 6);
         break;
       case "month":
-        start.setMonth(now.getMonth() - 1);
+        start.setDate(end.getDate() - 29);
         break;
       case "6months":
         start.setMonth(now.getMonth() - 6);
@@ -50128,12 +50144,24 @@ const ACHistoryAircraftAvailability = ({
     return { mean, meanPct, max, min, maxRecord, minRecord, trendPct, count: records.length };
   }, [records]);
   const chartData = reactExports.useMemo(
-    () => records.map((r) => ({
-      date: r.date,
-      value: r.dailyAverage,
-      label: formatDateLabel2(r.date)
-    })),
-    [records]
+    () => {
+      const { start, end } = getDateRange(selectedPeriod);
+      const recordByDate = new Map(records.map((r) => [r.date, r]));
+      const points = [];
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        const date = toISODate(cursor);
+        const record = recordByDate.get(date);
+        points.push({
+          date,
+          value: record ? record.dailyAverage : null,
+          label: formatDateLabel2(date)
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return points;
+    },
+    [records, selectedPeriod, getDateRange]
   );
   const historicalTotalAircraft = records.length > 0 ? Math.max(...records.map((r) => r.totalAircraft)) : totalAircraft;
   const getTrendIcon = (trend) => {
