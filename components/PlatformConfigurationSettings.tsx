@@ -2320,15 +2320,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const configLicenses = Array.isArray(config.licenses) ? config.licenses : [];
   const configPlatformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
-  const resourcePoolsDirty = useMemo(() => (
-    JSON.stringify({
+  const resourcePoolsDirty = useMemo(() => {
+    const baselineConfig = resourcePoolsUnlocked && resourcePoolEditBaselineRef.current
+      ? resourcePoolEditBaselineRef.current
+      : loadedConfigRef.current;
+    return JSON.stringify({
       aircraftTypes: Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [],
       resourcePools: Array.isArray(config.resourcePools) ? config.resourcePools : [],
     }) !== JSON.stringify({
-      aircraftTypes: Array.isArray(loadedConfigRef.current.aircraftTypes) ? loadedConfigRef.current.aircraftTypes : [],
-      resourcePools: Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : [],
-    })
-  ), [config.aircraftTypes, config.resourcePools]);
+      aircraftTypes: Array.isArray(baselineConfig.aircraftTypes) ? baselineConfig.aircraftTypes : [],
+      resourcePools: Array.isArray(baselineConfig.resourcePools) ? baselineConfig.resourcePools : [],
+    });
+  }, [config.aircraftTypes, config.resourcePools, resourcePoolsUnlocked]);
   const resourcePoolDeleteOptions = useMemo(() => (
     (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
       const key = String(pool.id || pool.code || `resource-pool-${index}`);
@@ -5497,24 +5500,44 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings))
   );
 
-  const getEditableDfpResourceRows = (pool: any): DfpResourceRowsSnapshot => (
-    resourcePoolsUnlocked
-      ? normaliseDfpResourceRowsSnapshot(pool?.settings || {})
-      : getDfpResourceRowsForDate(pool, getLocalDateString())
-  );
+  const getEditableDfpResourceRows = (pool: any, index: number): DfpResourceRowsSnapshot => {
+    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString());
+
+    const currentRows = normaliseDfpResourceRowsSnapshot(pool?.settings || {});
+    const baselinePools = Array.isArray(resourcePoolEditBaselineRef.current?.resourcePools)
+      ? resourcePoolEditBaselineRef.current.resourcePools
+      : [];
+    const baselineKey = getResourcePoolSaveKey(pool, index);
+    const baselinePool = baselinePools.find((candidate: any, candidateIndex: number) => (
+      getResourcePoolSaveKey(candidate, candidateIndex) === baselineKey
+    ));
+    const baselineRows = normaliseDfpResourceRowsSnapshot(baselinePool?.settings || {});
+    if (!baselinePool || !sameDfpResourceRows(currentRows, baselineRows)) return currentRows;
+
+    return getDfpResourceRowsForDate(pool, getLocalDateString(1));
+  };
 
   const clonePlatformConfigForResourceRowBaseline = (sourceConfig: PlatformConfig): PlatformConfig => (
     JSON.parse(JSON.stringify(sourceConfig))
   );
 
   const enterResourcePoolsEditMode = () => {
-    resourcePoolEditBaselineRef.current = clonePlatformConfigForResourceRowBaseline(loadedConfigRef.current);
+    const tomorrow = getLocalDateString(1);
+    const editConfig = clonePlatformConfigForResourceRowBaseline({
+      ...loadedConfigRef.current,
+      resourcePools: (Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : []).map((pool: any) => ({
+        ...pool,
+        settings: buildDfpResourceRowsSettings(pool.settings || {}, getDfpResourceRowsForDate(pool, tomorrow)),
+      })),
+    });
+    resourcePoolEditBaselineRef.current = editConfig;
+    setConfig(editConfig);
     setResourcePoolsUnlocked(true);
   };
 
   const buildResourceRowSavePlan = (
     candidateConfig: PlatformConfig = config,
-    baselineConfig: PlatformConfig = resourcePoolEditBaselineRef.current || loadedConfigRef.current,
+    baselineConfig: PlatformConfig = loadedConfigRef.current,
   ) => {
     const today = getLocalDateString();
     const tomorrow = getLocalDateString(1);
@@ -5535,11 +5558,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const todayRows = previousPool
         ? getDfpResourceRowsForDate(previousPool, today)
         : normaliseDfpResourceRowsSnapshot(pool.settings || {});
-      const previousRawRows = previousPool
-        ? normaliseDfpResourceRowsSnapshot((previousPool as any).settings || {})
-        : normaliseDfpResourceRowsSnapshot({});
       const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
-      const rawRowsChanged = !previousPool || !sameDfpResourceRows(previousRawRows, nextRows);
+      const rawRowsChanged = !previousPool || !sameDfpResourceRows(previousRows, nextRows);
       const historyChanged = previousPool
         ? !sameDfpResourceRowsHistory((previousPool as any).settings || {}, pool.settings || {})
         : false;
@@ -6754,8 +6774,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         cruiseLevel: aircraft.defaultCruiseAltitudeFl ?? null,
       };
     });
-  const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool }) => {
-    const rowSnapshot = getEditableDfpResourceRows(pool);
+  const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool, index }) => {
+    const rowSnapshot = getEditableDfpResourceRows(pool, index);
     const rowCount = Object.values(rowSnapshot).reduce((total, value) => total + Math.max(0, Number(value) || 0), 0);
     return {
       code: String(pool.code || '').trim(),
@@ -9246,7 +9266,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             )}
             {visibleResourcePoolRows.map(({ pool, index }) => {
-              const editableDfpRows = getEditableDfpResourceRows(pool);
+              const editableDfpRows = getEditableDfpResourceRows(pool, index);
               const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
               const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0
                 ? visibleAircraftTypeOptions

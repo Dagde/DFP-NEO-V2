@@ -68410,13 +68410,16 @@ const PlatformConfigurationSettings = ({
   const configLicenses = Array.isArray(config.licenses) ? config.licenses : [];
   const configPlatformUsers = Array.isArray(config.platformUsers) ? config.platformUsers : [];
   const crewCompositionAircraftTypes = Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [];
-  const resourcePoolsDirty = reactExports.useMemo(() => JSON.stringify({
-    aircraftTypes: Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [],
-    resourcePools: Array.isArray(config.resourcePools) ? config.resourcePools : []
-  }) !== JSON.stringify({
-    aircraftTypes: Array.isArray(loadedConfigRef.current.aircraftTypes) ? loadedConfigRef.current.aircraftTypes : [],
-    resourcePools: Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : []
-  }), [config.aircraftTypes, config.resourcePools]);
+  const resourcePoolsDirty = reactExports.useMemo(() => {
+    const baselineConfig = resourcePoolsUnlocked && resourcePoolEditBaselineRef.current ? resourcePoolEditBaselineRef.current : loadedConfigRef.current;
+    return JSON.stringify({
+      aircraftTypes: Array.isArray(config.aircraftTypes) ? config.aircraftTypes : [],
+      resourcePools: Array.isArray(config.resourcePools) ? config.resourcePools : []
+    }) !== JSON.stringify({
+      aircraftTypes: Array.isArray(baselineConfig.aircraftTypes) ? baselineConfig.aircraftTypes : [],
+      resourcePools: Array.isArray(baselineConfig.resourcePools) ? baselineConfig.resourcePools : []
+    });
+  }, [config.aircraftTypes, config.resourcePools, resourcePoolsUnlocked]);
   const resourcePoolDeleteOptions = reactExports.useMemo(() => (Array.isArray(config.resourcePools) ? config.resourcePools : []).map((pool, index) => {
     const key = String(pool.id || pool.code || `resource-pool-${index}`);
     const name = String(pool.name || "").trim() || "Unnamed DFP Resource Rows";
@@ -70942,13 +70945,31 @@ This removes the reusable permission profile from Settings. Users assigned only 
   }), { ...settings });
   const normaliseDfpResourceRowsHistory = (settings = {}) => Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
   const sameDfpResourceRowsHistory = (leftSettings = {}, rightSettings = {}) => JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings));
-  const getEditableDfpResourceRows = (pool) => resourcePoolsUnlocked ? normaliseDfpResourceRowsSnapshot(pool?.settings || {}) : getDfpResourceRowsForDate(pool, getLocalDateString2());
+  const getEditableDfpResourceRows = (pool, index) => {
+    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString2());
+    const currentRows = normaliseDfpResourceRowsSnapshot(pool?.settings || {});
+    const baselinePools = Array.isArray(resourcePoolEditBaselineRef.current?.resourcePools) ? resourcePoolEditBaselineRef.current.resourcePools : [];
+    const baselineKey = getResourcePoolSaveKey(pool, index);
+    const baselinePool = baselinePools.find((candidate, candidateIndex) => getResourcePoolSaveKey(candidate, candidateIndex) === baselineKey);
+    const baselineRows = normaliseDfpResourceRowsSnapshot(baselinePool?.settings || {});
+    if (!baselinePool || !sameDfpResourceRows(currentRows, baselineRows)) return currentRows;
+    return getDfpResourceRowsForDate(pool, getLocalDateString2(1));
+  };
   const clonePlatformConfigForResourceRowBaseline = (sourceConfig) => JSON.parse(JSON.stringify(sourceConfig));
   const enterResourcePoolsEditMode = () => {
-    resourcePoolEditBaselineRef.current = clonePlatformConfigForResourceRowBaseline(loadedConfigRef.current);
+    const tomorrow = getLocalDateString2(1);
+    const editConfig = clonePlatformConfigForResourceRowBaseline({
+      ...loadedConfigRef.current,
+      resourcePools: (Array.isArray(loadedConfigRef.current.resourcePools) ? loadedConfigRef.current.resourcePools : []).map((pool) => ({
+        ...pool,
+        settings: buildDfpResourceRowsSettings(pool.settings || {}, getDfpResourceRowsForDate(pool, tomorrow))
+      }))
+    });
+    resourcePoolEditBaselineRef.current = editConfig;
+    setConfig(editConfig);
     setResourcePoolsUnlocked(true);
   };
-  const buildResourceRowSavePlan = (candidateConfig = config, baselineConfig = resourcePoolEditBaselineRef.current || loadedConfigRef.current) => {
+  const buildResourceRowSavePlan = (candidateConfig = config, baselineConfig = loadedConfigRef.current) => {
     const today = getLocalDateString2();
     const tomorrow = getLocalDateString2(1);
     const previousPoolsByKey = new Map(
@@ -70961,11 +70982,10 @@ This removes the reusable permission profile from Settings. Users assigned only 
     const nextResourcePools = (candidateConfig.resourcePools || []).map((pool, index) => {
       const key = getResourcePoolSaveKey(pool, index);
       const previousPool = previousPoolsByKey.get(key);
-      previousPool ? getDfpResourceRowsForDate(previousPool, tomorrow) : normaliseDfpResourceRowsSnapshot({});
+      const previousRows = previousPool ? getDfpResourceRowsForDate(previousPool, tomorrow) : normaliseDfpResourceRowsSnapshot({});
       const todayRows = previousPool ? getDfpResourceRowsForDate(previousPool, today) : normaliseDfpResourceRowsSnapshot(pool.settings || {});
-      const previousRawRows = previousPool ? normaliseDfpResourceRowsSnapshot(previousPool.settings || {}) : normaliseDfpResourceRowsSnapshot({});
       const nextRows = normaliseDfpResourceRowsSnapshot(pool.settings || {});
-      const rawRowsChanged = !previousPool || !sameDfpResourceRows(previousRawRows, nextRows);
+      const rawRowsChanged = !previousPool || !sameDfpResourceRows(previousRows, nextRows);
       const historyChanged = previousPool ? !sameDfpResourceRowsHistory(previousPool.settings || {}, pool.settings || {}) : false;
       const rowsChanged = rawRowsChanged || historyChanged;
       if (!rowsChanged) {
@@ -71977,8 +71997,8 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
       cruiseLevel: aircraft.defaultCruiseAltitudeFl ?? null
     };
   });
-  const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool }) => {
-    const rowSnapshot = getEditableDfpResourceRows(pool);
+  const ownershipResourcePoolRows = visibleResourcePoolRows.map(({ pool, index }) => {
+    const rowSnapshot = getEditableDfpResourceRows(pool, index);
     const rowCount = Object.values(rowSnapshot).reduce((total, value) => total + Math.max(0, Number(value) || 0), 0);
     return {
       code: String(pool.code || "").trim(),
@@ -74280,7 +74300,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-cyan-50/75", children: "Press Edit, then Add Rows to create the rows that drive the DFP resource columns." })
         ] }),
         visibleResourcePoolRows.map(({ pool, index }) => {
-          const editableDfpRows = getEditableDfpResourceRows(pool);
+          const editableDfpRows = getEditableDfpResourceRows(pool, index);
           const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
           const aircraftTypeOptions = (visibleAircraftTypeOptions.length > 0 ? visibleAircraftTypeOptions : configAircraftTypes.map((aircraft) => aircraft.code)).filter(Boolean);
           const displayedResourcePoolAircraftTypeCode = pool.aircraftTypeCode || "";
