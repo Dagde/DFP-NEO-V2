@@ -9456,6 +9456,17 @@ const addAircraftAvailabilityContextFilters = (where, params, context, columns =
   }
 };
 
+const addAircraftAvailabilityHistoryContextFilters = (where, params, context, columns = ['locationCode', 'unitCode']) => {
+  if (columns.includes('locationCode') && context.locationCode) {
+    params.push(context.locationCode);
+    where.push(`("locationCode" = $${params.length}::text OR "locationCode" IS NULL OR "locationCode" = '')`);
+  }
+  if (columns.includes('unitCode') && context.unitCode) {
+    params.push(context.unitCode);
+    where.push(`("unitCode" = $${params.length}::text OR "unitCode" IS NULL OR "unitCode" = '')`);
+  }
+};
+
 // GET /api/aircraft-availability-history
 // Returns history records, scoped by date plus optional location/unit context.
 app.get('/api/aircraft-availability-history', async (req, res) => {
@@ -9476,7 +9487,7 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
       params.push(endDate);
       where.push(`"date" <= $1::text`);
     }
-    addAircraftAvailabilityContextFilters(where, params, context);
+    addAircraftAvailabilityHistoryContextFilters(where, params, context);
     if (where.length > 0) query += ` WHERE ${where.join(' AND ')}`;
     query += ` ORDER BY "date" ASC`;
     const rawRecords = await db.$queryRawUnsafe(query, ...params);
