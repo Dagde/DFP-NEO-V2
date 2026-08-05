@@ -285,7 +285,7 @@ const LimitingFactorsSection: React.FC<{
     
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Scheduling Bottlenecks</h2>
+            <h2 className="text-xl font-semibold text-sky-400 mb-4">Scheduling Constraints</h2>
             
             {hasLimitingFactors ? (
                 <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4">

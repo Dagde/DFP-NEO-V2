@@ -94,7 +94,7 @@ interface TIEThresholds {
   atRiskAvgGrade: number;        // avg grade BELOW which trainee is at-risk
   exceedingAvgGrade: number;     // avg grade ABOVE which trainee is exceeding
   concernThresholdGrade: number; // grade BELOW which an element is a concern (pass = >= this value)
-  bottleneckThresholdPct: number;// % of trainees below concern threshold to flag event as bottleneck
+  bottleneckThresholdPct: number;// % of trainees below concern threshold to flag event as elevated risk
   highVarianceThreshold: number; // grade std-dev ABOVE which event has high variance
   normalMinGrade: number;
   atRiskAverageEnabled: boolean;
@@ -1149,8 +1149,8 @@ const ThresholdSettingsPanel: React.FC<{
     },
     {
       key: 'bottleneckThresholdPct',
-      label: 'Bottleneck % Threshold',
-      desc: 'Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as a training bottleneck.',
+      label: 'Elevated Risk % Threshold',
+      desc: 'Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as an elevated risk event.',
       min: 10, max: 80, step: 5,
     },
     {
@@ -1443,7 +1443,7 @@ const CourseTab: React.FC<{
   const bottleneckEvents = parseJ(summary.bottleneckEvents, []) as string[];
   const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []) as string[];
 
-  // Derive over-serviced events from event data if summary is empty
+  // Derive low risk events from event data if summary is empty
   const overServicedFromEvents = events
     .filter(ev => ev.overServiceIndicator === true || (ev as any).overServiceIndicator === 'true' || (ev as any).overServiceIndicator === 1)
     .map(ev => ev.eventCode);
@@ -1472,7 +1472,7 @@ const CourseTab: React.FC<{
           color={atRisk > 0 ? 'text-red-400' : 'text-gray-400'} sub={`of ${trainees.length} trainees`} />
         <StatCard label={`${trainingReportDisplayName} Records`} value={summary.totalPt051s} sub={`${trainees.length} trainees`} />
         <StatCard label="Events" value={events.length}
-          sub={`${bottleneckEvents.length} bottleneck`}
+          sub={`${bottleneckEvents.length} elevated risk`}
           color={bottleneckEvents.length > 0 ? 'text-orange-400' : 'text-white'} />
       </div>
 
@@ -1604,7 +1604,7 @@ const CourseTab: React.FC<{
             </div>
             <p className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-700/60">
               Pass = grade ≥ <span className="text-gray-400 font-mono">{thresholds.concernThresholdGrade}</span> (Satisfactory or above).
-              {' '}Bottleneck = &gt;<span className="text-gray-400 font-mono">{thresholds.bottleneckThresholdPct}%</span> trainees below pass grade.
+              {' '}Elevated risk = &gt;<span className="text-gray-400 font-mono">{thresholds.bottleneckThresholdPct}%</span> trainees below pass grade.
             </p>
           </div>
         </SCard>
@@ -1627,7 +1627,7 @@ const CourseTab: React.FC<{
                   <SparkBar value={safeN(ev.avgOverallGrade)} />
                 </div>
                 <span className="text-xs text-gray-500 w-16 flex-shrink-0 text-right">{ev.totalAttempts} tries</span>
-                {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">BOTTLENECK</span>}
+                {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">ELEVATED RISK</span>}
               </div>
             ))}
           </div>
@@ -1675,11 +1675,11 @@ const CourseTab: React.FC<{
         </>
       )}
 
-      {/* Row 4: Bottleneck + Over-Service */}
+      {/* Row 4: Elevated Risk + Low Risk */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SCard title="Bottleneck Events">
+        <SCard title="Elevated Risk Events">
           {bottleneckEvents.length === 0
-            ? <p className="text-gray-500 text-sm">No bottlenecks detected</p>
+            ? <p className="text-gray-500 text-sm">No elevated risk events detected</p>
             : (
               <>
                 <p className="text-xs text-gray-500 mb-2">Events where trainees consistently struggle — high difficulty score, low pass rate, or recurring weak elements.</p>
@@ -1688,12 +1688,12 @@ const CourseTab: React.FC<{
               </>
             )}
         </SCard>
-        <SCard title="Over-Serviced Events">
+        <SCard title="Low Risk Events">
           <p className="text-xs text-gray-500 mb-2">
-            Over-serviced events are events where trainees perform well above expectations — high pass rates and grades suggest these events may receive disproportionate training time relative to their difficulty. Consider reallocating focus to bottleneck events.
+            Low risk events are events where trainees perform well above expectations — high pass rates and grades suggest these events may require less attention than elevated risk events.
           </p>
           {overServicedEvents.length === 0
-            ? <p className="text-gray-500 text-sm">No over-serviced events detected</p>
+            ? <p className="text-gray-500 text-sm">No low risk events detected</p>
             : <div className="flex flex-wrap gap-2">{overServicedEvents.map(e => <Tag key={e} text={e} type="green" />)}</div>}
         </SCard>
       </div>
@@ -2112,8 +2112,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   // Grading scale: 1=Unsatisfactory, 2=Below Standard, 3=Satisfactory(Pass), 4=Above Avg, 5=Exceptional
   // Pass threshold: grade >= 3 is a PASS. Only grades 1 or 2 are failures.
   //
-  // Old DB bottleneckScore was computed with WRONG threshold (counted grade 3 as fail).
-  // So bottleneckScore is heavily inflated. We derive pass rate from avgOverallGrade instead:
+  // Old DB elevated-risk score was computed with WRONG threshold (counted grade 3 as fail).
+  // So the stored score is heavily inflated. We derive pass rate from avgOverallGrade instead:
   //   - avg = 3.0 means all grades are exactly 3 → 100% pass
   //   - avg = 2.8 means some grade-2s dragging it down → some failures
   //   - avg = 2.5 means roughly half grade-2, half grade-3 → ~50% pass
@@ -2247,7 +2247,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                         <span className="text-red-400 font-bold text-sm w-5 text-center">#{idx + 1}</span>
                         <span className="text-white font-semibold text-sm">{ev.eventCode}</span>
                         {safeN(ev.bottleneckScore) > 0.5 && (
-                          <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded">BOTTLENECK</span>
+                          <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded">ELEVATED RISK</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
@@ -2274,7 +2274,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <div>
                         <h4 className="text-red-400 font-semibold text-xs uppercase tracking-wide mb-1.5">Why This Event Is a Struggle</h4>
                         <p className="text-gray-300 text-sm leading-relaxed">
-                          {ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) > 0.5 ? ` It is classified as a training bottleneck — a high proportion of trainees are scoring below the satisfactory threshold.` : ''} ${safeN(ev.gradeVariance) > 1 ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ''}`}
+                          {ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) > 0.5 ? ` It is classified as an elevated risk event because a high proportion of trainees are scoring below the satisfactory threshold.` : ''} ${safeN(ev.gradeVariance) > 1 ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ''}`}
                         </p>
                       </div>
 
@@ -2389,7 +2389,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <div>
                         <h4 className="text-emerald-400 font-semibold text-xs uppercase tracking-wide mb-1.5">Why Trainees Excel at This Event</h4>
                         <p className="text-gray-300 text-sm leading-relaxed">
-                          {ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, making it one of the strongest-performing events in this course.${ev.overServiceIndicator ? ` This event shows signs of being over-serviced — trainees consistently perform at or near mastery before reaching it, which may indicate that preceding training adequately prepares them or that the event itself is not sufficiently challenging.` : ''} ${safeN(ev.gradeVariance) < 0.5 ? `The low grade variance (${safe(ev.gradeVariance, 2)}) shows consistent high performance across the cohort.` : ''}`}
+                          {ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, making it one of the strongest-performing events in this course.${ev.overServiceIndicator ? ` This event is classified as low risk because trainees consistently perform at or near mastery before reaching it, which may indicate that preceding training adequately prepares them or that the event itself is not sufficiently challenging.` : ''} ${safeN(ev.gradeVariance) < 0.5 ? `The low grade variance (${safe(ev.gradeVariance, 2)}) shows consistent high performance across the cohort.` : ''}`}
                         </p>
                       </div>
 
@@ -2482,8 +2482,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none">BN</span>}
-                        {ev.overServiceIndicator && <span className="text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none">OS</span>}
+                        {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none">ER</span>}
+                        {ev.overServiceIndicator && <span className="text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none">LR</span>}
                       </div>
                     </td>
                   </tr>
@@ -2658,8 +2658,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {safeN(selected.bottleneckScore) > 0.5 && <Tag text="Bottleneck" type="red" />}
-                {selected.overServiceIndicator && <Tag text="Over-Serviced" type="green" />}
+                {safeN(selected.bottleneckScore) > 0.5 && <Tag text="Elevated Risk" type="red" />}
+                {selected.overServiceIndicator && <Tag text="Low Risk" type="green" />}
               </div>
             </div>
 

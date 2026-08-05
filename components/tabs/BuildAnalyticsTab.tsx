@@ -133,7 +133,7 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({
           </p>
           <ul className="text-sm text-slate-500 mt-4 space-y-1">
             <li>Build Summary (events, {aircraftNoun}, utilization)</li>
-            <li>Scheduling Bottlenecks</li>
+            <li>Scheduling Constraints</li>
             <li>Time Distribution Analysis</li>
             <li>Insights & Recommendations</li>
           </ul>
@@ -169,7 +169,7 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({
         </div>
       </fieldset>
 
-      {/* Scheduling Bottlenecks */}
+      {/* Scheduling Constraints */}
       <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} instructorLabel={instructorLabel} />
 
       {/* Time Distribution */}

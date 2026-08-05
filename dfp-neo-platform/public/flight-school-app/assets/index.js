@@ -44931,7 +44931,7 @@ const LimitingFactorsSection = ({
   });
   const hasLimitingFactors = Object.values(totalLimitingFactors).some((v) => v > 0);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Scheduling Bottlenecks" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Scheduling Constraints" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: hasLimitingFactors ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-500/10 border border-amber-500/40 rounded-lg p-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-amber-300 font-semibold mb-3 flex items-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-2", children: "⚠" }),
@@ -45132,7 +45132,7 @@ const BuildAnalyticsTab = ({
             aircraftNoun,
             ", utilization)"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Scheduling Bottlenecks" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Scheduling Constraints" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Time Distribution Analysis" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Insights & Recommendations" })
         ] })
@@ -46077,8 +46077,8 @@ const ThresholdSettingsPanel = ({ onClose, onSave }) => {
     },
     {
       key: "bottleneckThresholdPct",
-      label: "Bottleneck % Threshold",
-      desc: "Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as a training bottleneck.",
+      label: "Elevated Risk % Threshold",
+      desc: "Percentage of trainees scoring below the concern threshold that triggers an event to be flagged as an elevated risk event.",
       min: 10,
       max: 80,
       step: 5
@@ -46384,7 +46384,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
         {
           label: "Events",
           value: events.length,
-          sub: `${bottleneckEvents.length} bottleneck`,
+          sub: `${bottleneckEvents.length} elevated risk`,
           color: bottleneckEvents.length > 0 ? "text-orange-400" : "text-white"
         }
       )
@@ -46524,7 +46524,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 font-mono", children: thresholds.concernThresholdGrade }),
             " (Satisfactory or above).",
             " ",
-            "Bottleneck = >",
+            "Elevated risk = >",
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-400 font-mono", children: [
               thresholds.bottleneckThresholdPct,
               "%"
@@ -46546,7 +46546,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
         ev.totalAttempts,
         " tries"
       ] }),
-      safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "BOTTLENECK" })
+      safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0", children: "ELEVATED RISK" })
     ] }, ev.id || ev.eventCode)) }) : events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "Event grades not yet computed — run analytics to populate" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No event data — run analytics first" }) }),
     topByAttempts.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       eventAvgExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4", onClick: () => setEventAvgExpanded(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full max-w-6xl p-6", style: { maxHeight: "90vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), children: [
@@ -46575,7 +46575,7 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
       ] }), children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ColChart, { data: topByAttempts.map((ev) => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) })), max: 5, height: 130 }) }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Bottleneck Events", children: bottleneckEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No bottlenecks detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Elevated Risk Events", children: bottleneckEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No elevated risk events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mb-2", children: "Events where trainees consistently struggle — high difficulty score, low pass rate, or recurring weak elements." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: bottleneckEvents.slice(0, 5).map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "red" }, e)) }),
         bottleneckEvents.length > 5 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-600 mt-2", children: [
@@ -46584,9 +46584,9 @@ const CourseTab = ({ summary, trainees, events, trainingReportDisplayName }) => 
           " more"
         ] })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(SCard, { title: "Over-Serviced Events", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mb-2", children: "Over-serviced events are events where trainees perform well above expectations — high pass rates and grades suggest these events may receive disproportionate training time relative to their difficulty. Consider reallocating focus to bottleneck events." }),
-        overServicedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No over-serviced events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: overServicedEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "green" }, e)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(SCard, { title: "Low Risk Events", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mb-2", children: "Low risk events are events where trainees perform well above expectations — high pass rates and grades suggest these events may require less attention than elevated risk events." }),
+        overServicedEvents.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm", children: "No low risk events detected" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: overServicedEvents.map((e) => /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: e, type: "green" }, e)) })
       ] })
     ] }),
     events.length > 0 && allSkills.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Skill Weakness Heatmap (Event x Skill Family)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "text-xs", children: [
@@ -47024,7 +47024,7 @@ const EventsTab = ({ events }) => {
                         idx + 1
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-semibold text-sm", children: ev.eventCode }),
-                      safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded", children: "BOTTLENECK" })
+                      safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded", children: "ELEVATED RISK" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-lg font-bold font-mono ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }),
@@ -47044,7 +47044,7 @@ const EventsTab = ({ events }) => {
             isSelected && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 mx-1 bg-gray-900/80 border border-red-900/40 rounded-lg p-4 space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-red-400 font-semibold text-xs uppercase tracking-wide mb-1.5", children: "Why This Event Is a Struggle" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed", children: ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) > 0.5 ? ` It is classified as a training bottleneck — a high proportion of trainees are scoring below the satisfactory threshold.` : ""} ${safeN(ev.gradeVariance) > 1 ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ""}` })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed", children: ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, placing it among the most challenging events in this course.${safeN(ev.bottleneckScore) > 0.5 ? ` It is classified as an elevated risk event because a high proportion of trainees are scoring below the satisfactory threshold.` : ""} ${safeN(ev.gradeVariance) > 1 ? `The high grade variance (${safe(ev.gradeVariance, 2)}) indicates inconsistent performance, suggesting the event exposes gaps in preparation or foundational skills.` : ""}` })
               ] }),
               weakEls.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-red-400 font-semibold text-xs uppercase tracking-wide mb-1.5", children: "Assessment Elements Contributing to Low Scores" }),
@@ -47122,7 +47122,7 @@ const EventsTab = ({ events }) => {
             isSelected && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 mx-1 bg-gray-900/80 border border-emerald-900/40 rounded-lg p-4 space-y-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-emerald-400 font-semibold text-xs uppercase tracking-wide mb-1.5", children: "Why Trainees Excel at This Event" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed", children: ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, making it one of the strongest-performing events in this course.${ev.overServiceIndicator ? ` This event shows signs of being over-serviced — trainees consistently perform at or near mastery before reaching it, which may indicate that preceding training adequately prepares them or that the event itself is not sufficiently challenging.` : ""} ${safeN(ev.gradeVariance) < 0.5 ? `The low grade variance (${safe(ev.gradeVariance, 2)}) shows consistent high performance across the cohort.` : ""}` })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm leading-relaxed", children: ev.narrativeSummary || `${ev.eventCode} has a mean grade of ${safe(ev.avgOverallGrade, 2)} across ${ev.totalAttempts} assessments, making it one of the strongest-performing events in this course.${ev.overServiceIndicator ? ` This event is classified as low risk because trainees consistently perform at or near mastery before reaching it, which may indicate that preceding training adequately prepares them or that the event itself is not sufficiently challenging.` : ""} ${safeN(ev.gradeVariance) < 0.5 ? `The low grade variance (${safe(ev.gradeVariance, 2)}) shows consistent high performance across the cohort.` : ""}` })
               ] }),
               strongEls.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-emerald-400 font-semibold text-xs uppercase tracking-wide mb-1.5", children: "Assessment Elements Where Trainees Performed Well" }),
@@ -47186,8 +47186,8 @@ const EventsTab = ({ events }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > 1 ? "text-orange-400" : "text-gray-400"}`, children: safe(ev.gradeVariance, 2) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SparkBar, { value: safeN(ev.difficultyScore), max: 1 }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", children: [
-                  safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none", children: "BN" }),
-                  ev.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none", children: "OS" })
+                  safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none", children: "ER" }),
+                  ev.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none", children: "LR" })
                 ] }) })
               ]
             },
@@ -47353,8 +47353,8 @@ const EventsTab = ({ events }) => {
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-1.5 mt-3", children: [
-            safeN(selected.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Bottleneck", type: "red" }),
-            selected.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Over-Serviced", type: "green" })
+            safeN(selected.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Elevated Risk", type: "red" }),
+            selected.overServiceIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx(Tag, { text: "Low Risk", type: "green" })
           ] })
         ] }),
         Object.keys(selSkills).length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(SCard, { title: "Skill Family Scores", children: /* @__PURE__ */ jsxRuntimeExports.jsx(HBarChart, { data: Object.entries(selSkills).sort((a, b) => a[1] - b[1]).map(([l, v]) => ({ label: l, value: v })) }) }),

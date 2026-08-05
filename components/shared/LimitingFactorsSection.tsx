@@ -66,7 +66,7 @@ const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
   return (
     <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
       <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
-        <h2 className="text-lg font-semibold text-white">Scheduling Bottlenecks</h2>
+        <h2 className="text-lg font-semibold text-white">Scheduling Constraints</h2>
       </div>
       <div className="p-5">
         {hasLimitingFactors ? (
