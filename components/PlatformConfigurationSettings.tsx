@@ -2175,6 +2175,7 @@ interface PlatformConfigurationSettingsProps {
   focusUserId?: string;
   focusSubsectionId?: string;
   onNavigateToSettingsSection?: (target: ConfigurationHealthSettingsTarget) => void;
+  onSetHeaderAction?: (action: React.ReactNode | null) => void;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -2204,6 +2205,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   focusUserId = '',
   focusSubsectionId = '',
   onNavigateToSettingsSection,
+  onSetHeaderAction,
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -2225,6 +2227,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [trainingReportElementNameDrafts, setTrainingReportElementNameDrafts] = useState<Record<string, string>>({});
   const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = useState<Record<string, string>>({});
   const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = useState('');
+  const [trainingReportPreviewOpen, setTrainingReportPreviewOpen] = useState(false);
 
   const showPlatformConfigError = useCallback((message: string, link: PlatformConfigSaveBlocker['link'] | null = null) => {
     setError(message);
@@ -2254,6 +2257,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
   }, []);
+
+  useEffect(() => {
+    if (!onSetHeaderAction || scrollTarget !== 'platform-training-report-template') return undefined;
+    onSetHeaderAction(
+      <button
+        type="button"
+        onClick={() => setTrainingReportPreviewOpen(true)}
+        className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200"
+      >
+        Preview
+      </button>,
+    );
+    return () => onSetHeaderAction(null);
+  }, [onSetHeaderAction, scrollTarget]);
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -2844,6 +2861,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const rollingWindowRepeatGradeSummary = describeTrainingReportGrades(
     trainingReportTemplate.repeatRules.rollingWindow.grades,
   );
+  const trainingReportCompletionStatusPreview = trainingReportTemplate.completionResults
+    .filter((option) => option.enabled !== false)
+    .map((option) => option.label)
+    .join(' / ') || 'Complete';
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes,
     false,
@@ -7306,6 +7327,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   return (
     <div className="relative space-y-8" onKeyDownCapture={handleSettingsKeyDownCapture}>
+      {trainingReportPreviewOpen && (
+        <TrainingReportFullPreviewFlyout
+          template={trainingReportTemplate}
+          elements={trainingReportPreviewElements}
+          completionStatusPreview={trainingReportCompletionStatusPreview}
+          resourceLabel={getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode)}
+          callsign={trainingReportPreviewCallsign}
+          unitCode={trainingReportPreviewUnitCode}
+          onClose={() => setTrainingReportPreviewOpen(false)}
+        />
+      )}
       {applyingChanges && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm">
           <div className="rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl">
@@ -10477,7 +10509,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
                 <TrainingReportModulePreview title={trainingReportTemplate.modules.overallAssessment.title}>
                   <div className="grid gap-3 md:grid-cols-4">
-                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(' / ') || 'Complete'} />
+                    <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.result} value={trainingReportCompletionStatusPreview} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallGrade} value={trainingReportTemplate.grades.showNumbers ? '7 - Very Good' : 'Very Good'} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.overallResult} value={`${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}`} />
                     <TrainingReportPreviewCell label={trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment} value="Assessment / 85%" />
@@ -12711,6 +12743,137 @@ const TrainingReportPreviewCell = ({ label, value }: { label: string; value: str
     <div className="mt-1 text-sm font-semibold text-gray-100">{value}</div>
   </div>
 );
+
+const TrainingReportFullPreviewFlyout = ({
+  template,
+  elements,
+  completionStatusPreview,
+  resourceLabel,
+  callsign,
+  unitCode,
+  onClose,
+}: {
+  template: TrainingReportTemplate;
+  elements: string[];
+  completionStatusPreview: string;
+  resourceLabel: string;
+  callsign: string;
+  unitCode: string;
+  onClose: () => void;
+}) => {
+  const visibleGrades = template.grades.options
+    .filter((option) => option.enabled !== false)
+    .sort((a, b) => b.value - a.value);
+  const formatGradeLabel = (grade: TrainingReportTemplate['grades']['options'][number]) => (
+    template.grades.showNumbers ? `${grade.value} - ${grade.label}` : grade.label
+  );
+
+  return (
+    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/75 px-4 py-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Training Report Preview">
+      <div className="flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-cyan-400/40 bg-gray-900 shadow-2xl">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950 px-5 py-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">Preview</div>
+            <h3 className="mt-1 text-2xl font-black text-white">{template.displayName || template.genericName || 'Training Report'}</h3>
+            <p className="mt-1 text-sm text-gray-400">Full-size report preview using the current Training Reports settings.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200"
+          >
+            Close
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-gray-950 p-5">
+          <div className="mx-auto max-w-6xl rounded-lg border border-gray-700 bg-gray-900 p-5 text-gray-100 shadow-xl">
+            <div className="border-b border-gray-700 pb-4">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">{template.genericName || 'Training Report'}</div>
+              <h4 className="mt-1 text-3xl font-black text-white">{template.displayName || template.genericName || 'Training Report'}</h4>
+            </div>
+
+            <section className="mt-5">
+              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.overview.title}</h5>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <TrainingReportPreviewCell label={template.modules.overview.fields.event} value="Event 1" />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.training} value="Training Package" />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.type} value="Flight" />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.timing} value="08:00 / 1.2h" />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.resource} value={resourceLabel} />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.callsign} value={callsign} />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.unit} value={unitCode} />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.date} value="07 Jun 26" />
+                <TrainingReportPreviewCell label={template.modules.overview.fields.assessor} value="Assessor Name" />
+              </div>
+            </section>
+
+            <section className="mt-6">
+              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.overallAssessment.title}</h5>
+              <div className="mt-3 grid gap-3 md:grid-cols-4">
+                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.result} value={completionStatusPreview} />
+                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.overallGrade} value={visibleGrades[0] ? formatGradeLabel(visibleGrades[0]) : 'Not selected'} />
+                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.overallResult} value={`${template.overallResults.passLabel} / ${template.overallResults.failLabel}`} />
+                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.groundSchoolAssessment} value="Assessment / 85%" />
+              </div>
+            </section>
+
+            <section className="mt-6">
+              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.assessmentMatrix.title}</h5>
+              <div className="mt-3 overflow-x-auto rounded border border-gray-700 bg-gray-950/60">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-gray-700 text-[10px] uppercase tracking-wide text-gray-400">
+                    <tr>
+                      <th className="px-3 py-3">Element</th>
+                      {visibleGrades.map((grade) => (
+                        <th key={grade.value} className="min-w-[96px] px-2 py-3 text-center">{formatGradeLabel(grade)}</th>
+                      ))}
+                      <th className="min-w-[220px] px-3 py-3">Comments</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {elements.length > 0 ? elements.map((element, elementIndex) => (
+                      <tr key={element} className="border-b border-gray-800 last:border-b-0">
+                        <td className="px-3 py-3 font-semibold text-white">{element}</td>
+                        {visibleGrades.map((grade, gradeIndex) => (
+                          <td key={grade.value} className="px-2 py-3 text-center">
+                            <span className={`mx-auto block h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === 0 ? 'border-cyan-300 bg-cyan-400' : 'border-gray-500 bg-gray-900'}`} />
+                          </td>
+                        ))}
+                        <td className="px-3 py-3 text-gray-400">Element comments appear here.</td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td className="px-3 py-4 text-sm italic text-gray-500" colSpan={visibleGrades.length + 2}>No assessment elements configured.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="mt-6">
+              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.comments.title}</h5>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <TrainingReportPreviewCell label={template.modules.comments.fields.assessor} value="Assessor Name" />
+                <TrainingReportPreviewCell label={template.modules.comments.fields.weather} value="VMC, light turbulence" />
+                <TrainingReportPreviewCell label={template.modules.comments.fields.nest} value="NEST 2" />
+                <div className="md:col-span-3">
+                  <TrainingReportPreviewCell label={template.modules.comments.fields.profile} value="Profile narrative appears here." />
+                </div>
+                <div className="md:col-span-3">
+                  <TrainingReportPreviewCell label={template.modules.comments.fields.overall} value="Overall assessment narrative appears here." />
+                </div>
+                <div className="md:col-span-3">
+                  <TrainingReportPreviewCell label={template.modules.comments.fields.notes} value="Model-specific notes appear here." />
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TrainingReportModulePreview = ({
   title,

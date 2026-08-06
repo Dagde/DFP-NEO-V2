@@ -68248,6 +68248,7 @@ const PlatformConfigurationSettings = ({
   focusUserId = "",
   focusSubsectionId = "",
   onNavigateToSettingsSection,
+  onSetHeaderAction,
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -68269,6 +68270,7 @@ const PlatformConfigurationSettings = ({
   const [trainingReportElementNameDrafts, setTrainingReportElementNameDrafts] = reactExports.useState({});
   const [trainingReportElementGroupDrafts, setTrainingReportElementGroupDrafts] = reactExports.useState({});
   const [trainingReportNewElementDraft, setTrainingReportNewElementDraft] = reactExports.useState("");
+  const [trainingReportPreviewOpen, setTrainingReportPreviewOpen] = reactExports.useState(false);
   const showPlatformConfigError = reactExports.useCallback((message, link = null) => {
     setError(message);
     setErrorLink(link);
@@ -68292,6 +68294,21 @@ const PlatformConfigurationSettings = ({
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
   }, []);
+  reactExports.useEffect(() => {
+    if (!onSetHeaderAction || scrollTarget !== "platform-training-report-template") return void 0;
+    onSetHeaderAction(
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setTrainingReportPreviewOpen(true),
+          className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200",
+          children: "Preview"
+        }
+      )
+    );
+    return () => onSetHeaderAction(null);
+  }, [onSetHeaderAction, scrollTarget]);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -68812,6 +68829,7 @@ const PlatformConfigurationSettings = ({
   const rollingWindowRepeatGradeSummary = describeTrainingReportGrades(
     trainingReportTemplate.repeatRules.rollingWindow.grades
   );
+  const trainingReportCompletionStatusPreview = trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "Complete";
   const insertEventTypes = normaliseInsertEventTypes(
     primaryOrganisationSettings.insertEventTypes,
     false
@@ -72376,6 +72394,18 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
     ] });
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", onKeyDownCapture: handleSettingsKeyDownCapture, children: [
+    trainingReportPreviewOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TrainingReportFullPreviewFlyout,
+      {
+        template: trainingReportTemplate,
+        elements: trainingReportPreviewElements,
+        completionStatusPreview: trainingReportCompletionStatusPreview,
+        resourceLabel: getAircraftTypeDisplayLabel(trainingReportPreviewAircraftTypeCode),
+        callsign: trainingReportPreviewCallsign,
+        unitCode: trainingReportPreviewUnitCode,
+        onClose: () => setTrainingReportPreviewOpen(false)
+      }
+    ),
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The updated platform settings are being applied across the running app." })
@@ -75426,7 +75456,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 key
               )) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportModulePreview, { title: trainingReportTemplate.modules.overallAssessment.title, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportTemplate.completionResults.filter((option) => option.enabled !== false).map((option) => option.label).join(" / ") || "Complete" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.result, value: trainingReportCompletionStatusPreview }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallGrade, value: trainingReportTemplate.grades.showNumbers ? "7 - Very Good" : "Very Good" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.overallResult, value: `${trainingReportTemplate.overallResults.passLabel} / ${trainingReportTemplate.overallResults.failLabel}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: trainingReportTemplate.modules.overallAssessment.fields.groundSchoolAssessment, value: "Assessment / 85%" })
@@ -77502,6 +77532,91 @@ const TrainingReportPreviewCell = ({ label, value }) => /* @__PURE__ */ jsxRunti
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold uppercase tracking-wide text-gray-500", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-semibold text-gray-100", children: value })
 ] });
+const TrainingReportFullPreviewFlyout = ({
+  template,
+  elements,
+  completionStatusPreview,
+  resourceLabel,
+  callsign,
+  unitCode,
+  onClose
+}) => {
+  const visibleGrades = template.grades.options.filter((option) => option.enabled !== false).sort((a, b) => b.value - a.value);
+  const formatGradeLabel = (grade) => template.grades.showNumbers ? `${grade.value} - ${grade.label}` : grade.label;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/75 px-4 py-5 backdrop-blur-sm", role: "dialog", "aria-modal": "true", "aria-label": "Training Report Preview", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-cyan-400/40 bg-gray-900 shadow-2xl", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300", children: "Preview" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-2xl font-black text-white", children: template.displayName || template.genericName || "Training Report" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Full-size report preview using the current Training Reports settings." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: onClose,
+          className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200",
+          children: "Close"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-950 p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-6xl rounded-lg border border-gray-700 bg-gray-900 p-5 text-gray-100 shadow-xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 pb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500", children: template.genericName || "Training Report" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-3xl font-black text-white", children: template.displayName || template.genericName || "Training Report" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "mt-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-black uppercase tracking-wide text-cyan-200", children: template.modules.overview.title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.event, value: "Event 1" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.training, value: "Training Package" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.type, value: "Flight" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.timing, value: "08:00 / 1.2h" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.resource, value: resourceLabel }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.callsign, value: callsign }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.unit, value: unitCode }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.date, value: "07 Jun 26" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overview.fields.assessor, value: "Assessor Name" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "mt-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-black uppercase tracking-wide text-cyan-200", children: template.modules.overallAssessment.title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overallAssessment.fields.result, value: completionStatusPreview }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overallAssessment.fields.overallGrade, value: visibleGrades[0] ? formatGradeLabel(visibleGrades[0]) : "Not selected" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overallAssessment.fields.overallResult, value: `${template.overallResults.passLabel} / ${template.overallResults.failLabel}` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.overallAssessment.fields.groundSchoolAssessment, value: "Assessment / 85%" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "mt-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-black uppercase tracking-wide text-cyan-200", children: template.modules.assessmentMatrix.title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 overflow-x-auto rounded border border-gray-700 bg-gray-950/60", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "border-b border-gray-700 text-[10px] uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3", children: "Element" }),
+            visibleGrades.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[96px] px-2 py-3 text-center", children: formatGradeLabel(grade) }, grade.value)),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[220px] px-3 py-3", children: "Comments" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: elements.length > 0 ? elements.map((element, elementIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-800 last:border-b-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 font-semibold text-white", children: element }),
+            visibleGrades.map((grade, gradeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-3 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mx-auto block h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === 0 ? "border-cyan-300 bg-cyan-400" : "border-gray-500 bg-gray-900"}` }) }, grade.value)),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-gray-400", children: "Element comments appear here." })
+          ] }, element)) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-4 text-sm italic text-gray-500", colSpan: visibleGrades.length + 2, children: "No assessment elements configured." }) }) })
+        ] }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "mt-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-black uppercase tracking-wide text-cyan-200", children: template.modules.comments.title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.comments.fields.assessor, value: "Assessor Name" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.comments.fields.weather, value: "VMC, light turbulence" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.comments.fields.nest, value: "NEST 2" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.comments.fields.profile, value: "Profile narrative appears here." }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.comments.fields.overall, value: "Overall assessment narrative appears here." }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingReportPreviewCell, { label: template.modules.comments.fields.notes, value: "Model-specific notes appear here." }) })
+        ] })
+      ] })
+    ] }) })
+  ] }) });
+};
 const TrainingReportModulePreview = ({
   title,
   children
@@ -78785,7 +78900,13 @@ const SettingsViewWithMenu = (props) => {
     }
     return "platform-configuration-health";
   });
+  const [settingsHeaderAction, setSettingsHeaderAction] = reactExports.useState(null);
   const { isFrozen } = useSystemFreeze();
+  reactExports.useEffect(() => {
+    if (activeSection !== "training-report-template") {
+      setSettingsHeaderAction(null);
+    }
+  }, [activeSection]);
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState(() => {
     try {
       const restoreTab = sessionStorage.getItem("dfp_restore_scoring_matrix_tab");
@@ -79342,6 +79463,7 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: getSectionLabel(activeSection) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
+            settingsHeaderAction,
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${getSectionLabel(activeSection)}` })
           ] })
         ] }),
@@ -79388,6 +79510,7 @@ const SettingsViewWithMenu = (props) => {
               focusUserId: settingsFocusTarget?.userId,
               focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
               onNavigateToSettingsSection: navigateToSettingsSection,
+              onSetHeaderAction: setSettingsHeaderAction,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
               phraseBank: props.phraseBank,
