@@ -77545,7 +77545,7 @@ const TrainingReportFullPreviewFlyout = ({
   const formatGradeLabel = (grade) => template.grades.showNumbers ? `${grade.value} - ${grade.label}` : grade.label;
   const formatGradeTileLabel = (grade) => grade.isNoGrade ? "No Grade" : template.grades.showNumbers ? `${grade.value} ${grade.label}` : grade.label;
   const reportTitle = template.displayName || template.genericName || "Training Report";
-  const sampleEvent = "BGF2";
+  const sampleEvent = "EventX";
   const sampleType = "Basic AP Operation; Climbing; Descending; Re-join Landing";
   const sampleInstructor = "FLTLT Hall, Emily";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/78 px-4 py-5 backdrop-blur-sm", role: "dialog", "aria-modal": "true", "aria-label": "Training Report Preview", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[92vh] w-[calc(100vw-2rem)] max-w-[88rem] flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-gray-900 text-gray-100 shadow-2xl md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)]", children: [
@@ -77567,8 +77567,8 @@ const TrainingReportFullPreviewFlyout = ({
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-[2px]", children: [
-        ["Print", "Edit", "Save", "Delete", "Back"].map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed", children: label }, label)),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", className: "flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed", children: "Audit" }),
+        ["Print", "Edit", "Save", "Delete", "Back"].map((label) => /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled: true, "aria-disabled": "true", className: "flex h-[41px] w-[56px] cursor-default items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed opacity-70", children: label }, label)),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled: true, "aria-disabled": "true", className: "flex h-[41px] w-[56px] cursor-default items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed opacity-70", children: "Audit" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {

@@ -12776,7 +12776,7 @@ const TrainingReportFullPreviewFlyout = ({
         : grade.label
   );
   const reportTitle = template.displayName || template.genericName || 'Training Report';
-  const sampleEvent = 'BGF2';
+  const sampleEvent = 'EventX';
   const sampleType = 'Basic AP Operation; Climbing; Descending; Re-join Landing';
   const sampleInstructor = 'FLTLT Hall, Emily';
 
@@ -12802,11 +12802,11 @@ const TrainingReportFullPreviewFlyout = ({
           </div>
           <div className="flex items-center gap-[2px]">
             {['Print', 'Edit', 'Save', 'Delete', 'Back'].map((label) => (
-              <button key={label} type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed">
+              <button key={label} type="button" disabled aria-disabled="true" className="flex h-[41px] w-[56px] cursor-default items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed opacity-70">
                 {label}
               </button>
             ))}
-            <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed">
+            <button type="button" disabled aria-disabled="true" className="flex h-[41px] w-[56px] cursor-default items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed opacity-70">
               Audit
             </button>
             <button
