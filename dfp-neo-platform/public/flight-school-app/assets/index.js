@@ -68248,7 +68248,6 @@ const PlatformConfigurationSettings = ({
   focusUserId = "",
   focusSubsectionId = "",
   onNavigateToSettingsSection,
-  onSetHeaderAction,
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -68294,21 +68293,6 @@ const PlatformConfigurationSettings = ({
     window.addEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT$1, handlePlatformConfigUpdated);
   }, []);
-  reactExports.useEffect(() => {
-    if (!onSetHeaderAction || scrollTarget !== "platform-training-report-template") return void 0;
-    onSetHeaderAction(
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => setTrainingReportPreviewOpen(true),
-          className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200",
-          children: "Preview"
-        }
-      )
-    );
-    return () => onSetHeaderAction(null);
-  }, [onSetHeaderAction, scrollTarget]);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -75245,7 +75229,16 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         SectionHeader,
         {
           title: "Training Reports",
-          subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
+          subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models.",
+          action: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setTrainingReportPreviewOpen(true),
+              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200",
+              children: "Preview"
+            }
+          )
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-4", children: [
@@ -78900,13 +78893,7 @@ const SettingsViewWithMenu = (props) => {
     }
     return "platform-configuration-health";
   });
-  const [settingsHeaderAction, setSettingsHeaderAction] = reactExports.useState(null);
   const { isFrozen } = useSystemFreeze();
-  reactExports.useEffect(() => {
-    if (activeSection !== "training-report-template") {
-      setSettingsHeaderAction(null);
-    }
-  }, [activeSection]);
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState(() => {
     try {
       const restoreTab = sessionStorage.getItem("dfp_restore_scoring_matrix_tab");
@@ -79463,7 +79450,6 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: getSectionLabel(activeSection) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
-            settingsHeaderAction,
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${getSectionLabel(activeSection)}` })
           ] })
         ] }),
@@ -79510,7 +79496,6 @@ const SettingsViewWithMenu = (props) => {
               focusUserId: settingsFocusTarget?.userId,
               focusSubsectionId: settingsFocusTarget?.focusSubsectionId,
               onNavigateToSettingsSection: navigateToSettingsSection,
-              onSetHeaderAction: setSettingsHeaderAction,
               activeUnitCodes: props.activeUnitCodes,
               activeCompositeUnitCode: props.activeCompositeUnitCode,
               phraseBank: props.phraseBank,

@@ -2175,7 +2175,6 @@ interface PlatformConfigurationSettingsProps {
   focusUserId?: string;
   focusSubsectionId?: string;
   onNavigateToSettingsSection?: (target: ConfigurationHealthSettingsTarget) => void;
-  onSetHeaderAction?: (action: React.ReactNode | null) => void;
   phraseBank?: Record<string, any>;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
@@ -2205,7 +2204,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   focusUserId = '',
   focusSubsectionId = '',
   onNavigateToSettingsSection,
-  onSetHeaderAction,
   phraseBank = {},
   masterCurrencies = [],
   currencyRequirements = [],
@@ -2258,19 +2256,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     return () => window.removeEventListener(PLATFORM_CONFIG_UPDATED_EVENT, handlePlatformConfigUpdated);
   }, []);
 
-  useEffect(() => {
-    if (!onSetHeaderAction || scrollTarget !== 'platform-training-report-template') return undefined;
-    onSetHeaderAction(
-      <button
-        type="button"
-        onClick={() => setTrainingReportPreviewOpen(true)}
-        className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200"
-      >
-        Preview
-      </button>,
-    );
-    return () => onSetHeaderAction(null);
-  }, [onSetHeaderAction, scrollTarget]);
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
@@ -10309,6 +10294,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Training Reports"
           subtitle="Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
+          action={(
+            <button
+              type="button"
+              onClick={() => setTrainingReportPreviewOpen(true)}
+              className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200"
+            >
+              Preview
+            </button>
+          )}
         />
         <div className="space-y-5 p-4">
           {!canEdit ? (

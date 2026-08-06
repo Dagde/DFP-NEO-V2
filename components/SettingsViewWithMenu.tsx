@@ -987,14 +987,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         } catch (e) { /* ignore */ }
         return 'platform-configuration-health';
     });
-    const [settingsHeaderAction, setSettingsHeaderAction] = useState<React.ReactNode | null>(null);
     const { isFrozen } = useSystemFreeze();
-
-    useEffect(() => {
-        if (activeSection !== 'training-report-template') {
-            setSettingsHeaderAction(null);
-        }
-    }, [activeSection]);
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>(() => {
         try {
             const restoreTab = sessionStorage.getItem('dfp_restore_scoring_matrix_tab');
@@ -1704,7 +1697,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <strong>Read-Only Mode</strong>
                                     </div>
                                 )}
-                                {settingsHeaderAction}
                                 <AuditButton pageName={`Settings - ${getSectionLabel(activeSection as SettingsMenuSection)}`} />
                             </div>
                         </div>
@@ -1770,7 +1762,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 focusUserId={settingsFocusTarget?.userId}
                             focusSubsectionId={settingsFocusTarget?.focusSubsectionId}
                             onNavigateToSettingsSection={navigateToSettingsSection}
-                            onSetHeaderAction={setSettingsHeaderAction}
                             activeUnitCodes={props.activeUnitCodes}
                                 activeCompositeUnitCode={props.activeCompositeUnitCode}
                                 phraseBank={props.phraseBank}
