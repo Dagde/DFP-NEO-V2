@@ -77548,7 +77548,7 @@ const TrainingReportFullPreviewFlyout = ({
   const sampleEvent = "BGF2";
   const sampleType = "Basic AP Operation; Climbing; Descending; Re-join Landing";
   const sampleInstructor = "FLTLT Hall, Emily";
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/78 px-4 py-5 backdrop-blur-sm", role: "dialog", "aria-modal": "true", "aria-label": "Training Report Preview", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[92vh] w-full max-w-[1580px] flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-gray-900 text-gray-100 shadow-2xl", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/78 px-4 py-5 backdrop-blur-sm", role: "dialog", "aria-modal": "true", "aria-label": "Training Report Preview", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-[92vh] w-full flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-gray-900 text-gray-100 shadow-2xl", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 bg-gray-800 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
