@@ -44,6 +44,7 @@ import {
     INITIAL_SCORING_MATRIX_ELEMENTS,
     SCORING_MATRIX_ELEMENT_GROUPS_KEY,
     SCORING_MATRIX_ELEMENT_LIST_KEY,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY,
     getConfiguredScoringMatrixElements,
 } from '../utils/scoringMatrixElements';
 import type { PlatformMasterLmpCatalogueEntry } from '../utils/platformConfigService';
@@ -115,7 +116,11 @@ const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
     } else {
         getConfiguredScoringMatrixElements(phraseBank).forEach(add);
         Object.keys(phraseBank || {}).forEach(key => {
-            if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY) add(key);
+            if (
+                key !== SCORING_MATRIX_ELEMENT_LIST_KEY
+                && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY
+                && key !== SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY
+            ) add(key);
         });
     }
     return Array.from(seen.values());

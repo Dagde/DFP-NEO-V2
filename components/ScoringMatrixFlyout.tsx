@@ -7,6 +7,8 @@ import {
     DEFAULT_SCORING_MATRIX_SECTIONS,
     SCORING_MATRIX_ELEMENT_GROUPS_KEY,
     SCORING_MATRIX_ELEMENT_LIST_KEY,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY,
     SCORING_MATRIX_SECTION_HELP,
     getConfiguredScoringMatrixElementGroups,
     getConfiguredScoringMatrixElements,
@@ -219,6 +221,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
                 ...configuredElementGroups,
                 [element]: nextGroup || 'Additional Elements',
             },
+            [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         } as PhraseBank);
     };
 
@@ -312,6 +315,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
         onUpdatePhraseBank({
             ...phraseBank,
             [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
+            [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
             [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
                 ...configuredElementGroups,
                 [newElementName]: 'Additional Elements',
@@ -341,6 +345,7 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
             delete nextGroups[el];
         });
         (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
+        (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
         (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_GROUPS_KEY] = nextGroups;
         onUpdatePhraseBank(newPhraseBank);
         

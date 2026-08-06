@@ -123,6 +123,8 @@ import {
   DEFAULT_SCORING_MATRIX_SECTIONS,
   SCORING_MATRIX_ELEMENT_GROUPS_KEY,
   SCORING_MATRIX_ELEMENT_LIST_KEY,
+  SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
+  SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY,
   getConfiguredScoringMatrixElementGroups,
   getConfiguredScoringMatrixElements,
   getScoringMatrixElementGroup,
@@ -3884,6 +3886,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       return {
         ...bank,
         [SCORING_MATRIX_ELEMENT_LIST_KEY]: [...elements, name],
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
           ...groups,
           [name]: 'Additional Elements',
@@ -3919,6 +3922,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const nextBank: PhraseBank = {
         ...bank,
         [SCORING_MATRIX_ELEMENT_LIST_KEY]: elements,
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: nextGroups,
       } as PhraseBank;
       if ((bank as any)[element] && !(bank as any)[nextName]) {
@@ -3945,6 +3949,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           ...groups,
           [element]: nextGroup,
         },
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
       } as PhraseBank;
     });
   };
@@ -3967,6 +3972,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const nextBank: PhraseBank = {
         ...bank,
         [SCORING_MATRIX_ELEMENT_LIST_KEY]: elements,
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: nextGroups,
       } as PhraseBank;
       delete (nextBank as any)[element];

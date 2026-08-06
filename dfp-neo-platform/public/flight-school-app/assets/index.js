@@ -21733,6 +21733,9 @@ const INITIAL_SCORING_MATRIX_ELEMENTS = [
 ];
 const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
+const SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY = "__scoringMatrixElementSelectionVersion";
+const SCORING_MATRIX_ELEMENT_SELECTION_VERSION = 2;
+const LEGACY_CORE_SCORING_MATRIX_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
 const DEFAULT_SCORING_MATRIX_SECTIONS = [
   "Core Dimensions",
   "Procedural Framework",
@@ -21775,9 +21778,14 @@ const dedupeScoringMatrixElements = (elements) => elements.map(normaliseScoringM
 const getConfiguredScoringMatrixElements = (phraseBank) => {
   const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
   if (Array.isArray(savedElements)) {
-    return dedupeScoringMatrixElements(savedElements);
+    const saved2 = dedupeScoringMatrixElements(savedElements);
+    const selectionVersion = Number(phraseBank?.[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] || 0);
+    if (selectionVersion >= SCORING_MATRIX_ELEMENT_SELECTION_VERSION) {
+      return saved2;
+    }
+    return dedupeScoringMatrixElements([...LEGACY_CORE_SCORING_MATRIX_ELEMENTS, ...saved2]);
   }
-  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
+  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 && key !== SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
   return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);
 };
 const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
@@ -55730,7 +55738,7 @@ const getScoringMatrixElementOptions = (phraseBank) => {
   } else {
     getConfiguredScoringMatrixElements(phraseBank).forEach(add);
     Object.keys(phraseBank || {}).forEach((key) => {
-      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2) add(key);
+      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 && key !== SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY) add(key);
     });
   }
   return Array.from(seen.values());
@@ -61020,7 +61028,8 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [element]: nextGroup || "Additional Elements"
-      }
+      },
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
     });
   };
   const beginElementGroupDraft = (element) => {
@@ -61098,6 +61107,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [newElementName]: "Additional Elements"
@@ -61119,6 +61129,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
       delete nextGroups[el];
     });
     newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
     newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (elementsToDelete.has(selectedElement)) {
@@ -62645,7 +62656,8 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [element]: nextGroup || "Additional Elements"
-      }
+      },
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
     });
   };
   const beginElementGroupDraft = (element) => {
@@ -62695,6 +62707,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     onUpdatePhraseBank({
       ...phraseBank,
       [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
+      [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [name]: "Additional Elements"
@@ -62722,6 +62735,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
       delete nextGroups[el];
     });
     newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
     newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
@@ -69628,6 +69642,7 @@ This permanently removes the organisation record from platform configuration and
       return {
         ...bank,
         [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: [...elements, name],
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
           ...groups,
           [name]: "Additional Elements"
@@ -69662,6 +69677,7 @@ This permanently removes the organisation record from platform configuration and
       const nextBank = {
         ...bank,
         [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: elements,
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: nextGroups
       };
       if (bank[element] && !bank[nextName]) {
@@ -69686,7 +69702,8 @@ This permanently removes the organisation record from platform configuration and
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
           ...groups,
           [element]: nextGroup
-        }
+        },
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION
       };
     });
   };
@@ -69706,6 +69723,7 @@ This permanently removes the organisation record from platform configuration and
       const nextBank = {
         ...bank,
         [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: elements,
+        [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: nextGroups
       };
       delete nextBank[element];

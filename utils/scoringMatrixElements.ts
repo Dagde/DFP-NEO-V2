@@ -28,6 +28,9 @@ export const INITIAL_SCORING_MATRIX_ELEMENTS = [
 
 export const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 export const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
+export const SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY = '__scoringMatrixElementSelectionVersion';
+export const SCORING_MATRIX_ELEMENT_SELECTION_VERSION = 2;
+export const LEGACY_CORE_SCORING_MATRIX_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 
 export const DEFAULT_SCORING_MATRIX_SECTIONS = [
   'Core Dimensions',
@@ -81,11 +84,17 @@ export const dedupeScoringMatrixElements = (elements: unknown[]): string[] => el
 export const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank | Record<string, any> | null | undefined): string[] => {
   const savedElements = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
   if (Array.isArray(savedElements)) {
-    return dedupeScoringMatrixElements(savedElements);
+    const saved = dedupeScoringMatrixElements(savedElements);
+    const selectionVersion = Number((phraseBank as any)?.[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] || 0);
+    if (selectionVersion >= SCORING_MATRIX_ELEMENT_SELECTION_VERSION) {
+      return saved;
+    }
+    return dedupeScoringMatrixElements([...LEGACY_CORE_SCORING_MATRIX_ELEMENTS, ...saved]);
   }
   const customElements = Object.keys(phraseBank || {}).filter((key) => (
     key !== SCORING_MATRIX_ELEMENT_LIST_KEY
     && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY
+    && key !== SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY
     && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key)
   ));
   return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);

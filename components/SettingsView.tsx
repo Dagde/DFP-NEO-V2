@@ -39,6 +39,8 @@ import {
     DEFAULT_SCORING_MATRIX_SECTIONS,
     SCORING_MATRIX_ELEMENT_GROUPS_KEY,
     SCORING_MATRIX_ELEMENT_LIST_KEY,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
+    SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY,
     SCORING_MATRIX_SECTION_HELP,
     getConfiguredScoringMatrixElementGroups,
     getConfiguredScoringMatrixElements,
@@ -209,6 +211,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                 ...configuredElementGroups,
                 [element]: nextGroup || 'Additional Elements',
             },
+            [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
         } as PhraseBank);
     };
 
@@ -262,6 +265,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         onUpdatePhraseBank({
             ...phraseBank,
             [SCORING_MATRIX_ELEMENT_LIST_KEY]: nextElements,
+            [SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY]: SCORING_MATRIX_ELEMENT_SELECTION_VERSION,
             [SCORING_MATRIX_ELEMENT_GROUPS_KEY]: {
                 ...configuredElementGroups,
                 [name]: 'Additional Elements',
@@ -283,6 +287,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
         const nextGroups = { ...configuredElementGroups };
         selectedToDelete.forEach(el => { delete nextGroups[el]; });
         (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_LIST_KEY] = newFlightElements;
+        (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_SELECTION_VERSION_KEY] = SCORING_MATRIX_ELEMENT_SELECTION_VERSION;
         (newPhraseBank as any)[SCORING_MATRIX_ELEMENT_GROUPS_KEY] = nextGroups;
         onUpdatePhraseBank(newPhraseBank);
         if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || 'Generic Flying Elements');
