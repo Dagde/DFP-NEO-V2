@@ -12930,40 +12930,40 @@ const TrainingReportFullPreviewFlyout = ({
                         )}
                       </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallGrade}</label>
-                      <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
-                        {previewGrades.map((grade) => (
-                        <label
-                          key={String(grade.value)}
-                          className={`relative flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${
-                            selectedPreviewGrade && grade.value === selectedPreviewGrade.value
-                              ? 'border-sky-400 bg-sky-500/15 text-white'
-                              : 'border-gray-700 bg-gray-900/80 text-gray-300'
-                          }`}
-                        >
-                          <span className="text-[11px] font-black uppercase leading-none text-white">{grade.isNoGrade ? '' : grade.value}</span>
-                          <span className={`flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade.isNoGrade && template.grades.showNumbers ? '-translate-y-2' : ''}`}>
-                            {formatGradeTileLabel(grade).replace(/^\d+\s*/, '').split(/\s+/).map((word, index) => (
-                              <span key={`${word}-${index}`}>{word}</span>
-                            ))}
-                          </span>
-                          <input
-                            type="radio"
-                            name="preview-overall-grade"
-                            value={String(grade.value)}
-                            checked={Boolean(selectedPreviewGrade && grade.value === selectedPreviewGrade.value)}
-                            disabled
-                            readOnly
-                            className="h-4 w-4 border-gray-600 bg-gray-600 accent-sky-500"
-                          />
-                        </label>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 </div>
                 <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallGrade}</label>
+                  <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
+                    {previewGrades.map((grade) => (
+                    <label
+                      key={String(grade.value)}
+                      className={`relative flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${
+                        selectedPreviewGrade && grade.value === selectedPreviewGrade.value
+                          ? 'border-sky-400 bg-sky-500/15 text-white'
+                          : 'border-gray-700 bg-gray-900/80 text-gray-300'
+                      }`}
+                    >
+                      <span className="text-[11px] font-black uppercase leading-none text-white">{grade.isNoGrade ? '' : grade.value}</span>
+                      <span className={`flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade.isNoGrade && template.grades.showNumbers ? '-translate-y-2' : ''}`}>
+                        {formatGradeTileLabel(grade).replace(/^\d+\s*/, '').split(/\s+/).map((word, index) => (
+                          <span key={`${word}-${index}`}>{word}</span>
+                        ))}
+                      </span>
+                      <input
+                        type="radio"
+                        name="preview-overall-grade"
+                        value={String(grade.value)}
+                        checked={Boolean(selectedPreviewGrade && grade.value === selectedPreviewGrade.value)}
+                        disabled
+                        readOnly
+                        className="h-4 w-4 border-gray-600 bg-gray-600 accent-sky-500"
+                      />
+                    </label>
+                    ))}
+                  </div>
+                </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallResult}</label>
                   <div className="mt-1 flex space-x-4">
