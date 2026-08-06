@@ -12755,114 +12755,245 @@ const TrainingReportFullPreviewFlyout = ({
   unitCode: string;
   onClose: () => void;
 }) => {
-  const visibleGrades = template.grades.options
+  const enabledGrades = template.grades.options
     .filter((option) => option.enabled !== false)
-    .sort((a, b) => b.value - a.value);
+    .sort((a, b) => a.value - b.value);
+  const previewGrades: Array<{ value: number | 'No Grade'; label: string; isNoGrade?: boolean }> = [
+    ...(template.grades.includeDemo ? [{ value: 'No Grade' as const, label: 'No Grade', isNoGrade: true }] : []),
+    ...enabledGrades.map((grade) => ({ value: grade.value, label: grade.label })),
+  ];
+  const selectedPreviewGrade = previewGrades.find((grade) => grade.value === 2) || previewGrades.find((grade) => !grade.isNoGrade) || previewGrades[0];
+  const missionStatusOptions = template.completionResults.filter((option) => option.enabled !== false);
+  const selectedMissionStatus = missionStatusOptions[0]?.code || 'DCO';
   const formatGradeLabel = (grade: TrainingReportTemplate['grades']['options'][number]) => (
     template.grades.showNumbers ? `${grade.value} - ${grade.label}` : grade.label
   );
+  const formatGradeTileLabel = (grade: { value: number | 'No Grade'; label: string; isNoGrade?: boolean }) => (
+    grade.isNoGrade
+      ? 'No Grade'
+      : template.grades.showNumbers
+        ? `${grade.value} ${grade.label}`
+        : grade.label
+  );
+  const reportTitle = template.displayName || template.genericName || 'Training Report';
+  const sampleEvent = 'BGF2';
+  const sampleType = 'Basic AP Operation; Climbing; Descending; Re-join Landing';
+  const sampleInstructor = 'FLTLT Hall, Emily';
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/75 px-4 py-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Training Report Preview">
-      <div className="flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-cyan-400/40 bg-gray-900 shadow-2xl">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-700 bg-gray-950 px-5 py-4">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">Preview</div>
-            <h3 className="mt-1 text-2xl font-black text-white">{template.displayName || template.genericName || 'Training Report'}</h3>
-            <p className="mt-1 text-sm text-gray-400">Full-size report preview using the current Training Reports settings.</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-[10px] font-bold text-gray-900 shadow hover:bg-gray-200"
-          >
-            Close
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto bg-gray-950 p-5">
-          <div className="mx-auto max-w-6xl rounded-lg border border-gray-700 bg-gray-900 p-5 text-gray-100 shadow-xl">
-            <div className="border-b border-gray-700 pb-4">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">{template.genericName || 'Training Report'}</div>
-              <h4 className="mt-1 text-3xl font-black text-white">{template.displayName || template.genericName || 'Training Report'}</h4>
+    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/78 px-4 py-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Training Report Preview">
+      <div className="flex h-[92vh] w-full max-w-[1580px] flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-gray-900 text-gray-100 shadow-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 bg-gray-800 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-4">
+            <div>
+              <h3 className="text-2xl font-black text-white">{sampleEvent}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="rounded bg-gray-700 px-3 py-1.5 text-sm font-semibold text-gray-100">09 / 11 / 2023</div>
+                <span className="text-sm text-gray-400">at</span>
+                <div className="rounded bg-gray-700 px-4 py-1.5 font-mono text-sm font-semibold text-white">1000</div>
+                <span className="text-sm text-gray-400">-</span>
+                <div className="rounded bg-gray-700 px-4 py-1.5 font-mono text-sm font-semibold text-white">1112</div>
+              </div>
             </div>
-
-            <section className="mt-5">
-              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.overview.title}</h5>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <TrainingReportPreviewCell label={template.modules.overview.fields.event} value="Event 1" />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.training} value="Training Package" />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.type} value="Flight" />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.timing} value="08:00 / 1.2h" />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.resource} value={resourceLabel} />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.callsign} value={callsign} />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.unit} value={unitCode} />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.date} value="07 Jun 26" />
-                <TrainingReportPreviewCell label={template.modules.overview.fields.assessor} value="Assessor Name" />
-              </div>
-            </section>
-
-            <section className="mt-6">
-              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.overallAssessment.title}</h5>
-              <div className="mt-3 grid gap-3 md:grid-cols-4">
-                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.result} value={completionStatusPreview} />
-                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.overallGrade} value={visibleGrades[0] ? formatGradeLabel(visibleGrades[0]) : 'Not selected'} />
-                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.overallResult} value={`${template.overallResults.passLabel} / ${template.overallResults.failLabel}`} />
-                <TrainingReportPreviewCell label={template.modules.overallAssessment.fields.groundSchoolAssessment} value="Assessment / 85%" />
-              </div>
-            </section>
-
-            <section className="mt-6">
-              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.assessmentMatrix.title}</h5>
-              <div className="mt-3 overflow-x-auto rounded border border-gray-700 bg-gray-950/60">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-gray-700 text-[10px] uppercase tracking-wide text-gray-400">
-                    <tr>
-                      <th className="px-3 py-3">Element</th>
-                      {visibleGrades.map((grade) => (
-                        <th key={grade.value} className="min-w-[96px] px-2 py-3 text-center">{formatGradeLabel(grade)}</th>
-                      ))}
-                      <th className="min-w-[220px] px-3 py-3">Comments</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {elements.length > 0 ? elements.map((element, elementIndex) => (
-                      <tr key={element} className="border-b border-gray-800 last:border-b-0">
-                        <td className="px-3 py-3 font-semibold text-white">{element}</td>
-                        {visibleGrades.map((grade, gradeIndex) => (
-                          <td key={grade.value} className="px-2 py-3 text-center">
-                            <span className={`mx-auto block h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === 0 ? 'border-cyan-300 bg-cyan-400' : 'border-gray-500 bg-gray-900'}`} />
-                          </td>
-                        ))}
-                        <td className="px-3 py-3 text-gray-400">Element comments appear here.</td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td className="px-3 py-4 text-sm italic text-gray-500" colSpan={visibleGrades.length + 2}>No assessment elements configured.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="mt-6">
-              <h5 className="text-sm font-black uppercase tracking-wide text-cyan-200">{template.modules.comments.title}</h5>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <TrainingReportPreviewCell label={template.modules.comments.fields.assessor} value="Assessor Name" />
-                <TrainingReportPreviewCell label={template.modules.comments.fields.weather} value="VMC, light turbulence" />
-                <TrainingReportPreviewCell label={template.modules.comments.fields.nest} value="NEST 2" />
-                <div className="md:col-span-3">
-                  <TrainingReportPreviewCell label={template.modules.comments.fields.profile} value="Profile narrative appears here." />
-                </div>
-                <div className="md:col-span-3">
-                  <TrainingReportPreviewCell label={template.modules.comments.fields.overall} value="Overall assessment narrative appears here." />
-                </div>
-                <div className="md:col-span-3">
-                  <TrainingReportPreviewCell label={template.modules.comments.fields.notes} value="Model-specific notes appear here." />
-                </div>
-              </div>
-            </section>
+            <div className="flex items-center rounded-full border border-gray-700 bg-gray-900/60 px-3 py-1">
+              <span className="mr-2 h-2 w-2 rounded-full bg-green-500" />
+              <span className="font-mono text-xs uppercase text-gray-300">All changes saved</span>
+            </div>
           </div>
+          <div className="flex items-center gap-[2px]">
+            {['Print', 'Edit', 'Save', 'Delete', 'Back'].map((label) => (
+              <button key={label} type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed">
+                {label}
+              </button>
+            ))}
+            <button type="button" className="flex h-[41px] w-[56px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed">
+              Audit
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="ml-2 flex h-[41px] w-[64px] items-center justify-center rounded-md px-1 py-1 text-center text-[10px] font-semibold btn-aluminium-brushed"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-gray-900 p-4 md:p-6">
+          <div className="mb-4 border-b border-gray-700 pb-3">
+            <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-gray-500">{template.genericName || 'Training Report'}</div>
+            <h4 className="mt-1 text-xl font-black text-white">{reportTitle}</h4>
+          </div>
+          <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+            <dl className="h-full space-y-3 rounded-lg border border-gray-700 bg-gray-800 p-4">
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.event}</dt>
+                <dd className="mt-1 text-sm font-semibold text-white">{sampleEvent}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.type}</dt>
+                <dd className="mt-1 text-sm text-white">{sampleType}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">Trainee</dt>
+                <dd className="mt-1 text-sm font-semibold text-white">PLTOFF Davies, Mary</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.training}</dt>
+                <dd className="mt-1 text-sm font-semibold text-white">ADF301</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.date}</dt>
+                <dd className="mt-1 inline-flex rounded bg-gray-700 px-2 py-1 text-sm font-semibold text-white">09 / 11 / 2023</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.timing}</dt>
+                <dd className="mt-1 flex items-center gap-1">
+                  {['10', '0', '11', '12'].map((value, index) => (
+                    <React.Fragment key={`${value}-${index}`}>
+                      <span className="w-12 rounded border border-gray-600 bg-gray-700 px-1 py-1 text-center text-sm font-semibold text-white">{value}</span>
+                      {index === 0 || index === 2 ? <span className="text-white">:</span> : index === 1 ? <span className="text-white">-</span> : null}
+                    </React.Fragment>
+                  ))}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.assessor}</dt>
+                <dd className="mt-1 rounded border border-gray-600 bg-gray-700 px-2 py-2 text-sm font-semibold text-white">{sampleInstructor}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.resource}</dt>
+                <dd className="mt-1 text-sm font-semibold text-white">{resourceLabel}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.callsign}</dt>
+                <dd className="mt-1 text-sm font-semibold text-white">{callsign}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.unit}</dt>
+                <dd className="mt-1 text-sm font-semibold text-white">{unitCode}</dd>
+              </div>
+            </dl>
+
+            <div className="lg:col-span-2">
+              <div className="relative rounded-lg border border-gray-600 bg-gray-900 p-4">
+                <div className="absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300">{template.modules.overallAssessment.title}</div>
+                <div className="mt-2 grid items-start gap-4 md:grid-cols-[minmax(170px,220px)_minmax(360px,1fr)]">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.result}</label>
+                    <div className="flex flex-col gap-2">
+                      {missionStatusOptions.length > 0 ? missionStatusOptions.map((option) => (
+                        <label key={option.code} className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                          <span className={`h-4 w-4 rounded-full border ${option.code === selectedMissionStatus ? 'border-sky-300 bg-sky-400' : 'border-gray-500 bg-white'}`} />
+                          <span className="font-medium text-white">{option.label || option.code}</span>
+                        </label>
+                      )) : (
+                        <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
+                          <span className="h-4 w-4 rounded-full border border-sky-300 bg-sky-400" />
+                          <span className="font-medium text-white">{completionStatusPreview || 'Complete'}</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallGrade}</label>
+                    <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
+                      {previewGrades.map((grade) => (
+                        <label
+                          key={String(grade.value)}
+                          className={`relative flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${
+                            selectedPreviewGrade && grade.value === selectedPreviewGrade.value
+                              ? 'border-sky-400 bg-sky-500/15 text-white'
+                              : 'border-gray-700 bg-gray-900/80 text-gray-300'
+                          }`}
+                        >
+                          <span className="text-[11px] font-black uppercase leading-none text-white">{grade.isNoGrade ? '' : grade.value}</span>
+                          <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
+                            {formatGradeTileLabel(grade).replace(/^\d+\s*/, '').split(/\s+/).map((word, index) => (
+                              <span key={`${word}-${index}`}>{word}</span>
+                            ))}
+                          </span>
+                          <span className={`h-4 w-4 rounded-full border ${selectedPreviewGrade && grade.value === selectedPreviewGrade.value ? 'border-sky-300 bg-sky-400' : 'border-gray-500 bg-white'}`} />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallResult}</label>
+                  <div className="flex gap-2 md:gap-4">
+                    <div className="w-1/2 rounded-lg bg-green-600 p-4 text-center text-white ring-2 ring-white">
+                      <span className="text-2xl font-bold">{template.overallResults.passLabel}</span>
+                    </div>
+                    <div className="w-1/2 rounded-lg bg-red-800/60 p-4 text-center text-red-200">
+                      <span className="text-2xl font-bold">{template.overallResults.failLabel}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 border-t border-gray-600 pt-4">
+                  <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.groundSchoolAssessment}</label>
+                  <div className="flex items-center gap-3">
+                    <span className="h-4 w-4 rounded border border-gray-500 bg-white" />
+                    <span className="text-xs font-medium text-gray-300">Assessment</span>
+                    <span className="text-xs font-medium text-gray-400">{template.modules.overallAssessment.fields.result}:</span>
+                    <span className="h-8 w-16 rounded border border-gray-600 bg-gray-700" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(180px,0.85fr)_minmax(360px,1.7fr)_120px]">
+            <label className="block">
+              <span className="block text-sm font-medium text-gray-400">{template.modules.comments.fields.assessor}</span>
+              <span className="mt-1 block rounded border border-gray-600 bg-gray-700 p-2 text-sm font-semibold text-white">{sampleInstructor}</span>
+            </label>
+            <label className="block">
+              <span className="block text-sm font-medium text-gray-400">{template.modules.comments.fields.weather}</span>
+              <span className="mt-1 block h-10 rounded border border-gray-600 bg-gray-700" />
+            </label>
+            <label className="block">
+              <span className="block text-sm font-medium text-gray-400">{template.modules.comments.fields.nest}</span>
+              <span className="mt-1 block h-10 rounded border border-gray-600 bg-gray-700" />
+            </label>
+          </div>
+          <label className="mt-6 block">
+            <span className="block text-sm font-medium text-gray-400">{template.modules.comments.fields.profile}</span>
+            <span className="mt-2 block h-24 rounded border border-gray-700 bg-gray-700/80" />
+          </label>
+
+          <section className="mt-6">
+            <h5 className="mb-3 text-sm font-bold text-gray-300">{template.modules.assessmentMatrix.title}</h5>
+            <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-950/60">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-gray-700 text-[10px] uppercase tracking-wide text-gray-400">
+                  <tr>
+                    <th className="px-3 py-3">Element</th>
+                    {enabledGrades.slice().sort((a, b) => b.value - a.value).map((grade) => (
+                      <th key={grade.value} className="min-w-[108px] px-2 py-3 text-center">{formatGradeLabel(grade)}</th>
+                    ))}
+                    <th className="min-w-[220px] px-3 py-3">Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {elements.length > 0 ? elements.map((element, elementIndex) => (
+                    <tr key={element} className="border-b border-gray-800 last:border-b-0">
+                      <td className="px-3 py-3 font-semibold text-white">{element}</td>
+                      {enabledGrades.slice().sort((a, b) => b.value - a.value).map((grade, gradeIndex) => (
+                        <td key={grade.value} className="px-2 py-3 text-center">
+                          <span className={`mx-auto block h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === 0 ? 'border-cyan-300 bg-cyan-400' : 'border-gray-500 bg-gray-900'}`} />
+                        </td>
+                      ))}
+                      <td className="px-3 py-3 text-gray-400">Element comments appear here.</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td className="px-3 py-4 text-sm italic text-gray-500" colSpan={enabledGrades.length + 2}>No assessment elements configured.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </div>
     </div>
