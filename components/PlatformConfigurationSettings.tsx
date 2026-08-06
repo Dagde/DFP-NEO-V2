@@ -12763,6 +12763,26 @@ const TrainingReportFullPreviewFlyout = ({
     ...enabledGrades.map((grade) => ({ value: grade.value, label: grade.label })),
   ];
   const selectedPreviewGrade = previewGrades.find((grade) => grade.value === 2) || previewGrades.find((grade) => !grade.isNoGrade) || previewGrades[0];
+  const assessmentGradeOptions = [
+    ...(template.grades.includeDemo ? [{ value: 'No Grade' as const, label: 'No Grade', isNoGrade: true }] : []),
+    ...enabledGrades.map((grade) => ({ value: grade.value, label: grade.label })),
+  ];
+  const gradeBandClass = (value: number | 'No Grade') => {
+    if (value === 'No Grade') return 'bg-gray-900/60 border-gray-700';
+    if (value <= 0) return 'bg-red-950/35 border-red-500/20';
+    if (value === 1) return 'bg-orange-950/35 border-orange-500/20';
+    if (value === 2) return 'bg-amber-950/35 border-amber-500/20';
+    if (value === 3) return 'bg-yellow-950/30 border-yellow-500/20';
+    if (value === 4) return 'bg-lime-950/25 border-lime-500/20';
+    return 'bg-emerald-950/25 border-emerald-500/20';
+  };
+  const formatAssessmentGradeHeader = (grade: { value: number | 'No Grade'; label: string; isNoGrade?: boolean }) => (
+    grade.isNoGrade
+      ? 'No Grade'
+      : template.grades.showNumbers
+        ? `${grade.label} ${grade.value}`
+        : grade.label
+  );
   const missionStatusOptions = template.completionResults.filter((option) => option.enabled !== false);
   const selectedMissionStatus = missionStatusOptions[0]?.code || 'DCO';
   const formatGradeLabel = (grade: TrainingReportTemplate['grades']['options'][number]) => (
@@ -12960,39 +12980,65 @@ const TrainingReportFullPreviewFlyout = ({
             <span className="block text-sm font-medium text-gray-400">{template.modules.comments.fields.profile}</span>
             <span className="mt-2 block h-24 rounded border border-gray-700 bg-gray-700/80" />
           </label>
+          <label className="mt-6 block">
+            <span className="block text-sm font-medium text-gray-400">{template.modules.comments.fields.overall}</span>
+            <span className="mt-2 block h-[150px] rounded border border-gray-700 bg-gray-700/80" />
+          </label>
 
           <section className="mt-6">
-            <h5 className="mb-3 text-sm font-bold text-gray-300">{template.modules.assessmentMatrix.title}</h5>
-            <div className="overflow-x-auto rounded-lg border border-gray-700 bg-gray-950/60">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-gray-700 text-[10px] uppercase tracking-wide text-gray-400">
+            <fieldset className="rounded-lg border border-gray-700 p-4">
+              <legend className="px-2 text-sm font-semibold text-gray-300">Additional Elements</legend>
+              <div className="mt-2 overflow-x-auto rounded-md border border-gray-800/80">
+              <table className="min-w-[1200px] w-full table-fixed border-collapse text-left text-sm">
+                <colgroup>
+                  <col className="w-[190px]" />
+                  {assessmentGradeOptions.map((grade) => <col key={String(grade.value)} className="w-[40px]" />)}
+                  <col className="w-[480px]" />
+                </colgroup>
+                <thead>
                   <tr>
-                    <th className="px-3 py-3">Element</th>
-                    {enabledGrades.slice().sort((a, b) => b.value - a.value).map((grade) => (
-                      <th key={grade.value} className="min-w-[108px] px-2 py-3 text-center">{formatGradeLabel(grade)}</th>
+                    <th className="px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500">Element</th>
+                    {assessmentGradeOptions.map((grade) => (
+                      <th key={String(grade.value)} className="relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400">
+                        <span className="absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap">
+                          {formatAssessmentGradeHeader(grade).split(/\s+/).map((word, index) => (
+                            <span key={`${word}-${index}`}>{word}</span>
+                          ))}
+                        </span>
+                      </th>
                     ))}
-                    <th className="min-w-[220px] px-3 py-3">Comments</th>
+                    <th className="h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500">Comments</th>
                   </tr>
                 </thead>
                 <tbody>
                   {elements.length > 0 ? elements.map((element, elementIndex) => (
-                    <tr key={element} className="border-b border-gray-800 last:border-b-0">
-                      <td className="px-3 py-3 font-semibold text-white">{element}</td>
-                      {enabledGrades.slice().sort((a, b) => b.value - a.value).map((grade, gradeIndex) => (
-                        <td key={grade.value} className="px-2 py-3 text-center">
-                          <span className={`mx-auto block h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === 0 ? 'border-cyan-300 bg-cyan-400' : 'border-gray-500 bg-gray-900'}`} />
+                    <tr key={element} className="border-t border-gray-700">
+                      <td className="py-3 pr-3 align-middle font-semibold text-white">{element}</td>
+                      {assessmentGradeOptions.map((grade, gradeIndex) => (
+                        <td key={String(grade.value)} className={`border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeBandClass(grade.value)}`}>
+                          <span className="flex min-h-[36px] items-center justify-center rounded">
+                            <span className="flex flex-col items-center justify-center gap-1">
+                              <span className={`h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === assessmentGradeOptions.length - 1 ? 'border-cyan-300 bg-cyan-400' : 'border-gray-500 bg-white'}`} />
+                              {template.grades.showNumbers && (
+                                <span className="text-[9px] font-bold leading-none text-gray-500">{grade.isNoGrade ? 'No Grade' : grade.value}</span>
+                              )}
+                            </span>
+                          </span>
                         </td>
                       ))}
-                      <td className="px-3 py-3 text-gray-400">Element comments appear here.</td>
+                      <td className="relative py-3 pl-3 pr-2 align-middle">
+                        <span className="block min-h-[42px] rounded border border-gray-600 bg-gray-800 p-2 pr-8 text-sm text-gray-400">Comments...</span>
+                      </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td className="px-3 py-4 text-sm italic text-gray-500" colSpan={enabledGrades.length + 2}>No assessment elements configured.</td>
+                      <td className="px-3 py-4 text-sm italic text-gray-500" colSpan={assessmentGradeOptions.length + 2}>No assessment elements configured.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </fieldset>
           </section>
         </div>
       </div>

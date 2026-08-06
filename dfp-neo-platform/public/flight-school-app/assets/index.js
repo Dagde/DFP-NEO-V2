@@ -77540,9 +77540,22 @@ const TrainingReportFullPreviewFlyout = ({
     ...enabledGrades.map((grade) => ({ value: grade.value, label: grade.label }))
   ];
   const selectedPreviewGrade = previewGrades.find((grade) => grade.value === 2) || previewGrades.find((grade) => !grade.isNoGrade) || previewGrades[0];
+  const assessmentGradeOptions = [
+    ...template.grades.includeDemo ? [{ value: "No Grade", label: "No Grade", isNoGrade: true }] : [],
+    ...enabledGrades.map((grade) => ({ value: grade.value, label: grade.label }))
+  ];
+  const gradeBandClass = (value) => {
+    if (value === "No Grade") return "bg-gray-900/60 border-gray-700";
+    if (value <= 0) return "bg-red-950/35 border-red-500/20";
+    if (value === 1) return "bg-orange-950/35 border-orange-500/20";
+    if (value === 2) return "bg-amber-950/35 border-amber-500/20";
+    if (value === 3) return "bg-yellow-950/30 border-yellow-500/20";
+    if (value === 4) return "bg-lime-950/25 border-lime-500/20";
+    return "bg-emerald-950/25 border-emerald-500/20";
+  };
+  const formatAssessmentGradeHeader = (grade) => grade.isNoGrade ? "No Grade" : template.grades.showNumbers ? `${grade.label} ${grade.value}` : grade.label;
   const missionStatusOptions = template.completionResults.filter((option) => option.enabled !== false);
   const selectedMissionStatus = missionStatusOptions[0]?.code || "DCO";
-  const formatGradeLabel = (grade) => template.grades.showNumbers ? `${grade.value} - ${grade.label}` : grade.label;
   const formatGradeTileLabel = (grade) => grade.isNoGrade ? "No Grade" : template.grades.showNumbers ? `${grade.value} ${grade.label}` : grade.label;
   const reportTitle = template.displayName || template.genericName || "Training Report";
   const sampleEvent = "EventX";
@@ -77699,21 +77712,33 @@ const TrainingReportFullPreviewFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-medium text-gray-400", children: template.modules.comments.fields.profile }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block h-24 rounded border border-gray-700 bg-gray-700/80" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "mt-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "mb-3 text-sm font-bold text-gray-300", children: template.modules.assessmentMatrix.title }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded-lg border border-gray-700 bg-gray-950/60", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "border-b border-gray-700 text-[10px] uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3", children: "Element" }),
-            enabledGrades.slice().sort((a, b) => b.value - a.value).map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[108px] px-2 py-3 text-center", children: formatGradeLabel(grade) }, grade.value)),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "min-w-[220px] px-3 py-3", children: "Comments" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mt-6 block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-medium text-gray-400", children: template.modules.comments.fields.overall }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-2 block h-[150px] rounded border border-gray-700 bg-gray-700/80" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("section", { className: "mt-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "rounded-lg border border-gray-700 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Additional Elements" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 overflow-x-auto rounded-md border border-gray-800/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-[1200px] w-full table-fixed border-collapse text-left text-sm", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("colgroup", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[190px]" }),
+            assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[40px]" }, String(grade.value))),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("col", { className: "w-[480px]" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 pb-2 text-left text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Element" }),
+            assessmentGradeOptions.map((grade) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "relative h-[98px] px-0 pb-2 text-center align-bottom text-[9px] font-black uppercase leading-[0.95] text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-2 left-1/2 flex w-[76px] origin-bottom-left -rotate-90 flex-row items-center justify-start gap-1 whitespace-nowrap", children: formatAssessmentGradeHeader(grade).split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }) }, String(grade.value))),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "h-[98px] px-2 pb-2 text-left align-bottom text-[10px] font-bold uppercase tracking-wide text-gray-500", children: "Comments" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: elements.length > 0 ? elements.map((element, elementIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-800 last:border-b-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 font-semibold text-white", children: element }),
-            enabledGrades.slice().sort((a, b) => b.value - a.value).map((grade, gradeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-3 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mx-auto block h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === 0 ? "border-cyan-300 bg-cyan-400" : "border-gray-500 bg-gray-900"}` }) }, grade.value)),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-gray-400", children: "Element comments appear here." })
-          ] }, element)) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-4 text-sm italic text-gray-500", colSpan: enabledGrades.length + 2, children: "No assessment elements configured." }) }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: elements.length > 0 ? elements.map((element, elementIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 pr-3 align-middle font-semibold text-white", children: element }),
+            assessmentGradeOptions.map((grade, gradeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `border-l border-gray-800 px-0.5 py-3 text-center align-middle ${gradeBandClass(grade.value)}`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex min-h-[36px] items-center justify-center rounded", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex flex-col items-center justify-center gap-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-4 w-4 rounded-full border ${elementIndex === 0 && gradeIndex === assessmentGradeOptions.length - 1 ? "border-cyan-300 bg-cyan-400" : "border-gray-500 bg-white"}` }),
+              template.grades.showNumbers && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] font-bold leading-none text-gray-500", children: grade.isNoGrade ? "No Grade" : grade.value })
+            ] }) }) }, String(grade.value))),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "relative py-3 pl-3 pr-2 align-middle", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block min-h-[42px] rounded border border-gray-600 bg-gray-800 p-2 pr-8 text-sm text-gray-400", children: "Comments..." }) })
+          ] }, element)) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-4 text-sm italic text-gray-500", colSpan: assessmentGradeOptions.length + 2, children: "No assessment elements configured." }) }) })
         ] }) })
-      ] })
+      ] }) })
     ] })
   ] }) });
 };
