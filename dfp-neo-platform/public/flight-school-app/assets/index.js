@@ -107535,7 +107535,7 @@ const App = () => {
     return matchingUnits.some((unit) => unit?.settings?.hasTrainees === true);
   }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
   const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
-  const activeResourcePoolUnitCode = isSharedFleetOperationalContext ? null : activeContextUnitCodes[0] || activeUnitCode;
+  const activeResourcePoolUnitCode = activeContextUnitCodes[0] || activeUnitCode;
   const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel("flight_school");
   const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
   const fixedCrewSharedResourceUnitTabs = reactExports.useMemo(() => isFixedCrewLikeOperationalModel(activeOperationalModel) && organisationSettings.fleetSharingEnabled && activeContextUnitCodes.length > 1 ? activeContextUnitCodes : [], [activeContextUnitCodes, activeOperationalModel, organisationSettings.fleetSharingEnabled]);
@@ -110806,7 +110806,8 @@ const App = () => {
         school,
         activeUnitCode,
         activeView,
-        activePoolKey: activePoolKey || null
+        activePoolKey: activePoolKey || null,
+        activeResourcePoolUnitCode
       },
       activeDfpCounts: {
         aircraft: configuredAirframeCount,
@@ -110850,6 +110851,7 @@ const App = () => {
     };
   }, [
     activePlatformResourcePool,
+    activeResourcePoolUnitCode,
     activeUnitCode,
     activeView,
     availableCptCount,

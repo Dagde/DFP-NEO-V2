@@ -23021,9 +23021,7 @@ const App: React.FC = () => {
         return matchingUnits.some((unit: any) => unit?.settings?.hasTrainees === true);
     }, [activeContextUnitCodes, activeUnitCode, platformConfig]);
     const isSharedFleetOperationalContext = activeContextUnitCodes.length > 1;
-    const activeResourcePoolUnitCode = isSharedFleetOperationalContext
-        ? null
-        : activeContextUnitCodes[0] || activeUnitCode;
+    const activeResourcePoolUnitCode = activeContextUnitCodes[0] || activeUnitCode;
 
     const activeOperationalModel = activeUnitContext?.model || normaliseOperationalModel('flight_school');
     const activeOperationalModelLabel = getOperationalModelLabel(activeOperationalModel);
@@ -26938,6 +26936,7 @@ const App: React.FC = () => {
                 activeUnitCode,
                 activeView,
                 activePoolKey: activePoolKey || null,
+                activeResourcePoolUnitCode,
             },
             activeDfpCounts: {
                 aircraft: configuredAirframeCount,
@@ -26983,6 +26982,7 @@ const App: React.FC = () => {
         };
     }, [
         activePlatformResourcePool,
+        activeResourcePoolUnitCode,
         activeUnitCode,
         activeView,
         availableCptCount,
