@@ -77598,8 +77598,8 @@ const TrainingReportFullPreviewFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-bold uppercase tracking-[0.24em] text-gray-500", children: template.genericName || "Training Report" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mt-1 text-xl font-black text-white", children: reportTitle })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "h-full space-y-3 rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("dl", { className: "h-full space-y-2 rounded-lg border border-gray-700 bg-gray-800 p-4 lg:col-span-1 lg:w-[calc(100%-25px)]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("dt", { className: "text-sm font-medium text-gray-400", children: template.modules.overview.fields.event }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: sampleEvent })
@@ -77644,16 +77644,37 @@ const TrainingReportFullPreviewFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("dd", { className: "mt-1 text-sm font-semibold text-white", children: unitCode })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-gray-600 bg-gray-900 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-full flex-col space-y-4 lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 rounded-lg border border-gray-600 bg-gray-900 p-4 lg:-ml-[44px] lg:w-[calc(100%+44px)]", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300", children: template.modules.overallAssessment.title }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid items-start gap-4 md:grid-cols-[minmax(170px,220px)_minmax(360px,1fr)]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 mb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: template.modules.overallAssessment.fields.result }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-2", children: missionStatusOptions.length > 0 ? missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-4 w-4 rounded-full border ${option.code === selectedMissionStatus ? "border-sky-300 bg-sky-400" : "border-gray-500 bg-white"}` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col space-y-2", children: missionStatusOptions.length > 0 ? missionStatusOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    name: "preview-mission-status",
+                    value: option.code,
+                    checked: option.code === selectedMissionStatus,
+                    disabled: true,
+                    readOnly: true,
+                    className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500"
+                  }
+                ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-white", children: option.label || option.code })
-              ] }, option.code)) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-4 rounded-full border border-sky-300 bg-sky-400" }),
+              ] }, option.code)) : /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "radio",
+                    name: "preview-mission-status",
+                    checked: true,
+                    disabled: true,
+                    readOnly: true,
+                    className: "h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500"
+                  }
+                ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-white", children: completionStatusPreview || "Complete" })
               ] }) })
             ] }),
@@ -77665,31 +77686,52 @@ const TrainingReportFullPreviewFlyout = ({
                   className: `relative flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${selectedPreviewGrade && grade.value === selectedPreviewGrade.value ? "border-sky-400 bg-sky-500/15 text-white" : "border-gray-700 bg-gray-900/80 text-gray-300"}`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-black uppercase leading-none text-white", children: grade.isNoGrade ? "" : grade.value }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300", children: formatGradeTileLabel(grade).replace(/^\d+\s*/, "").split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-4 w-4 rounded-full border ${selectedPreviewGrade && grade.value === selectedPreviewGrade.value ? "border-sky-300 bg-sky-400" : "border-gray-500 bg-white"}` })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade.isNoGrade && template.grades.showNumbers ? "-translate-y-2" : ""}`, children: formatGradeTileLabel(grade).replace(/^\d+\s*/, "").split(/\s+/).map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: word }, `${word}-${index}`)) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "radio",
+                        name: "preview-overall-grade",
+                        value: String(grade.value),
+                        checked: Boolean(selectedPreviewGrade && grade.value === selectedPreviewGrade.value),
+                        disabled: true,
+                        readOnly: true,
+                        className: "h-4 w-4 border-gray-600 bg-gray-600 accent-sky-500"
+                      }
+                    )
                   ]
                 },
                 String(grade.value)
               )) })
             ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: template.modules.overallAssessment.fields.overallResult }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 md:gap-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/2 rounded-lg bg-green-600 p-4 text-center text-white ring-2 ring-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: template.overallResults.passLabel }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/2 rounded-lg bg-red-800/60 p-4 text-center text-red-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: template.overallResults.failLabel }) })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 border-t border-gray-600 pt-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: template.modules.overallAssessment.fields.groundSchoolAssessment }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-4 w-4 rounded border border-gray-500 bg-white" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-medium text-gray-400", children: [
-                template.modules.overallAssessment.fields.result,
-                ":"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-8 w-16 rounded border border-gray-600 bg-gray-700" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: template.modules.overallAssessment.fields.overallResult }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/2 scale-105 rounded-lg bg-green-600 p-4 text-center text-white shadow-lg ring-2 ring-white", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: template.overallResults.passLabel }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/2 rounded-lg bg-red-800/50 p-4 text-center text-red-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-2xl font-bold", children: template.overallResults.failLabel }) })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-600 pt-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: template.modules.overallAssessment.fields.groundSchoolAssessment }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    disabled: true,
+                    readOnly: true,
+                    className: "h-4 w-4 rounded border-gray-500 bg-gray-600 accent-sky-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-medium text-gray-300", children: "Assessment" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs font-medium text-gray-400", children: [
+                  template.modules.overallAssessment.fields.result,
+                  ":"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-8 w-16 rounded-md border border-gray-600 bg-gray-600/50" })
+              ] })
             ] })
           ] })
         ] }) })

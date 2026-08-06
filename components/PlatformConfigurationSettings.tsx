@@ -12843,8 +12843,8 @@ const TrainingReportFullPreviewFlyout = ({
             <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-gray-500">{template.genericName || 'Training Report'}</div>
             <h4 className="mt-1 text-xl font-black text-white">{reportTitle}</h4>
           </div>
-          <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-            <dl className="h-full space-y-3 rounded-lg border border-gray-700 bg-gray-800 p-4">
+          <div className="mb-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+            <dl className="h-full space-y-2 rounded-lg border border-gray-700 bg-gray-800 p-4 lg:col-span-1 lg:w-[calc(100%-25px)]">
               <div>
                 <dt className="text-sm font-medium text-gray-400">{template.modules.overview.fields.event}</dt>
                 <dd className="mt-1 text-sm font-semibold text-white">{sampleEvent}</dd>
@@ -12894,30 +12894,46 @@ const TrainingReportFullPreviewFlyout = ({
               </div>
             </dl>
 
-            <div className="lg:col-span-2">
-              <div className="relative rounded-lg border border-gray-600 bg-gray-900 p-4">
+            <div className="flex h-full flex-col space-y-4 lg:col-span-2">
+              <div className="relative flex-1 rounded-lg border border-gray-600 bg-gray-900 p-4 lg:-ml-[44px] lg:w-[calc(100%+44px)]">
                 <div className="absolute -top-3 left-6 bg-gray-900 px-2 text-sm font-semibold text-gray-300">{template.modules.overallAssessment.title}</div>
-                <div className="mt-2 grid items-start gap-4 md:grid-cols-[minmax(170px,220px)_minmax(360px,1fr)]">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.result}</label>
-                    <div className="flex flex-col gap-2">
-                      {missionStatusOptions.length > 0 ? missionStatusOptions.map((option) => (
-                        <label key={option.code} className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
-                          <span className={`h-4 w-4 rounded-full border ${option.code === selectedMissionStatus ? 'border-sky-300 bg-sky-400' : 'border-gray-500 bg-white'}`} />
+                <div className="mt-2 mb-3">
+                  <div className="grid items-start gap-3 md:grid-cols-[minmax(180px,220px)_minmax(360px,1fr)]">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.result}</label>
+                      <div className="flex flex-col space-y-2">
+                        {missionStatusOptions.length > 0 ? missionStatusOptions.map((option) => (
+                        <label key={option.code} className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
+                          <input
+                            type="radio"
+                            name="preview-mission-status"
+                            value={option.code}
+                            checked={option.code === selectedMissionStatus}
+                            disabled
+                            readOnly
+                            className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500"
+                          />
                           <span className="font-medium text-white">{option.label || option.code}</span>
                         </label>
-                      )) : (
-                        <label className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-700/30">
-                          <span className="h-4 w-4 rounded-full border border-sky-300 bg-sky-400" />
+                        )) : (
+                        <label className="flex cursor-pointer items-center space-x-2 rounded p-1 hover:bg-gray-700/30">
+                          <input
+                            type="radio"
+                            name="preview-mission-status"
+                            checked
+                            disabled
+                            readOnly
+                            className="h-4 w-4 border-gray-500 bg-gray-600 accent-sky-500"
+                          />
                           <span className="font-medium text-white">{completionStatusPreview || 'Complete'}</span>
                         </label>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallGrade}</label>
-                    <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
-                      {previewGrades.map((grade) => (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallGrade}</label>
+                      <div className="mt-1 flex flex-wrap gap-2 rounded bg-gray-950/45 p-2">
+                        {previewGrades.map((grade) => (
                         <label
                           key={String(grade.value)}
                           className={`relative flex h-[75px] w-[82px] cursor-pointer flex-col items-center justify-between rounded border px-1 py-2 text-center transition ${
@@ -12927,36 +12943,52 @@ const TrainingReportFullPreviewFlyout = ({
                           }`}
                         >
                           <span className="text-[11px] font-black uppercase leading-none text-white">{grade.isNoGrade ? '' : grade.value}</span>
-                          <span className="flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300">
+                          <span className={`flex max-w-full flex-col items-center whitespace-nowrap text-[8px] font-semibold uppercase leading-[0.95] text-gray-300 ${grade.isNoGrade && template.grades.showNumbers ? '-translate-y-2' : ''}`}>
                             {formatGradeTileLabel(grade).replace(/^\d+\s*/, '').split(/\s+/).map((word, index) => (
                               <span key={`${word}-${index}`}>{word}</span>
                             ))}
                           </span>
-                          <span className={`h-4 w-4 rounded-full border ${selectedPreviewGrade && grade.value === selectedPreviewGrade.value ? 'border-sky-300 bg-sky-400' : 'border-gray-500 bg-white'}`} />
+                          <input
+                            type="radio"
+                            name="preview-overall-grade"
+                            value={String(grade.value)}
+                            checked={Boolean(selectedPreviewGrade && grade.value === selectedPreviewGrade.value)}
+                            disabled
+                            readOnly
+                            className="h-4 w-4 border-gray-600 bg-gray-600 accent-sky-500"
+                          />
                         </label>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="mt-4">
+                <div className="space-y-4">
+                <div>
                   <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.overallResult}</label>
-                  <div className="flex gap-2 md:gap-4">
-                    <div className="w-1/2 rounded-lg bg-green-600 p-4 text-center text-white ring-2 ring-white">
+                  <div className="mt-1 flex space-x-4">
+                    <div className="w-1/2 scale-105 rounded-lg bg-green-600 p-4 text-center text-white shadow-lg ring-2 ring-white">
                       <span className="text-2xl font-bold">{template.overallResults.passLabel}</span>
                     </div>
-                    <div className="w-1/2 rounded-lg bg-red-800/60 p-4 text-center text-red-200">
+                    <div className="w-1/2 rounded-lg bg-red-800/50 p-4 text-center text-red-200">
                       <span className="text-2xl font-bold">{template.overallResults.failLabel}</span>
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 border-t border-gray-600 pt-4">
+                <div className="border-t border-gray-600 pt-4">
                   <label className="mb-2 block text-sm font-medium text-gray-400">{template.modules.overallAssessment.fields.groundSchoolAssessment}</label>
-                  <div className="flex items-center gap-3">
-                    <span className="h-4 w-4 rounded border border-gray-500 bg-white" />
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      disabled
+                      readOnly
+                      className="h-4 w-4 rounded border-gray-500 bg-gray-600 accent-sky-500"
+                    />
                     <span className="text-xs font-medium text-gray-300">Assessment</span>
                     <span className="text-xs font-medium text-gray-400">{template.modules.overallAssessment.fields.result}:</span>
-                    <span className="h-8 w-16 rounded border border-gray-600 bg-gray-700" />
+                    <span className="h-8 w-16 rounded-md border border-gray-600 bg-gray-600/50" />
                   </div>
+                </div>
                 </div>
               </div>
             </div>
