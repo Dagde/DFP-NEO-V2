@@ -2,6 +2,9 @@ import type { PhraseBank } from '../types';
 
 export const INITIAL_SCORING_MATRIX_ELEMENTS = [
   'Generic Flying Elements',
+  'Airmanship',
+  'Preparation',
+  'Technique',
   'Pre-Post Flight',
   'Walk Around',
   'Strap-in',
@@ -83,7 +86,6 @@ export const getConfiguredScoringMatrixElements = (phraseBank: PhraseBank | Reco
   const customElements = Object.keys(phraseBank || {}).filter((key) => (
     key !== SCORING_MATRIX_ELEMENT_LIST_KEY
     && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY
-    && !['Airmanship', 'Preparation', 'Technique'].includes(key)
     && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key)
   ));
   return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);

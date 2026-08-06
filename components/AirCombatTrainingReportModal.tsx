@@ -9,6 +9,7 @@ import {
 } from '../utils/trainingReportTerminology';
 import { appendTrainingReportFollowUpDiag, getAirCombatAssignmentFromItem } from '../utils/airCombatTraining';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
 
 interface AirCombatTrainingReportModalProps {
   staff: Instructor;
@@ -142,7 +143,7 @@ const buildReportComments = (
 
 const getConfiguredReportElements = (phraseBank?: PhraseBank): string[] | undefined => {
   const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
-  return Array.isArray(configured) ? configured : undefined;
+  return Array.isArray(configured) ? configured : getConfiguredScoringMatrixElements(phraseBank);
 };
 
 const stripGeneratedFollowUpNotes = (value: string, generatedPrefix = ''): string => {
@@ -547,7 +548,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
     const configuredReportElements = getConfiguredReportElements(phraseBank);
     const source = Array.isArray(matchedItem?.assessedElements)
       ? matchedItem.assessedElements
-      : (configuredReportElements || ['Airmanship', 'Preparation', 'Technique']);
+      : configuredReportElements;
     return Array.from(new Set(source.map(element => String(element || '').trim()).filter(Boolean)));
   }, [matchedItem?.assessedElements, phraseBank]);
   const selectRecentEvent = (event: ScheduleEvent) => {

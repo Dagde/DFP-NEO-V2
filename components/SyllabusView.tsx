@@ -40,6 +40,12 @@ import {
     handleEditableTextKeyDownCapture,
     stopEditableKeyPropagation,
 } from '../utils/editableKeyEvents';
+import {
+    INITIAL_SCORING_MATRIX_ELEMENTS,
+    SCORING_MATRIX_ELEMENT_GROUPS_KEY,
+    SCORING_MATRIX_ELEMENT_LIST_KEY,
+    getConfiguredScoringMatrixElements,
+} from '../utils/scoringMatrixElements';
 import type { PlatformMasterLmpCatalogueEntry } from '../utils/platformConfigService';
 import { showDarkAlert } from './DarkMessageModal';
 
@@ -92,29 +98,7 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
 );
 
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX = /^\[Linked Event:\s*([^\]]+)\]$/i;
-const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
-const SCORING_MATRIX_ASSESSABLE_ELEMENTS = [
-    'Pre-Post Flight',
-    'Walk Around',
-    'Strap-in',
-    'Ground Checks',
-    'Airborne Checks',
-    'Stationary',
-    'Visual',
-    'Effects of Control',
-    'Trimming',
-    'Straight and Level',
-    'Level medium Turn',
-    'Level Steep turn',
-    'Visual - Initial & Pitch',
-    'Landing',
-    'Crosswind',
-    'Radio Comms',
-    'Situational Awareness',
-    'Lookout',
-    'Knowledge',
-];
-const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
+const DEFAULT_ASSESSED_ELEMENTS = INITIAL_SCORING_MATRIX_ELEMENTS.filter(element => element !== 'Generic Flying Elements');
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = new Set(['generic flying elements']);
 
 const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
@@ -129,10 +113,9 @@ const getScoringMatrixElementOptions = (phraseBank?: PhraseBank): string[] => {
     if (Array.isArray(configuredElements)) {
         configuredElements.forEach(add);
     } else {
-        DEFAULT_ASSESSED_ELEMENTS.forEach(add);
-        SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
+        getConfiguredScoringMatrixElements(phraseBank).forEach(add);
         Object.keys(phraseBank || {}).forEach(key => {
-            if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY) add(key);
+            if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY) add(key);
         });
     }
     return Array.from(seen.values());

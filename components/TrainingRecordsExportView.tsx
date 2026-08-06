@@ -10,6 +10,7 @@ import {
     resolveReportAssessorDisplayLabel,
     type TrainingReportTemplate,
 } from '../utils/trainingReportTerminology';
+import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
 import { showDarkAlert } from './DarkMessageModal';
 
 interface TrainingRecordsExportViewProps {
@@ -134,7 +135,6 @@ const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
     { category: 'Landing', elements: ['Landing', 'Crosswind'] },
     { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] },
 ];
-const DEFAULT_EXPORT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 
@@ -146,7 +146,7 @@ const getDefaultAssessmentCategory = (element: string): string => (
 
 const getConfiguredExportElements = (phraseBank?: PhraseBank): string[] | undefined => {
     const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
-    return Array.isArray(configured) ? configured : undefined;
+    return Array.isArray(configured) ? configured : getConfiguredScoringMatrixElements(phraseBank);
 };
 
 const getConfiguredExportGroups = (phraseBank?: PhraseBank): {
@@ -166,7 +166,7 @@ const buildExportAssessmentStructure = (elements?: string[], phraseBank?: Phrase
     const configuredReportElements = getConfiguredExportElements(phraseBank);
     const sourceElements = Array.isArray(elements)
         ? elements
-        : (configuredReportElements || DEFAULT_EXPORT_ASSESSED_ELEMENTS);
+        : configuredReportElements;
     const selectedElements = sourceElements
         .map(element => String(element || '').trim())
         .filter(Boolean)

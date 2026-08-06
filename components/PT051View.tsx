@@ -18,6 +18,7 @@ import {
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { loadPlatformConfigFromDB } from '../utils/platformConfigService';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { getConfiguredScoringMatrixElements } from '../utils/scoringMatrixElements';
 
 interface TrainingReportViewProps {
     trainee: Trainee;
@@ -173,7 +174,6 @@ const PT051_STRUCTURE = [
 ];
 
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
-const DEFAULT_ASSESSED_ELEMENTS = ['Airmanship', 'Preparation', 'Technique'];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = '__scoringMatrixElementGroups';
 const SCORING_MATRIX_ELEMENT_LIST_KEY = '__scoringMatrixElements';
 const COMMENT_SECTIONS = ['QFI', 'Weather', 'Profile', 'Overall', 'NEST', 'Notes'] as const;
@@ -256,7 +256,7 @@ const pushTrainingReportNotesDiag = (stage: string, payload: Record<string, any>
 
 const getConfiguredReportElements = (phraseBank?: PhraseBank): string[] | undefined => {
     const configured = (phraseBank as any)?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
-    return Array.isArray(configured) ? configured : undefined;
+    return Array.isArray(configured) ? configured : getConfiguredScoringMatrixElements(phraseBank);
 };
 
 const getConfiguredReportElementGroups = (phraseBank?: PhraseBank): {
@@ -275,7 +275,7 @@ const normaliseAssessedElements = (elements?: string[], phraseBank?: PhraseBank)
     const configuredReportElements = getConfiguredReportElements(phraseBank);
     const source = Array.isArray(elements)
         ? elements
-        : (configuredReportElements || DEFAULT_ASSESSED_ELEMENTS);
+        : configuredReportElements;
     const seen = new Set<string>();
     const selected = source
         .map(element => String(element || '').trim())

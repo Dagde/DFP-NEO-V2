@@ -21706,6 +21706,97 @@ const TraineeLmpView = ({
     ] })
   ] });
 };
+const INITIAL_SCORING_MATRIX_ELEMENTS = [
+  "Generic Flying Elements",
+  "Airmanship",
+  "Preparation",
+  "Technique",
+  "Pre-Post Flight",
+  "Walk Around",
+  "Strap-in",
+  "Ground Checks",
+  "Airborne Checks",
+  "Stationary",
+  "Visual",
+  "Effects of Control",
+  "Trimming",
+  "Straight and Level",
+  "Level medium Turn",
+  "Level Steep turn",
+  "Visual - Initial & Pitch",
+  "Landing",
+  "Crosswind",
+  "Radio Comms",
+  "Situational Awareness",
+  "Lookout",
+  "Knowledge"
+];
+const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
+const DEFAULT_SCORING_MATRIX_SECTIONS = [
+  "Core Dimensions",
+  "Procedural Framework",
+  "Takeoff",
+  "Departure",
+  "Core Handling Skills",
+  "Turns",
+  "Recovery",
+  "Landing",
+  "Domestics",
+  "Additional Elements"
+];
+const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
+  Airmanship: "Core Dimensions",
+  Preparation: "Core Dimensions",
+  Technique: "Core Dimensions",
+  "Pre-Post Flight": "Procedural Framework",
+  "Walk Around": "Procedural Framework",
+  "Strap-in": "Procedural Framework",
+  "Ground Checks": "Procedural Framework",
+  "Airborne Checks": "Procedural Framework",
+  Stationary: "Takeoff",
+  Visual: "Departure",
+  "Effects of Control": "Core Handling Skills",
+  Trimming: "Core Handling Skills",
+  "Straight and Level": "Core Handling Skills",
+  "Level medium Turn": "Turns",
+  "Level Steep turn": "Turns",
+  "Visual - Initial & Pitch": "Recovery",
+  Landing: "Landing",
+  Crosswind: "Landing",
+  "Radio Comms": "Domestics",
+  "Situational Awareness": "Domestics",
+  Lookout: "Domestics",
+  Knowledge: "Domestics"
+};
+const SCORING_MATRIX_SECTION_HELP = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
+const normaliseScoringMatrixElementName = (value) => String(value || "").trim();
+const dedupeScoringMatrixElements = (elements) => elements.map(normaliseScoringMatrixElementName).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
+const getConfiguredScoringMatrixElements = (phraseBank) => {
+  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
+  if (Array.isArray(savedElements)) {
+    return dedupeScoringMatrixElements(savedElements);
+  }
+  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
+  return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);
+};
+const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
+  const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2];
+  const hasExplicitGroups = !!savedGroups && typeof savedGroups === "object" && !Array.isArray(savedGroups);
+  return {
+    groups: hasExplicitGroups ? savedGroups : {},
+    hasExplicitGroups
+  };
+};
+const getScoringMatrixElementGroup = (element, groups, hasExplicitGroups) => {
+  if (Object.prototype.hasOwnProperty.call(groups, element)) {
+    return String(groups[element] || "").trim() || "Additional Elements";
+  }
+  if (!hasExplicitGroups) {
+    return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements";
+  }
+  return "Additional Elements";
+};
 const DraftTextInput$2 = ({
   value,
   onCommit,
@@ -21811,9 +21902,8 @@ const PT051_STRUCTURE$1 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 PT051_STRUCTURE$1.flatMap((cat) => cat.elements);
-const DEFAULT_ASSESSED_ELEMENTS$1 = ["Airmanship", "Preparation", "Technique"];
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY$3 = "__scoringMatrixElementGroups";
-const SCORING_MATRIX_ELEMENT_LIST_KEY$5 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 = "__scoringMatrixElementGroups";
+const SCORING_MATRIX_ELEMENT_LIST_KEY$2 = "__scoringMatrixElements";
 const COMMENT_SECTIONS = ["QFI", "Weather", "Profile", "Overall", "NEST", "Notes"];
 const formatTrainingReportDisplayDate = (dateString) => {
   if (!dateString) return "";
@@ -21874,11 +21964,11 @@ const pushTrainingReportNotesDiag$1 = (stage, payload = {}) => {
   }
 };
 const getConfiguredReportElements$1 = (phraseBank) => {
-  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$5];
-  return Array.isArray(configured) ? configured : void 0;
+  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$2];
+  return Array.isArray(configured) ? configured : getConfiguredScoringMatrixElements(phraseBank);
 };
 const getConfiguredReportElementGroups = (phraseBank) => {
-  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$3];
+  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1];
   const hasExplicitGroups = !!configured && typeof configured === "object" && !Array.isArray(configured);
   return {
     groups: hasExplicitGroups ? configured : {},
@@ -21887,7 +21977,7 @@ const getConfiguredReportElementGroups = (phraseBank) => {
 };
 const normaliseAssessedElements$1 = (elements, phraseBank) => {
   const configuredReportElements = getConfiguredReportElements$1(phraseBank);
-  const source = Array.isArray(elements) ? elements : configuredReportElements || DEFAULT_ASSESSED_ELEMENTS$1;
+  const source = Array.isArray(elements) ? elements : configuredReportElements;
   const seen = /* @__PURE__ */ new Set();
   const selected = source.map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
     const key = element.toLowerCase();
@@ -55624,29 +55714,7 @@ const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
 const AIR_COMBAT_LINKED_EVENT_NOTE_REGEX$1 = /^\[Linked Event:\s*([^\]]+)\]$/i;
-const DEFAULT_ASSESSED_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
-const SCORING_MATRIX_ASSESSABLE_ELEMENTS = [
-  "Pre-Post Flight",
-  "Walk Around",
-  "Strap-in",
-  "Ground Checks",
-  "Airborne Checks",
-  "Stationary",
-  "Visual",
-  "Effects of Control",
-  "Trimming",
-  "Straight and Level",
-  "Level medium Turn",
-  "Level Steep turn",
-  "Visual - Initial & Pitch",
-  "Landing",
-  "Crosswind",
-  "Radio Comms",
-  "Situational Awareness",
-  "Lookout",
-  "Knowledge"
-];
-const SCORING_MATRIX_ELEMENT_LIST_KEY$4 = "__scoringMatrixElements";
+const DEFAULT_ASSESSED_ELEMENTS = INITIAL_SCORING_MATRIX_ELEMENTS.filter((element) => element !== "Generic Flying Elements");
 const SCORING_MATRIX_NON_ASSESSABLE_KEYS = /* @__PURE__ */ new Set(["generic flying elements"]);
 const getScoringMatrixElementOptions = (phraseBank) => {
   const seen = /* @__PURE__ */ new Map();
@@ -55656,14 +55724,13 @@ const getScoringMatrixElementOptions = (phraseBank) => {
     if (!clean || SCORING_MATRIX_NON_ASSESSABLE_KEYS.has(key) || seen.has(key)) return;
     seen.set(key, clean);
   };
-  const configuredElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$4];
+  const configuredElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
   if (Array.isArray(configuredElements)) {
     configuredElements.forEach(add);
   } else {
-    DEFAULT_ASSESSED_ELEMENTS.forEach(add);
-    SCORING_MATRIX_ASSESSABLE_ELEMENTS.forEach(add);
+    getConfiguredScoringMatrixElements(phraseBank).forEach(add);
     Object.keys(phraseBank || {}).forEach((key) => {
-      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$4) add(key);
+      if (key !== SCORING_MATRIX_ELEMENT_LIST_KEY$3 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$2) add(key);
     });
   }
   return Array.from(seen.values());
@@ -58981,7 +59048,7 @@ const formatTrainingReportDate = (dateString) => {
   });
 };
 const COMMENT_SECTION_KEYS = ["assessor", "weather", "profile", "overall", "nest", "notes"];
-const SCORING_MATRIX_ELEMENT_LIST_KEY$3 = "__scoringMatrixElements";
+const SCORING_MATRIX_ELEMENT_LIST_KEY$1 = "__scoringMatrixElements";
 const escapeRegExp$1 = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const parseReportComments = (raw, sectionLabels2 = {}) => {
   const defaults = {
@@ -59034,8 +59101,8 @@ const parseReportComments = (raw, sectionLabels2 = {}) => {
 };
 const buildReportComments = (sections, sectionLabels2) => COMMENT_SECTION_KEYS.map((key) => [sectionLabels2[key] || key, sections[key]]).filter(([, value]) => String(value || "").trim()).map(([label, value]) => `${label}: ${String(value).trim()}`).join("\n\n");
 const getConfiguredReportElements = (phraseBank) => {
-  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$3];
-  return Array.isArray(configured) ? configured : void 0;
+  const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
+  return Array.isArray(configured) ? configured : getConfiguredScoringMatrixElements(phraseBank);
 };
 const stripGeneratedFollowUpNotes = (value, generatedPrefix = "") => {
   const lines = String(value || "").split("\n");
@@ -59346,7 +59413,7 @@ const AirCombatTrainingReportModal = ({
   ] });
   const assessmentElements = reactExports.useMemo(() => {
     const configuredReportElements = getConfiguredReportElements(phraseBank);
-    const source = Array.isArray(matchedItem?.assessedElements) ? matchedItem.assessedElements : configuredReportElements || ["Airmanship", "Preparation", "Technique"];
+    const source = Array.isArray(matchedItem?.assessedElements) ? matchedItem.assessedElements : configuredReportElements;
     return Array.from(new Set(source.map((element) => String(element || "").trim()).filter(Boolean)));
   }, [matchedItem?.assessedElements, phraseBank]);
   const selectRecentEvent = (event) => {
@@ -60815,67 +60882,6 @@ const AuthorisationFlyout = ({
     showClearConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(ClearAuthConfirmation, { onConfirm: handleProceedToPinForClear, onCancel: () => setShowClearConfirmation(false) })
   ] });
 };
-const INITIAL_ELEMENTS_LIST = [
-  "Generic Flying Elements",
-  "Pre-Post Flight",
-  "Walk Around",
-  "Strap-in",
-  "Ground Checks",
-  "Airborne Checks",
-  "Stationary",
-  "Visual",
-  "Effects of Control",
-  "Trimming",
-  "Straight and Level",
-  "Level medium Turn",
-  "Level Steep turn",
-  "Visual - Initial & Pitch",
-  "Landing",
-  "Crosswind",
-  "Radio Comms",
-  "Situational Awareness",
-  "Lookout",
-  "Knowledge"
-];
-const SCORING_MATRIX_ELEMENT_LIST_KEY$2 = "__scoringMatrixElements";
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY$2 = "__scoringMatrixElementGroups";
-const DEFAULT_SCORING_MATRIX_SECTIONS$1 = [
-  "Core Dimensions",
-  "Procedural Framework",
-  "Takeoff",
-  "Departure",
-  "Core Handling Skills",
-  "Turns",
-  "Recovery",
-  "Landing",
-  "Domestics",
-  "Additional Elements"
-];
-const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1 = {
-  Airmanship: "Core Dimensions",
-  Preparation: "Core Dimensions",
-  Technique: "Core Dimensions",
-  "Pre-Post Flight": "Procedural Framework",
-  "Walk Around": "Procedural Framework",
-  "Strap-in": "Procedural Framework",
-  "Ground Checks": "Procedural Framework",
-  "Airborne Checks": "Procedural Framework",
-  Stationary: "Takeoff",
-  Visual: "Departure",
-  "Effects of Control": "Core Handling Skills",
-  Trimming: "Core Handling Skills",
-  "Straight and Level": "Core Handling Skills",
-  "Level medium Turn": "Turns",
-  "Level Steep turn": "Turns",
-  "Visual - Initial & Pitch": "Recovery",
-  Landing: "Landing",
-  Crosswind: "Landing",
-  "Radio Comms": "Domestics",
-  "Situational Awareness": "Domestics",
-  Lookout: "Domestics",
-  Knowledge: "Domestics"
-};
-const SCORING_MATRIX_SECTION_HELP$1 = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
 const DraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
   const [draft, setDraft] = reactExports.useState(value || "");
   const [isFocused, setIsFocused] = reactExports.useState(false);
@@ -60916,33 +60922,6 @@ const DraftPhraseTextArea = ({ value, readOnly, onCommit }) => {
       style: { minHeight: "38px", height: "auto" }
     }
   );
-};
-const getConfiguredScoringMatrixElements$1 = (phraseBank) => {
-  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$2];
-  if (Array.isArray(savedElements)) {
-    return savedElements.map((element) => String(element || "").trim()).filter(Boolean).filter((element, index, arr) => arr.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
-  }
-  const customElements = Object.keys(phraseBank || {}).filter(
-    (key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$2 && !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_ELEMENTS_LIST.includes(key)
-  );
-  return [...INITIAL_ELEMENTS_LIST, ...customElements];
-};
-const getConfiguredScoringMatrixElementGroups$1 = (phraseBank) => {
-  const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2];
-  const hasExplicitGroups = !!savedGroups && typeof savedGroups === "object" && !Array.isArray(savedGroups);
-  return {
-    groups: hasExplicitGroups ? savedGroups : {},
-    hasExplicitGroups
-  };
-};
-const getScoringMatrixElementGroup$1 = (element, groups, hasExplicitGroups) => {
-  if (Object.prototype.hasOwnProperty.call(groups, element)) {
-    return String(groups[element] || "").trim() || "Additional Elements";
-  }
-  if (!hasExplicitGroups) {
-    return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS$1[element] || "Additional Elements";
-  }
-  return "Additional Elements";
 };
 const AddElementFlyout = ({ onClose, onSave }) => {
   const [name, setName] = reactExports.useState("");
@@ -61020,16 +60999,16 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   const [showDeleteElementFlyout, setShowDeleteElementFlyout] = reactExports.useState(false);
   const [editModeGrades, setEditModeGrades] = reactExports.useState(/* @__PURE__ */ new Set());
   const [flightElements, setFlightElements] = reactExports.useState(() => {
-    return getConfiguredScoringMatrixElements$1(phraseBank);
+    return getConfiguredScoringMatrixElements(phraseBank);
   });
   const [selectedElement, setSelectedElement] = reactExports.useState(flightElements[0]);
   const [elementGroupDrafts, setElementGroupDrafts] = reactExports.useState({});
   const currentDimension = activeTab === "Elements" ? selectedElement : activeTab;
-  const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups$1(phraseBank);
-  const savedElementGroup = getScoringMatrixElementGroup$1(selectedElement, configuredElementGroups, hasExplicitElementGroups);
+  const { groups: configuredElementGroups, hasExplicitGroups: hasExplicitElementGroups } = getConfiguredScoringMatrixElementGroups(phraseBank);
+  const savedElementGroup = getScoringMatrixElementGroup(selectedElement, configuredElementGroups, hasExplicitElementGroups);
   const currentElementGroup = elementGroupDrafts[selectedElement] ?? savedElementGroup;
   const sectionOptions = Array.from(new Set([
-    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS$1,
+    ...hasExplicitElementGroups ? [] : DEFAULT_SCORING_MATRIX_SECTIONS,
     ...Object.values(configuredElementGroups).map((value) => String(value || "").trim()).filter(Boolean),
     savedElementGroup,
     String(currentElementGroup || "").trim()
@@ -61047,7 +61026,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
   const beginElementGroupDraft = (element) => {
     setElementGroupDrafts((previous) => ({
       ...previous,
-      [element]: previous[element] ?? getScoringMatrixElementGroup$1(element, configuredElementGroups, hasExplicitElementGroups)
+      [element]: previous[element] ?? getScoringMatrixElementGroup(element, configuredElementGroups, hasExplicitElementGroups)
     }));
   };
   const updateElementGroupDraft = (element, group) => {
@@ -61118,7 +61097,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     setFlightElements(nextElements);
     onUpdatePhraseBank({
       ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_LIST_KEY$2]: nextElements,
+      [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
       [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [newElementName]: "Additional Elements"
@@ -61139,7 +61118,7 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
     elementsToDelete.forEach((el) => {
       delete nextGroups[el];
     });
-    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$2] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
     newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (elementsToDelete.has(selectedElement)) {
@@ -61232,11 +61211,11 @@ const ScoringMatrixFlyout = ({ onClose, phraseBank, onUpdatePhraseBank, initialT
                 "span",
                 {
                   className: "inline-flex h-4 w-4 items-center justify-center rounded-full border border-sky-500/60 bg-sky-500/10 text-[10px] font-bold text-sky-300",
-                  title: SCORING_MATRIX_SECTION_HELP$1,
+                  title: SCORING_MATRIX_SECTION_HELP,
                   children: "i"
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP$1 })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-30 hidden w-72 -translate-x-1/2 rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-xs normal-case leading-relaxed tracking-normal text-gray-200 shadow-xl group-hover:block", children: SCORING_MATRIX_SECTION_HELP })
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full max-w-full overflow-x-auto pb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid min-w-[460px] grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)] gap-3", children: [
@@ -62603,94 +62582,6 @@ const EmergencyPage = ({
     ] }) })
   ] });
 };
-const INITIAL_SCORING_MATRIX_ELEMENTS = [
-  "Generic Flying Elements",
-  "Pre-Post Flight",
-  "Walk Around",
-  "Strap-in",
-  "Ground Checks",
-  "Airborne Checks",
-  "Stationary",
-  "Visual",
-  "Effects of Control",
-  "Trimming",
-  "Straight and Level",
-  "Level medium Turn",
-  "Level Steep turn",
-  "Visual - Initial & Pitch",
-  "Landing",
-  "Crosswind",
-  "Radio Comms",
-  "Situational Awareness",
-  "Lookout",
-  "Knowledge"
-];
-const SCORING_MATRIX_ELEMENT_LIST_KEY$1 = "__scoringMatrixElements";
-const SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 = "__scoringMatrixElementGroups";
-const DEFAULT_SCORING_MATRIX_SECTIONS = [
-  "Core Dimensions",
-  "Procedural Framework",
-  "Takeoff",
-  "Departure",
-  "Core Handling Skills",
-  "Turns",
-  "Recovery",
-  "Landing",
-  "Domestics",
-  "Additional Elements"
-];
-const DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS = {
-  Airmanship: "Core Dimensions",
-  Preparation: "Core Dimensions",
-  Technique: "Core Dimensions",
-  "Pre-Post Flight": "Procedural Framework",
-  "Walk Around": "Procedural Framework",
-  "Strap-in": "Procedural Framework",
-  "Ground Checks": "Procedural Framework",
-  "Airborne Checks": "Procedural Framework",
-  Stationary: "Takeoff",
-  Visual: "Departure",
-  "Effects of Control": "Core Handling Skills",
-  Trimming: "Core Handling Skills",
-  "Straight and Level": "Core Handling Skills",
-  "Level medium Turn": "Turns",
-  "Level Steep turn": "Turns",
-  "Visual - Initial & Pitch": "Recovery",
-  Landing: "Landing",
-  Crosswind: "Landing",
-  "Radio Comms": "Domestics",
-  "Situational Awareness": "Domestics",
-  Lookout: "Domestics",
-  Knowledge: "Domestics"
-};
-const SCORING_MATRIX_SECTION_HELP = "Choose where this element appears in the training report. Type a new section name to add it. A section stays in the dropdown while at least one element uses it. To rename a section, change each element using the old name to the new name.";
-const normaliseScoringMatrixElementName = (value) => String(value || "").trim();
-const dedupeScoringMatrixElements = (elements) => elements.map(normaliseScoringMatrixElementName).filter(Boolean).filter((element, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === element.toLowerCase()) === index);
-const getConfiguredScoringMatrixElements = (phraseBank) => {
-  const savedElements = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY$1];
-  if (Array.isArray(savedElements)) {
-    return dedupeScoringMatrixElements(savedElements);
-  }
-  const customElements = Object.keys(phraseBank || {}).filter((key) => key !== SCORING_MATRIX_ELEMENT_LIST_KEY$1 && key !== SCORING_MATRIX_ELEMENT_GROUPS_KEY$1 && !["Airmanship", "Preparation", "Technique"].includes(key) && !INITIAL_SCORING_MATRIX_ELEMENTS.includes(key));
-  return dedupeScoringMatrixElements([...INITIAL_SCORING_MATRIX_ELEMENTS, ...customElements]);
-};
-const getConfiguredScoringMatrixElementGroups = (phraseBank) => {
-  const savedGroups = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1];
-  const hasExplicitGroups = !!savedGroups && typeof savedGroups === "object" && !Array.isArray(savedGroups);
-  return {
-    groups: hasExplicitGroups ? savedGroups : {},
-    hasExplicitGroups
-  };
-};
-const getScoringMatrixElementGroup = (element, groups, hasExplicitGroups) => {
-  if (Object.prototype.hasOwnProperty.call(groups, element)) {
-    return String(groups[element] || "").trim() || "Additional Elements";
-  }
-  if (!hasExplicitGroups) {
-    return DEFAULT_SCORING_MATRIX_ELEMENT_GROUPS[element] || "Additional Elements";
-  }
-  return "Additional Elements";
-};
 const TEMPLATE_OVERRIDE_FOLDER_ID = "template_overrides";
 const formatCurrencyExpiryCalculation = (value) => {
   const normalised = String(value || "").trim().toUpperCase();
@@ -62751,7 +62642,7 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     const nextGroup = String(group || "").trim();
     onUpdatePhraseBank({
       ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [element]: nextGroup || "Additional Elements"
       }
@@ -62803,8 +62694,8 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     setFlightElements(nextElements);
     onUpdatePhraseBank({
       ...phraseBank,
-      [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: nextElements,
-      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+      [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: nextElements,
+      [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
         ...configuredElementGroups,
         [name]: "Additional Elements"
       },
@@ -62830,8 +62721,8 @@ const ScoringMatrixInline = ({ activeTab, phraseBank, onUpdatePhraseBank, readOn
     selectedToDelete.forEach((el) => {
       delete nextGroups[el];
     });
-    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$1] = newFlightElements;
-    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$1] = nextGroups;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_LIST_KEY$3] = newFlightElements;
+    newPhraseBank[SCORING_MATRIX_ELEMENT_GROUPS_KEY$2] = nextGroups;
     onUpdatePhraseBank(newPhraseBank);
     if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || "Generic Flying Elements");
     setSelectedToDelete(/* @__PURE__ */ new Set());
@@ -69736,8 +69627,8 @@ This permanently removes the organisation record from platform configuration and
       const { groups } = getConfiguredScoringMatrixElementGroups(bank);
       return {
         ...bank,
-        [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: [...elements, name],
-        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: [...elements, name],
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
           ...groups,
           [name]: "Additional Elements"
         },
@@ -69770,8 +69661,8 @@ This permanently removes the organisation record from platform configuration and
       delete nextGroups[element];
       const nextBank = {
         ...bank,
-        [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: elements,
-        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: nextGroups
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: elements,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: nextGroups
       };
       if (bank[element] && !bank[nextName]) {
         nextBank[nextName] = bank[element];
@@ -69792,7 +69683,7 @@ This permanently removes the organisation record from platform configuration and
       const { groups } = getConfiguredScoringMatrixElementGroups(bank);
       return {
         ...bank,
-        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: {
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: {
           ...groups,
           [element]: nextGroup
         }
@@ -69814,8 +69705,8 @@ This permanently removes the organisation record from platform configuration and
       delete nextGroups[element];
       const nextBank = {
         ...bank,
-        [SCORING_MATRIX_ELEMENT_LIST_KEY$1]: elements,
-        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$1]: nextGroups
+        [SCORING_MATRIX_ELEMENT_LIST_KEY$3]: elements,
+        [SCORING_MATRIX_ELEMENT_GROUPS_KEY$2]: nextGroups
       };
       delete nextBank[element];
       return nextBank;
@@ -84207,13 +84098,12 @@ const DEFAULT_EXPORT_ASSESSMENT_STRUCTURE = [
   { category: "Landing", elements: ["Landing", "Crosswind"] },
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
-const DEFAULT_EXPORT_ASSESSED_ELEMENTS = ["Airmanship", "Preparation", "Technique"];
 const SCORING_MATRIX_ELEMENT_GROUPS_KEY = "__scoringMatrixElementGroups";
 const SCORING_MATRIX_ELEMENT_LIST_KEY = "__scoringMatrixElements";
 const getDefaultAssessmentCategory = (element) => DEFAULT_EXPORT_ASSESSMENT_STRUCTURE.find((category) => category.elements.some((candidate) => candidate.toLowerCase() === element.toLowerCase()))?.category || "Additional Elements";
 const getConfiguredExportElements = (phraseBank) => {
   const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_LIST_KEY];
-  return Array.isArray(configured) ? configured : void 0;
+  return Array.isArray(configured) ? configured : getConfiguredScoringMatrixElements(phraseBank);
 };
 const getConfiguredExportGroups = (phraseBank) => {
   const configured = phraseBank?.[SCORING_MATRIX_ELEMENT_GROUPS_KEY];
@@ -84226,7 +84116,7 @@ const getConfiguredExportGroups = (phraseBank) => {
 const buildExportAssessmentStructure = (elements, phraseBank) => {
   const seen = /* @__PURE__ */ new Set();
   const configuredReportElements = getConfiguredExportElements(phraseBank);
-  const sourceElements = Array.isArray(elements) ? elements : configuredReportElements || DEFAULT_EXPORT_ASSESSED_ELEMENTS;
+  const sourceElements = Array.isArray(elements) ? elements : configuredReportElements;
   const selectedElements = sourceElements.map((element) => String(element || "").trim()).filter(Boolean).filter((element) => {
     const key = element.toLowerCase();
     if (seen.has(key)) return false;
