@@ -12782,7 +12782,7 @@ const TrainingReportFullPreviewFlyout = ({
 
   return (
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-gray-950/78 px-4 py-5 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Training Report Preview">
-      <div className="flex h-[92vh] w-full flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-gray-900 text-gray-100 shadow-2xl">
+      <div className="flex h-[92vh] w-[calc(100vw-2rem)] max-w-[88rem] flex-col overflow-hidden rounded-xl border border-cyan-400/35 bg-gray-900 text-gray-100 shadow-2xl md:w-[calc(100vw-12rem)] xl:w-[min(calc(100vw-18rem),88rem)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-700 bg-gray-800 px-4 py-3">
           <div className="flex flex-wrap items-center gap-4">
             <div>
