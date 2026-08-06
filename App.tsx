@@ -26835,13 +26835,16 @@ const App: React.FC = () => {
         (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
         [resourceDisplayNames]
     );
-    const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, 'aircraft', 24, date);
-    const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, 'ftd', availableFtdCount, date);
-    const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount, date);
-    const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4, date);
-    const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6, date);
-    const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'dutySupervisor', 0, date) > 0;
-    const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'towerDutyInstructor', 0, date) > 0;
+    const resourceRowTargetDate = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'BuildAnalysis'].includes(activeView)
+        ? buildDfpDate
+        : date;
+    const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, 'aircraft', 24, resourceRowTargetDate);
+    const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, 'ftd', availableFtdCount, resourceRowTargetDate);
+    const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount, resourceRowTargetDate);
+    const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4, resourceRowTargetDate);
+    const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6, resourceRowTargetDate);
+    const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'dutySupervisor', 0, resourceRowTargetDate) > 0;
+    const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, 'towerDutyInstructor', 0, resourceRowTargetDate) > 0;
 
     const getLocalIsoDateForResourceRows = useCallback((offsetDays = 0): string => {
         const dateValue = new Date();
@@ -26894,7 +26897,16 @@ const App: React.FC = () => {
             date,
             getLocalIsoDateForResourceRows(1),
         ].filter(Boolean)));
-        const rowKeys = ['aircraft', 'ftd', 'cpt', 'standby', 'ground'] as const;
+        const rowKeys = ['aircraft', 'ftd', 'cpt', 'standby', 'ground', 'dutySupervisor', 'towerDutyInstructor'] as const;
+        const rowFallbacks: Record<typeof rowKeys[number], number> = {
+            aircraft: 24,
+            ftd: availableFtdCount,
+            cpt: availableCptCount,
+            standby: 4,
+            ground: 6,
+            dutySupervisor: 0,
+            towerDutyInstructor: 0,
+        };
         const pools = Array.isArray(platformConfig?.resourcePools) ? platformConfig.resourcePools : [];
         const activePoolKey = String(activePlatformResourcePool?.id || activePlatformResourcePool?.code || '').trim();
         const contextLocation = String(school || '').trim().toUpperCase();
@@ -26933,6 +26945,9 @@ const App: React.FC = () => {
                 cpt: configuredCptCount,
                 standby: configuredStandbyCount,
                 ground: configuredGroundCount,
+                dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
+                towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0,
+                targetDate: resourceRowTargetDate,
             },
             resourcePools: poolsToReport.map((pool: any, poolIndex: number) => {
                 const settings = pool?.settings || {};
@@ -26959,7 +26974,7 @@ const App: React.FC = () => {
                             historyMatch: getResourceRowHistoryMatchForDiag(settings, targetDate),
                             counts: Object.fromEntries(rowKeys.map(key => [
                                 key,
-                                getResourcePoolCount(pool, key, key === 'aircraft' ? 24 : key === 'ftd' ? availableFtdCount : key === 'cpt' ? availableCptCount : key === 'standby' ? 4 : 6, targetDate),
+                                getResourcePoolCount(pool, key, rowFallbacks[key], targetDate),
                             ])),
                         },
                     ])),
@@ -26977,10 +26992,13 @@ const App: React.FC = () => {
         configuredFtdCount,
         configuredGroundCount,
         configuredStandbyCount,
+        configuredDutySupervisorRowEnabled,
+        configuredTowerDutyInstructorRowEnabled,
         date,
         getLocalIsoDateForResourceRows,
         getResourceRowHistoryMatchForDiag,
         platformConfig?.resourcePools,
+        resourceRowTargetDate,
         school,
     ]);
 

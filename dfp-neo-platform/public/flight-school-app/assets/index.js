@@ -71042,7 +71042,7 @@ This removes the reusable permission profile from Settings. Users assigned only 
   const normaliseDfpResourceRowsHistory = (settings = {}) => Array.isArray(settings.dfpResourceRowsHistory) ? settings.dfpResourceRowsHistory : [];
   const sameDfpResourceRowsHistory = (leftSettings = {}, rightSettings = {}) => JSON.stringify(normaliseDfpResourceRowsHistory(leftSettings)) === JSON.stringify(normaliseDfpResourceRowsHistory(rightSettings));
   const getEditableDfpResourceRows = (pool, index) => {
-    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString2());
+    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString2(1));
     const currentRows = normaliseDfpResourceRowsSnapshot(pool?.settings || {});
     const baselinePools = Array.isArray(resourcePoolEditBaselineRef.current?.resourcePools) ? resourcePoolEditBaselineRef.current.resourcePools : [];
     const baselineKey = getResourcePoolSaveKey(pool, index);
@@ -71487,6 +71487,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         });
       });
       loadedConfigRef.current = configToSave;
+      setConfig(configToSave);
       notifyPlatformConfigUpdated(configToSave);
       if (hasRowChanges && rowSavePlan) {
         const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
@@ -110713,13 +110714,14 @@ const App = () => {
     (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
     [resourceDisplayNames]
   );
-  const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24, date);
-  const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount, date);
-  const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount, date);
-  const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4, date);
-  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6, date);
-  const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "dutySupervisor", 0, date) > 0;
-  const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "towerDutyInstructor", 0, date) > 0;
+  const resourceRowTargetDate = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView) ? buildDfpDate : date;
+  const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24, resourceRowTargetDate);
+  const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount, resourceRowTargetDate);
+  const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount, resourceRowTargetDate);
+  const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4, resourceRowTargetDate);
+  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6, resourceRowTargetDate);
+  const configuredDutySupervisorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "dutySupervisor", 0, resourceRowTargetDate) > 0;
+  const configuredTowerDutyInstructorRowEnabled = getResourcePoolCount(activePlatformResourcePool, "towerDutyInstructor", 0, resourceRowTargetDate) > 0;
   const getLocalIsoDateForResourceRows = reactExports.useCallback((offsetDays = 0) => {
     const dateValue = /* @__PURE__ */ new Date();
     dateValue.setDate(dateValue.getDate() + offsetDays);
@@ -110765,7 +110767,16 @@ const App = () => {
       date,
       getLocalIsoDateForResourceRows(1)
     ].filter(Boolean)));
-    const rowKeys = ["aircraft", "ftd", "cpt", "standby", "ground"];
+    const rowKeys = ["aircraft", "ftd", "cpt", "standby", "ground", "dutySupervisor", "towerDutyInstructor"];
+    const rowFallbacks = {
+      aircraft: 24,
+      ftd: availableFtdCount,
+      cpt: availableCptCount,
+      standby: 4,
+      ground: 6,
+      dutySupervisor: 0,
+      towerDutyInstructor: 0
+    };
     const pools = Array.isArray(platformConfig?.resourcePools) ? platformConfig.resourcePools : [];
     const activePoolKey = String(activePlatformResourcePool?.id || activePlatformResourcePool?.code || "").trim();
     const contextLocation = String(school || "").trim().toUpperCase();
@@ -110802,7 +110813,10 @@ const App = () => {
         ftd: configuredFtdCount,
         cpt: configuredCptCount,
         standby: configuredStandbyCount,
-        ground: configuredGroundCount
+        ground: configuredGroundCount,
+        dutySupervisor: configuredDutySupervisorRowEnabled ? 1 : 0,
+        towerDutyInstructor: configuredTowerDutyInstructorRowEnabled ? 1 : 0,
+        targetDate: resourceRowTargetDate
       },
       resourcePools: poolsToReport.map((pool, poolIndex) => {
         const settings = pool?.settings || {};
@@ -110827,7 +110841,7 @@ const App = () => {
               historyMatch: getResourceRowHistoryMatchForDiag(settings, targetDate),
               counts: Object.fromEntries(rowKeys.map((key) => [
                 key,
-                getResourcePoolCount(pool, key, key === "aircraft" ? 24 : key === "ftd" ? availableFtdCount : key === "cpt" ? availableCptCount : key === "standby" ? 4 : 6, targetDate)
+                getResourcePoolCount(pool, key, rowFallbacks[key], targetDate)
               ]))
             }
           ]))
@@ -110845,10 +110859,13 @@ const App = () => {
     configuredFtdCount,
     configuredGroundCount,
     configuredStandbyCount,
+    configuredDutySupervisorRowEnabled,
+    configuredTowerDutyInstructorRowEnabled,
     date,
     getLocalIsoDateForResourceRows,
     getResourceRowHistoryMatchForDiag,
     platformConfig?.resourcePools,
+    resourceRowTargetDate,
     school
   ]);
   const downloadDfpResourceRowsDiagnosticReport = reactExports.useCallback(() => {

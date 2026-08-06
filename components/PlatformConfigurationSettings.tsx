@@ -5669,7 +5669,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   const getEditableDfpResourceRows = (pool: any, index: number): DfpResourceRowsSnapshot => {
-    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString());
+    if (!resourcePoolsUnlocked) return getDfpResourceRowsForDate(pool, getLocalDateString(1));
 
     const currentRows = normaliseDfpResourceRowsSnapshot(pool?.settings || {});
     const baselinePools = Array.isArray(resourcePoolEditBaselineRef.current?.resourcePools)
@@ -6210,6 +6210,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         });
       });
       loadedConfigRef.current = configToSave;
+      setConfig(configToSave);
       notifyPlatformConfigUpdated(configToSave);
       if (hasRowChanges && rowSavePlan) {
         const deletedCount = await deleteFutureSnapshotsForResourceRowChanges(rowSavePlan.changedContexts, rowSavePlan.tomorrow);
