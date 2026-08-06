@@ -2258,7 +2258,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
   const [, setRankTerminologyDirty] = useState(false);
-  const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = useState(false);
+  const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = useState<string | null>(null);
   const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
   const [licenseImportText, setLicenseImportText] = useState('');
   const [licenseImportMessage, setLicenseImportMessage] = useState('');
@@ -2303,7 +2303,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
-  const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
+  const canEditTrainingReportTemplate = canEdit && !!trainingReportTemplateUnlocked;
+  const canEditTrainingReportTemplateSection = (sectionId: string) => canEdit && trainingReportTemplateUnlocked === sectionId;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
@@ -2815,6 +2816,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       getScoringMatrixElementGroup(element, trainingReportElementGroups.groups, trainingReportElementGroups.hasExplicitGroups)
     )),
   ].filter(Boolean))), [trainingReportElementGroups, trainingReportPreviewElements]);
+  const canEditTrainingReportSetup = canEditTrainingReportTemplateSection('setup');
+  const canEditTrainingReportModules = canEditTrainingReportTemplateSection('modules');
+  const canEditTrainingReportResults = canEditTrainingReportTemplateSection('results');
+  const canEditTrainingReportConsecutiveRule = canEditTrainingReportTemplateSection('consecutive-repeat');
+  const canEditTrainingReportRollingRule = canEditTrainingReportTemplateSection('rolling-repeat');
   const trainingReportSyncOptions = configUnits
     .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
     .map((unit) => ({
@@ -3863,7 +3869,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const addTrainingReportElement = async () => {
     const name = trainingReportNewElementDraft.trim();
-    if (!canEditTrainingReportTemplate) return;
+    if (!canEditTrainingReportModules) return;
     if (!name) {
       await showDarkAlert('Enter the assessment element name first.', 'Element Name Required', 'warning');
       return;
@@ -3895,7 +3901,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       const { [element]: _committedDraft, ...remainingDrafts } = previous;
       return remainingDrafts;
     });
-    if (!canEditTrainingReportTemplate || nextName === element) return;
+    if (!canEditTrainingReportModules || nextName === element) return;
     if (!nextName) {
       await showDarkAlert('Assessment element names cannot be blank.', 'Element Name Required', 'warning');
       return;
@@ -3924,7 +3930,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateTrainingReportElementSection = (element: string, rawGroup?: string) => {
-    if (!canEditTrainingReportTemplate) return;
+    if (!canEditTrainingReportModules) return;
     const nextGroup = String(rawGroup ?? trainingReportElementGroupDrafts[element] ?? '').trim() || 'Additional Elements';
     setTrainingReportElementGroupDrafts((previous) => {
       if (!(element in previous)) return previous;
@@ -3944,7 +3950,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const deleteTrainingReportElement = async (element: string) => {
-    if (!canEditTrainingReportTemplate) return;
+    if (!canEditTrainingReportModules) return;
     const confirmed = await showDarkConfirm(
       `Delete "${element}" from this unit's training report elements? Existing scoring phrases for this element will also be removed.`,
       'Delete Assessment Element',
@@ -4187,7 +4193,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     onBlur: (finalValue?: string) => commitTrainingReportTextDraft(draftKey, finalValue),
   });
 
-  const saveTrainingReportTemplateSettings = async () => {
+  const saveTrainingReportTemplateSettings = async (sectionId?: string) => {
     const configWithNameDrafts = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
     const configToSave = applyTrainingReportTextDraftsToConfig(configWithNameDrafts, trainingReportTextDrafts);
     setConfig(configToSave);
@@ -4198,7 +4204,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       successMessage: 'Training Report settings saved.',
     });
     if (saved) {
-      setTrainingReportTemplateUnlocked(false);
+      setTrainingReportTemplateUnlocked((current) => (!sectionId || current === sectionId ? null : current));
     }
   };
 
@@ -4303,7 +4309,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const syncTrainingReportSettingsFromUnit = async () => {
-    if (!canEditTrainingReportTemplate || activeTrainingReportUnitIndex < 0 || !trainingReportSyncUnitCode) return;
+    if (!canEditTrainingReportSetup || activeTrainingReportUnitIndex < 0 || !trainingReportSyncUnitCode) return;
     const sourceUnit = config.units.find((unit) => (
       String(unit.code || '').trim().toUpperCase() === trainingReportSyncUnitCode.trim().toUpperCase()
     ));
@@ -4344,14 +4350,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     await save(nextConfig, 'training-report-template');
   };
 
-  const renderTrainingReportTemplateAction = () => {
+  const renderTrainingReportTemplateAction = (sectionId: string) => {
     if (!canEdit) return null;
-    return trainingReportTemplateUnlocked ? (
+    return trainingReportTemplateUnlocked === sectionId ? (
       <button
         type="button"
         disabled={saving || applyingChanges}
         onMouseDown={(event) => event.preventDefault()}
-        onClick={saveTrainingReportTemplateSettings}
+        onClick={() => { void saveTrainingReportTemplateSettings(sectionId); }}
         className={platformActionButtonClass}
       >
         Save
@@ -4359,7 +4365,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ) : (
       <button
         type="button"
-        onClick={() => setTrainingReportTemplateUnlocked(true)}
+        disabled={saving || applyingChanges}
+        onClick={() => setTrainingReportTemplateUnlocked(sectionId)}
         className={platformActionButtonClass}
       >
         Edit
@@ -10264,7 +10271,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Training Reports"
           subtitle="Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
-          action={renderTrainingReportTemplateAction()}
         />
         <div className="space-y-5 p-4">
           {!canEdit ? (
@@ -10273,18 +10279,18 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           ) : !trainingReportTemplateUnlocked ? (
             <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80">
-              Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules.
+              Training Report settings are locked by section. Press Edit inside the section you want to change.
             </div>
           ) : null}
           <div id="platform-unit-training-report-template" className="rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h4 className="text-sm font-bold text-sky-100">Unit Training Report Template</h4>
+                <h4 className="text-sm font-bold text-sky-100">Template Setup</h4>
                 <p className="mt-1 text-sm text-sky-100/70">
                   These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix.
                 </p>
               </div>
-              {renderTrainingReportTemplateAction()}
+              {renderTrainingReportTemplateAction('setup')}
             </div>
           </div>
 
@@ -10307,7 +10313,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <select
                   className={fieldClass}
                   value={trainingReportSyncUnitCode}
-                  disabled={!canEditTrainingReportTemplate || trainingReportSyncOptions.length === 0}
+                  disabled={!canEditTrainingReportSetup || trainingReportSyncOptions.length === 0}
                   onChange={(event) => setTrainingReportSyncUnitCode(event.target.value)}
                 >
                   <option value="">Select source unit...</option>
@@ -10318,7 +10324,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
               <button
                 type="button"
-                disabled={!canEditTrainingReportTemplate || !trainingReportSyncUnitCode || saving || applyingChanges}
+                disabled={!canEditTrainingReportSetup || !trainingReportSyncUnitCode || saving || applyingChanges}
                 onClick={syncTrainingReportSettingsFromUnit}
                 className={platformActionButtonClass}
               >
@@ -10334,7 +10340,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <Field
               label="Generic Form Name"
               value={trainingReportNameDrafts.genericName ?? trainingReportTemplate.genericName}
-              disabled={!canEditTrainingReportTemplate}
+              disabled={!canEditTrainingReportSetup}
               maxLength={TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportNameDraft('genericName', value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('genericName')}
@@ -10344,7 +10350,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <Field
               label="Organisation Form Name"
               value={trainingReportNameDrafts.displayName ?? trainingReportTemplate.displayName}
-              disabled={!canEditTrainingReportTemplate}
+              disabled={!canEditTrainingReportSetup}
               maxLength={TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportNameDraft('displayName', value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH)}
               onFocus={() => beginTrainingReportNameDraft('displayName')}
@@ -10364,7 +10370,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   max={Math.max(0, trainingReportTemplate.grades.scaleMax - 1)}
                   step={1}
                   value={trainingReportTemplate.grades.scaleMin}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportSetup}
                   onChange={(event) => updateTrainingReportGradeScale({ scaleMin: Number(event.target.value) })}
                   aria-label="Grade scale low end"
                 />
@@ -10375,7 +10381,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   max={10}
                   step={1}
                   value={trainingReportTemplate.grades.scaleMax}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportSetup}
                   onChange={(event) => updateTrainingReportGradeScale({ scaleMax: Number(event.target.value) })}
                   aria-label="Grade scale high end"
                 />
@@ -10388,7 +10394,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <ToggleField
               label="Include No Grade option"
               checked={trainingReportTemplate.grades.includeDemo}
-              disabled={!canEditTrainingReportTemplate}
+              disabled={!canEditTrainingReportSetup}
               onChange={(checked) => updateTrainingReportTemplate((template) => ({
                 grades: {
                   ...template.grades,
@@ -10404,7 +10410,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Modules & Field Labels</h4>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Rename only</span>
-                {renderTrainingReportTemplateAction()}
+                {renderTrainingReportTemplateAction('modules')}
               </div>
             </div>
             <div className="space-y-4">
@@ -10412,7 +10418,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Overview Module"
                   {...getTrainingReportTextDraftProps('module:overview:title', trainingReportTemplate.modules.overview.title)}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportModules}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   info="Renames the module that displays the event identity, date, timing, resource and assessor context."
                 />
@@ -10422,7 +10428,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       key={key}
                       label={humaniseFieldKey(key)}
                       {...getTrainingReportTextDraftProps(`field:overview:${key}`, value)}
-                      disabled={!canEditTrainingReportTemplate}
+                      disabled={!canEditTrainingReportModules}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       info={TRAINING_REPORT_OVERVIEW_FIELD_INFO[key] || 'Renames this overview field in the training report.'}
                     />
@@ -10447,7 +10453,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Overall Module"
                   {...getTrainingReportTextDraftProps('module:overallAssessment:title', trainingReportTemplate.modules.overallAssessment.title)}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportModules}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   info="Renames the module that captures completion result, whole-event grade, pass/fail outcome and ground school assessment."
                 />
@@ -10457,7 +10463,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       key={key}
                       label={humaniseFieldKey(key)}
                       {...getTrainingReportTextDraftProps(`field:overallAssessment:${key}`, value)}
-                      disabled={!canEditTrainingReportTemplate}
+                      disabled={!canEditTrainingReportModules}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       info={TRAINING_REPORT_OVERALL_FIELD_INFO[key] || 'Renames this overall assessment field in the training report.'}
                     />
@@ -10477,7 +10483,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Comments Module"
                   {...getTrainingReportTextDraftProps('module:comments:title', trainingReportTemplate.modules.comments.title)}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportModules}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   info="Renames the narrative module used for assessor notes, weather/context, profile notes and the overall narrative."
                 />
@@ -10487,7 +10493,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       key={key}
                       label={humaniseFieldKey(key)}
                       {...getTrainingReportTextDraftProps(`field:comments:${key}`, value)}
-                      disabled={!canEditTrainingReportTemplate}
+                      disabled={!canEditTrainingReportModules}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       info={TRAINING_REPORT_COMMENT_FIELD_INFO[key] || 'Renames this narrative field in the training report.'}
                     />
@@ -10515,7 +10521,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <Field
                   label="Assessment Matrix Module"
                   {...getTrainingReportTextDraftProps('module:assessmentMatrix:title', trainingReportTemplate.modules.assessmentMatrix.title)}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportModules}
                   maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                   info="Assessment categories and descriptors remain controlled by the Scoring Matrix."
                 />
@@ -10549,7 +10555,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wide text-gray-500">Element Name</span>
                                   <input
                                     value={nameDraft}
-                                    disabled={!canEditTrainingReportTemplate}
+                                    disabled={!canEditTrainingReportModules}
                                     onFocus={() => setTrainingReportElementNameDrafts((previous) => ({
                                       ...previous,
                                       [dimension]: previous[dimension] ?? dimension,
@@ -10579,7 +10585,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                   <input
                                     list="training-report-element-sections"
                                     value={sectionDraft}
-                                    disabled={!canEditTrainingReportTemplate}
+                                    disabled={!canEditTrainingReportModules}
                                     onFocus={() => setTrainingReportElementGroupDrafts((previous) => ({
                                       ...previous,
                                       [dimension]: previous[dimension] ?? savedSection,
@@ -10607,7 +10613,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                                 <div className="flex items-end justify-end">
                                   <button
                                     type="button"
-                                    disabled={!canEditTrainingReportTemplate}
+                                    disabled={!canEditTrainingReportModules}
                                     onClick={() => { void deleteTrainingReportElement(dimension); }}
                                     className="rounded border border-red-500/40 bg-red-950/40 px-3 py-2 text-xs font-semibold text-red-100 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-50"
                                   >
@@ -10634,7 +10640,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                         <input
                           value={trainingReportNewElementDraft}
-                          disabled={!canEditTrainingReportTemplate}
+                          disabled={!canEditTrainingReportModules}
                           placeholder="Element name"
                           onChange={(event) => setTrainingReportNewElementDraft(event.target.value)}
                           onKeyDown={(event) => {
@@ -10650,7 +10656,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         />
                         <button
                           type="button"
-                          disabled={!canEditTrainingReportTemplate || !trainingReportNewElementDraft.trim()}
+                          disabled={!canEditTrainingReportModules || !trainingReportNewElementDraft.trim()}
                           onClick={() => { void addTrainingReportElement(); }}
                           className={platformActionButtonClass}
                         >
@@ -10686,7 +10692,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Results & Grades</h4>
-              {renderTrainingReportTemplateAction()}
+              {renderTrainingReportTemplateAction('results')}
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
               {trainingReportTemplate.completionResults.map((option) => {
@@ -10694,12 +10700,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 return (
                   <div key={option.code} className={`rounded border p-3 transition ${optionEnabled ? 'border-gray-700 bg-gray-900/50' : 'border-gray-800 bg-gray-950/45 opacity-60'}`}>
                     <div className="mb-2 flex justify-end">
-                      <label className={canEditTrainingReportTemplate ? 'cursor-pointer' : 'cursor-not-allowed'}>
+                      <label className={canEditTrainingReportResults ? 'cursor-pointer' : 'cursor-not-allowed'}>
                         <span className="sr-only">{option.code}</span>
                         <input
                           type="checkbox"
                           checked={optionEnabled}
-                          disabled={!canEditTrainingReportTemplate}
+                          disabled={!canEditTrainingReportResults}
                           onChange={(event) => updateTrainingReportCompletionResult(option.code, { enabled: event.target.checked })}
                           className="h-4 w-4 rounded border-gray-600 bg-gray-950 accent-sky-500"
                         />
@@ -10712,7 +10718,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         DNCO: 'Not Completed Status Label',
                       }[option.code]}
                       {...getTrainingReportTextDraftProps(`completion:${option.code}:label`, optionEnabled ? option.label : '')}
-                      disabled={!canEditTrainingReportTemplate || !optionEnabled}
+                      disabled={!canEditTrainingReportResults || !optionEnabled}
                       maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                       info={{
                         DCO: 'The visible status label for a completed event. The wording can change, while the system keeps the completed-event function intact.',
@@ -10726,14 +10732,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <Field
                 label="Satisfactory Label"
                 {...getTrainingReportTextDraftProps('overall:passLabel', trainingReportTemplate.overallResults.passLabel)}
-                disabled={!canEditTrainingReportTemplate}
+                disabled={!canEditTrainingReportResults}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 info="Text displayed when the assessment outcome is satisfactory. Organisations may use wording such as Satisfactory, Competent, Achieved or Pass."
               />
               <Field
                 label="Unsatisfactory Label"
                 {...getTrainingReportTextDraftProps('overall:failLabel', trainingReportTemplate.overallResults.failLabel)}
-                disabled={!canEditTrainingReportTemplate}
+                disabled={!canEditTrainingReportResults}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 info="Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               />
@@ -10753,13 +10759,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         trainingReportTemplate.grades.showNumbers === option.showNumbers
                           ? 'border-cyan-400 bg-cyan-500/15 text-cyan-100'
                           : 'border-gray-700 bg-gray-950/70 text-gray-400 hover:border-gray-500'
-                      } ${!canEditTrainingReportTemplate ? 'cursor-not-allowed opacity-60' : ''}`}
+                      } ${!canEditTrainingReportResults ? 'cursor-not-allowed opacity-60' : ''}`}
                     >
                       <input
                         type="radio"
                         name="training-report-grade-display"
                         checked={trainingReportTemplate.grades.showNumbers === option.showNumbers}
-                        disabled={!canEditTrainingReportTemplate}
+                        disabled={!canEditTrainingReportResults}
                         onChange={() => updateTrainingReportTemplate((template) => ({
                           grades: {
                             ...template.grades,
@@ -10777,7 +10783,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 label="Repeated Low-performance"
                 labelNoWrap
                 {...getTrainingReportTextDraftProps('overall:doubleRepeatLabel', trainingReportTemplate.overallResults.doubleRepeatLabel)}
-                disabled={!canEditTrainingReportTemplate}
+                disabled={!canEditTrainingReportResults}
                 maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                 info="Text shown when a configured repeat rule forces the event into a repeat or fail state."
               />
@@ -10812,7 +10818,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         <input
                           className={fieldClass}
                           value={trainingReportTextDrafts[`grade:${option.value}:label`] ?? option.label}
-                          disabled={!canEditTrainingReportTemplate}
+                          disabled={!canEditTrainingReportResults}
                           maxLength={TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH}
                           onFocus={() => beginTrainingReportTextDraft(`grade:${option.value}:label`, option.label)}
                           onBlur={(event) => commitTrainingReportTextDraft(`grade:${option.value}:label`, event.currentTarget.value)}
@@ -10827,7 +10833,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                           checked={option.requiresRepeat}
-                          disabled={!canEditTrainingReportTemplate}
+                          disabled={!canEditTrainingReportResults}
                           onChange={(event) => updateTrainingReportGrade(option.value, { requiresRepeat: event.target.checked })}
                         />
                       </td>
@@ -10836,7 +10842,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                           checked={trainingReportTemplate.repeatRules.consecutive.grades.includes(option.value)}
-                          disabled={!canEditTrainingReportTemplate}
+                          disabled={!canEditTrainingReportResults}
                           onChange={(event) => toggleTrainingReportRuleGrade('consecutive', option.value, event.target.checked)}
                         />
                       </td>
@@ -10845,7 +10851,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                           type="checkbox"
                           className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
                           checked={trainingReportTemplate.repeatRules.rollingWindow.grades.includes(option.value)}
-                          disabled={!canEditTrainingReportTemplate}
+                          disabled={!canEditTrainingReportResults}
                           onChange={(event) => toggleTrainingReportRuleGrade('rollingWindow', option.value, event.target.checked)}
                         />
                       </td>
@@ -10858,12 +10864,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
-              <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Consecutive Repeat Rule</h4>
+              <div className="flex items-center justify-between gap-3">
+                <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Consecutive Repeat Rule</h4>
+                {renderTrainingReportTemplateAction('consecutive-repeat')}
+              </div>
               <div className="mt-3 grid gap-3">
                 <ToggleField
                   label="Enable Two In A Row Rule"
                   checked={trainingReportTemplate.repeatRules.consecutive.enabled}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportConsecutiveRule}
                   onChange={(checked) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -10875,7 +10884,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <NumberField
                   label="Count"
                   value={trainingReportTemplate.repeatRules.consecutive.count}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportConsecutiveRule}
                   onChange={(value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -10891,12 +10900,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
 
             <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
-              <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Rolling Window Repeat Rule</h4>
+              <div className="flex items-center justify-between gap-3">
+                <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Rolling Window Repeat Rule</h4>
+                {renderTrainingReportTemplateAction('rolling-repeat')}
+              </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <ToggleField
                   label="Enable Two In Three Rule"
                   checked={trainingReportTemplate.repeatRules.rollingWindow.enabled}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportRollingRule}
                   onChange={(checked) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -10908,7 +10920,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <NumberField
                   label="Count"
                   value={trainingReportTemplate.repeatRules.rollingWindow.count}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportRollingRule}
                   onChange={(value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -10920,7 +10932,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <NumberField
                   label="Window"
                   value={trainingReportTemplate.repeatRules.rollingWindow.window}
-                  disabled={!canEditTrainingReportTemplate}
+                  disabled={!canEditTrainingReportRollingRule}
                   onChange={(value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,

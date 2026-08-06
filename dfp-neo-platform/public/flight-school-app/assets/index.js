@@ -68393,7 +68393,7 @@ const PlatformConfigurationSettings = ({
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
   const [, setRankTerminologyDirty] = reactExports.useState(false);
-  const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = reactExports.useState(false);
+  const [trainingReportTemplateUnlocked, setTrainingReportTemplateUnlocked] = reactExports.useState(null);
   const [licenseStatus, setLicenseStatus] = reactExports.useState(null);
   const [licenseImportText, setLicenseImportText] = reactExports.useState("");
   const [licenseImportMessage, setLicenseImportMessage] = reactExports.useState("");
@@ -68437,7 +68437,7 @@ const PlatformConfigurationSettings = ({
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
   const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
-  const canEditTrainingReportTemplate = canEdit && trainingReportTemplateUnlocked;
+  const canEditTrainingReportTemplateSection = (sectionId) => canEdit && trainingReportTemplateUnlocked === sectionId;
   const canEditResourcePools = canEdit && resourcePoolsUnlocked;
   const canEditCrewComposition = canEdit && crewCompositionUnlocked;
   const canEditTaskProfiles = canEdit && taskProfilesUnlocked;
@@ -68885,6 +68885,11 @@ const PlatformConfigurationSettings = ({
     ...Object.values(trainingReportElementGroups.groups).map((value) => String(value || "").trim()).filter(Boolean),
     ...trainingReportPreviewElements.map((element) => getScoringMatrixElementGroup(element, trainingReportElementGroups.groups, trainingReportElementGroups.hasExplicitGroups))
   ].filter(Boolean))), [trainingReportElementGroups, trainingReportPreviewElements]);
+  const canEditTrainingReportSetup = canEditTrainingReportTemplateSection("setup");
+  const canEditTrainingReportModules = canEditTrainingReportTemplateSection("modules");
+  const canEditTrainingReportResults = canEditTrainingReportTemplateSection("results");
+  const canEditTrainingReportConsecutiveRule = canEditTrainingReportTemplateSection("consecutive-repeat");
+  const canEditTrainingReportRollingRule = canEditTrainingReportTemplateSection("rolling-repeat");
   const trainingReportSyncOptions = configUnits.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
     code: String(unit.code || "").trim(),
     label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""}`
@@ -69717,7 +69722,7 @@ This permanently removes the organisation record from platform configuration and
   const trainingReportElementNameExists = (name, exceptName = "") => trainingReportPreviewElements.some((element) => element.toLowerCase() === name.toLowerCase() && element.toLowerCase() !== exceptName.toLowerCase());
   const addTrainingReportElement = async () => {
     const name = trainingReportNewElementDraft.trim();
-    if (!canEditTrainingReportTemplate) return;
+    if (!canEditTrainingReportModules) return;
     if (!name) {
       await showDarkAlert("Enter the assessment element name first.", "Element Name Required", "warning");
       return;
@@ -69748,7 +69753,7 @@ This permanently removes the organisation record from platform configuration and
       const { [element]: _committedDraft, ...remainingDrafts } = previous;
       return remainingDrafts;
     });
-    if (!canEditTrainingReportTemplate || nextName === element) return;
+    if (!canEditTrainingReportModules || nextName === element) return;
     if (!nextName) {
       await showDarkAlert("Assessment element names cannot be blank.", "Element Name Required", "warning");
       return;
@@ -69776,7 +69781,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const updateTrainingReportElementSection = (element, rawGroup) => {
-    if (!canEditTrainingReportTemplate) return;
+    if (!canEditTrainingReportModules) return;
     const nextGroup = String(trainingReportElementGroupDrafts[element] ?? "").trim() || "Additional Elements";
     setTrainingReportElementGroupDrafts((previous) => {
       if (!(element in previous)) return previous;
@@ -69795,7 +69800,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const deleteTrainingReportElement = async (element) => {
-    if (!canEditTrainingReportTemplate) return;
+    if (!canEditTrainingReportModules) return;
     const confirmed = await showDarkConfirm(
       `Delete "${element}" from this unit's training report elements? Existing scoring phrases for this element will also be removed.`,
       "Delete Assessment Element",
@@ -69990,7 +69995,7 @@ This permanently removes the organisation record from platform configuration and
     onFocus: () => beginTrainingReportTextDraft(draftKey, value),
     onBlur: (finalValue) => commitTrainingReportTextDraft(draftKey, finalValue)
   });
-  const saveTrainingReportTemplateSettings = async () => {
+  const saveTrainingReportTemplateSettings = async (sectionId) => {
     const configWithNameDrafts = applyTrainingReportNameDraftsToConfig(config, trainingReportNameDrafts);
     const configToSave = applyTrainingReportTextDraftsToConfig(configWithNameDrafts, trainingReportTextDrafts);
     setConfig(configToSave);
@@ -70001,7 +70006,7 @@ This permanently removes the organisation record from platform configuration and
       successMessage: "Training Report settings saved."
     });
     if (saved2) {
-      setTrainingReportTemplateUnlocked(false);
+      setTrainingReportTemplateUnlocked((current) => !sectionId || current === sectionId ? null : current);
     }
   };
   const updateTrainingReportGrade = (gradeValue, changes) => {
@@ -70053,7 +70058,7 @@ This permanently removes the organisation record from platform configuration and
     });
   };
   const syncTrainingReportSettingsFromUnit = async () => {
-    if (!canEditTrainingReportTemplate || activeTrainingReportUnitIndex < 0 || !trainingReportSyncUnitCode) return;
+    if (!canEditTrainingReportSetup || activeTrainingReportUnitIndex < 0 || !trainingReportSyncUnitCode) return;
     const sourceUnit = config.units.find((unit) => String(unit.code || "").trim().toUpperCase() === trainingReportSyncUnitCode.trim().toUpperCase());
     const targetUnit = config.units[activeTrainingReportUnitIndex];
     if (!sourceUnit || !targetUnit) return;
@@ -70089,15 +70094,17 @@ This permanently removes the organisation record from platform configuration and
     });
     await save(nextConfig, "training-report-template");
   };
-  const renderTrainingReportTemplateAction = () => {
+  const renderTrainingReportTemplateAction = (sectionId) => {
     if (!canEdit) return null;
-    return trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+    return trainingReportTemplateUnlocked === sectionId ? /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         type: "button",
         disabled: saving || applyingChanges,
         onMouseDown: (event) => event.preventDefault(),
-        onClick: saveTrainingReportTemplateSettings,
+        onClick: () => {
+          void saveTrainingReportTemplateSettings(sectionId);
+        },
         className: platformActionButtonClass,
         children: "Save"
       }
@@ -70105,7 +70112,8 @@ This permanently removes the organisation record from platform configuration and
       "button",
       {
         type: "button",
-        onClick: () => setTrainingReportTemplateUnlocked(true),
+        disabled: saving || applyingChanges,
+        onClick: () => setTrainingReportTemplateUnlocked(sectionId),
         className: platformActionButtonClass,
         children: "Edit"
       }
@@ -75298,18 +75306,17 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         SectionHeader,
         {
           title: "Training Reports",
-          subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models.",
-          action: renderTrainingReportTemplateAction()
+          subtitle: "Configure the organisation training report name, field labels, grade display and repeat rules. The layout stays consistent across operational models."
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 p-4", children: [
-        !canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Training Report settings are read-only. Super Admin or Admin permission is required to edit the template." }) : !trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Training Report settings are locked. Press Edit before changing report names, field labels, grade text or repeat rules." }) : null,
+        !canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Training Report settings are read-only. Super Admin or Admin permission is required to edit the template." }) : !trainingReportTemplateUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Training Report settings are locked by section. Press Edit inside the section you want to change." }) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: "platform-unit-training-report-template", className: "rounded-lg border border-sky-500/25 bg-sky-500/10 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Unit Training Report Template" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold text-sky-100", children: "Template Setup" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-sky-100/70", children: "These settings rename and configure the active unit report layout. Core dimensions and descriptor phrases come from this unit's Scoring Matrix." })
           ] }),
-          renderTrainingReportTemplateAction()
+          renderTrainingReportTemplateAction("setup")
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-gray-950/50 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end gap-3", children: [
@@ -75336,7 +75343,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   className: fieldClass,
                   value: trainingReportSyncUnitCode,
-                  disabled: !canEditTrainingReportTemplate || trainingReportSyncOptions.length === 0,
+                  disabled: !canEditTrainingReportSetup || trainingReportSyncOptions.length === 0,
                   onChange: (event) => setTrainingReportSyncUnitCode(event.target.value),
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select source unit..." }),
@@ -75349,7 +75356,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               "button",
               {
                 type: "button",
-                disabled: !canEditTrainingReportTemplate || !trainingReportSyncUnitCode || saving || applyingChanges,
+                disabled: !canEditTrainingReportSetup || !trainingReportSyncUnitCode || saving || applyingChanges,
                 onClick: syncTrainingReportSettingsFromUnit,
                 className: platformActionButtonClass,
                 children: "Sync Settings"
@@ -75364,7 +75371,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             {
               label: "Generic Form Name",
               value: trainingReportNameDrafts.genericName ?? trainingReportTemplate.genericName,
-              disabled: !canEditTrainingReportTemplate,
+              disabled: !canEditTrainingReportSetup,
               maxLength: TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH,
               onChange: (value) => updateTrainingReportNameDraft("genericName", value, TRAINING_REPORT_GENERIC_NAME_MAX_LENGTH),
               onFocus: () => beginTrainingReportNameDraft("genericName"),
@@ -75377,7 +75384,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             {
               label: "Organisation Form Name",
               value: trainingReportNameDrafts.displayName ?? trainingReportTemplate.displayName,
-              disabled: !canEditTrainingReportTemplate,
+              disabled: !canEditTrainingReportSetup,
               maxLength: TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH,
               onChange: (value) => updateTrainingReportNameDraft("displayName", value, TRAINING_REPORT_DISPLAY_NAME_MAX_LENGTH),
               onFocus: () => beginTrainingReportNameDraft("displayName"),
@@ -75403,7 +75410,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   max: Math.max(0, trainingReportTemplate.grades.scaleMax - 1),
                   step: 1,
                   value: trainingReportTemplate.grades.scaleMin,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportSetup,
                   onChange: (event) => updateTrainingReportGradeScale({ scaleMin: Number(event.target.value) }),
                   "aria-label": "Grade scale low end"
                 }
@@ -75417,7 +75424,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   max: 10,
                   step: 1,
                   value: trainingReportTemplate.grades.scaleMax,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportSetup,
                   onChange: (event) => updateTrainingReportGradeScale({ scaleMax: Number(event.target.value) }),
                   "aria-label": "Grade scale high end"
                 }
@@ -75433,7 +75440,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             {
               label: "Include No Grade option",
               checked: trainingReportTemplate.grades.includeDemo,
-              disabled: !canEditTrainingReportTemplate,
+              disabled: !canEditTrainingReportSetup,
               onChange: (checked) => updateTrainingReportTemplate((template) => ({
                 grades: {
                   ...template.grades,
@@ -75449,7 +75456,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Modules & Field Labels" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: "Rename only" }),
-              renderTrainingReportTemplateAction()
+              renderTrainingReportTemplateAction("modules")
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
@@ -75459,7 +75466,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Overview Module",
                   ...getTrainingReportTextDraftProps("module:overview:title", trainingReportTemplate.modules.overview.title),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: "Renames the module that displays the event identity, date, timing, resource and assessor context."
                 }
@@ -75469,7 +75476,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: humaniseFieldKey(key),
                   ...getTrainingReportTextDraftProps(`field:overview:${key}`, value),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: TRAINING_REPORT_OVERVIEW_FIELD_INFO[key] || "Renames this overview field in the training report."
                 },
@@ -75493,7 +75500,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Overall Module",
                   ...getTrainingReportTextDraftProps("module:overallAssessment:title", trainingReportTemplate.modules.overallAssessment.title),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: "Renames the module that captures completion result, whole-event grade, pass/fail outcome and ground school assessment."
                 }
@@ -75503,7 +75510,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: humaniseFieldKey(key),
                   ...getTrainingReportTextDraftProps(`field:overallAssessment:${key}`, value),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: TRAINING_REPORT_OVERALL_FIELD_INFO[key] || "Renames this overall assessment field in the training report."
                 },
@@ -75522,7 +75529,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Comments Module",
                   ...getTrainingReportTextDraftProps("module:comments:title", trainingReportTemplate.modules.comments.title),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: "Renames the narrative module used for assessor notes, weather/context, profile notes and the overall narrative."
                 }
@@ -75532,7 +75539,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: humaniseFieldKey(key),
                   ...getTrainingReportTextDraftProps(`field:comments:${key}`, value),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: TRAINING_REPORT_COMMENT_FIELD_INFO[key] || "Renames this narrative field in the training report."
                 },
@@ -75553,7 +75560,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Assessment Matrix Module",
                   ...getTrainingReportTextDraftProps("module:assessmentMatrix:title", trainingReportTemplate.modules.assessmentMatrix.title),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportModules,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   info: "Assessment categories and descriptors remain controlled by the Scoring Matrix."
                 }
@@ -75586,7 +75593,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                             "input",
                             {
                               value: nameDraft,
-                              disabled: !canEditTrainingReportTemplate,
+                              disabled: !canEditTrainingReportModules,
                               onFocus: () => setTrainingReportElementNameDrafts((previous) => ({
                                 ...previous,
                                 [dimension]: previous[dimension] ?? dimension
@@ -75621,7 +75628,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                             {
                               list: "training-report-element-sections",
                               value: sectionDraft,
-                              disabled: !canEditTrainingReportTemplate,
+                              disabled: !canEditTrainingReportModules,
                               onFocus: () => setTrainingReportElementGroupDrafts((previous) => ({
                                 ...previous,
                                 [dimension]: previous[dimension] ?? savedSection
@@ -75651,7 +75658,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                           "button",
                           {
                             type: "button",
-                            disabled: !canEditTrainingReportTemplate,
+                            disabled: !canEditTrainingReportModules,
                             onClick: () => {
                               void deleteTrainingReportElement(dimension);
                             },
@@ -75671,7 +75678,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       "input",
                       {
                         value: trainingReportNewElementDraft,
-                        disabled: !canEditTrainingReportTemplate,
+                        disabled: !canEditTrainingReportModules,
                         placeholder: "Element name",
                         onChange: (event) => setTrainingReportNewElementDraft(event.target.value),
                         onKeyDown: (event) => {
@@ -75690,7 +75697,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       "button",
                       {
                         type: "button",
-                        disabled: !canEditTrainingReportTemplate || !trainingReportNewElementDraft.trim(),
+                        disabled: !canEditTrainingReportModules || !trainingReportNewElementDraft.trim(),
                         onClick: () => {
                           void addTrainingReportElement();
                         },
@@ -75712,20 +75719,20 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Results & Grades" }),
-            renderTrainingReportTemplateAction()
+            renderTrainingReportTemplateAction("results")
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
             trainingReportTemplate.completionResults.map((option) => {
               const optionEnabled = option.enabled !== false;
               return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 transition ${optionEnabled ? "border-gray-700 bg-gray-900/50" : "border-gray-800 bg-gray-950/45 opacity-60"}`, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: canEditTrainingReportTemplate ? "cursor-pointer" : "cursor-not-allowed", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: canEditTrainingReportResults ? "cursor-pointer" : "cursor-not-allowed", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: option.code }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
                     {
                       type: "checkbox",
                       checked: optionEnabled,
-                      disabled: !canEditTrainingReportTemplate,
+                      disabled: !canEditTrainingReportResults,
                       onChange: (event) => updateTrainingReportCompletionResult(option.code, { enabled: event.target.checked }),
                       className: "h-4 w-4 rounded border-gray-600 bg-gray-950 accent-sky-500"
                     }
@@ -75740,7 +75747,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                       DNCO: "Not Completed Status Label"
                     }[option.code],
                     ...getTrainingReportTextDraftProps(`completion:${option.code}:label`, optionEnabled ? option.label : ""),
-                    disabled: !canEditTrainingReportTemplate || !optionEnabled,
+                    disabled: !canEditTrainingReportResults || !optionEnabled,
                     maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                     info: {
                       DCO: "The visible status label for a completed event. The wording can change, while the system keeps the completed-event function intact.",
@@ -75756,7 +75763,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               {
                 label: "Satisfactory Label",
                 ...getTrainingReportTextDraftProps("overall:passLabel", trainingReportTemplate.overallResults.passLabel),
-                disabled: !canEditTrainingReportTemplate,
+                disabled: !canEditTrainingReportResults,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 info: "Text displayed when the assessment outcome is satisfactory. Organisations may use wording such as Satisfactory, Competent, Achieved or Pass."
               }
@@ -75766,7 +75773,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               {
                 label: "Unsatisfactory Label",
                 ...getTrainingReportTextDraftProps("overall:failLabel", trainingReportTemplate.overallResults.failLabel),
-                disabled: !canEditTrainingReportTemplate,
+                disabled: !canEditTrainingReportResults,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 info: "Text displayed when the assessment outcome is unsatisfactory. Organisations may use wording such as Unsatisfactory, Not Yet Competent, Not Achieved or Fail."
               }
@@ -75785,7 +75792,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "label",
                 {
-                  className: `flex min-h-[42px] cursor-pointer items-center justify-start gap-2 rounded border px-3 py-2 text-left text-xs font-bold uppercase tracking-wide transition ${trainingReportTemplate.grades.showNumbers === option.showNumbers ? "border-cyan-400 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950/70 text-gray-400 hover:border-gray-500"} ${!canEditTrainingReportTemplate ? "cursor-not-allowed opacity-60" : ""}`,
+                  className: `flex min-h-[42px] cursor-pointer items-center justify-start gap-2 rounded border px-3 py-2 text-left text-xs font-bold uppercase tracking-wide transition ${trainingReportTemplate.grades.showNumbers === option.showNumbers ? "border-cyan-400 bg-cyan-500/15 text-cyan-100" : "border-gray-700 bg-gray-950/70 text-gray-400 hover:border-gray-500"} ${!canEditTrainingReportResults ? "cursor-not-allowed opacity-60" : ""}`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "input",
@@ -75793,7 +75800,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                         type: "radio",
                         name: "training-report-grade-display",
                         checked: trainingReportTemplate.grades.showNumbers === option.showNumbers,
-                        disabled: !canEditTrainingReportTemplate,
+                        disabled: !canEditTrainingReportResults,
                         onChange: () => updateTrainingReportTemplate((template) => ({
                           grades: {
                             ...template.grades,
@@ -75815,7 +75822,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 label: "Repeated Low-performance",
                 labelNoWrap: true,
                 ...getTrainingReportTextDraftProps("overall:doubleRepeatLabel", trainingReportTemplate.overallResults.doubleRepeatLabel),
-                disabled: !canEditTrainingReportTemplate,
+                disabled: !canEditTrainingReportResults,
                 maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                 info: "Text shown when a configured repeat rule forces the event into a repeat or fail state."
               }
@@ -75851,7 +75858,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   className: fieldClass,
                   value: trainingReportTextDrafts[`grade:${option.value}:label`] ?? option.label,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportResults,
                   maxLength: TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH,
                   onFocus: () => beginTrainingReportTextDraft(`grade:${option.value}:label`, option.label),
                   onBlur: (event) => commitTrainingReportTextDraft(`grade:${option.value}:label`, event.currentTarget.value),
@@ -75867,7 +75874,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   type: "checkbox",
                   className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
                   checked: option.requiresRepeat,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportResults,
                   onChange: (event) => updateTrainingReportGrade(option.value, { requiresRepeat: event.target.checked })
                 }
               ) }),
@@ -75877,7 +75884,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   type: "checkbox",
                   className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
                   checked: trainingReportTemplate.repeatRules.consecutive.grades.includes(option.value),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportResults,
                   onChange: (event) => toggleTrainingReportRuleGrade("consecutive", option.value, event.target.checked)
                 }
               ) }),
@@ -75887,7 +75894,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   type: "checkbox",
                   className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
                   checked: trainingReportTemplate.repeatRules.rollingWindow.grades.includes(option.value),
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportResults,
                   onChange: (event) => toggleTrainingReportRuleGrade("rollingWindow", option.value, event.target.checked)
                 }
               ) })
@@ -75896,14 +75903,17 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Consecutive Repeat Rule" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Consecutive Repeat Rule" }),
+              renderTrainingReportTemplateAction("consecutive-repeat")
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 ToggleField,
                 {
                   label: "Enable Two In A Row Rule",
                   checked: trainingReportTemplate.repeatRules.consecutive.enabled,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportConsecutiveRule,
                   onChange: (checked) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -75918,7 +75928,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Count",
                   value: trainingReportTemplate.repeatRules.consecutive.count,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportConsecutiveRule,
                   onChange: (value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -75935,14 +75945,17 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Rolling Window Repeat Rule" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Rolling Window Repeat Rule" }),
+              renderTrainingReportTemplateAction("rolling-repeat")
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 ToggleField,
                 {
                   label: "Enable Two In Three Rule",
                   checked: trainingReportTemplate.repeatRules.rollingWindow.enabled,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportRollingRule,
                   onChange: (checked) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -75957,7 +75970,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Count",
                   value: trainingReportTemplate.repeatRules.rollingWindow.count,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportRollingRule,
                   onChange: (value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
@@ -75972,7 +75985,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 {
                   label: "Window",
                   value: trainingReportTemplate.repeatRules.rollingWindow.window,
-                  disabled: !canEditTrainingReportTemplate,
+                  disabled: !canEditTrainingReportRollingRule,
                   onChange: (value) => updateTrainingReportTemplate((template) => ({
                     repeatRules: {
                       ...template.repeatRules,
