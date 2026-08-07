@@ -26432,15 +26432,15 @@ const App: React.FC = () => {
     }
 
     function getDailySnapshotDate(snapshotDate: string): string {
-        return String(snapshotDate || '').replace(/__[A-Za-z0-9_-]+(?:__[A-Za-z0-9_-]+)?$/i, '');
+        return String(snapshotDate || '').trim().split('__')[0] || '';
     }
 
     function parseDailySnapshotKey(snapshotKey: string): { date: string; school: string; unit: string } {
-        const match = String(snapshotKey || '').trim().match(/^(\d{4}-\d{2}-\d{2})(?:__([A-Za-z0-9_-]+)(?:__([A-Za-z0-9_-]+))?)?$/);
+        const parts = String(snapshotKey || '').trim().split('__');
         return {
-            date: match?.[1] || '',
-            school: match?.[2] || '',
-            unit: match?.[3] || '',
+            date: parts[0] || '',
+            school: parts[1] || '',
+            unit: parts[2] || '',
         };
     }
 

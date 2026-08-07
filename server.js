@@ -12195,6 +12195,15 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
   }
 });
 
+function parseDailySnapshotDateKey(rawDate) {
+  const parts = String(rawDate || '').trim().split('__');
+  return {
+    date: parts[0] || '',
+    school: parts[1] || null,
+    unit: parts[2] || null,
+  };
+}
+
 // GET /api/daily-snapshot/dates - Return all dates that have snapshots (for calendar dropdown)
 app.get('/api/daily-snapshot/dates', async (req, res) => {
   try {
@@ -12202,14 +12211,17 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
     const rows = await db.$queryRawUnsafe(
       `SELECT date, "savedAt", "savedBy" FROM "DailySnapshot" ORDER BY date DESC`
     );
-    const dates = (rows || []).map(r => ({
-      date: String(r.date || '').replace(/__([A-Z0-9_-]+)(?:__([A-Za-z0-9_-]+))?$/i, ''),
-      snapshotKey: r.date,
-      school: (String(r.date || '').match(/__([A-Z0-9_-]+)(?:__([A-Za-z0-9_-]+))?$/i) || [])[1] || null,
-      unit: (String(r.date || '').match(/__([A-Z0-9_-]+)(?:__([A-Za-z0-9_-]+))?$/i) || [])[2] || null,
-      savedAt: r.savedAt,
-      savedBy: r.savedBy
-    }));
+    const dates = (rows || []).map(r => {
+      const parsed = parseDailySnapshotDateKey(r.date);
+      return {
+        date: parsed.date,
+        snapshotKey: r.date,
+        school: parsed.school,
+        unit: parsed.unit,
+        savedAt: r.savedAt,
+        savedBy: r.savedBy
+      };
+    });
     console.log(`✅ GET /api/daily-snapshot/dates - ${dates.length} snapshot dates`);
     res.json({ dates });
   } catch (error) {
