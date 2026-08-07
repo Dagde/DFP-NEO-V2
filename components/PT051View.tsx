@@ -1854,7 +1854,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                                 Unsatisfactory report notification
                                             </div>
                                             <div className="grid gap-2 sm:grid-cols-2">
-                                                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === 'notify' ? 'border-amber-300 bg-amber-400/15 text-amber-50' : 'border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500'}`}>
+                                                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === 'notify' ? 'border-amber-300 bg-gray-950/50 text-amber-50' : 'border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500'}`}>
                                                     <input
                                                         type="radio"
                                                         name="pt051-auto-notify"

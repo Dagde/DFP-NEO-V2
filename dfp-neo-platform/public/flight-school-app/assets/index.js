@@ -23386,7 +23386,7 @@ This action cannot be undone.`;
                   shouldShowAutoNotifyChoice && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-200", children: "Unsatisfactory report notification" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "notify" ? "border-amber-300 bg-amber-400/15 text-amber-50" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "notify" ? "border-amber-300 bg-gray-950/50 text-amber-50" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {
@@ -60864,7 +60864,7 @@ const AirCombatTrainingReportModal = ({
                 shouldShowAutoNotifyChoice && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-200", children: "Unsatisfactory report notification" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "notify" ? "border-amber-300 bg-amber-400/15 text-amber-50" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "notify" ? "border-amber-300 bg-gray-950/50 text-amber-50" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
