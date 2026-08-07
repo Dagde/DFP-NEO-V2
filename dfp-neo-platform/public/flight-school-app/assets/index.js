@@ -7314,8 +7314,8 @@ const Dropdown$2 = ({ label, value, onChange, children, id }) => /* @__PURE__ */
   )
 ] });
 const normaliseContextValue = (value) => String(value || "").trim().toLowerCase();
-const resolveActiveLocationOption = (locationOptions, activeLocationCode, platformConfig) => {
-  const active = String(activeLocationCode || "").trim();
+const resolveActiveLocationOption = (locationOptions, activeLocationCode2, platformConfig) => {
+  const active = String(activeLocationCode2 || "").trim();
   if (!active) return locationOptions[0] || "";
   const candidates = /* @__PURE__ */ new Set([active]);
   const activeKey = normaliseContextValue(active);
@@ -7358,7 +7358,7 @@ const AddCourseFlyout = ({
   existingCourses,
   locations = [],
   units = [],
-  activeLocationCode = "",
+  activeLocationCode: activeLocationCode2 = "",
   activeUnitCode = "",
   platformConfig = null,
   serviceDefinitions = []
@@ -7366,8 +7366,8 @@ const AddCourseFlyout = ({
   const locationOptions = reactExports.useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
   const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
   const defaultLocation = reactExports.useMemo(
-    () => resolveActiveLocationOption(locationOptions, activeLocationCode, platformConfig),
-    [locationOptions, activeLocationCode, platformConfig]
+    () => resolveActiveLocationOption(locationOptions, activeLocationCode2, platformConfig),
+    [locationOptions, activeLocationCode2, platformConfig]
   );
   const defaultUnit = reactExports.useMemo(
     () => resolveActiveUnitOption(unitOptions, activeUnitCode),
@@ -44620,7 +44620,7 @@ const CourseMetricsTab = ({
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
-  const activeLocationCode = String(operationalContext?.locationCode || "").trim().toUpperCase();
+  const activeLocationCode2 = String(operationalContext?.locationCode || "").trim().toUpperCase();
   const getTrainingCodeFromItem2 = (item) => (item.courses || []).find(Boolean) || item.code || "";
   const matchesAirCombatAssignment = (item, kind, code, unitCode) => {
     const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
@@ -44636,7 +44636,7 @@ const CourseMetricsTab = ({
     const itemUnit = String(item.unit || "").trim().toUpperCase();
     const itemLocation = String(item.location || "").trim().toUpperCase();
     const unitMatches = activeUnitCodes.size === 0 || !itemUnit || activeUnitCodes.has(itemUnit);
-    const locationMatches = !activeLocationCode || !itemLocation || itemLocation === activeLocationCode;
+    const locationMatches = !activeLocationCode2 || !itemLocation || itemLocation === activeLocationCode2;
     return unitMatches && locationMatches;
   };
   const getStreamTitleFromItem = (item, code) => item.module && item.module !== code ? item.module : item.phase && item.phase !== code ? item.phase : item.eventDescription || code;
@@ -44712,7 +44712,7 @@ const CourseMetricsTab = ({
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
         const assignmentUnit = String(assignment.unitCode || staffUnit).trim().toUpperCase();
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
-        const assignmentLocation = String(assignment.locationCode || activeLocationCode).trim().toUpperCase();
+        const assignmentLocation = String(assignment.locationCode || activeLocationCode2).trim().toUpperCase();
         const stream = ensureStream(assignment.kind, assignment.code, assignment.title, assignmentUnit, assignmentLocation);
         stream.staff.add(staff.name);
         if (isAvailable) stream.availableStaff.add(staff.name);
@@ -44748,7 +44748,7 @@ const CourseMetricsTab = ({
     })).sort(
       (left, right) => left.kind.localeCompare(right.kind) || left.unitCode.localeCompare(right.unitCode) || left.code.localeCompare(right.code)
     );
-  }, [activeLocationCode, activeUnitCodes, date, events, instructorsData, syllabusDetails]);
+  }, [activeLocationCode2, activeUnitCodes, date, events, instructorsData, syllabusDetails]);
   const stripCourseSuffix = (value) => {
     const text = String(value || "").trim();
     const match = text.match(/^(.*?)\s+[–-]\s+([A-Z0-9][A-Z0-9 +/]*?)$/);
@@ -48164,6 +48164,18 @@ const fetchBliMetrics = async (startDate, endDate, signal, requestContext) => {
   const availabilityData = await availabilityResponse.json();
   return mergeAvailabilityHistory(metrics, availabilityData.records || availabilityData.history || []);
 };
+const fetchCourseMovements = async (signal, requestContext) => {
+  const params = new URLSearchParams();
+  if (requestContext?.eventUnitCode) params.set("unit", requestContext.eventUnitCode);
+  if (requestContext?.locationCode) params.set("locationCode", requestContext.locationCode);
+  const response = await fetch(`/api/bli/course-movements${params.toString() ? `?${params.toString()}` : ""}`, {
+    credentials: "include",
+    signal
+  });
+  if (!response.ok) throw new Error(await response.text());
+  const data = await response.json();
+  return Array.isArray(data.movements) ? data.movements : [];
+};
 const valueSum = (series) => series.reduce((sum, point) => sum + (Number(point.value) || 0), 0);
 const valueAvg = (series) => {
   const values = series.map((point) => point.value).filter((value) => value !== null && Number.isFinite(value));
@@ -48317,6 +48329,67 @@ const buildBliRequestContext = (context, unitScopeOptions, selectedUnitScopeKey)
     availabilityUnitCode: selectedIndividualUnitCode || contextUnitCode || void 0,
     locationCode: locationCode || void 0
   };
+};
+const normaliseCourseCode = (value) => String(value || "").trim();
+const traineeMatchesBliUnit = (trainee, context, selectedUnitScopeKey = "combined") => {
+  const selectedUnit = selectedUnitScopeKey.startsWith("unit:") ? normalizeUnitCode(selectedUnitScopeKey.slice(5)) : "";
+  const contextUnit = normalizeUnitCode(context?.unitCode);
+  const traineeUnit = normalizeUnitCode(trainee.unit);
+  if (selectedUnit) return traineeUnit === selectedUnit;
+  if (!context?.isSharedFleetContext && contextUnit) return traineeUnit === contextUnit;
+  const allowedUnits = new Set((context?.unitCodes || String(context?.unitCode || "").split("+")).map(normalizeUnitCode).filter(Boolean));
+  return allowedUnits.size === 0 || allowedUnits.has(traineeUnit);
+};
+const courseMovementMatchesBliUnit = (movement, context, selectedUnitScopeKey = "combined") => {
+  const selectedUnit = selectedUnitScopeKey.startsWith("unit:") ? normalizeUnitCode(selectedUnitScopeKey.slice(5)) : "";
+  const contextUnit = normalizeUnitCode(context?.unitCode);
+  const movementUnit = normalizeUnitCode(movement.unit);
+  if (selectedUnit) return movementUnit === selectedUnit || !movementUnit;
+  if (!context?.isSharedFleetContext && contextUnit) return movementUnit === contextUnit || !movementUnit;
+  const allowedUnits = new Set((context?.unitCodes || String(context?.unitCode || "").split("+")).map(normalizeUnitCode).filter(Boolean));
+  return allowedUnits.size === 0 || allowedUnits.has(movementUnit) || !movementUnit;
+};
+const buildCourseOutcomeMetrics = (selectedCourse, trainees, movements) => {
+  const course = normaliseCourseCode(selectedCourse);
+  const courseTrainees = trainees.filter((trainee) => normaliseCourseCode(trainee.course) === course);
+  const movedOut = movements.filter((movement) => normaliseCourseCode(movement.fromCourse) === course && normaliseCourseCode(movement.toCourse) !== course);
+  const backCoursed = movedOut.filter((movement) => movement.direction === "back-course").length;
+  const forwardCoursed = movedOut.filter((movement) => movement.direction === "forward-course").length;
+  const suspended = courseTrainees.filter((trainee) => isTraineeSuspended(trainee)).length;
+  const paused = courseTrainees.filter((trainee) => trainee.isPaused && !isTraineeSuspended(trainee)).length;
+  const remaining = courseTrainees.filter((trainee) => !trainee.isPaused && !isTraineeSuspended(trainee)).length;
+  const started = Math.max(courseTrainees.length + movedOut.length, remaining + paused + suspended + backCoursed + forwardCoursed);
+  const courses = Array.from(new Set([
+    ...trainees.map((trainee) => normaliseCourseCode(trainee.course)),
+    ...movements.map((movement) => normaliseCourseCode(movement.fromCourse))
+  ].filter(Boolean))).filter((candidate) => candidate !== course);
+  const selectedScale = Math.max(1, started);
+  const historicalRows = courses.map((candidate) => {
+    const candidateTrainees = trainees.filter((trainee) => normaliseCourseCode(trainee.course) === candidate);
+    const candidateMovedOut = movements.filter((movement) => normaliseCourseCode(movement.fromCourse) === candidate && normaliseCourseCode(movement.toCourse) !== candidate);
+    const candidateStarted = Math.max(1, candidateTrainees.length + candidateMovedOut.length);
+    return {
+      started: 1,
+      failed: candidateTrainees.filter((trainee) => isTraineeSuspended(trainee)).length / candidateStarted,
+      paused: candidateTrainees.filter((trainee) => trainee.isPaused && !isTraineeSuspended(trainee)).length / candidateStarted,
+      backCoursed: candidateMovedOut.filter((movement) => movement.direction === "back-course").length / candidateStarted,
+      forwardCoursed: candidateMovedOut.filter((movement) => movement.direction === "forward-course").length / candidateStarted,
+      remaining: candidateTrainees.filter((trainee) => !trainee.isPaused && !isTraineeSuspended(trainee)).length / candidateStarted
+    };
+  });
+  const averageRatio = (key) => {
+    if (historicalRows.length === 0) return 0;
+    return historicalRows.reduce((sum, row) => sum + Number(row[key] || 0), 0) / historicalRows.length;
+  };
+  const historicalAverage = (key) => averageRatio(key) * selectedScale;
+  return [
+    { key: "started", label: "Started on course", current: started, historicalAverage: historicalAverage("started") },
+    { key: "failed", label: "Failed / suspended", current: suspended, historicalAverage: historicalAverage("failed") },
+    { key: "paused", label: "Paused", current: paused, historicalAverage: historicalAverage("paused") },
+    { key: "backCoursed", label: "Back-coursed", current: backCoursed, historicalAverage: historicalAverage("backCoursed") },
+    { key: "forwardCoursed", label: "Forward-coursed", current: forwardCoursed, historicalAverage: historicalAverage("forwardCoursed") },
+    { key: "remaining", label: "Remaining on course", current: remaining, historicalAverage: historicalAverage("remaining") }
+  ];
 };
 const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
@@ -48767,6 +48840,82 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
     }
   );
 };
+const CourseOutcomeComparison = ({ traineesData, movements, operationalContext, selectedUnitScopeKey }) => {
+  const scopedTrainees = reactExports.useMemo(
+    () => traineesData.filter((trainee) => traineeMatchesBliUnit(trainee, operationalContext, selectedUnitScopeKey)),
+    [operationalContext, selectedUnitScopeKey, traineesData]
+  );
+  const scopedMovements = reactExports.useMemo(
+    () => movements.filter((movement) => courseMovementMatchesBliUnit(movement, operationalContext, selectedUnitScopeKey)),
+    [movements, operationalContext, selectedUnitScopeKey]
+  );
+  const courses = reactExports.useMemo(() => Array.from(new Set([
+    ...scopedTrainees.map((trainee) => normaliseCourseCode(trainee.course)),
+    ...scopedMovements.map((movement) => normaliseCourseCode(movement.fromCourse))
+  ].filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [scopedMovements, scopedTrainees]);
+  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
+  reactExports.useEffect(() => {
+    if (courses.length === 0) {
+      setSelectedCourse("");
+      return;
+    }
+    if (!courses.includes(selectedCourse)) setSelectedCourse(courses[0]);
+  }, [courses, selectedCourse]);
+  const rows = reactExports.useMemo(() => selectedCourse ? buildCourseOutcomeMetrics(selectedCourse, scopedTrainees, scopedMovements) : [], [scopedMovements, scopedTrainees, selectedCourse]);
+  const axis = niceAxisRange$1(rows.flatMap((row) => [row.current, row.historicalAverage]), 5);
+  const max = Math.max(1, axis.max);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 shadow-[0_10px_26px_rgba(0,0,0,0.22)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "Course Outcomes" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-lg font-bold text-white", children: "Course status comparison" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs leading-5 text-slate-400", children: "Current course counts are compared with historical course averages, normalised to the selected course intake size. Course movement history is captured from new back-course and forward-course actions." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Course" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "select",
+          {
+            value: selectedCourse,
+            onChange: (event) => setSelectedCourse(event.target.value),
+            className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
+            children: courses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
+          }
+        )
+      ] })
+    ] }),
+    rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-md border border-slate-800 bg-slate-950/50 px-4 py-8 text-center text-sm text-slate-500", children: "No course roster data is available for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-end gap-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-cyan-400" }),
+          "Selected course"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-slate-500" }),
+          "Historical average"
+        ] })
+      ] }),
+      rows.map((row) => {
+        const currentPct = Math.max(0, Math.min(100, row.current / max * 100));
+        const historicalPct = Math.max(0, Math.min(100, row.historicalAverage / max * 100));
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[170px_minmax(0,1fr)_76px] items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-slate-200", children: row.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 rounded bg-slate-950 ring-1 ring-slate-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded bg-cyan-400", style: { width: `${currentPct}%` } }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 rounded bg-slate-950 ring-1 ring-slate-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded bg-slate-500", style: { width: `${historicalPct}%` } }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right text-xs text-slate-400", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-white", children: compactNumber(row.current, 0) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              compactNumber(row.historicalAverage, 1),
+              " avg"
+            ] })
+          ] })
+        ] }, row.key);
+      })
+    ] })
+  ] });
+};
 const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${isEditing ? "min-w-[220px]" : "min-w-[128px]"} rounded border border-slate-700/70 bg-slate-950/55 p-2 shadow-sm`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -48945,10 +49094,12 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     }
   ) });
 };
-const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
+const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
   const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
+  const [courseMovements, setCourseMovements] = reactExports.useState([]);
+  const [courseMovementError, setCourseMovementError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
   const [periodSettings, setPeriodSettings] = reactExports.useState(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = reactExports.useState(null);
@@ -49049,6 +49200,17 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
     });
     return () => controller.abort();
   }, [date, previewRange.endDate, previewRange.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
+  reactExports.useEffect(() => {
+    const controller = new AbortController();
+    setCourseMovementError(null);
+    fetchCourseMovements(controller.signal, requestContext).then(setCourseMovements).catch((fetchError) => {
+      if (fetchError.name === "AbortError") return;
+      console.error("Failed to load BLI course movements:", fetchError);
+      setCourseMovementError("Course movement history could not be loaded.");
+      setCourseMovements([]);
+    });
+    return () => controller.abort();
+  }, [requestContext.eventUnitCode, requestContext.locationCode]);
   const staffGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     sortedStaff2.forEach((staff) => {
@@ -49149,7 +49311,17 @@ const BliTab = ({ date, events, instructorsData, currentAircraftAvailable, total
         cancellationCategories: metrics.cancellationsByCategory
       },
       metric.key
-    )) })
+    )) }),
+    courseMovementError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: courseMovementError }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CourseOutcomeComparison,
+      {
+        traineesData,
+        movements: courseMovements,
+        operationalContext,
+        selectedUnitScopeKey
+      }
+    )
   ] });
 };
 const numberLabel = (value, digits = 0) => value.toLocaleString("en-GB", { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -51349,9 +51521,11 @@ const BuildIntelligenceView = (props) => {
           date: props.date,
           events: props.events,
           instructorsData: props.instructorsData,
+          traineesData: props.traineesData,
           currentAircraftAvailable: props.currentAircraftAvailable,
           totalAircraft: props.totalAircraft,
-          operationalContext: props.operationalContext
+          operationalContext: props.operationalContext,
+          cancellationCodes: props.cancellationCodes
         }
       )
     ] }) })
@@ -56525,7 +56699,7 @@ const SyllabusView = ({
   aircraftConfigurations = [],
   aircraftCrewComposition,
   crewPositionTerminology,
-  activeLocationCode = "",
+  activeLocationCode: activeLocationCode2 = "",
   activeUnitCode = "",
   trainingPackageTemplates = [],
   instructorsData = [],
@@ -56649,7 +56823,7 @@ const SyllabusView = ({
   const getCourseTitle = (code) => activeTab === "master" ? masterLmpTitleMap[code] || courseTitleMap[code] || code : courseTitleMap[code] || code;
   const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode2(effectiveActiveUnitCode);
-  const activeLocationNormalised = normaliseContextCode2(activeLocationCode);
+  const activeLocationNormalised = normaliseContextCode2(activeLocationCode2);
   const pushSetupTestLmpViewDiag = (stage, details = {}) => {
     if (typeof window === "undefined") return;
     const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
@@ -56657,7 +56831,7 @@ const SyllabusView = ({
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
-      activeLocationCode,
+      activeLocationCode: activeLocationCode2,
       activeUnitCode,
       effectiveActiveUnitCode,
       activeTab,
@@ -56874,11 +57048,11 @@ const SyllabusView = ({
     if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
     return getAirCombatAssignmentFromItem(
       { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
-      activeLocationCode,
+      activeLocationCode2,
       effectiveActiveUnitCode,
       currentUserName
     );
-  }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode2, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
   const assignableAirCombatStaff = reactExports.useMemo(() => {
     if (!isAirCombatModel) return [];
     const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
@@ -83998,7 +84172,7 @@ const CoursesManagementView = ({
   onUpdateCourse,
   locations = [],
   units = [],
-  activeLocationCode = "",
+  activeLocationCode: activeLocationCode2 = "",
   activeUnitCode = "",
   operationalModel = "flight_school",
   syllabusDetails = [],
@@ -84236,7 +84410,7 @@ const CoursesManagementView = ({
         existingCourses: courseColors,
         locations,
         units,
-        activeLocationCode,
+        activeLocationCode: activeLocationCode2,
         activeUnitCode,
         platformConfig,
         serviceDefinitions
@@ -86107,7 +86281,7 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
-  activeLocationCode = "",
+  activeLocationCode: activeLocationCode2 = "",
   activeUnitCode = "",
   operationalModel = "flight_school",
   platformConfig = null,
@@ -86162,7 +86336,7 @@ const TrainingRecordsView = ({
           onUpdateCourse,
           locations,
           units,
-          activeLocationCode,
+          activeLocationCode: activeLocationCode2,
           activeUnitCode,
           operationalModel,
           syllabusDetails,
@@ -123727,6 +123901,79 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage(`Could not delete ${traineeName}. ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);
+  const resolveCourseMovementDirection = reactExports.useCallback((fromCourse, toCourse) => {
+    const normaliseCourse = (value) => String(value || "").trim().toUpperCase();
+    const from = normaliseCourse(fromCourse);
+    const to = normaliseCourse(toCourse);
+    if (!from || !to || from === to) return "course-change";
+    const courseOrder = Object.keys(scopedCourseColors || {}).map(normaliseCourse).filter(Boolean).sort((a, b) => a.localeCompare(b, void 0, { numeric: true }));
+    const fromIndex = courseOrder.indexOf(from);
+    const toIndex = courseOrder.indexOf(to);
+    if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+      return toIndex > fromIndex ? "back-course" : "forward-course";
+    }
+    const fromNumber = Number((from.match(/(\d+)(?!.*\d)/) || [])[1]);
+    const toNumber2 = Number((to.match(/(\d+)(?!.*\d)/) || [])[1]);
+    if (Number.isFinite(fromNumber) && Number.isFinite(toNumber2) && fromNumber !== toNumber2) {
+      return toNumber2 > fromNumber ? "back-course" : "forward-course";
+    }
+    return "course-change";
+  }, [scopedCourseColors]);
+  const handleMoveTraineeBetweenCourses = reactExports.useCallback(async (trainee, newCourse) => {
+    const fromCourse = String(trainee.course || "").trim();
+    const toCourse = String(newCourse || "").trim();
+    if (!toCourse || fromCourse === toCourse) return;
+    const direction = resolveCourseMovementDirection(fromCourse, toCourse);
+    const updatedTrainee = { ...trainee, course: toCourse };
+    setTraineesData((prev) => prev.map(
+      (t) => t.idNumber === trainee.idNumber ? updatedTrainee : t
+    ));
+    const dbId = String(trainee.id || "").trim();
+    if (dbId && trainee._dataSource === "database") {
+      try {
+        const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ course: toCourse })
+        });
+        if (!response.ok) {
+          console.error(`[CourseMove] Failed to save trainee course change for ${trainee.name}:`, await response.text().catch(() => response.statusText));
+        }
+      } catch (error) {
+        console.error(`[CourseMove] Error saving trainee course change for ${trainee.name}:`, error);
+      }
+    }
+    try {
+      const response = await fetch(scopedApiPath("/api/bli/course-movements"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          traineeName: trainee.fullName || trainee.name,
+          traineeId: dbId || void 0,
+          idNumber: trainee.idNumber,
+          fromCourse,
+          toCourse,
+          direction,
+          unit: trainee.unit || activeUnitCode,
+          location: trainee.location || activeLocationCode || school,
+          userId: getCurrentUserId() ?? void 0
+        })
+      });
+      if (!response.ok) {
+        console.error(`[CourseMove] Failed to record ${direction} movement:`, await response.text().catch(() => response.statusText));
+      }
+    } catch (error) {
+      console.error(`[CourseMove] Error recording ${direction} movement:`, error);
+    }
+    logAudit({
+      page: "Trainee Roster",
+      action: "edit",
+      description: direction === "forward-course" ? "Trainee forward-coursed" : direction === "back-course" ? "Trainee back-coursed" : "Trainee course changed",
+      changes: `${trainee.rank} ${trainee.name} moved from ${fromCourse} to ${toCourse}`
+    });
+  }, [activeLocationCode, activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath, scopedCourseColors]);
   const renderActiveView = () => {
     switch (activeView) {
       case "Program Schedule":
@@ -124125,16 +124372,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onBackcourseTrainee: (trainee, newCourse) => {
-              logRoutineAppDebug(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
-              setTraineesData((prev) => prev.map(
-                (t) => t.idNumber === trainee.idNumber ? { ...t, course: newCourse } : t
-              ));
-              logAudit({
-                page: "Trainee Roster",
-                action: "edit",
-                description: `Trainee backcoursed`,
-                changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
-              });
+              void handleMoveTraineeBetweenCourses(trainee, newCourse);
             },
             date,
             onDateChange: handleDateChange,
@@ -124278,15 +124516,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               });
             },
             onBackcourseTrainee: (trainee, newCourse) => {
-              setTraineesData((prev) => prev.map(
-                (t) => t.idNumber === trainee.idNumber ? { ...t, course: newCourse } : t
-              ));
-              logAudit({
-                page: "Trainee Roster",
-                action: "edit",
-                description: `Trainee backcoursed`,
-                changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
-              });
+              void handleMoveTraineeBetweenCourses(trainee, newCourse);
             },
             masterCurrencies,
             currencyRequirements,

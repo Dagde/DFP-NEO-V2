@@ -42869,6 +42869,87 @@ appliedUpdates.forEach(update => {
         }
     }, [scopedApiPath]);
 
+    const resolveCourseMovementDirection = useCallback((fromCourse: string, toCourse: string): 'back-course' | 'forward-course' | 'course-change' => {
+        const normaliseCourse = (value: string) => String(value || '').trim().toUpperCase();
+        const from = normaliseCourse(fromCourse);
+        const to = normaliseCourse(toCourse);
+        if (!from || !to || from === to) return 'course-change';
+        const courseOrder = Object.keys(scopedCourseColors || {}).map(normaliseCourse).filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        const fromIndex = courseOrder.indexOf(from);
+        const toIndex = courseOrder.indexOf(to);
+        if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+            return toIndex > fromIndex ? 'back-course' : 'forward-course';
+        }
+        const fromNumber = Number((from.match(/(\d+)(?!.*\d)/) || [])[1]);
+        const toNumber = Number((to.match(/(\d+)(?!.*\d)/) || [])[1]);
+        if (Number.isFinite(fromNumber) && Number.isFinite(toNumber) && fromNumber !== toNumber) {
+            return toNumber > fromNumber ? 'back-course' : 'forward-course';
+        }
+        return 'course-change';
+    }, [scopedCourseColors]);
+
+    const handleMoveTraineeBetweenCourses = useCallback(async (trainee: Trainee, newCourse: string) => {
+        const fromCourse = String(trainee.course || '').trim();
+        const toCourse = String(newCourse || '').trim();
+        if (!toCourse || fromCourse === toCourse) return;
+        const direction = resolveCourseMovementDirection(fromCourse, toCourse);
+        const updatedTrainee = { ...trainee, course: toCourse };
+
+        setTraineesData(prev => prev.map(t =>
+            t.idNumber === trainee.idNumber
+                ? updatedTrainee
+                : t
+        ));
+
+        const dbId = String((trainee as any).id || '').trim();
+        if (dbId && (trainee as any)._dataSource === 'database') {
+            try {
+                const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ course: toCourse }),
+                });
+                if (!response.ok) {
+                    console.error(`[CourseMove] Failed to save trainee course change for ${trainee.name}:`, await response.text().catch(() => response.statusText));
+                }
+            } catch (error) {
+                console.error(`[CourseMove] Error saving trainee course change for ${trainee.name}:`, error);
+            }
+        }
+
+        try {
+            const response = await fetch(scopedApiPath('/api/bli/course-movements'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    traineeName: trainee.fullName || trainee.name,
+                    traineeId: dbId || undefined,
+                    idNumber: trainee.idNumber,
+                    fromCourse,
+                    toCourse,
+                    direction,
+                    unit: trainee.unit || activeUnitCode,
+                    location: trainee.location || activeLocationCode || school,
+                    userId: getCurrentUserId() ?? undefined,
+                }),
+            });
+            if (!response.ok) {
+                console.error(`[CourseMove] Failed to record ${direction} movement:`, await response.text().catch(() => response.statusText));
+            }
+        } catch (error) {
+            console.error(`[CourseMove] Error recording ${direction} movement:`, error);
+        }
+
+        logAudit({
+            page: 'Trainee Roster',
+            action: 'edit',
+            description: direction === 'forward-course' ? 'Trainee forward-coursed' : direction === 'back-course' ? 'Trainee back-coursed' : 'Trainee course changed',
+            changes: `${trainee.rank} ${trainee.name} moved from ${fromCourse} to ${toCourse}`
+        });
+    }, [activeLocationCode, activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath, scopedCourseColors]);
+
 
     const renderActiveView = () => {
         switch (activeView) {
@@ -43285,18 +43366,7 @@ appliedUpdates.forEach(update => {
                                 });
                             }}
                             onBackcourseTrainee={(trainee, newCourse) => {
-                                logRoutineAppDebug(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
-                                setTraineesData(prev => prev.map(t =>
-                                    t.idNumber === trainee.idNumber
-                                        ? { ...t, course: newCourse }
-                                        : t
-                                ));
-                                logAudit({
-                                    page: 'Trainee Roster',
-                                    action: 'edit',
-                                    description: `Trainee backcoursed`,
-                                    changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
-                                });
+                                void handleMoveTraineeBetweenCourses(trainee, newCourse);
                             }}
                             date={date}
                             onDateChange={handleDateChange}
@@ -43448,19 +43518,7 @@ appliedUpdates.forEach(update => {
                                 });
                             }}
                             onBackcourseTrainee={(trainee, newCourse) => {
-                                // Move trainee to new course
-                                setTraineesData(prev => prev.map(t =>
-                                    t.idNumber === trainee.idNumber
-                                        ? { ...t, course: newCourse }
-                                        : t
-                                ));
-                                // Log audit
-                                logAudit({
-                                    page: 'Trainee Roster',
-                                    action: 'edit',
-                                    description: `Trainee backcoursed`,
-                                    changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
-                                });
+                                void handleMoveTraineeBetweenCourses(trainee, newCourse);
                             }}
                             masterCurrencies={masterCurrencies}
                             currencyRequirements={currencyRequirements}

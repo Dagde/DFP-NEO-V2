@@ -12679,6 +12679,78 @@ app.get('/api/bli/metrics', async (req, res) => {
   }
 });
 
+// GET /api/bli/course-movements - Load durable course movement events for BLI outcome charts.
+app.get('/api/bli/course-movements', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const unitFilter = normalizeBliUnit(req.query.unit);
+    const locationFilter = normalizeBliUnit(req.query.locationCode || req.query.location);
+    const rows = await db.dataBackup.findMany({
+      where: { type: 'course_movement_event' },
+      orderBy: { createdAt: 'asc' },
+      take: 5000,
+    });
+
+    const movements = rows
+      .map((row) => ({ id: row.id, createdAt: row.createdAt, ...(row.data || {}) }))
+      .filter((movement) => {
+        const unit = normalizeBliUnit(movement.unit || movement.unitCode);
+        const location = normalizeBliUnit(movement.location || movement.locationCode);
+        if (unitFilter && unit && unit !== unitFilter) return false;
+        if (locationFilter && location && location !== locationFilter) return false;
+        return true;
+      });
+
+    res.json({ success: true, movements });
+  } catch (error) {
+    console.error('❌ GET /api/bli/course-movements error:', error);
+    res.status(500).json({ error: 'Failed to load course movement events', details: error.message });
+  }
+});
+
+// POST /api/bli/course-movements - Record back-course/forward-course actions for future BLI history.
+app.post('/api/bli/course-movements', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const payload = req.body || {};
+    const traineeName = String(payload.traineeName || '').trim();
+    const fromCourse = String(payload.fromCourse || '').trim();
+    const toCourse = String(payload.toCourse || '').trim();
+    const direction = String(payload.direction || '').trim().toLowerCase();
+
+    if (!traineeName || !fromCourse || !toCourse) {
+      return res.status(400).json({ error: 'traineeName, fromCourse and toCourse are required' });
+    }
+    if (!['back-course', 'forward-course', 'course-change'].includes(direction)) {
+      return res.status(400).json({ error: 'direction must be back-course, forward-course or course-change' });
+    }
+
+    const data = {
+      traineeName,
+      traineeId: payload.traineeId || null,
+      idNumber: payload.idNumber ?? null,
+      fromCourse,
+      toCourse,
+      direction,
+      unit: normalizeBliUnit(payload.unit || payload.unitCode),
+      location: normalizeBliUnit(payload.location || payload.locationCode),
+      changedAt: payload.changedAt || new Date().toISOString(),
+    };
+    const record = await db.dataBackup.create({
+      data: {
+        type: 'course_movement_event',
+        data,
+        userId: String(payload.userId || '').trim() || null,
+      },
+    });
+
+    res.json({ success: true, movement: { id: record.id, createdAt: record.createdAt, ...data } });
+  } catch (error) {
+    console.error('❌ POST /api/bli/course-movements error:', error);
+    res.status(500).json({ error: 'Failed to record course movement event', details: error.message });
+  }
+});
+
 // DELETE /api/daily-snapshot/seed-cleanup - Delete all seed DataBackup records
 app.delete('/api/daily-snapshot/seed-cleanup', async (req, res) => {
   try {

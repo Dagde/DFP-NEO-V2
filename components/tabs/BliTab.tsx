@@ -10,8 +10,9 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { showDarkAlert, showDarkPrompt } from '../DarkMessageModal';
-import type { CancellationCode, Instructor, ScheduleEvent } from '../../types';
+import type { CancellationCode, Instructor, ScheduleEvent, Trainee } from '../../types';
 import { verifyCurrentUserPassword } from '../../utils/passwordVerification';
+import { isTraineeSuspended } from '../../utils/traineeStatus';
 
 type TimelineKey = '7d' | '1m' | '6m' | '12m' | '2y' | '3y' | '5y' | 'lastCY' | 'lastFY' | 'thisCY' | 'thisFY';
 type MetricKey = 'availability' | 'flight' | 'flightHours' | 'simulator' | 'simulatorHours' | 'total' | 'cancellations' | 'staffFlight' | 'staffSimulator' | 'staffTotal';
@@ -91,10 +92,33 @@ interface BliTabProps {
   date: string;
   events: ScheduleEvent[];
   instructorsData: Instructor[];
+  traineesData: Trainee[];
   currentAircraftAvailable?: number;
   totalAircraft?: number;
   operationalContext?: BliOperationalContext;
   cancellationCodes?: CancellationCode[];
+}
+
+interface CourseMovementEvent {
+  id?: string;
+  traineeName?: string;
+  idNumber?: number | string | null;
+  fromCourse?: string;
+  toCourse?: string;
+  direction?: 'back-course' | 'forward-course' | 'course-change' | string;
+  unit?: string;
+  location?: string;
+  changedAt?: string;
+  createdAt?: string;
+}
+
+type CourseOutcomeMetricKey = 'started' | 'failed' | 'paused' | 'backCoursed' | 'forwardCoursed' | 'remaining';
+
+interface CourseOutcomeMetric {
+  key: CourseOutcomeMetricKey;
+  label: string;
+  current: number;
+  historicalAverage: number;
 }
 
 interface ChartPoint {
@@ -394,6 +418,22 @@ const fetchBliMetrics = async (
   return mergeAvailabilityHistory(metrics, availabilityData.records || availabilityData.history || []);
 };
 
+const fetchCourseMovements = async (
+  signal: AbortSignal,
+  requestContext?: BliRequestContext,
+): Promise<CourseMovementEvent[]> => {
+  const params = new URLSearchParams();
+  if (requestContext?.eventUnitCode) params.set('unit', requestContext.eventUnitCode);
+  if (requestContext?.locationCode) params.set('locationCode', requestContext.locationCode);
+  const response = await fetch(`/api/bli/course-movements${params.toString() ? `?${params.toString()}` : ''}`, {
+    credentials: 'include',
+    signal,
+  });
+  if (!response.ok) throw new Error(await response.text());
+  const data = await response.json();
+  return Array.isArray(data.movements) ? data.movements : [];
+};
+
 const valueSum = (series: ChartPoint[]): number => series.reduce((sum, point) => sum + (Number(point.value) || 0), 0);
 
 const valueAvg = (series: ChartPoint[]): number | null => {
@@ -600,6 +640,81 @@ const buildBliRequestContext = (
     availabilityUnitCode: selectedIndividualUnitCode || contextUnitCode || undefined,
     locationCode: locationCode || undefined,
   };
+};
+
+const normaliseCourseCode = (value: unknown): string => String(value || '').trim();
+
+const traineeMatchesBliUnit = (trainee: Trainee, context?: BliOperationalContext, selectedUnitScopeKey = 'combined'): boolean => {
+  const selectedUnit = selectedUnitScopeKey.startsWith('unit:')
+    ? normalizeUnitCode(selectedUnitScopeKey.slice(5))
+    : '';
+  const contextUnit = normalizeUnitCode(context?.unitCode);
+  const traineeUnit = normalizeUnitCode(trainee.unit);
+  if (selectedUnit) return traineeUnit === selectedUnit;
+  if (!context?.isSharedFleetContext && contextUnit) return traineeUnit === contextUnit;
+  const allowedUnits = new Set((context?.unitCodes || String(context?.unitCode || '').split('+')).map(normalizeUnitCode).filter(Boolean));
+  return allowedUnits.size === 0 || allowedUnits.has(traineeUnit);
+};
+
+const courseMovementMatchesBliUnit = (movement: CourseMovementEvent, context?: BliOperationalContext, selectedUnitScopeKey = 'combined'): boolean => {
+  const selectedUnit = selectedUnitScopeKey.startsWith('unit:')
+    ? normalizeUnitCode(selectedUnitScopeKey.slice(5))
+    : '';
+  const contextUnit = normalizeUnitCode(context?.unitCode);
+  const movementUnit = normalizeUnitCode(movement.unit);
+  if (selectedUnit) return movementUnit === selectedUnit || !movementUnit;
+  if (!context?.isSharedFleetContext && contextUnit) return movementUnit === contextUnit || !movementUnit;
+  const allowedUnits = new Set((context?.unitCodes || String(context?.unitCode || '').split('+')).map(normalizeUnitCode).filter(Boolean));
+  return allowedUnits.size === 0 || allowedUnits.has(movementUnit) || !movementUnit;
+};
+
+const buildCourseOutcomeMetrics = (
+  selectedCourse: string,
+  trainees: Trainee[],
+  movements: CourseMovementEvent[],
+): CourseOutcomeMetric[] => {
+  const course = normaliseCourseCode(selectedCourse);
+  const courseTrainees = trainees.filter(trainee => normaliseCourseCode(trainee.course) === course);
+  const movedOut = movements.filter(movement => normaliseCourseCode(movement.fromCourse) === course && normaliseCourseCode(movement.toCourse) !== course);
+  const backCoursed = movedOut.filter(movement => movement.direction === 'back-course').length;
+  const forwardCoursed = movedOut.filter(movement => movement.direction === 'forward-course').length;
+  const suspended = courseTrainees.filter(trainee => isTraineeSuspended(trainee)).length;
+  const paused = courseTrainees.filter(trainee => trainee.isPaused && !isTraineeSuspended(trainee)).length;
+  const remaining = courseTrainees.filter(trainee => !trainee.isPaused && !isTraineeSuspended(trainee)).length;
+  const started = Math.max(courseTrainees.length + movedOut.length, remaining + paused + suspended + backCoursed + forwardCoursed);
+
+  const courses = Array.from(new Set([
+    ...trainees.map(trainee => normaliseCourseCode(trainee.course)),
+    ...movements.map(movement => normaliseCourseCode(movement.fromCourse)),
+  ].filter(Boolean))).filter(candidate => candidate !== course);
+  const selectedScale = Math.max(1, started);
+  const historicalRows = courses.map(candidate => {
+    const candidateTrainees = trainees.filter(trainee => normaliseCourseCode(trainee.course) === candidate);
+    const candidateMovedOut = movements.filter(movement => normaliseCourseCode(movement.fromCourse) === candidate && normaliseCourseCode(movement.toCourse) !== candidate);
+    const candidateStarted = Math.max(1, candidateTrainees.length + candidateMovedOut.length);
+    return {
+      started: 1,
+      failed: candidateTrainees.filter(trainee => isTraineeSuspended(trainee)).length / candidateStarted,
+      paused: candidateTrainees.filter(trainee => trainee.isPaused && !isTraineeSuspended(trainee)).length / candidateStarted,
+      backCoursed: candidateMovedOut.filter(movement => movement.direction === 'back-course').length / candidateStarted,
+      forwardCoursed: candidateMovedOut.filter(movement => movement.direction === 'forward-course').length / candidateStarted,
+      remaining: candidateTrainees.filter(trainee => !trainee.isPaused && !isTraineeSuspended(trainee)).length / candidateStarted,
+    };
+  });
+  const averageRatio = (key: CourseOutcomeMetricKey): number => {
+    if (historicalRows.length === 0) return 0;
+    return historicalRows.reduce((sum, row) => sum + Number(row[key] || 0), 0) / historicalRows.length;
+  };
+  const historicalAverage = (key: CourseOutcomeMetricKey): number => averageRatio(key) * selectedScale;
+
+  return [
+    { key: 'started', label: 'Started on course', current: started, historicalAverage: historicalAverage('started') },
+    { key: 'failed', label: 'Failed / suspended', current: suspended, historicalAverage: historicalAverage('failed') },
+    { key: 'paused', label: 'Paused', current: paused, historicalAverage: historicalAverage('paused') },
+    { key: 'backCoursed', label: 'Back-coursed', current: backCoursed, historicalAverage: historicalAverage('backCoursed') },
+    { key: 'forwardCoursed', label: 'Forward-coursed', current: forwardCoursed, historicalAverage: historicalAverage('forwardCoursed') },
+    { key: 'remaining', label: 'Remaining on course', current: remaining, historicalAverage: historicalAverage('remaining') },
+  ];
 };
 
 const buildMetricDefinitions = (
@@ -1111,6 +1226,105 @@ const MetricTile: React.FC<{
   );
 };
 
+const CourseOutcomeComparison: React.FC<{
+  traineesData: Trainee[];
+  movements: CourseMovementEvent[];
+  operationalContext?: BliOperationalContext;
+  selectedUnitScopeKey: string;
+}> = ({ traineesData, movements, operationalContext, selectedUnitScopeKey }) => {
+  const scopedTrainees = useMemo(
+    () => traineesData.filter(trainee => traineeMatchesBliUnit(trainee, operationalContext, selectedUnitScopeKey)),
+    [operationalContext, selectedUnitScopeKey, traineesData],
+  );
+  const scopedMovements = useMemo(
+    () => movements.filter(movement => courseMovementMatchesBliUnit(movement, operationalContext, selectedUnitScopeKey)),
+    [movements, operationalContext, selectedUnitScopeKey],
+  );
+  const courses = useMemo(() => (
+    Array.from(new Set([
+      ...scopedTrainees.map(trainee => normaliseCourseCode(trainee.course)),
+      ...scopedMovements.map(movement => normaliseCourseCode(movement.fromCourse)),
+    ].filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  ), [scopedMovements, scopedTrainees]);
+  const [selectedCourse, setSelectedCourse] = useState('');
+
+  useEffect(() => {
+    if (courses.length === 0) {
+      setSelectedCourse('');
+      return;
+    }
+    if (!courses.includes(selectedCourse)) setSelectedCourse(courses[0]);
+  }, [courses, selectedCourse]);
+
+  const rows = useMemo(() => (
+    selectedCourse
+      ? buildCourseOutcomeMetrics(selectedCourse, scopedTrainees, scopedMovements)
+      : []
+  ), [scopedMovements, scopedTrainees, selectedCourse]);
+  const axis = niceAxisRange(rows.flatMap(row => [row.current, row.historicalAverage]), 5);
+  const max = Math.max(1, axis.max);
+
+  return (
+    <section className="rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 shadow-[0_10px_26px_rgba(0,0,0,0.22)]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Course Outcomes</p>
+          <h3 className="mt-1 text-lg font-bold text-white">Course status comparison</h3>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+            Current course counts are compared with historical course averages, normalised to the selected course intake size. Course movement history is captured from new back-course and forward-course actions.
+          </p>
+        </div>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Course</span>
+          <select
+            value={selectedCourse}
+            onChange={event => setSelectedCourse(event.target.value)}
+            className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+          >
+            {courses.map(course => (
+              <option key={course} value={course}>{course}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="mt-4 rounded-md border border-slate-800 bg-slate-950/50 px-4 py-8 text-center text-sm text-slate-500">
+          No course roster data is available for this unit.
+        </div>
+      ) : (
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center justify-end gap-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <span className="flex items-center gap-2"><span className="h-2 w-5 rounded bg-cyan-400" />Selected course</span>
+            <span className="flex items-center gap-2"><span className="h-2 w-5 rounded bg-slate-500" />Historical average</span>
+          </div>
+          {rows.map(row => {
+            const currentPct = Math.max(0, Math.min(100, (row.current / max) * 100));
+            const historicalPct = Math.max(0, Math.min(100, (row.historicalAverage / max) * 100));
+            return (
+              <div key={row.key} className="grid grid-cols-[170px_minmax(0,1fr)_76px] items-center gap-3">
+                <div className="text-sm font-semibold text-slate-200">{row.label}</div>
+                <div className="space-y-1.5">
+                  <div className="h-3 rounded bg-slate-950 ring-1 ring-slate-800">
+                    <div className="h-full rounded bg-cyan-400" style={{ width: `${currentPct}%` }} />
+                  </div>
+                  <div className="h-3 rounded bg-slate-950 ring-1 ring-slate-800">
+                    <div className="h-full rounded bg-slate-500" style={{ width: `${historicalPct}%` }} />
+                  </div>
+                </div>
+                <div className="text-right text-xs text-slate-400">
+                  <div className="font-bold text-white">{compactNumber(row.current, 0)}</div>
+                  <div>{compactNumber(row.historicalAverage, 1)} avg</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+};
+
 const BliPeriodWindow: React.FC<{
   title: string;
   periodKey: PeriodKey;
@@ -1330,10 +1544,12 @@ const MetricModal: React.FC<{
   );
 };
 
-const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
+const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, traineesData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
   const [metrics, setMetrics] = useState<BliMetricsResponse>(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [courseMovements, setCourseMovements] = useState<CourseMovementEvent[]>([]);
+  const [courseMovementError, setCourseMovementError] = useState<string | null>(null);
   const [openMetric, setOpenMetric] = useState<MetricDefinition | null>(null);
   const [periodSettings, setPeriodSettings] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = useState<PeriodKey | null>(null);
@@ -1451,6 +1667,20 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
     return () => controller.abort();
   }, [date, previewRange.endDate, previewRange.startDate, requestContext.availabilityUnitCode, requestContext.eventUnitCode, requestContext.locationCode]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setCourseMovementError(null);
+    fetchCourseMovements(controller.signal, requestContext)
+      .then(setCourseMovements)
+      .catch(fetchError => {
+        if (fetchError.name === 'AbortError') return;
+        console.error('Failed to load BLI course movements:', fetchError);
+        setCourseMovementError('Course movement history could not be loaded.');
+        setCourseMovements([]);
+      });
+    return () => controller.abort();
+  }, [requestContext.eventUnitCode, requestContext.locationCode]);
+
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
     sortedStaff.forEach(staff => {
@@ -1556,6 +1786,13 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, currentA
           />
         ))}
       </div>
+      {courseMovementError && <p className="text-xs text-amber-300">{courseMovementError}</p>}
+      <CourseOutcomeComparison
+        traineesData={traineesData}
+        movements={courseMovements}
+        operationalContext={operationalContext}
+        selectedUnitScopeKey={selectedUnitScopeKey}
+      />
     </div>
   );
 };
