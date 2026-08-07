@@ -25521,11 +25521,13 @@ const App: React.FC = () => {
             const startedAt = performance.now();
             try {
                 const apiBase = getAppApiBase();
-                const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates`;
+                const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates?_=${Date.now()}`;
                 pushDfpDataDiag('snapshot-dates:start', {
                     url: snapshotDatesUrl,
+                    activeLocation: school,
+                    activeUnitCode,
                 });
-                const res = await fetch(snapshotDatesUrl);
+                const res = await fetch(snapshotDatesUrl, { cache: 'no-store' });
                 pushDfpDataDiag('snapshot-dates:response', {
                     url: snapshotDatesUrl,
                     durationMs: Math.round(performance.now() - startedAt),
@@ -25571,7 +25573,7 @@ const App: React.FC = () => {
             }
         };
         loadSnapshotDates();
-    }, [setupTestProfile]);
+    }, [activeUnitCode, school, setupTestProfile]);
 
     const applyDailySnapshot = React.useCallback((
         targetDate: string,

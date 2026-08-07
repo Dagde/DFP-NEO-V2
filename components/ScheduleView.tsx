@@ -8865,7 +8865,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                 Saved Records
                                             </p>
                                             <div className="max-h-36 overflow-y-auto space-y-1">
-                                                {snapshotDates.slice(0, 12).map(snapshotDate => (
+                                                {snapshotDates.slice(0, 60).map(snapshotDate => (
                                                     <button
                                                         key={snapshotDate}
                                                         type="button"

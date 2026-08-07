@@ -17684,7 +17684,7 @@ const ScheduleView = ({
                         ),
                         snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2", children: "Saved Records" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 12).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 60).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "button",
                             {
                               type: "button",
@@ -110474,11 +110474,13 @@ const App = () => {
       const startedAt = performance.now();
       try {
         const apiBase = getAppApiBase();
-        const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates`;
+        const snapshotDatesUrl = `${apiBase}/daily-snapshot/dates?_=${Date.now()}`;
         pushDfpDataDiag("snapshot-dates:start", {
-          url: snapshotDatesUrl
+          url: snapshotDatesUrl,
+          activeLocation: school,
+          activeUnitCode
         });
-        const res = await fetch(snapshotDatesUrl);
+        const res = await fetch(snapshotDatesUrl, { cache: "no-store" });
         pushDfpDataDiag("snapshot-dates:response", {
           url: snapshotDatesUrl,
           durationMs: Math.round(performance.now() - startedAt),
@@ -110521,7 +110523,7 @@ const App = () => {
       }
     };
     loadSnapshotDates();
-  }, [setupTestProfile]);
+  }, [activeUnitCode, school, setupTestProfile]);
   const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snapshotUnit, snap2, replace, source) => {
     if (!snap2) return 0;
     const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];

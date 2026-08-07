@@ -12223,6 +12223,9 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
       };
     });
     console.log(`✅ GET /api/daily-snapshot/dates - ${dates.length} snapshot dates`);
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.json({ dates });
   } catch (error) {
     console.error('❌ GET /api/daily-snapshot/dates error:', error);
