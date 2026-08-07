@@ -33,6 +33,7 @@ interface HeaderProps {
     showDepartureDensityOverlay: boolean;
     onToggleDepartureDensityOverlay: () => void;
     canEditDfpTiles?: boolean;
+    canOpenFlightLine?: boolean;
     canRunValidation?: boolean;
     canRunNeoBuild?: boolean;
     // Auth props
@@ -68,6 +69,7 @@ const Header: React.FC<HeaderProps> = ({
     showDepartureDensityOverlay, 
     onToggleDepartureDensityOverlay,
     canEditDfpTiles = true,
+    canOpenFlightLine = true,
     canRunValidation = true,
     canRunNeoBuild = true,
     authUser,
@@ -417,9 +419,13 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 10. Flight Line Button */}
                         <button
                             type="button"
-                            onClick={onToggleFlightLinePanel}
-                            className={`${headerButtonClass} ${isFlightLinePanelOpen ? 'active' : ''}`}
-                            title="Open Flight Line"
+                            onClick={() => {
+                                if (!canOpenFlightLine || !onToggleFlightLinePanel) return;
+                                onToggleFlightLinePanel();
+                            }}
+                            disabled={!canOpenFlightLine || !onToggleFlightLinePanel}
+                            className={`${headerButtonClass} ${isFlightLinePanelOpen ? 'active' : ''} ${!canOpenFlightLine ? unavailableActionClass : ''}`}
+                            title={canOpenFlightLine ? 'Open Flight Line' : 'Access denied: Flight Line permission required'}
                         >
                             <span className="text-center leading-tight">Flight<br />Line</span>
                         </button>

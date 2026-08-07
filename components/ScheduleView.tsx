@@ -127,6 +127,9 @@ interface ScheduleViewProps {
   isFlightLinePanelOpen?: boolean;
   onOrganisationSlideoutOpen?: () => void;
   onToggleFlightLinePanel?: () => void;
+  canEditFlightLineInventory?: boolean;
+  canEditFlightLineAvailability?: boolean;
+  canEditTileAircraftNumber?: boolean;
   onInitialSetupWizardActiveChange?: (active: boolean) => void;
   formationCallsigns?: FormationCallsign[];
   buildRuleSettings?: {
@@ -7216,6 +7219,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isFlightLinePanelOpen = false,
     onOrganisationSlideoutOpen,
     onToggleFlightLinePanel,
+    canEditFlightLineInventory = true,
+    canEditFlightLineAvailability = true,
+    canEditTileAircraftNumber = true,
     onInitialSetupWizardActiveChange,
     formationCallsigns = [],
     buildRuleSettings,
@@ -7374,6 +7380,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         }
     }, [flightLineConfiguredNumbersKey, flightLineLocalUnavailableNumbers, flightLineStoredUnavailableKey, flightLinePoolContext.numbers, sortFlightLineAircraftNumbers]);
     const updateFlightLineAircraftNumber = useCallback((aircraftIndex: number, value: string) => {
+        if (!canEditFlightLineInventory || isReadOnly) return;
         if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
         onUpdatePlatformConfig((current: any) => ({
             ...current,
@@ -7396,7 +7403,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 };
             }),
         }));
-    }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
+    }, [canEditFlightLineInventory, flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, isReadOnly, onUpdatePlatformConfig]);
     const clearFlightLineDragState = useCallback(() => {
         setFlightLineDraggedAircraftNumber(null);
         setFlightLineScheduleDropPreview(null);
@@ -7404,6 +7411,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setIsFlightLineUnavailableDropActive(false);
     }, []);
     const saveFlightLineUnavailableAircraftNumbers = useCallback((nextUnavailableNumbers: string[]) => {
+        if (!canEditFlightLineAvailability || isReadOnly) return;
         const validNumbers = new Set(flightLinePoolContext.numbers);
         const cleanNumbers = sortFlightLineAircraftNumbers(Array.from(new Set(nextUnavailableNumbers.map((number) => String(number ?? '').trim()).filter((number) => number && validNumbers.has(number)))));
         setFlightLineLocalUnavailableNumbers(cleanNumbers);
@@ -7422,8 +7430,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 };
             }),
         }));
-    }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
+    }, [canEditFlightLineAvailability, flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, isReadOnly, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
     const moveFlightLineAircraftToUnavailable = useCallback((aircraftNumber: string) => {
+        if (!canEditFlightLineAvailability || isReadOnly) {
+            clearFlightLineDragState();
+            return;
+        }
         const cleanNumber = aircraftNumber.trim();
         const assignedEventIds = getFlightLineAssignedEventIdsForAircraft(cleanNumber);
         if (assignedEventIds.length > 0) {
@@ -7433,8 +7445,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
         saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber]);
-    }, [clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
     const moveFlightLineAircraftToAvailable = useCallback((aircraftNumber: string, sourceEventId = '') => {
+        if (!canEditFlightLineAvailability || isReadOnly) {
+            clearFlightLineDragState();
+            return;
+        }
         const cleanNumber = aircraftNumber.trim();
         const assignedEventIds = getFlightLineAssignedEventIdsForAircraft(cleanNumber, sourceEventId || undefined);
         if (assignedEventIds.length > 0) {
@@ -7444,10 +7460,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         clearFlightLineDragState();
         if (!cleanNumber || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
         saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber));
-    }, [clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+    }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
     const assignFlightLineAircraftToEvent = useCallback((aircraftNumber: string, eventId: string, sourceEventId = '') => {
+        if (!canEditTileAircraftNumber || isReadOnly) {
+            clearFlightLineDragState();
+            return;
+        }
         const cleanNumber = aircraftNumber.trim();
         if (!cleanNumber || !eventId || !flightLinePoolContext.numbers.includes(cleanNumber)) return;
+        if (flightLineEffectiveUnavailableNumbers.includes(cleanNumber) && !canEditFlightLineAvailability) {
+            clearFlightLineDragState();
+            return;
+        }
         const eventUpdates: { eventId: string; newAircraftNumber: string }[] = [];
         if (sourceEventId && sourceEventId !== eventId) {
             eventUpdates.push({ eventId: sourceEventId, newAircraftNumber: '' });
@@ -7457,7 +7481,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         setFlightLineAssignmentState(eventId, cleanNumber, sourceEventId);
         saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber));
         clearFlightLineDragState();
-    }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers, setFlightLineAssignmentState]);
+    }, [canEditFlightLineAvailability, canEditTileAircraftNumber, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers, setFlightLineAssignmentState]);
     const flightLineAircraftConflictEventIds = useMemo(() => {
         const conflictEventIds = new Set<string>();
         const eventsByAircraft = new Map<string, ScheduleEvent[]>();
@@ -7669,6 +7693,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (isReadOnly) return;
         const dragTypes = Array.from(event.dataTransfer.types);
         if (dragTypes.includes('application/flight-line-aircraft')) {
+            if (!canEditTileAircraftNumber) return;
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
             const aircraftNumber = event.dataTransfer.getData('application/flight-line-aircraft') || flightLineDraggedAircraftNumber || '';
@@ -8396,8 +8421,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         data-dfp-event-id={event.id}
                         data-dfp-event-label={event.flightNumber || event.eventCode || event.id}
                         data-dfp-resource-id={event.resourceId}
-                        draggable
+                        draggable={canEditTileAircraftNumber && !isReadOnly}
                         onDragStart={(dragEvent) => {
+                            if (!canEditTileAircraftNumber || isReadOnly) {
+                                dragEvent.preventDefault();
+                                return;
+                            }
                             setFlightLineDraggedAircraftNumber(aircraftNumber);
                             dragEvent.dataTransfer.effectAllowed = 'move';
                             dragEvent.dataTransfer.setData('application/flight-line-aircraft', aircraftNumber);
@@ -8406,7 +8435,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         }}
                         onDragEnd={clearFlightLineDragState}
                         onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
-                        className={`absolute cursor-grab transition-all duration-300 ease-out active:cursor-grabbing ${isPreview ? 'opacity-70' : 'opacity-100'}`}
+                        className={`absolute transition-all duration-300 ease-out ${canEditTileAircraftNumber && !isReadOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed'} ${isPreview ? 'opacity-70' : 'opacity-100'}`}
                         style={{
                             left: `${markerLeft}px`,
                             top: `${markerTop}px`,
@@ -8651,7 +8680,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                         type="text"
                                                         value={number}
                                                         onChange={(event) => updateFlightLineAircraftNumber(index, event.target.value)}
-                                                        className="h-7 min-w-0 rounded border border-slate-600/80 bg-slate-950/80 px-2 text-xs font-bold text-slate-100 outline-none transition focus:border-cyan-300"
+                                                        disabled={!canEditFlightLineInventory || isReadOnly}
+                                                        className={`h-7 min-w-0 rounded border px-2 text-xs font-bold outline-none transition focus:border-cyan-300 ${canEditFlightLineInventory && !isReadOnly ? 'border-slate-600/80 bg-slate-950/80 text-slate-100' : 'cursor-not-allowed border-slate-700/70 bg-slate-900/70 text-slate-500'}`}
+                                                        title={canEditFlightLineInventory && !isReadOnly ? 'Edit aircraft inventory number' : 'Aircraft inventory edit permission required'}
                                                     />
                                                 </label>
                                             )) : (
@@ -8666,6 +8697,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         <div
                                             className={`mt-3 flex min-h-[88px] flex-wrap gap-2 rounded-md border px-2 py-2 pb-1 transition-all duration-300 ease-out ${isFlightLineAvailableDropActive ? 'border-cyan-300/70 bg-cyan-500/10' : 'border-transparent bg-transparent'}`}
                                             onDragOver={(event) => {
+                                                if (!canEditFlightLineAvailability || isReadOnly) return;
                                                 event.preventDefault();
                                                 event.dataTransfer.dropEffect = 'move';
                                                 setIsFlightLineAvailableDropActive(true);
@@ -8676,6 +8708,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                 }
                                             }}
                                             onDrop={(event) => {
+                                                if (!canEditFlightLineAvailability || isReadOnly) return;
                                                 event.preventDefault();
                                                 const aircraftNumber = event.dataTransfer.getData('text/plain') || flightLineDraggedAircraftNumber || '';
                                                 const sourceEventId = getFlightLineDragSourceEventId(event);
@@ -8709,15 +8742,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                                 data-dfp-context-kind="aircraft"
                                                                 data-dfp-aircraft-number={number}
                                                                 data-dfp-resource-label={tailNumber}
-                                                                draggable
+                                                                draggable={canEditTileAircraftNumber || canEditFlightLineAvailability}
                                                                 onDragStart={(event) => {
+                                                                    if (!canEditTileAircraftNumber && !canEditFlightLineAvailability) {
+                                                                        event.preventDefault();
+                                                                        return;
+                                                                    }
                                                                     setFlightLineDraggedAircraftNumber(number);
                                                                     event.dataTransfer.effectAllowed = 'move';
                                                                     event.dataTransfer.setData('application/flight-line-aircraft', number);
                                                                     event.dataTransfer.setData('text/plain', number);
                                                                 }}
                                                                 onDragEnd={clearFlightLineDragState}
-                                                                className={`absolute inset-0 flex cursor-grab flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out active:cursor-grabbing ${isDragging ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
+                                                                className={`absolute inset-0 flex flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${(canEditTileAircraftNumber || canEditFlightLineAvailability) ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'} ${isDragging ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
                                                                 title={tailNumber}
                                                             >
                                                                 {flightLinePoolContext.prefix ? (
@@ -8735,6 +8772,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 <div
                                     className="flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4"
                                     onDragOver={(event) => {
+                                        if (!canEditFlightLineAvailability || isReadOnly) return;
                                         event.preventDefault();
                                         event.dataTransfer.dropEffect = 'move';
                                         setIsFlightLineUnavailableDropActive(true);
@@ -8745,6 +8783,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                         }
                                     }}
                                     onDrop={(event) => {
+                                        if (!canEditFlightLineAvailability || isReadOnly) return;
                                         event.preventDefault();
                                         const aircraftNumber = event.dataTransfer.getData('text/plain') || flightLineDraggedAircraftNumber || '';
                                         moveFlightLineAircraftToUnavailable(aircraftNumber);
@@ -8762,15 +8801,19 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                             data-dfp-context-kind="aircraft"
                                                             data-dfp-aircraft-number={number}
                                                             data-dfp-resource-label={tailNumber}
-                                                            draggable
+                                                            draggable={canEditFlightLineAvailability}
                                                             onDragStart={(event) => {
+                                                                if (!canEditFlightLineAvailability || isReadOnly) {
+                                                                    event.preventDefault();
+                                                                    return;
+                                                                }
                                                                 setFlightLineDraggedAircraftNumber(number);
                                                                 event.dataTransfer.effectAllowed = 'move';
                                                                 event.dataTransfer.setData('application/flight-line-aircraft', number);
                                                                 event.dataTransfer.setData('text/plain', number);
                                                             }}
                                                             onDragEnd={clearFlightLineDragState}
-                                                            className={`flex h-[40px] w-[50px] cursor-grab flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out active:cursor-grabbing ${flightLineDraggedAircraftNumber === number ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
+                                                            className={`flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'} ${flightLineDraggedAircraftNumber === number ? 'border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]' : 'border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]'}`}
                                                             title={tailNumber}
                                                         >
                                                             {flightLinePoolContext.prefix ? (

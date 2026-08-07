@@ -2005,6 +2005,10 @@ const PLATFORM_PERMISSION_CATALOG = [
     items: [
       ["dfp.view", "View DFP"],
       ["dfp.editTiles", "Add, edit and delete tiles"],
+      ["dfp.flightLine.view", "Open Flight Line"],
+      ["dfp.flightLine.inventory.edit", "Edit aircraft inventory"],
+      ["dfp.flightLine.availability.edit", "Edit aircraft availability status"],
+      ["dfp.aircraftNumber.edit", "Edit aircraft number on flight tiles"],
       ["dfp.validation", "Run validation checks"],
       ["dfp.publish", "Publish DFP"],
       ["dfp.history", "View historical DFP records"]
@@ -2085,7 +2089,13 @@ const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
     id: "scheduler",
     name: "Scheduler",
     description: "Scheduling and build management access.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"]
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.aircraftNumber.edit", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"]
+  },
+  {
+    id: "maintenance",
+    name: "Maintenance",
+    description: "Aircraft inventory, aircraft availability and flight-line tail assignment access without general tile editing.",
+    permissions: ["dfp.view", "dfp.flightLine.view", "dfp.flightLine.inventory.edit", "dfp.flightLine.availability.edit", "dfp.aircraftNumber.edit"]
   },
   {
     id: "unit-admin",
@@ -8082,6 +8092,7 @@ const Header = ({
   showDepartureDensityOverlay,
   onToggleDepartureDensityOverlay,
   canEditDfpTiles = true,
+  canOpenFlightLine = true,
   canRunValidation = true,
   canRunNeoBuild = true,
   authUser,
@@ -8415,9 +8426,13 @@ const Header = ({
           "button",
           {
             type: "button",
-            onClick: onToggleFlightLinePanel,
-            className: `${headerButtonClass} ${isFlightLinePanelOpen ? "active" : ""}`,
-            title: "Open Flight Line",
+            onClick: () => {
+              if (!canOpenFlightLine || !onToggleFlightLinePanel) return;
+              onToggleFlightLinePanel();
+            },
+            disabled: !canOpenFlightLine || !onToggleFlightLinePanel,
+            className: `${headerButtonClass} ${isFlightLinePanelOpen ? "active" : ""} ${!canOpenFlightLine ? unavailableActionClass : ""}`,
+            title: canOpenFlightLine ? "Open Flight Line" : "Access denied: Flight Line permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Flight",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -16219,6 +16234,9 @@ const ScheduleView = ({
   isFlightLinePanelOpen = false,
   onOrganisationSlideoutOpen,
   onToggleFlightLinePanel,
+  canEditFlightLineInventory = true,
+  canEditFlightLineAvailability = true,
+  canEditTileAircraftNumber = true,
   onInitialSetupWizardActiveChange,
   formationCallsigns = [],
   buildRuleSettings,
@@ -16365,6 +16383,7 @@ const ScheduleView = ({
     }
   }, [flightLineConfiguredNumbersKey, flightLineLocalUnavailableNumbers, flightLineStoredUnavailableKey, flightLinePoolContext.numbers, sortFlightLineAircraftNumbers]);
   const updateFlightLineAircraftNumber = reactExports.useCallback((aircraftIndex, value) => {
+    if (!canEditFlightLineInventory || isReadOnly) return;
     if (!onUpdatePlatformConfig || flightLinePoolContext.poolIndex < 0) return;
     onUpdatePlatformConfig((current) => ({
       ...current,
@@ -16385,7 +16404,7 @@ const ScheduleView = ({
         };
       })
     }));
-  }, [flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, onUpdatePlatformConfig]);
+  }, [canEditFlightLineInventory, flightLinePoolContext.aircraftCount, flightLinePoolContext.poolIndex, isReadOnly, onUpdatePlatformConfig]);
   const clearFlightLineDragState = reactExports.useCallback(() => {
     setFlightLineDraggedAircraftNumber(null);
     setFlightLineScheduleDropPreview(null);
@@ -16393,6 +16412,7 @@ const ScheduleView = ({
     setIsFlightLineUnavailableDropActive(false);
   }, []);
   const saveFlightLineUnavailableAircraftNumbers = reactExports.useCallback((nextUnavailableNumbers) => {
+    if (!canEditFlightLineAvailability || isReadOnly) return;
     const validNumbers = new Set(flightLinePoolContext.numbers);
     const cleanNumbers = sortFlightLineAircraftNumbers(Array.from(new Set(nextUnavailableNumbers.map((number) => String(number ?? "").trim()).filter((number) => number && validNumbers.has(number)))));
     setFlightLineLocalUnavailableNumbers(cleanNumbers);
@@ -16411,8 +16431,12 @@ const ScheduleView = ({
         };
       })
     }));
-  }, [flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
+  }, [canEditFlightLineAvailability, flightLinePoolContext.numbers, flightLinePoolContext.poolIndex, isReadOnly, onUpdatePlatformConfig, sortFlightLineAircraftNumbers]);
   const moveFlightLineAircraftToUnavailable = reactExports.useCallback((aircraftNumber) => {
+    if (!canEditFlightLineAvailability || isReadOnly) {
+      clearFlightLineDragState();
+      return;
+    }
     const cleanNumber2 = aircraftNumber.trim();
     const assignedEventIds = getFlightLineAssignedEventIdsForAircraft(cleanNumber2);
     if (assignedEventIds.length > 0) {
@@ -16422,8 +16446,12 @@ const ScheduleView = ({
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
     saveFlightLineUnavailableAircraftNumbers([...flightLineEffectiveUnavailableNumbers, cleanNumber2]);
-  }, [clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+  }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
   const moveFlightLineAircraftToAvailable = reactExports.useCallback((aircraftNumber, sourceEventId = "") => {
+    if (!canEditFlightLineAvailability || isReadOnly) {
+      clearFlightLineDragState();
+      return;
+    }
     const cleanNumber2 = aircraftNumber.trim();
     const assignedEventIds = getFlightLineAssignedEventIdsForAircraft(cleanNumber2, sourceEventId || void 0);
     if (assignedEventIds.length > 0) {
@@ -16433,10 +16461,18 @@ const ScheduleView = ({
     clearFlightLineDragState();
     if (!cleanNumber2 || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
     saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
-  }, [clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
+  }, [canEditFlightLineAvailability, clearFlightLineAssignmentState, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, getFlightLineAssignedEventIdsForAircraft, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers]);
   const assignFlightLineAircraftToEvent = reactExports.useCallback((aircraftNumber, eventId, sourceEventId = "") => {
+    if (!canEditTileAircraftNumber || isReadOnly) {
+      clearFlightLineDragState();
+      return;
+    }
     const cleanNumber2 = aircraftNumber.trim();
     if (!cleanNumber2 || !eventId || !flightLinePoolContext.numbers.includes(cleanNumber2)) return;
+    if (flightLineEffectiveUnavailableNumbers.includes(cleanNumber2) && !canEditFlightLineAvailability) {
+      clearFlightLineDragState();
+      return;
+    }
     const eventUpdates = [];
     if (sourceEventId && sourceEventId !== eventId) {
       eventUpdates.push({ eventId: sourceEventId, newAircraftNumber: "" });
@@ -16446,7 +16482,7 @@ const ScheduleView = ({
     setFlightLineAssignmentState(eventId, cleanNumber2, sourceEventId);
     saveFlightLineUnavailableAircraftNumbers(flightLineEffectiveUnavailableNumbers.filter((number) => number !== cleanNumber2));
     clearFlightLineDragState();
-  }, [clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers, setFlightLineAssignmentState]);
+  }, [canEditFlightLineAvailability, canEditTileAircraftNumber, clearFlightLineDragState, flightLineEffectiveUnavailableNumbers, flightLinePoolContext.numbers, isReadOnly, onUpdateEvent, saveFlightLineUnavailableAircraftNumbers, setFlightLineAssignmentState]);
   const flightLineAircraftConflictEventIds = reactExports.useMemo(() => {
     const conflictEventIds = /* @__PURE__ */ new Set();
     const eventsByAircraft = /* @__PURE__ */ new Map();
@@ -16619,6 +16655,7 @@ const ScheduleView = ({
     if (isReadOnly) return;
     const dragTypes = Array.from(event.dataTransfer.types);
     if (dragTypes.includes("application/flight-line-aircraft")) {
+      if (!canEditTileAircraftNumber) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       const aircraftNumber = event.dataTransfer.getData("application/flight-line-aircraft") || flightLineDraggedAircraftNumber || "";
@@ -17235,8 +17272,12 @@ const ScheduleView = ({
         "data-dfp-event-id": event.id,
         "data-dfp-event-label": event.flightNumber || event.eventCode || event.id,
         "data-dfp-resource-id": event.resourceId,
-        draggable: true,
+        draggable: canEditTileAircraftNumber && !isReadOnly,
         onDragStart: (dragEvent) => {
+          if (!canEditTileAircraftNumber || isReadOnly) {
+            dragEvent.preventDefault();
+            return;
+          }
           setFlightLineDraggedAircraftNumber(aircraftNumber);
           dragEvent.dataTransfer.effectAllowed = "move";
           dragEvent.dataTransfer.setData("application/flight-line-aircraft", aircraftNumber);
@@ -17245,7 +17286,7 @@ const ScheduleView = ({
         },
         onDragEnd: clearFlightLineDragState,
         onMouseDown: (mouseEvent) => mouseEvent.stopPropagation(),
-        className: `absolute cursor-grab transition-all duration-300 ease-out active:cursor-grabbing ${isPreview ? "opacity-70" : "opacity-100"}`,
+        className: `absolute transition-all duration-300 ease-out ${canEditTileAircraftNumber && !isReadOnly ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed"} ${isPreview ? "opacity-70" : "opacity-100"}`,
         style: {
           left: `${markerLeft}px`,
           top: `${markerTop}px`,
@@ -17495,7 +17536,9 @@ const ScheduleView = ({
                         type: "text",
                         value: number,
                         onChange: (event) => updateFlightLineAircraftNumber(index, event.target.value),
-                        className: "h-7 min-w-0 rounded border border-slate-600/80 bg-slate-950/80 px-2 text-xs font-bold text-slate-100 outline-none transition focus:border-cyan-300"
+                        disabled: !canEditFlightLineInventory || isReadOnly,
+                        className: `h-7 min-w-0 rounded border px-2 text-xs font-bold outline-none transition focus:border-cyan-300 ${canEditFlightLineInventory && !isReadOnly ? "border-slate-600/80 bg-slate-950/80 text-slate-100" : "cursor-not-allowed border-slate-700/70 bg-slate-900/70 text-slate-500"}`,
+                        title: canEditFlightLineInventory && !isReadOnly ? "Edit aircraft inventory number" : "Aircraft inventory edit permission required"
                       }
                     )
                   ] }, `flight-line-aircraft-inventory-${index}`)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-slate-700/80 bg-slate-950/60 px-2 py-2 text-[10px] font-semibold text-slate-500", children: "No aircraft rows configured." }) }) })
@@ -17507,6 +17550,7 @@ const ScheduleView = ({
                     {
                       className: `mt-3 flex min-h-[88px] flex-wrap gap-2 rounded-md border px-2 py-2 pb-1 transition-all duration-300 ease-out ${isFlightLineAvailableDropActive ? "border-cyan-300/70 bg-cyan-500/10" : "border-transparent bg-transparent"}`,
                       onDragOver: (event) => {
+                        if (!canEditFlightLineAvailability || isReadOnly) return;
                         event.preventDefault();
                         event.dataTransfer.dropEffect = "move";
                         setIsFlightLineAvailableDropActive(true);
@@ -17517,6 +17561,7 @@ const ScheduleView = ({
                         }
                       },
                       onDrop: (event) => {
+                        if (!canEditFlightLineAvailability || isReadOnly) return;
                         event.preventDefault();
                         const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
                         const sourceEventId = getFlightLineDragSourceEventId(event);
@@ -17552,15 +17597,19 @@ const ScheduleView = ({
                                   "data-dfp-context-kind": "aircraft",
                                   "data-dfp-aircraft-number": number,
                                   "data-dfp-resource-label": tailNumber,
-                                  draggable: true,
+                                  draggable: canEditTileAircraftNumber || canEditFlightLineAvailability,
                                   onDragStart: (event) => {
+                                    if (!canEditTileAircraftNumber && !canEditFlightLineAvailability) {
+                                      event.preventDefault();
+                                      return;
+                                    }
                                     setFlightLineDraggedAircraftNumber(number);
                                     event.dataTransfer.effectAllowed = "move";
                                     event.dataTransfer.setData("application/flight-line-aircraft", number);
                                     event.dataTransfer.setData("text/plain", number);
                                   },
                                   onDragEnd: clearFlightLineDragState,
-                                  className: `absolute inset-0 flex cursor-grab flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out active:cursor-grabbing ${isDragging ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
+                                  className: `absolute inset-0 flex flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditTileAircraftNumber || canEditFlightLineAvailability ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${isDragging ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
                                   title: tailNumber,
                                   children: [
                                     flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
@@ -17581,6 +17630,7 @@ const ScheduleView = ({
                   {
                     className: "flex w-[200px] max-w-[200px] shrink-0 flex-col border-l border-slate-700/70 pl-4",
                     onDragOver: (event) => {
+                      if (!canEditFlightLineAvailability || isReadOnly) return;
                       event.preventDefault();
                       event.dataTransfer.dropEffect = "move";
                       setIsFlightLineUnavailableDropActive(true);
@@ -17591,6 +17641,7 @@ const ScheduleView = ({
                       }
                     },
                     onDrop: (event) => {
+                      if (!canEditFlightLineAvailability || isReadOnly) return;
                       event.preventDefault();
                       const aircraftNumber = event.dataTransfer.getData("text/plain") || flightLineDraggedAircraftNumber || "";
                       moveFlightLineAircraftToUnavailable(aircraftNumber);
@@ -17605,15 +17656,19 @@ const ScheduleView = ({
                             "data-dfp-context-kind": "aircraft",
                             "data-dfp-aircraft-number": number,
                             "data-dfp-resource-label": tailNumber,
-                            draggable: true,
+                            draggable: canEditFlightLineAvailability,
                             onDragStart: (event) => {
+                              if (!canEditFlightLineAvailability || isReadOnly) {
+                                event.preventDefault();
+                                return;
+                              }
                               setFlightLineDraggedAircraftNumber(number);
                               event.dataTransfer.effectAllowed = "move";
                               event.dataTransfer.setData("application/flight-line-aircraft", number);
                               event.dataTransfer.setData("text/plain", number);
                             },
                             onDragEnd: clearFlightLineDragState,
-                            className: `flex h-[40px] w-[50px] cursor-grab flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out active:cursor-grabbing ${flightLineDraggedAircraftNumber === number ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
+                            className: `flex h-[40px] w-[50px] flex-col items-center justify-center rounded-md border px-1 text-center font-black text-slate-50 transition-all duration-300 ease-out ${canEditFlightLineAvailability && !isReadOnly ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-60"} ${flightLineDraggedAircraftNumber === number ? "border-dashed border-cyan-200/70 bg-[#4f5357]/35 opacity-60 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]" : "border-slate-500/45 bg-[#4f5357] shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_8px_18px_rgba(0,0,0,0.28)]"}`,
                             title: tailNumber,
                             children: [
                               flightLinePoolContext.prefix ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-0.5 max-w-full truncate text-[9px] font-black uppercase leading-none tracking-normal text-slate-200/85", children: flightLinePoolContext.prefix }) : null,
@@ -114987,6 +115042,10 @@ ${"=".repeat(60)}`);
     setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
   }, []);
   const canEditDfpTiles = canUsePlatformPermission("dfp.editTiles");
+  const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.view") || canUsePlatformPermission("dfp.flightLine.inventory.edit") || canUsePlatformPermission("dfp.flightLine.availability.edit") || canUsePlatformPermission("dfp.aircraftNumber.edit");
+  const canEditFlightLineInventory = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.inventory.edit");
+  const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission("dfp.flightLine.availability.edit");
+  const canEditTileAircraftNumber = canEditDfpTiles || canUsePlatformPermission("dfp.aircraftNumber.edit");
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
@@ -124951,7 +125010,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       menuItems.push(
         { label: "Open Details", detail: "Open the selected schedule event.", onSelect: openEventDetails },
         { label: "Edit Event", detail: canEditActiveDfp ? "Open details in the normal edit workflow." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: openEventDetails },
-        { label: selectedEvent2.type === "flight" ? "Assign Aircraft" : "Open Flight Line", detail: "Open the aircraft flight-line panel.", disabled: !canEditActiveDfp, onSelect: () => {
+        { label: selectedEvent2.type === "flight" ? "Assign Aircraft" : "Open Flight Line", detail: canOpenFlightLine ? "Open the aircraft flight-line panel." : "Flight Line access is not available for this profile.", disabled: !canOpenFlightLine, onSelect: () => {
           setShowDfpSidePanel(false);
           setShowFlightLinePanel(true);
         } },
@@ -124976,7 +125035,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       subtitle = [resourceLabel || "Flight Line", selectedEvent2 ? selectedEvent2.flightNumber || eventLabel : ""].filter(Boolean).join(" | ");
       kind = "aircraft";
       menuItems.push(
-        { label: "Open Flight Line", detail: "Open aircraft inventory and unavailable bays.", onSelect: () => {
+        { label: "Open Flight Line", detail: canOpenFlightLine ? "Open aircraft inventory and unavailable bays." : "Flight Line access is not available for this profile.", disabled: !canOpenFlightLine, onSelect: () => {
           setShowDfpSidePanel(false);
           setShowFlightLinePanel(true);
         } },
@@ -124989,7 +125048,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       subtitle = "Schedule resource";
       menuItems.push(
         { label: "Copy Resource Name", detail: resourceLabel || resourceId, onSelect: () => copyContextSummary(resourceLabel || resourceId) },
-        { label: "Open Flight Line", detail: "Open aircraft inventory and unavailable bays.", onSelect: () => {
+        { label: "Open Flight Line", detail: canOpenFlightLine ? "Open aircraft inventory and unavailable bays." : "Flight Line access is not available for this profile.", disabled: !canOpenFlightLine, onSelect: () => {
           setShowDfpSidePanel(false);
           setShowFlightLinePanel(true);
         } }
@@ -125013,7 +125072,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           handleOpenModal(null, { type: "flight" });
         } },
         { label: "Add Ground Tile", detail: canEditActiveDfp ? "Create a new ground event." : "Tile editing is not available for this DFP.", disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
-        { label: "Open Flight Line", detail: "Open aircraft inventory and unavailable bays.", onSelect: () => {
+        { label: "Open Flight Line", detail: canOpenFlightLine ? "Open aircraft inventory and unavailable bays." : "Flight Line access is not available for this profile.", disabled: !canOpenFlightLine, onSelect: () => {
           setShowDfpSidePanel(false);
           setShowFlightLinePanel(true);
         } }
@@ -125026,7 +125085,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       subtitle = activeView;
       kind = "workspace";
       menuItems.push(
-        { label: activeView === "Program Schedule" ? "Open Flight Line" : "Go To DFP", detail: "Return to the main schedule workspace.", onSelect: () => {
+        { label: activeView === "Program Schedule" ? "Open Flight Line" : "Go To DFP", detail: activeView === "Program Schedule" && !canOpenFlightLine ? "Flight Line access is not available for this profile." : "Return to the main schedule workspace.", disabled: activeView === "Program Schedule" && !canOpenFlightLine, onSelect: () => {
           if (activeView !== "Program Schedule") handleNavigation("Program Schedule");
           else setShowFlightLinePanel(true);
         } },
@@ -125047,6 +125106,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     authUser?.role,
     buildResources,
     canEditDfpTiles,
+    canOpenFlightLine,
     canRunValidation,
     closeDfpContextMenu,
     copyContextSummary,
@@ -125241,6 +125301,9 @@ ${error instanceof Error ? error.message : String(error)}`,
               setShowDfpSidePanel(false);
               setShowFlightLinePanel((value) => !value);
             },
+            canEditFlightLineInventory: canEditFlightLineInventory && !isViewingPastDfp,
+            canEditFlightLineAvailability: canEditFlightLineAvailability && !isViewingPastDfp,
+            canEditTileAircraftNumber: canEditTileAircraftNumber && !isViewingPastDfp,
             onInitialSetupWizardActiveChange: setIsInitialSetupWizardActive,
             formationCallsigns,
             buildRuleSettings: {
@@ -127905,6 +127968,7 @@ Do you want to replace the existing entry?`,
             showDepartureDensityOverlay,
             onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
             canEditDfpTiles: canEditDfpTiles && !isViewingPastDfp,
+            canOpenFlightLine,
             canRunValidation,
             canRunNeoBuild: canRunNeoBuildForActiveModel,
             showAircraftAvailability,
@@ -127941,6 +128005,10 @@ Do you want to replace the existing entry?`,
             onShowChangePassword: () => setShowChangePassword(true),
             isFlightLinePanelOpen: showFlightLinePanel,
             onToggleFlightLinePanel: () => {
+              if (!canOpenFlightLine) {
+                denyPlatformAction("Flight Line access is not permitted for your assigned permission profile");
+                return;
+              }
               if (activeView !== "Program Schedule") {
                 handleNavigation("Program Schedule");
               }

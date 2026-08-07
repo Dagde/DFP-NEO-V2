@@ -131,6 +131,10 @@ export const PLATFORM_PERMISSION_CATALOG: PlatformPermissionCatalogGroup[] = [
     items: [
       ['dfp.view', 'View DFP'],
       ['dfp.editTiles', 'Add, edit and delete tiles'],
+      ['dfp.flightLine.view', 'Open Flight Line'],
+      ['dfp.flightLine.inventory.edit', 'Edit aircraft inventory'],
+      ['dfp.flightLine.availability.edit', 'Edit aircraft availability status'],
+      ['dfp.aircraftNumber.edit', 'Edit aircraft number on flight tiles'],
       ['dfp.validation', 'Run validation checks'],
       ['dfp.publish', 'Publish DFP'],
       ['dfp.history', 'View historical DFP records'],
@@ -214,7 +218,13 @@ export const DEFAULT_PLATFORM_PERMISSION_PROFILES: PlatformPermissionProfile[] =
     id: 'scheduler',
     name: 'Scheduler',
     description: 'Scheduling and build management access.',
-    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'neo.run', 'neo.priorities', 'neo.intelligence', 'neo.override', 'reporting.view'],
+    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.flightLine.view', 'dfp.flightLine.inventory.edit', 'dfp.flightLine.availability.edit', 'dfp.aircraftNumber.edit', 'dfp.validation', 'neo.run', 'neo.priorities', 'neo.intelligence', 'neo.override', 'reporting.view'],
+  },
+  {
+    id: 'maintenance',
+    name: 'Maintenance',
+    description: 'Aircraft inventory, aircraft availability and flight-line tail assignment access without general tile editing.',
+    permissions: ['dfp.view', 'dfp.flightLine.view', 'dfp.flightLine.inventory.edit', 'dfp.flightLine.availability.edit', 'dfp.aircraftNumber.edit'],
   },
   {
     id: 'unit-admin',

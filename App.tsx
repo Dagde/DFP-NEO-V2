@@ -30746,6 +30746,10 @@ const App: React.FC = () => {
     }, []);
 
     const canEditDfpTiles = canUsePlatformPermission('dfp.editTiles');
+    const canOpenFlightLine = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.view') || canUsePlatformPermission('dfp.flightLine.inventory.edit') || canUsePlatformPermission('dfp.flightLine.availability.edit') || canUsePlatformPermission('dfp.aircraftNumber.edit');
+    const canEditFlightLineInventory = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.inventory.edit');
+    const canEditFlightLineAvailability = canEditDfpTiles || canUsePlatformPermission('dfp.flightLine.availability.edit');
+    const canEditTileAircraftNumber = canEditDfpTiles || canUsePlatformPermission('dfp.aircraftNumber.edit');
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
@@ -42942,7 +42946,7 @@ appliedUpdates.forEach(update => {
             menuItems.push(
                 { label: 'Open Details', detail: 'Open the selected schedule event.', onSelect: openEventDetails },
                 { label: 'Edit Event', detail: canEditActiveDfp ? 'Open details in the normal edit workflow.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: openEventDetails },
-                { label: selectedEvent.type === 'flight' ? 'Assign Aircraft' : 'Open Flight Line', detail: 'Open the aircraft flight-line panel.', disabled: !canEditActiveDfp, onSelect: () => {
+                { label: selectedEvent.type === 'flight' ? 'Assign Aircraft' : 'Open Flight Line', detail: canOpenFlightLine ? 'Open the aircraft flight-line panel.' : 'Flight Line access is not available for this profile.', disabled: !canOpenFlightLine, onSelect: () => {
                     setShowDfpSidePanel(false);
                     setShowFlightLinePanel(true);
                 }},
@@ -42967,7 +42971,7 @@ appliedUpdates.forEach(update => {
             subtitle = [resourceLabel || 'Flight Line', selectedEvent ? selectedEvent.flightNumber || eventLabel : ''].filter(Boolean).join(' | ');
             kind = 'aircraft';
             menuItems.push(
-                { label: 'Open Flight Line', detail: 'Open aircraft inventory and unavailable bays.', onSelect: () => {
+                { label: 'Open Flight Line', detail: canOpenFlightLine ? 'Open aircraft inventory and unavailable bays.' : 'Flight Line access is not available for this profile.', disabled: !canOpenFlightLine, onSelect: () => {
                     setShowDfpSidePanel(false);
                     setShowFlightLinePanel(true);
                 }},
@@ -42986,7 +42990,7 @@ appliedUpdates.forEach(update => {
             subtitle = 'Schedule resource';
             menuItems.push(
                 { label: 'Copy Resource Name', detail: resourceLabel || resourceId, onSelect: () => copyContextSummary(resourceLabel || resourceId) },
-                { label: 'Open Flight Line', detail: 'Open aircraft inventory and unavailable bays.', onSelect: () => {
+                { label: 'Open Flight Line', detail: canOpenFlightLine ? 'Open aircraft inventory and unavailable bays.' : 'Flight Line access is not available for this profile.', disabled: !canOpenFlightLine, onSelect: () => {
                     setShowDfpSidePanel(false);
                     setShowFlightLinePanel(true);
                 }}
@@ -43010,7 +43014,7 @@ appliedUpdates.forEach(update => {
                     handleOpenModal(null, { type: 'flight' });
                 }},
                 { label: 'Add Ground Tile', detail: canEditActiveDfp ? 'Create a new ground event.' : 'Tile editing is not available for this DFP.', disabled: !canEditActiveDfp, onSelect: () => setShowAddGroundEvent(true) },
-                { label: 'Open Flight Line', detail: 'Open aircraft inventory and unavailable bays.', onSelect: () => {
+                { label: 'Open Flight Line', detail: canOpenFlightLine ? 'Open aircraft inventory and unavailable bays.' : 'Flight Line access is not available for this profile.', disabled: !canOpenFlightLine, onSelect: () => {
                     setShowDfpSidePanel(false);
                     setShowFlightLinePanel(true);
                 }}
@@ -43023,7 +43027,7 @@ appliedUpdates.forEach(update => {
             subtitle = activeView;
             kind = 'workspace';
             menuItems.push(
-                { label: activeView === 'Program Schedule' ? 'Open Flight Line' : 'Go To DFP', detail: 'Return to the main schedule workspace.', onSelect: () => {
+                { label: activeView === 'Program Schedule' ? 'Open Flight Line' : 'Go To DFP', detail: activeView === 'Program Schedule' && !canOpenFlightLine ? 'Flight Line access is not available for this profile.' : 'Return to the main schedule workspace.', disabled: activeView === 'Program Schedule' && !canOpenFlightLine, onSelect: () => {
                     if (activeView !== 'Program Schedule') handleNavigation('Program Schedule');
                     else setShowFlightLinePanel(true);
                 }},
@@ -43045,6 +43049,7 @@ appliedUpdates.forEach(update => {
         authUser?.role,
         buildResources,
         canEditDfpTiles,
+        canOpenFlightLine,
         canRunValidation,
         closeDfpContextMenu,
         copyContextSummary,
@@ -43255,6 +43260,9 @@ appliedUpdates.forEach(update => {
                                setShowDfpSidePanel(false);
                                setShowFlightLinePanel(value => !value);
                            }}
+                           canEditFlightLineInventory={canEditFlightLineInventory && !isViewingPastDfp}
+                           canEditFlightLineAvailability={canEditFlightLineAvailability && !isViewingPastDfp}
+                           canEditTileAircraftNumber={canEditTileAircraftNumber && !isViewingPastDfp}
                            onInitialSetupWizardActiveChange={setIsInitialSetupWizardActive}
                            formationCallsigns={formationCallsigns}
                            buildRuleSettings={{
@@ -46133,6 +46141,7 @@ appliedUpdates.forEach(update => {
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
                     canEditDfpTiles={canEditDfpTiles && !isViewingPastDfp}
+                    canOpenFlightLine={canOpenFlightLine}
                     canRunValidation={canRunValidation}
                     canRunNeoBuild={canRunNeoBuildForActiveModel}
 
@@ -46173,6 +46182,10 @@ appliedUpdates.forEach(update => {
                        onShowChangePassword={() => setShowChangePassword(true)}
                        isFlightLinePanelOpen={showFlightLinePanel}
                        onToggleFlightLinePanel={() => {
+                           if (!canOpenFlightLine) {
+                               denyPlatformAction('Flight Line access is not permitted for your assigned permission profile');
+                               return;
+                           }
                            if (activeView !== 'Program Schedule') {
                                handleNavigation('Program Schedule');
                            }
