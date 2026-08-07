@@ -25140,8 +25140,8 @@ const App: React.FC = () => {
                         .map(courseName => courseName.toUpperCase().replace(/\s+/g, ''))
                         .filter(Boolean)
                 );
-                const savedServiceDefinitionsForCourseRecovery = Array.isArray(saved.serviceDefinitions)
-                    ? saved.serviceDefinitions
+                const savedServiceDefinitionsForCourseRecovery = Array.isArray(data.serviceDefinitions)
+                    ? data.serviceDefinitions
                     : [];
                 const getRecoveredFlightSchoolCourse = (courseName: string, fallbackColor: string): Course => {
                     const traineesForCourse = dbTraineesFromLoad.filter((trainee: any) => normaliseCourseName(trainee.course) === courseName);
