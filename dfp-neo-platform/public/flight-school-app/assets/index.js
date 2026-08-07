@@ -111637,6 +111637,7 @@ const App = () => {
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
   );
+  const instructorLabel2 = personnelDisplaySettings.instructorLabel;
   const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode;
   const trainingReportTerminology = reactExports.useMemo(
     () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
@@ -111952,7 +111953,6 @@ const App = () => {
     () => getInsertEventTypes(platformConfig),
     [platformConfig]
   );
-  const instructorLabel2 = personnelDisplaySettings.instructorLabel;
   const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
   const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
   const isContractorStaffRole2 = (instructor) => Boolean(instructor) && getPersonAssignedQualificationIds(instructor, activeStaffQualificationCatalogue, false).includes("contractor");

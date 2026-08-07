@@ -26627,6 +26627,7 @@ const App: React.FC = () => {
         () => getPersonnelDisplaySettings(platformConfig),
         [platformConfig]
     );
+    const instructorLabel = personnelDisplaySettings.instructorLabel;
     const activeTrainingReportUnitCode = activeContextUnitCodes[0] || activeUnitCode;
     const trainingReportTerminology = useMemo(
         () => getUnitTrainingReportTerminology(platformConfig, activeTrainingReportUnitCode),
@@ -26971,7 +26972,6 @@ const App: React.FC = () => {
         () => getInsertEventTypes(platformConfig),
         [platformConfig]
     );
-    const instructorLabel = personnelDisplaySettings.instructorLabel;
     const simIpDisplayLabel = getSimIpDisplayLabel(personnelDisplaySettings);
     const contractorStaffEventEligibility = personnelDisplaySettings.contractorStaffEventEligibility;
     const isContractorStaffRole = (instructor?: Instructor | null): boolean => Boolean(instructor) && (
