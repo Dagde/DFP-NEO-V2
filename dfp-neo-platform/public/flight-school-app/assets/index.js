@@ -110750,6 +110750,62 @@ const App = () => {
             }
           }
           if (!res || res.status === 404) {
+            const existingEventsBeforeEmpty = (publishedSchedulesRef.current[targetDate] || []).filter((e) => !e.isHistoricalSeed);
+            if (existingEventsBeforeEmpty.length > 0) {
+              loadedSnapshotDates.current.add(snapshotKey);
+              pushDfpDataDiag("snapshot:preserve-existing-on-empty-load", {
+                targetDate,
+                snapshotKey,
+                existingCount: existingEventsBeforeEmpty.length,
+                replace,
+                durationMs: Math.round(performance.now() - loadStartedAt)
+              });
+              setDfpSnapshotLoadState({
+                status: "loaded",
+                date: targetDate,
+                message: `Showing existing DFP for ${targetDate}`,
+                progress: 100
+              });
+              return;
+            }
+            if (replace && useCache) {
+              try {
+                const cachedSnapshot = localStorage.getItem(cacheKey);
+                pushDfpDataDiag("snapshot:empty-cache-fallback-check", {
+                  targetDate,
+                  snapshotKey,
+                  cacheKey,
+                  hit: Boolean(cachedSnapshot),
+                  byteLength: cachedSnapshot?.length || 0
+                });
+                if (cachedSnapshot) {
+                  const parsedCachedSnapshot = JSON.parse(cachedSnapshot);
+                  const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, snapshotUnit, parsedCachedSnapshot, true, "cache");
+                  if (cachedEvents > 0) {
+                    loadedSnapshotDates.current.add(snapshotKey);
+                    pushDfpDataDiag("snapshot:empty-cache-fallback-success", {
+                      targetDate,
+                      snapshotKey,
+                      eventCount: cachedEvents,
+                      durationMs: Math.round(performance.now() - loadStartedAt)
+                    });
+                    setDfpSnapshotLoadState({
+                      status: "cached",
+                      date: targetDate,
+                      message: `Restored ${cachedEvents} cached DFP events`,
+                      progress: 100
+                    });
+                    return;
+                  }
+                }
+              } catch (cacheErr) {
+                pushDfpDataDiag("snapshot:empty-cache-fallback-error", {
+                  targetDate,
+                  snapshotKey,
+                  error: String(cacheErr)
+                });
+              }
+            }
             if (replace) {
               setPublishedSchedules((prev) => ({ ...prev, [targetDate]: [] }));
               setBaselineSchedules((prev) => ({ ...prev, [snapshotKey]: [] }));
