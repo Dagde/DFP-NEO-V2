@@ -62,6 +62,7 @@ import {
     getUnitTrainingReportPhraseBank,
     getUnitTrainingReportTemplate,
     getUnitTrainingReportTerminology,
+    type TrainingReportTemplate,
 } from './utils/trainingReportTerminology';
 import { getSctTerminology } from './utils/sctTerminology';
 import {
@@ -26651,6 +26652,111 @@ const App: React.FC = () => {
             : null;
         return String(configuredResult?.label || cleanCode).trim() || cleanCode;
     }, [trainingReportTemplate]);
+    const sendDashboardAutoMessage = useCallback(async (message: { id: string; from: string; to: string; body: string; sentAt: string }) => {
+        if (typeof window !== 'undefined') {
+            try {
+                const storageKey = 'dfp_dashboard_messages_v1';
+                const parsed = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
+                const existingMessages = Array.isArray(parsed) ? parsed : [];
+                const nextMessages = [
+                    ...existingMessages.filter((existing: any) => existing?.id !== message.id),
+                    message,
+                ].sort((a: any, b: any) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+                window.localStorage.setItem(storageKey, JSON.stringify(nextMessages));
+                window.dispatchEvent(new Event('dfp-dashboard-messages-updated'));
+            } catch (error) {
+                console.warn('[Training Report Auto Notify] Could not update local dashboard messages:', error);
+            }
+        }
+        const response = await fetch('/api/dashboard-messages', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            throw new Error(errorText || `Dashboard message send failed (${response.status})`);
+        }
+    }, []);
+    const sendTrainingReportAutoNotifications = useCallback(async ({
+        assessment,
+        trainee,
+        reportTemplate: activeReportTemplate,
+        courseName,
+    }: {
+        assessment: {
+            id?: string;
+            traineeFullName?: string;
+            staffName?: string;
+            flightNumber?: string;
+            eventCode?: string;
+            date?: string;
+            instructorName?: string;
+            overallGrade?: unknown;
+            overallResult?: '' | 'P' | 'F' | null;
+            dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO' | null;
+            autoNotifyChoice?: 'notify' | 'skip';
+        };
+        trainee?: Trainee | null;
+        reportTemplate: TrainingReportTemplate;
+        courseName?: string;
+    }): Promise<string[]> => {
+        if (assessment.overallResult !== 'F' || assessment.autoNotifyChoice === 'skip' || activeReportTemplate.autoNotify.enabled !== true) {
+            return [];
+        }
+        const courseIdentifier = String(courseName || trainee?.course || '').trim();
+        const course = courses.find((candidate: any) => (
+            String(candidate?.name || '').trim() === courseIdentifier ||
+            String(candidate?.number || '').trim() === courseIdentifier
+        ));
+        const configuredRecipients = activeReportTemplate.autoNotify.recipients;
+        const recipientNames = [
+            configuredRecipients.courseCommander ? course?.courseCommander : '',
+            configuredRecipients.deputyCourseCommander ? course?.deputyCourseCommander : '',
+            ...(configuredRecipients.staffNames || []),
+        ].map((name) => String(name || '').trim()).filter(Boolean);
+        const uniqueRecipients = Array.from(new Map(recipientNames.map((name) => [normaliseDashboardNotificationName(name), name])).values());
+        if (uniqueRecipients.length === 0) return [];
+
+        const sentAt = new Date().toISOString();
+        const reportName = activeReportTemplate.displayName || activeReportTemplate.genericName || configuredTrainingReportDisplayName || 'Training Report';
+        const traineeName = String(assessment.traineeFullName || assessment.staffName || 'Selected person').trim();
+        const eventCode = String(assessment.flightNumber || assessment.eventCode || 'event').trim();
+        const failLabel = activeReportTemplate.overallResults.failLabel || 'Unsatisfactory';
+        const statusLabel = getConfiguredMissionStatusLabel(String(assessment.dcoResult || '')) || 'Not selected';
+        const sender = dashboardNotificationUserName || currentUserName || 'DFP NEO';
+        const body = [
+            `${reportName} notification`,
+            '',
+            `${traineeName} received ${failLabel} for ${eventCode}.`,
+            assessment.date ? `Date: ${assessment.date}` : null,
+            assessment.overallGrade !== null && assessment.overallGrade !== undefined && assessment.overallGrade !== '' ? `Overall grade: ${assessment.overallGrade}` : null,
+            `${configuredTrainingReportStatusFieldLabel}: ${statusLabel}`,
+            assessment.instructorName ? `${instructorLabel || 'Instructor'}: ${assessment.instructorName}` : null,
+        ].filter(Boolean).join('\n');
+
+        await Promise.all(uniqueRecipients.map((recipient) => sendDashboardAutoMessage({
+            id: `training-report-auto-notify-${assessment.id || eventCode}-${normaliseDashboardNotificationName(recipient)}`,
+            from: sender,
+            to: recipient,
+            body,
+            sentAt,
+        }).catch((error) => {
+            console.warn(`[Training Report Auto Notify] Could not notify ${recipient}:`, error);
+        })));
+        return uniqueRecipients;
+    }, [
+        configuredTrainingReportDisplayName,
+        configuredTrainingReportStatusFieldLabel,
+        courses,
+        currentUserName,
+        dashboardNotificationUserName,
+        getConfiguredMissionStatusLabel,
+        instructorLabel,
+        normaliseDashboardNotificationName,
+        sendDashboardAutoMessage,
+    ]);
     const activeTrainingReportPhraseBank = useMemo(
         () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
         [activeTrainingReportUnitCode, phraseBank, platformConfig]
@@ -31367,14 +31473,28 @@ const App: React.FC = () => {
     };
 
     const handleSaveAirCombatTrainingReport = async (report: AirCombatTrainingReport) => {
+        let reportForSave = report;
+        const reportTemplateForSave = getUnitTrainingReportTemplate(platformConfig, report.unitCode || activeUnitCode);
+        const notifiedRecipients = await sendTrainingReportAutoNotifications({
+            assessment: report,
+            reportTemplate: reportTemplateForSave,
+            courseName: report.trainingCode || report.trainingTitle,
+        });
+        if (notifiedRecipients.length > 0) {
+            reportForSave = {
+                ...report,
+                autoNotifySentAt: new Date().toISOString(),
+                autoNotifyRecipients: notifiedRecipients,
+            };
+        }
         appendTrainingReportFollowUpDiag('app:save-received', {
-            reportId: report.id,
-            staffName: report.staffName,
-            staffIdNumber: report.staffIdNumber,
-            eventCode: report.eventCode,
-            dcoResult: report.dcoResult,
-            dpcoFollowUp: report.dpcoFollowUp,
-            dncoFollowUp: report.dncoFollowUp,
+            reportId: reportForSave.id,
+            staffName: reportForSave.staffName,
+            staffIdNumber: reportForSave.staffIdNumber,
+            eventCode: reportForSave.eventCode,
+            dcoResult: reportForSave.dcoResult,
+            dpcoFollowUp: reportForSave.dpcoFollowUp,
+            dncoFollowUp: reportForSave.dncoFollowUp,
         });
         const staff = allInstructorsData.find(person => (
             (airCombatTrainingReportDraft?.staff as any)?.id
@@ -31383,9 +31503,9 @@ const App: React.FC = () => {
         )) || airCombatTrainingReportDraft?.staff;
         if (!staff) {
             appendTrainingReportFollowUpDiag('app:save-no-staff', {
-                reportId: report.id,
-                staffName: report.staffName,
-                staffIdNumber: report.staffIdNumber,
+                reportId: reportForSave.id,
+                staffName: reportForSave.staffName,
+                staffIdNumber: reportForSave.staffIdNumber,
             });
             return;
         }
@@ -31393,15 +31513,15 @@ const App: React.FC = () => {
         const preferences = { ...(staff.preferences || {}) };
         const existingReports = normaliseAirCombatTrainingReports(preferences);
         appendTrainingReportFollowUpDiag('app:save-existing-reports', {
-            reportId: report.id,
+            reportId: reportForSave.id,
             staffName: staff.name,
             staffIdNumber: staff.idNumber,
             existingCount: existingReports.length,
-            existingMatch: existingReports.find(existing => existing.id === report.id) || null,
+            existingMatch: existingReports.find(existing => existing.id === reportForSave.id) || null,
         });
         const updatedReports = [
-            report,
-            ...existingReports.filter(existing => existing.id !== report.id),
+            reportForSave,
+            ...existingReports.filter(existing => existing.id !== reportForSave.id),
         ];
         const updatedStaff: Instructor = {
             ...staff,
@@ -31416,12 +31536,12 @@ const App: React.FC = () => {
 
         const dbId = (updatedStaff as any).id;
         appendTrainingReportFollowUpDiag('app:save-before-patch', {
-            reportId: report.id,
+            reportId: reportForSave.id,
             dbId,
             staffName: updatedStaff.name,
             staffIdNumber: updatedStaff.idNumber,
             firstUpdatedReport: updatedReports[0],
-            persistedReportMatch: (updatedStaff.preferences as any)?.airCombat?.trainingReports?.find((item: any) => item.id === report.id) || null,
+            persistedReportMatch: (updatedStaff.preferences as any)?.airCombat?.trainingReports?.find((item: any) => item.id === reportForSave.id) || null,
         });
         if (dbId) {
             const response = await fetch(`/api/personnel/${dbId}`, {
@@ -31431,7 +31551,7 @@ const App: React.FC = () => {
                 body: JSON.stringify(updatedStaff),
             });
             appendTrainingReportFollowUpDiag('app:save-patch-response', {
-                reportId: report.id,
+                reportId: reportForSave.id,
                 dbId,
                 ok: response.ok,
                 status: response.status,
@@ -31439,7 +31559,7 @@ const App: React.FC = () => {
             if (!response.ok) {
                 const errorText = await response.text();
                 appendTrainingReportFollowUpDiag('app:save-patch-error', {
-                    reportId: report.id,
+                    reportId: reportForSave.id,
                     dbId,
                     status: response.status,
                     errorText,
@@ -31456,15 +31576,15 @@ const App: React.FC = () => {
         setAirCombatTrainingReportDraft(null);
         setSelectedPersonForProfile(updatedStaff);
         appendTrainingReportFollowUpDiag('app:save-state-updated', {
-            reportId: report.id,
+            reportId: reportForSave.id,
             staffName: updatedStaff.name,
             staffIdNumber: updatedStaff.idNumber,
-            savedReport: updatedReports.find(existing => existing.id === report.id) || null,
+            savedReport: updatedReports.find(existing => existing.id === reportForSave.id) || null,
         });
         logAudit(
             'Air Combat Training Reports',
             'Create',
-            `Created ${report.reportName} Air Combat training report for ${report.staffName} - Event: ${report.eventCode}`
+            `Created ${reportForSave.reportName} Air Combat training report for ${reportForSave.staffName} - Event: ${reportForSave.eventCode}`
         );
     };
 
@@ -44945,6 +45065,7 @@ appliedUpdates.forEach(update => {
                         trainingReportUnitCode={selectedTraineeForHateSheet.unit || activeUnitCode}
                         trainingReportContextUnitCode={activeUnitCode}
                         formatResourceLabel={formatResourceDisplayLabel}
+                        courseCommanderLabel={personnelDisplaySettings.courseCommanderLabel || 'Cse Commander'}
                         onBack={() => {
                             setEventForPt051(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');
@@ -45029,11 +45150,26 @@ appliedUpdates.forEach(update => {
                             // Save using the correct key format: pt051-${eventId}-${traineeFullName}
                             const saveEventId = updatedAssessment.eventId || existingAssessment?.eventId || eventForPt051.id;
                             const saveKey = `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`;
-                            const normalizedAssessment = {
+                            let normalizedAssessment = {
                                 ...updatedAssessment,
                                 eventId: saveEventId,
                                 id: updatedAssessment.id || existingAssessment?.id || `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`,
                             };
+                            if (!isAutoSave) {
+                                const notifiedRecipients = await sendTrainingReportAutoNotifications({
+                                    assessment: normalizedAssessment,
+                                    trainee: selectedTraineeForHateSheet,
+                                    reportTemplate: selectedTrainingReportTemplate,
+                                    courseName: selectedTraineeForHateSheet.course,
+                                });
+                                if (notifiedRecipients.length > 0) {
+                                    normalizedAssessment = {
+                                        ...normalizedAssessment,
+                                        autoNotifySentAt: new Date().toISOString(),
+                                        autoNotifyRecipients: notifiedRecipients,
+                                    };
+                                }
+                            }
                             const updatedAssessments = new Map(pt051Assessments).set(saveKey, normalizedAssessment);
                             setPt051Assessments(updatedAssessments);
                             void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments)
@@ -47066,6 +47202,7 @@ appliedUpdates.forEach(update => {
                 trainingReportTemplate={getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode)}
                 phraseBank={getUnitTrainingReportPhraseBank(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode, phraseBank)}
                 instructorLabel={instructorLabel}
+                courseCommanderLabel={personnelDisplaySettings.courseCommanderLabel || 'Cse Commander'}
                 currentUserName={currentUserName}
                 locationCode={school}
                 unitCode={airCombatTrainingReportDraft.staff.unit || activeUnitCode}

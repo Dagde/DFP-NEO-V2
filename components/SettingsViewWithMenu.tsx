@@ -1768,6 +1768,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 masterCurrencies={props.masterCurrencies}
                                 currencyRequirements={props.currencyRequirements}
                                 syllabusDetails={props.syllabusDetails}
+                                instructorsData={props.instructorsData}
                                 unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                             />
                         </div>
@@ -1794,6 +1795,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
                             syllabusDetails={props.syllabusDetails}
+                            instructorsData={props.instructorsData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -1820,6 +1822,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
                             syllabusDetails={props.syllabusDetails}
+                            instructorsData={props.instructorsData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -1846,6 +1849,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
                             syllabusDetails={props.syllabusDetails}
+                            instructorsData={props.instructorsData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                         />
                     )}
@@ -1963,6 +1967,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             masterCurrencies={props.masterCurrencies}
                             currencyRequirements={props.currencyRequirements}
                             syllabusDetails={props.syllabusDetails}
+                            instructorsData={props.instructorsData}
                             unitCurrencyDefinitions={props.unitCurrencyDefinitions}
                             formationCallsigns={props.formationCallsigns}
                             onUpdateFormationCallsigns={props.onUpdateFormationCallsigns}

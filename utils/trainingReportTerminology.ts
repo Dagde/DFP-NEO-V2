@@ -65,6 +65,14 @@ export interface TrainingReportTemplate {
     failLabel: string;
     doubleRepeatLabel: string;
   };
+  autoNotify: {
+    enabled: boolean;
+    recipients: {
+      courseCommander: boolean;
+      deputyCourseCommander: boolean;
+      staffNames: string[];
+    };
+  };
   grades: {
     scaleMin: number;
     scaleMax: number;
@@ -178,6 +186,14 @@ export const DEFAULT_TRAINING_REPORT_TEMPLATE: TrainingReportTemplate = {
     failLabel: 'Unsatisfactory',
     doubleRepeatLabel: 'Repeated Low-performance',
   },
+  autoNotify: {
+    enabled: false,
+    recipients: {
+      courseCommander: true,
+      deputyCourseCommander: true,
+      staffNames: [],
+    },
+  },
   grades: {
     scaleMin: 0,
     scaleMax: 10,
@@ -227,6 +243,13 @@ const cleanNumber = (value: unknown, fallback: number, min: number, max: number)
 const cleanBoolean = (value: unknown, fallback: boolean): boolean => (
   typeof value === 'boolean' ? value : fallback
 );
+
+const cleanStringList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)));
+};
 
 const normaliseGradeValues = (values: unknown, scaleMin: number, scaleMax: number, fallback: number[]): number[] => {
   const source = Array.isArray(values) ? values : fallback;
@@ -350,6 +373,14 @@ export const normaliseTrainingReportTemplate = (
       passLabel: cleanLabel(source.overallResults?.passLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.passLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
       failLabel: cleanLabel(source.overallResults?.failLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.failLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
       doubleRepeatLabel: cleanLabel(source.overallResults?.doubleRepeatLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.doubleRepeatLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
+    },
+    autoNotify: {
+      enabled: cleanBoolean(source.autoNotify?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.autoNotify.enabled),
+      recipients: {
+        courseCommander: cleanBoolean(source.autoNotify?.recipients?.courseCommander, DEFAULT_TRAINING_REPORT_TEMPLATE.autoNotify.recipients.courseCommander),
+        deputyCourseCommander: cleanBoolean(source.autoNotify?.recipients?.deputyCourseCommander, DEFAULT_TRAINING_REPORT_TEMPLATE.autoNotify.recipients.deputyCourseCommander),
+        staffNames: cleanStringList(source.autoNotify?.recipients?.staffNames),
+      },
     },
     grades: {
       scaleMin,

@@ -4280,7 +4280,7 @@ const getRankSortIndex = (rank, settings, group = "staff") => {
   }
   return 1e4;
 };
-const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
+const comparePeopleByConfiguredRank$1 = (a, b, settings, group = "staff") => {
   const safe2 = normalisePersonnelDisplaySettings(settings);
   const aName = splitPersonName(a);
   const bName = splitPersonName(b);
@@ -4582,6 +4582,14 @@ const DEFAULT_TRAINING_REPORT_TEMPLATE = {
     failLabel: "Unsatisfactory",
     doubleRepeatLabel: "Repeated Low-performance"
   },
+  autoNotify: {
+    enabled: false,
+    recipients: {
+      courseCommander: true,
+      deputyCourseCommander: true,
+      staffNames: []
+    }
+  },
   grades: {
     scaleMin: 0,
     scaleMax: 10,
@@ -4623,6 +4631,10 @@ const cleanNumber$1 = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, Math.round(numeric)));
 };
 const cleanBoolean = (value, fallback) => typeof value === "boolean" ? value : fallback;
+const cleanStringList = (value) => {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map((item) => String(item || "").trim()).filter(Boolean)));
+};
 const normaliseGradeValues = (values, scaleMin, scaleMax, fallback) => {
   const source = Array.isArray(values) ? values : fallback;
   const cleaned = source.map((value) => cleanNumber$1(value, -1, scaleMin, scaleMax)).filter((value) => value >= scaleMin && value <= scaleMax);
@@ -4714,6 +4726,14 @@ const normaliseTrainingReportTemplate = (input, legacyTerminology) => {
       passLabel: cleanLabel$1(source.overallResults?.passLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.passLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
       failLabel: cleanLabel$1(source.overallResults?.failLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.failLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH),
       doubleRepeatLabel: cleanLabel$1(source.overallResults?.doubleRepeatLabel, DEFAULT_TRAINING_REPORT_TEMPLATE.overallResults.doubleRepeatLabel, TRAINING_REPORT_FIELD_LABEL_MAX_LENGTH)
+    },
+    autoNotify: {
+      enabled: cleanBoolean(source.autoNotify?.enabled, DEFAULT_TRAINING_REPORT_TEMPLATE.autoNotify.enabled),
+      recipients: {
+        courseCommander: cleanBoolean(source.autoNotify?.recipients?.courseCommander, DEFAULT_TRAINING_REPORT_TEMPLATE.autoNotify.recipients.courseCommander),
+        deputyCourseCommander: cleanBoolean(source.autoNotify?.recipients?.deputyCourseCommander, DEFAULT_TRAINING_REPORT_TEMPLATE.autoNotify.recipients.deputyCourseCommander),
+        staffNames: cleanStringList(source.autoNotify?.recipients?.staffNames)
+      }
     },
     grades: {
       scaleMin,
@@ -5189,7 +5209,7 @@ const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
     return false;
   });
 };
-const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank(a, b, settings, "staff"));
+const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, settings, "staff"));
 const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
   let nextNumber = startingNumber;
   people.forEach((person) => {
@@ -22146,7 +22166,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
     ] })
   ] }) });
 };
-const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel: instructorLabel2 = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false }) => {
+const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel: instructorLabel2 = "Instructor", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = "", trainingReportContextUnitCode = "", formatResourceLabel: formatResourceLabel2, embeddedInProfile = false, courseCommanderLabel = "Cse Commander" }) => {
   const reportTemplate = reactExports.useMemo(() => {
     const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
     const terminologyName = String(trainingReportTerminology?.name || "").trim();
@@ -22358,6 +22378,8 @@ const TrainingReportView = ({ trainee, event, onBack, onSave, onDeleteAssessment
   }, [event.id, event.flightNumber, event.notes, forwardedPreFlightNotes, initialAssessment?.id, initialAssessment?.passNotesToNextEvent, initialAssessment?.trainingReportNotes, trainee.fullName]);
   const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
   const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
+  const [autoNotifyChoice, setAutoNotifyChoice] = reactExports.useState(initialAssessment?.autoNotifyChoice || "notify");
+  const shouldShowAutoNotifyChoice = reportTemplate.autoNotify.enabled && overallResult === "F";
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
     initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }
   );
@@ -22634,6 +22656,7 @@ ${key === "Notes" ? buildTrainingReportNotes() : commentFields[key]}`).join("\n\
       ...assessment,
       overallGrade,
       overallResult,
+      autoNotifyChoice: reportTemplate.autoNotify.enabled && overallResult === "F" ? autoNotifyChoice : void 0,
       dcoResult,
       dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
       dncoFollowUp: dcoResult === "DNCO" ? dncoFollowUp : void 0,
@@ -22891,7 +22914,7 @@ This action cannot be undone.`;
       handleSave(true);
     }, 1e3);
     return () => clearTimeout(timerId);
-  }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment, canEditPt051]);
+  }, [assessment, overallGrade, overallResult, autoNotifyChoice, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment, canEditPt051]);
   reactExports.useEffect(() => {
     registerDirtyCheck(
       () => isDirty,
@@ -22900,7 +22923,7 @@ This action cannot be undone.`;
         setIsDirty(false);
       }
     );
-  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
+  }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, autoNotifyChoice, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
   const gradeHeaderColors = {
     "MIN": "bg-red-800/50",
     "DEMO": "bg-slate-900/60 border-slate-500/25",
@@ -23360,6 +23383,48 @@ This action cannot be undone.`;
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: overallFields.overallResult }),
+                  shouldShowAutoNotifyChoice && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-200", children: "Unsatisfactory report notification" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "notify" ? "border-amber-300 bg-amber-400/15 text-amber-50" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "radio",
+                            name: "pt051-auto-notify",
+                            checked: autoNotifyChoice === "notify",
+                            onChange: () => {
+                              setAutoNotifyChoice("notify");
+                              setIsDirty(true);
+                              setSaveStatus("Unsaved");
+                            },
+                            className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                          "Notify ",
+                          courseCommanderLabel
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "skip" ? "border-gray-300 bg-gray-500/20 text-white" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "radio",
+                            name: "pt051-auto-notify",
+                            checked: autoNotifyChoice === "skip",
+                            onChange: () => {
+                              setAutoNotifyChoice("skip");
+                              setIsDirty(true);
+                              setSaveStatus("Unsaved");
+                            },
+                            className: "h-4 w-4 border-gray-500 bg-gray-600 accent-gray-300"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Do not Auto Notify" })
+                      ] })
+                    ] })
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }),
@@ -26277,7 +26342,7 @@ const CourseEditFlyout = ({
     return [...instructorsData].filter((staff) => String(staff?.name || "").trim()).sort((a, b) => {
       const unitCompare = String(a.unit || "").localeCompare(String(b.unit || ""), void 0, { numeric: true, sensitivity: "base" });
       if (unitCompare !== 0) return unitCompare;
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, personnelDisplaySettings]);
   const staffByUnit = reactExports.useMemo(() => {
@@ -27249,7 +27314,7 @@ const CourseRosterView = ({
       groups[courseKey].push(trainee);
     });
     for (const course in groups) {
-      groups[course].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee"));
+      groups[course].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee"));
     }
     return groups;
   }, [traineesData, personnelDisplaySettings]);
@@ -28908,10 +28973,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       return candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey) && (!crewParts.crew || String(staff.crew || "").trim().toUpperCase() === crewParts.crew)) || candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)) || candidates[0];
     }).filter(Boolean);
     if (rosterFromAttendees.length > 0) {
-      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
     }
     if (!eventCrewKey) return [];
-    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
   }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
   const staffHasAvailabilityConflict = (staff, bookingWindow, eventDate) => {
     if (!eventDate) return false;
@@ -28938,7 +29003,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       ...getPersonnelForConflictCheck(event),
       ...rosteredFixedCrewMembers.map((member) => member.name)
     ].map((name) => String(name || "").trim()).filter(Boolean));
-    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
   };
   const getFixedCrewSubstituteRejectReasons = (staff, bookingWindow, eventDate) => {
     const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
@@ -28956,7 +29021,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)) reasons.push("unavailable during this event window");
       if (staffHasEventConflict(candidate, bookingWindow)) reasons.push("already assigned to another event in this event window");
       return { candidate, reasons };
-    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank(a.candidate, b.candidate, personnelDisplaySettings, "staff")).slice(0, 8);
+    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank$1(a.candidate, b.candidate, personnelDisplaySettings, "staff")).slice(0, 8);
   };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
@@ -29001,7 +29066,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (aPic !== bPic) return aPic - bPic;
       const roleDiff = roleRank(getFixedCrewStaffRoleLabel(a.staff)) - roleRank(getFixedCrewStaffRoleLabel(b.staff));
       if (roleDiff !== 0) return roleDiff;
-      return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank$1(a.staff, b.staff, personnelDisplaySettings, "staff");
     }).reduce((groups, status) => {
       const role = getFixedCrewStaffRoleLabel(status.staff);
       const existing = groups.find((group) => group.role === role);
@@ -29012,7 +29077,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       const aRank = String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       const bRank = String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       if (aRank !== bRank) return aRank - bRank;
-      const seniorityComparison = comparePeopleByConfiguredRank(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, "staff");
+      const seniorityComparison = comparePeopleByConfiguredRank$1(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, "staff");
       if (seniorityComparison !== 0) return seniorityComparison;
       return a.role.localeCompare(b.role);
     });
@@ -29238,14 +29303,14 @@ ${swapNote}` : swapNote
     }, {});
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
-        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
+        (a, b) => comparePeopleByConfiguredRank$1(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
       );
     });
     const sortedUnits = Object.keys(grouped).sort((a, b) => {
       const firstA = grouped[a][0];
       const firstB = grouped[b][0];
       if (firstA && firstB) {
-        const rankComparison = comparePeopleByConfiguredRank(
+        const rankComparison = comparePeopleByConfiguredRank$1(
           firstA.instructor || firstA,
           firstB.instructor || firstB,
           personnelDisplaySettings,
@@ -29283,7 +29348,7 @@ ${swapNote}` : swapNote
     });
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
-        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
+        (a, b) => comparePeopleByConfiguredRank$1(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
       );
     });
     return { grouped, sortedUnits: Object.keys(grouped).sort() };
@@ -32558,7 +32623,7 @@ const AddFlightTileModal = ({
       const roleCompare = fixedCrewRoleGroupLabel(a).localeCompare(fixedCrewRoleGroupLabel(b), void 0, { numeric: true });
       if (roleCompare !== 0) return roleCompare;
     }
-    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+    return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
   };
   const fixedCrewMembers = reactExports.useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
@@ -32753,13 +32818,13 @@ const AddFlightTileModal = ({
   };
   const getNames = (unit, selection) => {
     if (selection === "STAFF") {
-      return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
+      return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((i) => ({
         name: i.name,
         label: `${i.rank ? i.rank + " " : ""}${i.name}`,
         color: "#fff"
       }));
     }
-    return traineesData.filter((t) => (t.unit || "Unassigned") === unit && t.course === selection).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((t) => {
+    return traineesData.filter((t) => (t.unit || "Unassigned") === unit && t.course === selection).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee")).map((t) => {
       const twClass = courseColors[t.course] || "";
       const colourMap = {
         "bg-sky-500": "#38bdf8",
@@ -32797,19 +32862,19 @@ const AddFlightTileModal = ({
   };
   const getPicNames = (unit, selection) => {
     if (!shouldRestrictContinuationPicToPilots || selection !== "STAFF") return getNames(unit, selection);
-    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
+    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((i) => ({
       name: i.name,
       label: `${i.rank ? i.rank + " " : ""}${i.name}`,
       color: "#fff"
     }));
   };
   const standardPersonOptions = reactExports.useMemo(() => {
-    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((person) => ({
+    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((person) => ({
       value: person.name,
       label: [person.rank, person.name, person.unit].filter(Boolean).join(" - "),
       group: "Staff"
     }));
-    const trainees2 = traineesData.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
+    const trainees2 = traineesData.sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
       value: person.fullName || person.name,
       label: [person.rank, person.fullName || person.name, person.course, person.unit].filter(Boolean).join(" - "),
       group: person.course || "Trainees"
@@ -55138,7 +55203,7 @@ const InstructorListView = ({
     return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
   };
   const qfis = reactExports.useMemo(() => {
-    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue2)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue2)).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
   }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue2]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
@@ -55211,7 +55276,7 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue2]);
   const ofis = reactExports.useMemo(() => {
@@ -55225,7 +55290,7 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
     });
     return sorted;
   }, [instructorsData, personnelDisplaySettings]);
@@ -55243,7 +55308,7 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue2]);
   const fixedCrewGroups = reactExports.useMemo(() => {
@@ -55984,7 +56049,7 @@ const StaffView = (props) => {
       const unitA = normaliseUnitCode2(a.unit) || "ZZZ";
       const unitB = normaliseUnitCode2(b.unit) || "ZZZ";
       if (unitA !== unitB) return unitA.localeCompare(unitB);
-      return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank$1(a, b, props.personnelDisplaySettings, "staff");
     }
     const roleA = isFlyingCrewRole(a) ? 0 : 1;
     const roleB = isFlyingCrewRole(b) ? 0 : 1;
@@ -55994,7 +56059,7 @@ const StaffView = (props) => {
     if (a.unit !== b.unit) {
       return a.unit.localeCompare(b.unit);
     }
-    return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
+    return comparePeopleByConfiguredRank$1(a, b, props.personnelDisplaySettings, "staff");
   });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3", children: [
@@ -56134,7 +56199,7 @@ const TraineeView = (props) => {
     if (a.course !== b.course) {
       return a.course.localeCompare(b.course);
     }
-    return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "trainee");
+    return comparePeopleByConfiguredRank$1(a, b, props.personnelDisplaySettings, "trainee");
   }).map((t) => t.fullName);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
@@ -56255,7 +56320,7 @@ const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, perso
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const sortedTrainees = reactExports.useMemo(
-    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")),
+    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee")),
     [traineesData, personnelDisplaySettings]
   );
   const handleMouseEnter = (e, traineeFullName) => {
@@ -60054,6 +60119,7 @@ const AirCombatTrainingReportModal = ({
   trainingReportTemplate = null,
   phraseBank,
   instructorLabel: instructorLabel2 = "Instructor",
+  courseCommanderLabel = "Cse Commander",
   currentUserName = "",
   locationCode = "",
   unitCode = "",
@@ -60143,6 +60209,7 @@ const AirCombatTrainingReportModal = ({
   const [instructorName, setInstructorName] = reactExports.useState(initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || "");
   const [overallGrade, setOverallGrade] = reactExports.useState(initialReport?.overallGrade || "");
   const [overallResult, setOverallResult] = reactExports.useState(initialReport?.overallResult || "");
+  const [autoNotifyChoice, setAutoNotifyChoice] = reactExports.useState(initialReport?.autoNotifyChoice || "notify");
   const [dcoResult, setDcoResult] = reactExports.useState(
     initialReport?.dcoResult || (enabledCompletionResults.length === 0 ? "Complete" : "")
   );
@@ -60323,7 +60390,8 @@ const AirCombatTrainingReportModal = ({
     ...gradeOptions
   ];
   const awardedOverallGrade = String(overallGrade || "").trim();
-  const gradeDrivenOverallResult = awardedOverallGrade ? awardedOverallGrade === "0" ? "F" : "P" : "";
+  const gradeDrivenOverallResult = awardedOverallGrade ? awardedOverallGrade === "0" ? "F" : "P" : overallResult;
+  const shouldShowAutoNotifyChoice = reportTemplate.autoNotify.enabled && gradeDrivenOverallResult === "F";
   const gradeHeaderColors = {
     DEMO: "bg-slate-900/60 border-slate-500/25",
     "0": "bg-red-950/35 border-red-500/20",
@@ -60373,6 +60441,7 @@ const AirCombatTrainingReportModal = ({
         dashboardAssigneeName: initialReport?.dashboardAssigneeName || currentUserName || instructorName,
         overallGrade,
         overallResult,
+        autoNotifyChoice: shouldShowAutoNotifyChoice ? autoNotifyChoice : void 0,
         dcoResult,
         dpcoFollowUp: dcoResult === "DPCO" ? dpcoFollowUp : void 0,
         dncoFollowUp: dcoResult === "DNCO" ? dncoFollowUp : void 0,
@@ -60792,6 +60861,46 @@ const AirCombatTrainingReportModal = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-sm font-medium text-gray-400", children: overallFields.overallResult }),
+                shouldShowAutoNotifyChoice && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-200", children: "Unsatisfactory report notification" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "notify" ? "border-amber-300 bg-amber-400/15 text-amber-50" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "training-report-auto-notify",
+                          checked: autoNotifyChoice === "notify",
+                          onChange: () => {
+                            setAutoNotifyChoice("notify");
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        "Notify ",
+                        courseCommanderLabel
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === "skip" ? "border-gray-300 bg-gray-500/20 text-white" : "border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500"}`, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "radio",
+                          name: "training-report-auto-notify",
+                          checked: autoNotifyChoice === "skip",
+                          onChange: () => {
+                            setAutoNotifyChoice("skip");
+                            setSaveStatus("Unsaved");
+                          },
+                          className: "h-4 w-4 border-gray-500 bg-gray-600 accent-gray-300"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Do not Auto Notify" })
+                    ] })
+                  ] })
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex space-x-4", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${gradeDrivenOverallResult === "P" ? "scale-105 bg-green-600 text-white shadow-lg ring-2 ring-white" : "bg-green-950/20 text-green-300/35 hover:bg-green-900/25 hover:text-green-300/45"}`, children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "radio", name: "training-report-overall-result", value: "P", checked: overallResult === "P", onChange: () => {
@@ -69068,6 +69177,7 @@ const PlatformConfigurationSettings = ({
   masterCurrencies = [],
   currencyRequirements = [],
   syllabusDetails = [],
+  instructorsData = [],
   unitCurrencyDefinitions = {},
   formationCallsigns = [],
   onUpdateFormationCallsigns
@@ -69610,8 +69720,17 @@ const PlatformConfigurationSettings = ({
   const canEditTrainingReportSetup = canEditTrainingReportTemplateSection("setup");
   const canEditTrainingReportModules = canEditTrainingReportTemplateSection("modules");
   const canEditTrainingReportResults = canEditTrainingReportTemplateSection("results");
+  const canEditTrainingReportAutoNotify = canEditTrainingReportTemplateSection("auto-notify");
   const canEditTrainingReportConsecutiveRule = canEditTrainingReportTemplateSection("consecutive-repeat");
   const canEditTrainingReportRollingRule = canEditTrainingReportTemplateSection("rolling-repeat");
+  const courseCommanderLabel = personnelDisplaySettings.courseCommanderLabel?.trim() || "Cse Commander";
+  const deputyCourseCommanderLabel = personnelDisplaySettings.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
+  const trainingReportAutoNotifyStaffOptions = [...instructorsData].filter((staff) => String(staff?.name || "").trim()).sort((a, b) => {
+    const unitA = String(a.unit || "").trim();
+    const unitB = String(b.unit || "").trim();
+    if (unitA !== unitB) return unitA.localeCompare(unitB);
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+  });
   const trainingReportSyncOptions = configUnits.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
     code: String(unit.code || "").trim(),
     label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""}`
@@ -76650,6 +76769,128 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             ] }, option.value)) })
           ] }) })
         ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase tracking-wide text-gray-200", children: "Unsatisfactory Report Auto Notify" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: [
+                "When enabled, reports marked ",
+                trainingReportTemplate.overallResults.failLabel || "Unsatisfactory",
+                " can send a Messages notification when the instructor saves the report."
+              ] })
+            ] }),
+            renderTrainingReportTemplateAction("auto-notify")
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              ToggleField,
+              {
+                label: "Use Auto Notify",
+                checked: trainingReportTemplate.autoNotify.enabled,
+                disabled: !canEditTrainingReportAutoNotify,
+                onChange: (checked) => updateTrainingReportTemplate((template) => ({
+                  autoNotify: {
+                    ...template.autoNotify,
+                    enabled: checked
+                  }
+                })),
+                info: `Turns on the notification choice that appears when ${trainingReportTemplate.overallResults.failLabel || "Unsatisfactory"} is selected in a training report.`
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                FieldLabel,
+                {
+                  label: "Default Recipients",
+                  info: "These recipients are resolved from the trainee's course leadership assignments at the time the report is saved."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2", children: [
+                { key: "courseCommander", label: courseCommanderLabel },
+                { key: "deputyCourseCommander", label: deputyCourseCommanderLabel }
+              ].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-center gap-2 rounded border px-3 py-2 text-xs font-semibold ${canEditTrainingReportAutoNotify ? "cursor-pointer border-gray-700 bg-gray-950/60 text-gray-200" : "cursor-not-allowed border-gray-800 bg-gray-950/40 text-gray-500"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: trainingReportTemplate.autoNotify.recipients[option.key],
+                    disabled: !canEditTrainingReportAutoNotify,
+                    onChange: (event) => updateTrainingReportTemplate((template) => ({
+                      autoNotify: {
+                        ...template.autoNotify,
+                        recipients: {
+                          ...template.autoNotify.recipients,
+                          [option.key]: event.target.checked
+                        }
+                      }
+                    })),
+                    className: "h-4 w-4 rounded border-gray-600 bg-gray-950 accent-cyan-500"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label })
+              ] }, option.key)) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900/50 p-3 lg:col-span-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                FieldLabel,
+                {
+                  label: "Additional Staff to Notify",
+                  info: "Select extra staff who should receive the same unsatisfactory report message. Course leaders can still be selected above."
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-2 sm:flex-row", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  className: fieldClass,
+                  disabled: !canEditTrainingReportAutoNotify || trainingReportAutoNotifyStaffOptions.length === 0,
+                  value: "",
+                  onChange: (event) => {
+                    const selectedName = event.target.value;
+                    if (!selectedName) return;
+                    updateTrainingReportTemplate((template) => ({
+                      autoNotify: {
+                        ...template.autoNotify,
+                        recipients: {
+                          ...template.autoNotify.recipients,
+                          staffNames: Array.from(/* @__PURE__ */ new Set([
+                            ...template.autoNotify.recipients.staffNames || [],
+                            selectedName
+                          ]))
+                        }
+                      }
+                    }));
+                  },
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Add staff member..." }),
+                    trainingReportAutoNotifyStaffOptions.filter((staff) => !trainingReportTemplate.autoNotify.recipients.staffNames.includes(staff.name)).map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: `${staff.unit ? `${staff.unit} - ` : ""}${staff.rank ? `${staff.rank} ` : ""}${staff.name}` }, `${staff.unit || "unit"}-${staff.name}`))
+                  ]
+                }
+              ) }),
+              trainingReportTemplate.autoNotify.recipients.staffNames.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-2", children: trainingReportTemplate.autoNotify.recipients.staffNames.map((staffName) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "inline-flex items-center gap-2 rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-50", children: [
+                staffName,
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canEditTrainingReportAutoNotify,
+                    onClick: () => updateTrainingReportTemplate((template) => ({
+                      autoNotify: {
+                        ...template.autoNotify,
+                        recipients: {
+                          ...template.autoNotify.recipients,
+                          staffNames: template.autoNotify.recipients.staffNames.filter((name) => name !== staffName)
+                        }
+                      }
+                    })),
+                    className: "text-cyan-100/70 hover:text-white disabled:cursor-not-allowed disabled:opacity-40",
+                    "aria-label": `Remove ${staffName}`,
+                    children: "x"
+                  }
+                )
+              ] }, staffName)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-gray-800 bg-gray-950/50 px-3 py-2 text-xs text-gray-500", children: "No additional staff selected." })
+            ] })
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-950/40 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
@@ -80547,6 +80788,7 @@ const SettingsViewWithMenu = (props) => {
               masterCurrencies: props.masterCurrencies,
               currencyRequirements: props.currencyRequirements,
               syllabusDetails: props.syllabusDetails,
+              instructorsData: props.instructorsData,
               unitCurrencyDefinitions: props.unitCurrencyDefinitions
             }
           )
@@ -80573,6 +80815,7 @@ const SettingsViewWithMenu = (props) => {
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
+            instructorsData: props.instructorsData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -80599,6 +80842,7 @@ const SettingsViewWithMenu = (props) => {
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
+            instructorsData: props.instructorsData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -80625,6 +80869,7 @@ const SettingsViewWithMenu = (props) => {
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
+            instructorsData: props.instructorsData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -80728,6 +80973,7 @@ const SettingsViewWithMenu = (props) => {
             masterCurrencies: props.masterCurrencies,
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
+            instructorsData: props.instructorsData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions,
             formationCallsigns: props.formationCallsigns,
             onUpdateFormationCallsigns: props.onUpdateFormationCallsigns
@@ -80934,7 +81180,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       const roleCompare = getFixedCrewPreviewRole(a).localeCompare(getFixedCrewPreviewRole(b));
       if (roleCompare) return roleCompare;
     }
-    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || void 0, "staff");
+    return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings || void 0, "staff");
   }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
   const pilotLogbookOptions = reactExports.useMemo(() => {
     const options = [];
@@ -111414,6 +111660,89 @@ const App = () => {
     const configuredResult = Array.isArray(trainingReportTemplate.completionResults) ? trainingReportTemplate.completionResults.find((result) => String(result?.code || "").trim().toUpperCase() === cleanCode) : null;
     return String(configuredResult?.label || cleanCode).trim() || cleanCode;
   }, [trainingReportTemplate]);
+  const sendDashboardAutoMessage = reactExports.useCallback(async (message) => {
+    if (typeof window !== "undefined") {
+      try {
+        const storageKey = "dfp_dashboard_messages_v1";
+        const parsed = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
+        const existingMessages = Array.isArray(parsed) ? parsed : [];
+        const nextMessages = [
+          ...existingMessages.filter((existing) => existing?.id !== message.id),
+          message
+        ].sort((a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime());
+        window.localStorage.setItem(storageKey, JSON.stringify(nextMessages));
+        window.dispatchEvent(new Event("dfp-dashboard-messages-updated"));
+      } catch (error) {
+        console.warn("[Training Report Auto Notify] Could not update local dashboard messages:", error);
+      }
+    }
+    const response = await fetch("/api/dashboard-messages", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message })
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(errorText || `Dashboard message send failed (${response.status})`);
+    }
+  }, []);
+  const sendTrainingReportAutoNotifications = reactExports.useCallback(async ({
+    assessment,
+    trainee,
+    reportTemplate: activeReportTemplate,
+    courseName
+  }) => {
+    if (assessment.overallResult !== "F" || assessment.autoNotifyChoice === "skip" || activeReportTemplate.autoNotify.enabled !== true) {
+      return [];
+    }
+    const courseIdentifier = String(courseName || trainee?.course || "").trim();
+    const course = courses.find((candidate) => String(candidate?.name || "").trim() === courseIdentifier || String(candidate?.number || "").trim() === courseIdentifier);
+    const configuredRecipients = activeReportTemplate.autoNotify.recipients;
+    const recipientNames = [
+      configuredRecipients.courseCommander ? course?.courseCommander : "",
+      configuredRecipients.deputyCourseCommander ? course?.deputyCourseCommander : "",
+      ...configuredRecipients.staffNames || []
+    ].map((name) => String(name || "").trim()).filter(Boolean);
+    const uniqueRecipients = Array.from(new Map(recipientNames.map((name) => [normaliseDashboardNotificationName(name), name])).values());
+    if (uniqueRecipients.length === 0) return [];
+    const sentAt = (/* @__PURE__ */ new Date()).toISOString();
+    const reportName = activeReportTemplate.displayName || activeReportTemplate.genericName || configuredTrainingReportDisplayName;
+    const traineeName = String(assessment.traineeFullName || assessment.staffName || "Selected person").trim();
+    const eventCode2 = String(assessment.flightNumber || assessment.eventCode || "event").trim();
+    const failLabel = activeReportTemplate.overallResults.failLabel || "Unsatisfactory";
+    const statusLabel = getConfiguredMissionStatusLabel(String(assessment.dcoResult || "")) || "Not selected";
+    const sender = dashboardNotificationUserName || currentUserName || "DFP NEO";
+    const body = [
+      `${reportName} notification`,
+      "",
+      `${traineeName} received ${failLabel} for ${eventCode2}.`,
+      assessment.date ? `Date: ${assessment.date}` : null,
+      assessment.overallGrade !== null && assessment.overallGrade !== void 0 && assessment.overallGrade !== "" ? `Overall grade: ${assessment.overallGrade}` : null,
+      `${configuredTrainingReportStatusFieldLabel}: ${statusLabel}`,
+      assessment.instructorName ? `${instructorLabel2 || "Instructor"}: ${assessment.instructorName}` : null
+    ].filter(Boolean).join("\n");
+    await Promise.all(uniqueRecipients.map((recipient) => sendDashboardAutoMessage({
+      id: `training-report-auto-notify-${assessment.id || eventCode2}-${normaliseDashboardNotificationName(recipient)}`,
+      from: sender,
+      to: recipient,
+      body,
+      sentAt
+    }).catch((error) => {
+      console.warn(`[Training Report Auto Notify] Could not notify ${recipient}:`, error);
+    })));
+    return uniqueRecipients;
+  }, [
+    configuredTrainingReportDisplayName,
+    configuredTrainingReportStatusFieldLabel,
+    courses,
+    currentUserName,
+    dashboardNotificationUserName,
+    getConfiguredMissionStatusLabel,
+    instructorLabel2,
+    normaliseDashboardNotificationName,
+    sendDashboardAutoMessage
+  ]);
   const activeTrainingReportPhraseBank = reactExports.useMemo(
     () => getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank),
     [activeTrainingReportUnitCode, phraseBank, platformConfig]
@@ -112607,7 +112936,7 @@ ${"=".repeat(60)}`);
     }).map((callsign) => String(callsign.code || "").trim()).filter(Boolean);
     return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
   }, [activeContextUnitCodeSet, formationCallsigns, knownDfpLocationAliases, school]);
-  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
+  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
   reactExports.useEffect(() => {
     const loadSettings = async () => {
       const startedAt = performance.now();
@@ -115195,36 +115524,50 @@ ${error instanceof Error ? error.message : String(error)}`,
     setAirCombatTrainingReportDraft(getAirCombatTrainingReportDraftFromEvent(staff, sourceEvent));
   };
   const handleSaveAirCombatTrainingReport = async (report) => {
+    let reportForSave = report;
+    const reportTemplateForSave = getUnitTrainingReportTemplate(platformConfig, report.unitCode || activeUnitCode);
+    const notifiedRecipients = await sendTrainingReportAutoNotifications({
+      assessment: report,
+      reportTemplate: reportTemplateForSave,
+      courseName: report.trainingCode || report.trainingTitle
+    });
+    if (notifiedRecipients.length > 0) {
+      reportForSave = {
+        ...report,
+        autoNotifySentAt: (/* @__PURE__ */ new Date()).toISOString(),
+        autoNotifyRecipients: notifiedRecipients
+      };
+    }
     appendTrainingReportFollowUpDiag("app:save-received", {
-      reportId: report.id,
-      staffName: report.staffName,
-      staffIdNumber: report.staffIdNumber,
-      eventCode: report.eventCode,
-      dcoResult: report.dcoResult,
-      dpcoFollowUp: report.dpcoFollowUp,
-      dncoFollowUp: report.dncoFollowUp
+      reportId: reportForSave.id,
+      staffName: reportForSave.staffName,
+      staffIdNumber: reportForSave.staffIdNumber,
+      eventCode: reportForSave.eventCode,
+      dcoResult: reportForSave.dcoResult,
+      dpcoFollowUp: reportForSave.dpcoFollowUp,
+      dncoFollowUp: reportForSave.dncoFollowUp
     });
     const staff = allInstructorsData.find((person) => airCombatTrainingReportDraft?.staff?.id ? person.id === airCombatTrainingReportDraft.staff.id : person.idNumber === airCombatTrainingReportDraft?.staff.idNumber) || airCombatTrainingReportDraft?.staff;
     if (!staff) {
       appendTrainingReportFollowUpDiag("app:save-no-staff", {
-        reportId: report.id,
-        staffName: report.staffName,
-        staffIdNumber: report.staffIdNumber
+        reportId: reportForSave.id,
+        staffName: reportForSave.staffName,
+        staffIdNumber: reportForSave.staffIdNumber
       });
       return;
     }
     const preferences = { ...staff.preferences || {} };
     const existingReports = normaliseAirCombatTrainingReports(preferences);
     appendTrainingReportFollowUpDiag("app:save-existing-reports", {
-      reportId: report.id,
+      reportId: reportForSave.id,
       staffName: staff.name,
       staffIdNumber: staff.idNumber,
       existingCount: existingReports.length,
-      existingMatch: existingReports.find((existing) => existing.id === report.id) || null
+      existingMatch: existingReports.find((existing) => existing.id === reportForSave.id) || null
     });
     const updatedReports = [
-      report,
-      ...existingReports.filter((existing) => existing.id !== report.id)
+      reportForSave,
+      ...existingReports.filter((existing) => existing.id !== reportForSave.id)
     ];
     const updatedStaff = {
       ...staff,
@@ -115238,12 +115581,12 @@ ${error instanceof Error ? error.message : String(error)}`,
     };
     const dbId = updatedStaff.id;
     appendTrainingReportFollowUpDiag("app:save-before-patch", {
-      reportId: report.id,
+      reportId: reportForSave.id,
       dbId,
       staffName: updatedStaff.name,
       staffIdNumber: updatedStaff.idNumber,
       firstUpdatedReport: updatedReports[0],
-      persistedReportMatch: updatedStaff.preferences?.airCombat?.trainingReports?.find((item) => item.id === report.id) || null
+      persistedReportMatch: updatedStaff.preferences?.airCombat?.trainingReports?.find((item) => item.id === reportForSave.id) || null
     });
     if (dbId) {
       const response = await fetch(`/api/personnel/${dbId}`, {
@@ -115253,7 +115596,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         body: JSON.stringify(updatedStaff)
       });
       appendTrainingReportFollowUpDiag("app:save-patch-response", {
-        reportId: report.id,
+        reportId: reportForSave.id,
         dbId,
         ok: response.ok,
         status: response.status
@@ -115261,7 +115604,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       if (!response.ok) {
         const errorText = await response.text();
         appendTrainingReportFollowUpDiag("app:save-patch-error", {
-          reportId: report.id,
+          reportId: reportForSave.id,
           dbId,
           status: response.status,
           errorText
@@ -115273,15 +115616,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     setAirCombatTrainingReportDraft(null);
     setSelectedPersonForProfile(updatedStaff);
     appendTrainingReportFollowUpDiag("app:save-state-updated", {
-      reportId: report.id,
+      reportId: reportForSave.id,
       staffName: updatedStaff.name,
       staffIdNumber: updatedStaff.idNumber,
-      savedReport: updatedReports.find((existing) => existing.id === report.id) || null
+      savedReport: updatedReports.find((existing) => existing.id === reportForSave.id) || null
     });
     logAudit(
       "Air Combat Training Reports",
       "Create",
-      `Created ${report.reportName} Air Combat training report for ${report.staffName} - Event: ${report.eventCode}`
+      `Created ${reportForSave.reportName} Air Combat training report for ${reportForSave.staffName} - Event: ${reportForSave.eventCode}`
     );
   };
   const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
@@ -124953,7 +125296,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           if (unitA !== unitB) {
             return unitA.localeCompare(unitB);
           }
-          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+          return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
         });
         logRoutineAppDebug("🔍 STAFF SCHEDULE - Location filtering and sorting applied");
         logRoutineAppDebug("🔍 School:", school);
@@ -125002,7 +125345,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           if (unitA !== unitB) {
             return unitA.localeCompare(unitB);
           }
-          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+          return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
         });
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           NextDayInstructorScheduleView,
@@ -126581,6 +126924,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               trainingReportUnitCode: selectedTraineeForHateSheet.unit || activeUnitCode,
               trainingReportContextUnitCode: activeUnitCode,
               formatResourceLabel: formatResourceDisplayLabel,
+              courseCommanderLabel: personnelDisplaySettings.courseCommanderLabel || "Cse Commander",
               onBack: () => {
                 setEventForPt051(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");
@@ -126652,11 +126996,26 @@ ${errorText || `HTTP ${response.status}`}`,
                 };
                 const saveEventId = updatedAssessment.eventId || existingAssessment?.eventId || eventForPt051.id;
                 const saveKey = `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`;
-                const normalizedAssessment = {
+                let normalizedAssessment = {
                   ...updatedAssessment,
                   eventId: saveEventId,
                   id: updatedAssessment.id || existingAssessment?.id || `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`
                 };
+                if (!isAutoSave) {
+                  const notifiedRecipients = await sendTrainingReportAutoNotifications({
+                    assessment: normalizedAssessment,
+                    trainee: selectedTraineeForHateSheet,
+                    reportTemplate: selectedTrainingReportTemplate,
+                    courseName: selectedTraineeForHateSheet.course
+                  });
+                  if (notifiedRecipients.length > 0) {
+                    normalizedAssessment = {
+                      ...normalizedAssessment,
+                      autoNotifySentAt: (/* @__PURE__ */ new Date()).toISOString(),
+                      autoNotifyRecipients: notifiedRecipients
+                    };
+                  }
+                }
                 const updatedAssessments = new Map(pt051Assessments).set(saveKey, normalizedAssessment);
                 setPt051Assessments(updatedAssessments);
                 void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
@@ -128522,6 +128881,7 @@ Do you want to replace the existing entry?`,
         trainingReportTemplate: getUnitTrainingReportTemplate(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode),
         phraseBank: getUnitTrainingReportPhraseBank(platformConfig, airCombatTrainingReportDraft.staff.unit || activeUnitCode, phraseBank),
         instructorLabel: instructorLabel2,
+        courseCommanderLabel: personnelDisplaySettings.courseCommanderLabel || "Cse Commander",
         currentUserName,
         locationCode: school,
         unitCode: airCombatTrainingReportDraft.staff.unit || activeUnitCode,

@@ -270,6 +270,9 @@ export interface AirCombatTrainingReport {
   dashboardAssigneeName?: string;
   overallGrade?: string;
   overallResult?: '' | 'P' | 'F';
+  autoNotifyChoice?: 'notify' | 'skip';
+  autoNotifySentAt?: string;
+  autoNotifyRecipients?: string[];
   dcoResult?: '' | 'DCO' | 'DPCO' | 'DNCO';
   dpcoFollowUp?: {
     action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';
@@ -548,6 +551,9 @@ export interface Pt051Assessment {
   instructorName: string;
   overallGrade: Pt051OverallGrade | null;
   overallResult: 'P' | 'F' | null;
+  autoNotifyChoice?: 'notify' | 'skip';
+  autoNotifySentAt?: string;
+  autoNotifyRecipients?: string[];
   dcoResult?: 'DCO' | 'DPCO' | 'DNCO' | '';
   dpcoFollowUp?: {
     action: 'extra-event' | 'extra-hours-next-event' | 'continue-no-additions' | '';

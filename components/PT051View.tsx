@@ -44,6 +44,7 @@ interface TrainingReportViewProps {
     trainingReportContextUnitCode?: string;
     formatResourceLabel?: (resourceId: string) => string;
     embeddedInProfile?: boolean;
+    courseCommanderLabel?: string;
 }
 
 const DraftTextInput = ({
@@ -491,7 +492,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'Instructor', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false }) => {
+const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'Instructor', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY, trainingReportTemplate = null, trainingReportUnitCode = '', trainingReportContextUnitCode = '', formatResourceLabel, embeddedInProfile = false, courseCommanderLabel = 'Cse Commander' }) => {
     const reportTemplate = useMemo(() => {
         const template = normaliseTrainingReportTemplate(trainingReportTemplate, trainingReportTerminology);
         const terminologyName = String(trainingReportTerminology?.name || '').trim();
@@ -739,6 +740,8 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
     
     const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade ?? null);
     const [overallResult, setOverallResult] = useState<'P' | 'F' | null>(initialAssessment?.overallResult || null);
+    const [autoNotifyChoice, setAutoNotifyChoice] = useState<'notify' | 'skip'>(initialAssessment?.autoNotifyChoice || 'notify');
+    const shouldShowAutoNotifyChoice = reportTemplate.autoNotify.enabled && overallResult === 'F';
     const [groundSchoolAssessment, setGroundSchoolAssessment] = useState(
         initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: undefined }
     );
@@ -1091,6 +1094,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             ...assessment,
             overallGrade,
             overallResult,
+            autoNotifyChoice: reportTemplate.autoNotify.enabled && overallResult === 'F' ? autoNotifyChoice : undefined,
             dcoResult,
             dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
             dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
@@ -1386,7 +1390,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             handleSave(true);
         }, 1000); 
         return () => clearTimeout(timerId);
-    }, [assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment, canEditPt051]);
+    }, [assessment, overallGrade, overallResult, autoNotifyChoice, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment, canEditPt051]);
 
     useEffect(() => {
         registerDirtyCheck(
@@ -1394,7 +1398,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
             () => handleSave(false), 
             () => { setIsDirty(false); } 
         );
-    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
+    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, autoNotifyChoice, dcoResult, dpcoFollowUp, dncoFollowUp, passNotesToNextEvent, commentFields, groundSchoolAssessment]);
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
@@ -1844,6 +1848,43 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-2">{overallFields.overallResult}</label>
+                                    {shouldShowAutoNotifyChoice && (
+                                        <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3">
+                                            <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-200">
+                                                Unsatisfactory report notification
+                                            </div>
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === 'notify' ? 'border-amber-300 bg-amber-400/15 text-amber-50' : 'border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name="pt051-auto-notify"
+                                                        checked={autoNotifyChoice === 'notify'}
+                                                        onChange={() => {
+                                                            setAutoNotifyChoice('notify');
+                                                            setIsDirty(true);
+                                                            setSaveStatus('Unsaved');
+                                                        }}
+                                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                                                    />
+                                                    <span>Notify {courseCommanderLabel}</span>
+                                                </label>
+                                                <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === 'skip' ? 'border-gray-300 bg-gray-500/20 text-white' : 'border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500'}`}>
+                                                    <input
+                                                        type="radio"
+                                                        name="pt051-auto-notify"
+                                                        checked={autoNotifyChoice === 'skip'}
+                                                        onChange={() => {
+                                                            setAutoNotifyChoice('skip');
+                                                            setIsDirty(true);
+                                                            setSaveStatus('Unsaved');
+                                                        }}
+                                                        className="h-4 w-4 border-gray-500 bg-gray-600 accent-gray-300"
+                                                    />
+                                                    <span>Do not Auto Notify</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="mt-1 flex space-x-4">
                                         <label className={`cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${
                                             overallResult === 'P'

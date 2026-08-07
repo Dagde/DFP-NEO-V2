@@ -24,6 +24,7 @@ interface AirCombatTrainingReportModalProps {
   trainingReportTemplate?: Partial<TrainingReportTemplate> | null;
   phraseBank?: PhraseBank;
   instructorLabel?: string;
+  courseCommanderLabel?: string;
   currentUserName?: string;
   locationCode?: string;
   unitCode?: string;
@@ -301,6 +302,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   trainingReportTemplate = null,
   phraseBank,
   instructorLabel = 'Instructor',
+  courseCommanderLabel = 'Cse Commander',
   currentUserName = '',
   locationCode = '',
   unitCode = '',
@@ -415,6 +417,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const [instructorName, setInstructorName] = useState(initialReport?.instructorName || activeSourceEvent?.instructor || currentUserName || '');
   const [overallGrade, setOverallGrade] = useState(initialReport?.overallGrade || '');
   const [overallResult, setOverallResult] = useState<'' | 'P' | 'F'>(initialReport?.overallResult || '');
+  const [autoNotifyChoice, setAutoNotifyChoice] = useState<'notify' | 'skip'>(initialReport?.autoNotifyChoice || 'notify');
   const [dcoResult, setDcoResult] = useState<string>(
     initialReport?.dcoResult || (enabledCompletionResults.length === 0 ? 'Complete' : '')
   );
@@ -648,7 +651,8 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
   const awardedOverallGrade = String(overallGrade || '').trim();
   const gradeDrivenOverallResult: '' | 'P' | 'F' = awardedOverallGrade
     ? awardedOverallGrade === '0' ? 'F' : 'P'
-    : '';
+    : overallResult;
+  const shouldShowAutoNotifyChoice = reportTemplate.autoNotify.enabled && gradeDrivenOverallResult === 'F';
   const gradeHeaderColors: Record<string, string> = {
     DEMO: 'bg-slate-900/60 border-slate-500/25',
     '0': 'bg-red-950/35 border-red-500/20',
@@ -698,6 +702,7 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
         dashboardAssigneeName: initialReport?.dashboardAssigneeName || currentUserName || instructorName,
         overallGrade,
         overallResult,
+        autoNotifyChoice: shouldShowAutoNotifyChoice ? autoNotifyChoice : undefined,
         dcoResult,
         dpcoFollowUp: dcoResult === 'DPCO' ? dpcoFollowUp : undefined,
         dncoFollowUp: dcoResult === 'DNCO' ? dncoFollowUp : undefined,
@@ -1056,6 +1061,41 @@ export const AirCombatTrainingReportModal: React.FC<AirCombatTrainingReportModal
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-400">{overallFields.overallResult}</label>
+                    {shouldShowAutoNotifyChoice && (
+                      <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3">
+                        <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-amber-200">
+                          Unsatisfactory report notification
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === 'notify' ? 'border-amber-300 bg-amber-400/15 text-amber-50' : 'border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500'}`}>
+                            <input
+                              type="radio"
+                              name="training-report-auto-notify"
+                              checked={autoNotifyChoice === 'notify'}
+                              onChange={() => {
+                                setAutoNotifyChoice('notify');
+                                setSaveStatus('Unsaved');
+                              }}
+                              className="h-4 w-4 border-gray-500 bg-gray-600 accent-amber-400"
+                            />
+                            <span>Notify {courseCommanderLabel}</span>
+                          </label>
+                          <label className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 text-xs font-semibold transition ${autoNotifyChoice === 'skip' ? 'border-gray-300 bg-gray-500/20 text-white' : 'border-gray-700 bg-gray-950/50 text-gray-300 hover:border-gray-500'}`}>
+                            <input
+                              type="radio"
+                              name="training-report-auto-notify"
+                              checked={autoNotifyChoice === 'skip'}
+                              onChange={() => {
+                                setAutoNotifyChoice('skip');
+                                setSaveStatus('Unsaved');
+                              }}
+                              className="h-4 w-4 border-gray-500 bg-gray-600 accent-gray-300"
+                            />
+                            <span>Do not Auto Notify</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                     <div className="mt-1 flex space-x-4">
                       <label className={`w-1/2 cursor-pointer rounded-lg p-4 text-center transition-all duration-200 ${gradeDrivenOverallResult === 'P' ? 'scale-105 bg-green-600 text-white shadow-lg ring-2 ring-white' : 'bg-green-950/20 text-green-300/35 hover:bg-green-900/25 hover:text-green-300/45'}`}>
                         <input type="radio" name="training-report-overall-result" value="P" checked={overallResult === 'P'} onChange={() => { setOverallResult('P'); setSaveStatus('Unsaved'); }} className="sr-only" />

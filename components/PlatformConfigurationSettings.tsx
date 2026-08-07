@@ -103,7 +103,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import type { CurrencyRequirement, FormationCallsign, MasterCurrency, PhraseBank, SyllabusItemDetail } from '../types';
+import type { CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
   normaliseInsertEventTypes,
@@ -2179,6 +2179,7 @@ interface PlatformConfigurationSettingsProps {
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
   syllabusDetails?: SyllabusItemDetail[];
+  instructorsData?: Instructor[];
   unitCurrencyDefinitions?: Record<string, {
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
@@ -2208,6 +2209,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   masterCurrencies = [],
   currencyRequirements = [],
   syllabusDetails = [],
+  instructorsData = [],
   unitCurrencyDefinitions = {},
   formationCallsigns = [],
   onUpdateFormationCallsigns,
@@ -2823,8 +2825,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const canEditTrainingReportSetup = canEditTrainingReportTemplateSection('setup');
   const canEditTrainingReportModules = canEditTrainingReportTemplateSection('modules');
   const canEditTrainingReportResults = canEditTrainingReportTemplateSection('results');
+  const canEditTrainingReportAutoNotify = canEditTrainingReportTemplateSection('auto-notify');
   const canEditTrainingReportConsecutiveRule = canEditTrainingReportTemplateSection('consecutive-repeat');
   const canEditTrainingReportRollingRule = canEditTrainingReportTemplateSection('rolling-repeat');
+  const courseCommanderLabel = personnelDisplaySettings.courseCommanderLabel?.trim() || 'Cse Commander';
+  const deputyCourseCommanderLabel = personnelDisplaySettings.deputyCourseCommanderLabel?.trim() || 'Deputy Cse Commander';
+  const trainingReportAutoNotifyStaffOptions = [...instructorsData]
+    .filter((staff) => String(staff?.name || '').trim())
+    .sort((a, b) => {
+      const unitA = String(a.unit || '').trim();
+      const unitB = String(b.unit || '').trim();
+      if (unitA !== unitB) return unitA.localeCompare(unitB);
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
+    });
   const trainingReportSyncOptions = configUnits
     .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
     .map((unit) => ({
@@ -10892,6 +10905,131 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-950/40 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-wide text-gray-200">Unsatisfactory Report Auto Notify</h4>
+                <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                  When enabled, reports marked {trainingReportTemplate.overallResults.failLabel || 'Unsatisfactory'} can send a Messages notification when the instructor saves the report.
+                </p>
+              </div>
+              {renderTrainingReportTemplateAction('auto-notify')}
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <ToggleField
+                label="Use Auto Notify"
+                checked={trainingReportTemplate.autoNotify.enabled}
+                disabled={!canEditTrainingReportAutoNotify}
+                onChange={(checked) => updateTrainingReportTemplate((template) => ({
+                  autoNotify: {
+                    ...template.autoNotify,
+                    enabled: checked,
+                  },
+                }))}
+                info={`Turns on the notification choice that appears when ${trainingReportTemplate.overallResults.failLabel || 'Unsatisfactory'} is selected in a training report.`}
+              />
+              <div className="rounded border border-gray-700 bg-gray-900/50 p-3">
+                <FieldLabel
+                  label="Default Recipients"
+                  info="These recipients are resolved from the trainee's course leadership assignments at the time the report is saved."
+                />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {[
+                    { key: 'courseCommander' as const, label: courseCommanderLabel },
+                    { key: 'deputyCourseCommander' as const, label: deputyCourseCommanderLabel },
+                  ].map((option) => (
+                    <label key={option.key} className={`flex items-center gap-2 rounded border px-3 py-2 text-xs font-semibold ${canEditTrainingReportAutoNotify ? 'cursor-pointer border-gray-700 bg-gray-950/60 text-gray-200' : 'cursor-not-allowed border-gray-800 bg-gray-950/40 text-gray-500'}`}>
+                      <input
+                        type="checkbox"
+                        checked={trainingReportTemplate.autoNotify.recipients[option.key]}
+                        disabled={!canEditTrainingReportAutoNotify}
+                        onChange={(event) => updateTrainingReportTemplate((template) => ({
+                          autoNotify: {
+                            ...template.autoNotify,
+                            recipients: {
+                              ...template.autoNotify.recipients,
+                              [option.key]: event.target.checked,
+                            },
+                          },
+                        }))}
+                        className="h-4 w-4 rounded border-gray-600 bg-gray-950 accent-cyan-500"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded border border-gray-700 bg-gray-900/50 p-3 lg:col-span-2">
+                <FieldLabel
+                  label="Additional Staff to Notify"
+                  info="Select extra staff who should receive the same unsatisfactory report message. Course leaders can still be selected above."
+                />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <select
+                    className={fieldClass}
+                    disabled={!canEditTrainingReportAutoNotify || trainingReportAutoNotifyStaffOptions.length === 0}
+                    value=""
+                    onChange={(event) => {
+                      const selectedName = event.target.value;
+                      if (!selectedName) return;
+                      updateTrainingReportTemplate((template) => ({
+                        autoNotify: {
+                          ...template.autoNotify,
+                          recipients: {
+                            ...template.autoNotify.recipients,
+                            staffNames: Array.from(new Set([
+                              ...(template.autoNotify.recipients.staffNames || []),
+                              selectedName,
+                            ])),
+                          },
+                        },
+                      }));
+                    }}
+                  >
+                    <option value="">Add staff member...</option>
+                    {trainingReportAutoNotifyStaffOptions
+                      .filter((staff) => !trainingReportTemplate.autoNotify.recipients.staffNames.includes(staff.name))
+                      .map((staff) => (
+                        <option key={`${staff.unit || 'unit'}-${staff.name}`} value={staff.name}>
+                          {`${staff.unit ? `${staff.unit} - ` : ''}${staff.rank ? `${staff.rank} ` : ''}${staff.name}`}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                {trainingReportTemplate.autoNotify.recipients.staffNames.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {trainingReportTemplate.autoNotify.recipients.staffNames.map((staffName) => (
+                      <span key={staffName} className="inline-flex items-center gap-2 rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-50">
+                        {staffName}
+                        <button
+                          type="button"
+                          disabled={!canEditTrainingReportAutoNotify}
+                          onClick={() => updateTrainingReportTemplate((template) => ({
+                            autoNotify: {
+                              ...template.autoNotify,
+                              recipients: {
+                                ...template.autoNotify.recipients,
+                                staffNames: template.autoNotify.recipients.staffNames.filter((name) => name !== staffName),
+                              },
+                            },
+                          }))}
+                          className="text-cyan-100/70 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label={`Remove ${staffName}`}
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded border border-gray-800 bg-gray-950/50 px-3 py-2 text-xs text-gray-500">
+                    No additional staff selected.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
