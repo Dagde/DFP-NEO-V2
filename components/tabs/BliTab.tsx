@@ -127,6 +127,34 @@ interface CourseOutcomeData {
   rows: CourseOutcomeMetric[];
 }
 
+interface CoursePassRateOption {
+  key: string;
+  label: string;
+  courseCount: number;
+  completedReports: number;
+}
+
+interface CoursePassRateRow {
+  courseCode: string;
+  courseName: string;
+  lmpType: string;
+  unit?: string;
+  location?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  pass: number;
+  fail: number;
+  other: number;
+  total: number;
+  passRate: number | null;
+}
+
+interface CoursePassRateData {
+  lmpOptions: CoursePassRateOption[];
+  rows: CoursePassRateRow[];
+}
+
 interface ChartPoint {
   date: string;
   value: number | null;
@@ -438,6 +466,25 @@ const fetchCourseMovements = async (
   if (!response.ok) throw new Error(await response.text());
   const data = await response.json();
   return Array.isArray(data.movements) ? data.movements : [];
+};
+
+const fetchCoursePassRates = async (
+  signal: AbortSignal,
+  requestContext: BliRequestContext,
+): Promise<CoursePassRateData> => {
+  const params = new URLSearchParams();
+  if (requestContext.eventUnitCode) params.set('unit', requestContext.eventUnitCode);
+  if (requestContext.locationCode) params.set('location', requestContext.locationCode);
+  const response = await fetch(`/api/bli/course-pass-rates${params.toString() ? `?${params.toString()}` : ''}`, {
+    signal,
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const data = await response.json();
+  return {
+    lmpOptions: Array.isArray(data.lmpOptions) ? data.lmpOptions : [],
+    rows: Array.isArray(data.rows) ? data.rows : [],
+  };
 };
 
 const valueSum = (series: ChartPoint[]): number => series.reduce((sum, point) => sum + (Number(point.value) || 0), 0);
@@ -1465,6 +1512,184 @@ const CourseOutcomeModal: React.FC<{
   </div>
 );
 
+const summarisePassRateRows = (rows: CoursePassRateRow[], selectedLmp: string) => {
+  const scoped = rows.filter(row => String(row.lmpType || '').trim() === selectedLmp);
+  const totals = scoped.reduce((acc, row) => ({
+    pass: acc.pass + Number(row.pass || 0),
+    fail: acc.fail + Number(row.fail || 0),
+    other: acc.other + Number(row.other || 0),
+    total: acc.total + Number(row.total || 0),
+  }), { pass: 0, fail: 0, other: 0, total: 0 });
+  return {
+    rows: scoped,
+    totals,
+    passRate: totals.total > 0 ? (totals.pass / totals.total) * 100 : null,
+  };
+};
+
+const PassRateStack: React.FC<{ pass: number; fail: number; other: number }> = ({ pass, fail, other }) => {
+  const total = Math.max(1, pass + fail + other);
+  const segments = [
+    { key: 'pass', value: pass, color: '#22c55e', label: 'Pass' },
+    { key: 'fail', value: fail, color: '#ef4444', label: 'Fail' },
+    { key: 'other', value: other, color: '#94a3b8', label: 'No result' },
+  ];
+  return (
+    <div className="flex h-8 overflow-hidden rounded-md border border-slate-700/90 bg-slate-950/70">
+      {segments.map(segment => {
+        if (segment.value <= 0) return null;
+        return (
+          <div
+            key={segment.key}
+            className="h-full min-w-[3px]"
+            style={{ width: `${Math.max(2, (segment.value / total) * 100)}%`, backgroundColor: segment.color }}
+            title={`${segment.label}: ${compactNumber(segment.value, 0)}`}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
+const CoursePassRateTile: React.FC<{
+  data: CoursePassRateData;
+  selectedLmp: string;
+  onOpen: () => void;
+}> = ({ data, selectedLmp, onOpen }) => {
+  const summary = summarisePassRateRows(data.rows, selectedLmp);
+  return (
+    <button
+      onClick={onOpen}
+      className="group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-emerald-400/40 bg-emerald-400/10 text-emerald-200">
+          <ChartBarIcon className="h-8 w-8" />
+        </div>
+        <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
+      </div>
+      <div className="mt-4">
+        <h3 className="text-base font-semibold text-white">Unit pass rates</h3>
+        <p className="mt-1 min-h-[34px] text-xs leading-5 text-slate-400">
+          Completed Training Report pass rates for {selectedLmp || 'allocated LMP courses'}.
+        </p>
+      </div>
+      <div className="mt-3 text-2xl font-bold tracking-normal text-white">
+        {summary.passRate === null ? 'N/A' : `${compactNumber(summary.passRate, 1)}%`}
+      </div>
+      <div className="text-xs text-slate-500">{compactNumber(summary.totals.total, 0)} completed reports</div>
+      <div className="mt-4 flex-1">
+        {summary.totals.total > 0 ? (
+          <PassRateStack pass={summary.totals.pass} fail={summary.totals.fail} other={summary.totals.other} />
+        ) : (
+          <div className="text-xs text-slate-500">No completed report data available</div>
+        )}
+      </div>
+      <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500">{compactNumber(data.lmpOptions.length, 0)} LMP courses in scope</p>
+    </button>
+  );
+};
+
+const CoursePassRateModal: React.FC<{
+  data: CoursePassRateData;
+  selectedLmp: string;
+  onLmpChange: (value: string) => void;
+  onClose: () => void;
+}> = ({ data, selectedLmp, onLmpChange, onClose }) => {
+  const summary = summarisePassRateRows(data.rows, selectedLmp);
+  const rows = [...summary.rows]
+    .filter(row => row.total > 0)
+    .sort((a, b) => String(a.startDate || '').localeCompare(String(b.startDate || '')) || a.courseName.localeCompare(b.courseName, undefined, { numeric: true }));
+
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8" onMouseDown={onClose}>
+      <div
+        className="max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+        onMouseDown={event => event.stopPropagation()}
+      >
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
+            <h2 className="mt-1 text-2xl font-bold text-white">Unit pass rates</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-400">
+              Historical pass rates from completed Training Reports, grouped by course records allocated to this unit and filtered by LMP course.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end justify-end gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">LMP course</span>
+              <select
+                value={selectedLmp}
+                onChange={event => onLmpChange(event.target.value)}
+                className="h-10 min-w-[220px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+              >
+                {data.lmpOptions.map(option => (
+                  <option key={option.key} value={option.key}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              onClick={onClose}
+              className="h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        {data.lmpOptions.length === 0 ? (
+          <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-sm text-slate-400">
+            No LMP course allocations are available for this unit.
+          </div>
+        ) : summary.totals.total === 0 ? (
+          <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-sm text-slate-400">
+            No completed Training Reports are available for {selectedLmp}.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{selectedLmp}</h3>
+                  <p className="text-sm text-slate-400">{compactNumber(rows.length, 0)} completed course record{rows.length === 1 ? '' : 's'}</p>
+                </div>
+                <div className="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Pass</span>
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Fail</span>
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-400" />No result</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {rows.map(row => (
+                  <div key={`${row.courseCode}-${row.courseName}`} className="grid grid-cols-[140px_minmax(0,1fr)_72px] items-center gap-3">
+                    <div>
+                      <div className="truncate text-sm font-semibold text-slate-200" title={row.courseName}>{row.courseName}</div>
+                      <div className="text-[11px] text-slate-500">{row.startDate || 'No start'} - {row.endDate || 'No end'}</div>
+                    </div>
+                    <PassRateStack pass={row.pass} fail={row.fail} other={row.other} />
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-emerald-200">{row.passRate === null ? 'N/A' : `${compactNumber(row.passRate, 1)}%`}</div>
+                      <div className="text-[11px] text-slate-500">{compactNumber(row.total, 0)} reports</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+              <StatRow label="Overall pass rate" value={summary.passRate === null ? 'N/A' : `${compactNumber(summary.passRate, 1)}%`} accent="text-emerald-200" />
+              <StatRow label="Passed" value={compactNumber(summary.totals.pass, 0)} accent="text-emerald-200" />
+              <StatRow label="Failed" value={compactNumber(summary.totals.fail, 0)} accent="text-rose-200" />
+              <StatRow label="No result" value={compactNumber(summary.totals.other, 0)} accent="text-slate-200" />
+              <StatRow label="Completed reports" value={compactNumber(summary.totals.total, 0)} />
+            </aside>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const BliPeriodWindow: React.FC<{
   title: string;
   periodKey: PeriodKey;
@@ -1690,9 +1915,13 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   const [error, setError] = useState<string | null>(null);
   const [courseMovements, setCourseMovements] = useState<CourseMovementEvent[]>([]);
   const [courseMovementError, setCourseMovementError] = useState<string | null>(null);
+  const [coursePassRates, setCoursePassRates] = useState<CoursePassRateData>({ lmpOptions: [], rows: [] });
+  const [coursePassRateError, setCoursePassRateError] = useState<string | null>(null);
   const [openMetric, setOpenMetric] = useState<MetricDefinition | null>(null);
   const [courseOutcomeOpen, setCourseOutcomeOpen] = useState(false);
+  const [coursePassRateOpen, setCoursePassRateOpen] = useState(false);
   const [selectedCourseOutcomeCourse, setSelectedCourseOutcomeCourse] = useState('');
+  const [selectedPassRateLmp, setSelectedPassRateLmp] = useState('');
   const [periodSettings, setPeriodSettings] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = useState<PeriodKey | null>(null);
   const [periodDraft, setPeriodDraft] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
@@ -1823,6 +2052,20 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
     return () => controller.abort();
   }, [requestContext.eventUnitCode, requestContext.locationCode]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setCoursePassRateError(null);
+    fetchCoursePassRates(controller.signal, requestContext)
+      .then(setCoursePassRates)
+      .catch(fetchError => {
+        if (fetchError.name === 'AbortError') return;
+        console.error('Failed to load BLI course pass rates:', fetchError);
+        setCoursePassRateError('Course pass-rate history could not be loaded.');
+        setCoursePassRates({ lmpOptions: [], rows: [] });
+      });
+    return () => controller.abort();
+  }, [requestContext.eventUnitCode, requestContext.locationCode]);
+
   const staffGroups = useMemo(() => {
     const groups = new Map<string, Instructor[]>();
     sortedStaff.forEach(staff => {
@@ -1852,6 +2095,16 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
     }
   }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
 
+  useEffect(() => {
+    if (coursePassRates.lmpOptions.length === 0) {
+      if (selectedPassRateLmp) setSelectedPassRateLmp('');
+      return;
+    }
+    if (!coursePassRates.lmpOptions.some(option => option.key === selectedPassRateLmp)) {
+      setSelectedPassRateLmp(coursePassRates.lmpOptions[0].key);
+    }
+  }, [coursePassRates.lmpOptions, selectedPassRateLmp]);
+
   return (
     <div className="space-y-5">
       {openMetric && (
@@ -1879,6 +2132,14 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
           selectedCourse={courseOutcomeData.selectedCourse}
           onCourseChange={setSelectedCourseOutcomeCourse}
           onClose={() => setCourseOutcomeOpen(false)}
+        />
+      )}
+      {coursePassRateOpen && (
+        <CoursePassRateModal
+          data={coursePassRates}
+          selectedLmp={selectedPassRateLmp}
+          onLmpChange={setSelectedPassRateLmp}
+          onClose={() => setCoursePassRateOpen(false)}
         />
       )}
 
@@ -1946,8 +2207,10 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
           />
         ))}
         <CourseOutcomeTile data={courseOutcomeData} onOpen={() => setCourseOutcomeOpen(true)} />
+        <CoursePassRateTile data={coursePassRates} selectedLmp={selectedPassRateLmp} onOpen={() => setCoursePassRateOpen(true)} />
       </div>
       {courseMovementError && <p className="text-xs text-amber-300">{courseMovementError}</p>}
+      {coursePassRateError && <p className="text-xs text-amber-300">{coursePassRateError}</p>}
     </div>
   );
 };

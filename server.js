@@ -12708,6 +12708,95 @@ app.get('/api/bli/course-movements', async (req, res) => {
   }
 });
 
+// GET /api/bli/course-pass-rates - Completed training report pass/fail rates by LMP course.
+app.get('/api/bli/course-pass-rates', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const scopedWhere = hasScopeQuery(req) ? await buildScopedEntityWhere(req, db) : {};
+    const courses = await db.course.findMany({
+      where: scopedWhere,
+      select: { code: true, name: true, lmpType: true, unit: true, location: true, status: true, startDate: true, endDate: true },
+      orderBy: [{ lmpType: 'asc' }, { name: 'asc' }],
+    });
+
+    const courseKeys = uniqueStrings(courses.flatMap((course) => [course.code, course.name].filter(Boolean)));
+    if (courses.length === 0 || courseKeys.length === 0) {
+      return res.json({ success: true, lmpOptions: [], rows: [], summary: null });
+    }
+
+    const courseSql = sqlStringList(courseKeys);
+    const performanceRows = await db.$queryRawUnsafe(`
+      SELECT
+        "course",
+        UPPER(COALESCE("overallResult", '')) AS "overallResult",
+        COUNT(*)::int AS "count"
+      FROM "TraineePerformance"
+      WHERE "isCompleted" = true
+        AND "course" IN (${courseSql})
+      GROUP BY "course", UPPER(COALESCE("overallResult", ''))
+    `);
+
+    const statsByCourse = new Map();
+    (performanceRows || []).forEach((row) => {
+      const key = String(row.course || '').trim();
+      if (!key) return;
+      const result = String(row.overallResult || '').trim().toUpperCase();
+      const count = Number(row.count || 0);
+      const stats = statsByCourse.get(key) || { pass: 0, fail: 0, other: 0 };
+      if (result === 'P' || result === 'PASS') stats.pass += count;
+      else if (result === 'F' || result === 'FAIL') stats.fail += count;
+      else stats.other += count;
+      statsByCourse.set(key, stats);
+    });
+
+    const rows = courses.map((course) => {
+      const stats = uniqueStrings([course.code, course.name].filter(Boolean))
+        .map((key) => statsByCourse.get(String(key).trim()))
+        .filter(Boolean)
+        .reduce((acc, item) => ({
+          pass: acc.pass + item.pass,
+          fail: acc.fail + item.fail,
+          other: acc.other + item.other,
+        }), { pass: 0, fail: 0, other: 0 });
+      const total = stats.pass + stats.fail + stats.other;
+      return {
+        courseCode: course.code,
+        courseName: course.name,
+        lmpType: course.lmpType || course.name || course.code,
+        unit: course.unit,
+        location: course.location,
+        status: course.status,
+        startDate: course.startDate,
+        endDate: course.endDate,
+        pass: stats.pass,
+        fail: stats.fail,
+        other: stats.other,
+        total,
+        passRate: total > 0 ? (stats.pass / total) * 100 : null,
+      };
+    });
+
+    const optionMap = new Map();
+    rows.forEach((row) => {
+      const key = String(row.lmpType || '').trim();
+      if (!key) return;
+      const current = optionMap.get(key) || { key, label: key, courseCount: 0, completedReports: 0 };
+      current.courseCount += 1;
+      current.completedReports += row.total;
+      optionMap.set(key, current);
+    });
+
+    res.json({
+      success: true,
+      lmpOptions: [...optionMap.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true })),
+      rows,
+    });
+  } catch (error) {
+    console.error('❌ GET /api/bli/course-pass-rates error:', error);
+    res.status(500).json({ error: 'Failed to load course pass rates', details: error.message });
+  }
+});
+
 // POST /api/bli/course-movements - Record back-course/forward-course actions for future BLI history.
 app.post('/api/bli/course-movements', async (req, res) => {
   try {
