@@ -15,7 +15,7 @@ export const DEFAULT_RESOURCE_DISPLAY_NAMES: ResourceDisplayNames = {
 const cleanLabel = (value: unknown, fallback: string): string => {
   if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
-  return trimmed;
+  return trimmed || fallback;
 };
 
 const isNonAircraftResourceId = (resourceId: string): boolean => (
@@ -75,9 +75,13 @@ export const getResourceCategory = (resourceId?: string | null): string => {
 
 export const getResourceDisplayNames = (resourcePool?: PlatformResourcePool | null): ResourceDisplayNames => {
   const settings = resourcePool?.settings || {};
+  const aircraftFallback = cleanLabel(
+    resourcePool?.aircraftTypeCode,
+    DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft,
+  );
 
   return {
-    aircraft: cleanLabel(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
+    aircraft: cleanLabel(settings.aircraftLabel, aircraftFallback),
     ftd: cleanLabel(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
     cpt: cleanLabel(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt),
   };

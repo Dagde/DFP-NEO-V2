@@ -3216,7 +3216,7 @@ const DEFAULT_RESOURCE_DISPLAY_NAMES = {
 const cleanLabel$2 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
-  return trimmed;
+  return trimmed || fallback;
 };
 const isNonAircraftResourceId = (resourceId) => /^SIM(\s+\d+)?$/i.test(resourceId) || /^FTD(\s+\d+)?$/i.test(resourceId) || /^CPT(\s+\d+)?$/i.test(resourceId) || /^Ground(\s+\d+)?$/i.test(resourceId) || /^STBY(\s+\d+)?$/i.test(resourceId) || /^BNF-STBY(\s+\d+)?$/i.test(resourceId) || resourceId === "Duty Sup" || resourceId === "TWR DI";
 const getAircraftResourceMatch = (resourceId) => {
@@ -3259,8 +3259,12 @@ const getResourceCategory$2 = (resourceId) => {
 };
 const getResourceDisplayNames = (resourcePool) => {
   const settings = resourcePool?.settings || {};
+  const aircraftFallback = cleanLabel$2(
+    resourcePool?.aircraftTypeCode,
+    DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft
+  );
   return {
-    aircraft: cleanLabel$2(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
+    aircraft: cleanLabel$2(settings.aircraftLabel, aircraftFallback),
     ftd: cleanLabel$2(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
     cpt: cleanLabel$2(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
   };
