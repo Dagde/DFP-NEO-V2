@@ -2839,6 +2839,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       if (unitA !== unitB) return unitA.localeCompare(unitB);
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
     });
+  const availableTrainingReportAutoNotifyStaffByUnit = (() => {
+    const selectedNames = new Set(trainingReportTemplate.autoNotify.recipients.staffNames || []);
+    const groups = new Map<string, typeof trainingReportAutoNotifyStaffOptions>();
+    trainingReportAutoNotifyStaffOptions
+      .filter((staff) => !selectedNames.has(staff.name))
+      .forEach((staff) => {
+        const unit = String(staff.unit || '').trim() || 'No unit assigned';
+        groups.set(unit, [...(groups.get(unit) || []), staff]);
+      });
+    return Array.from(groups.entries());
+  })();
   const trainingReportSyncOptions = configUnits
     .filter((unit) => isActiveRecord(unit) && String(unit.code || '').trim() && String(unit.code || '').trim() !== String(activeTrainingReportUnit?.code || '').trim())
     .map((unit) => ({
@@ -10991,13 +11002,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     }}
                   >
                     <option value="">Add staff member...</option>
-                    {trainingReportAutoNotifyStaffOptions
-                      .filter((staff) => !trainingReportTemplate.autoNotify.recipients.staffNames.includes(staff.name))
-                      .map((staff) => (
-                        <option key={`${staff.unit || 'unit'}-${staff.name}`} value={staff.name}>
-                          {`${staff.unit ? `${staff.unit} - ` : ''}${staff.rank ? `${staff.rank} ` : ''}${staff.name}`}
-                        </option>
-                      ))}
+                    {availableTrainingReportAutoNotifyStaffByUnit.map(([unit, staffMembers]) => (
+                      <optgroup key={`${unit}-auto-notify-staff-group`} label={unit}>
+                        {staffMembers.map((staff) => (
+                          <option key={`${staff.unit || 'unit'}-${staff.name}`} value={staff.name}>
+                            {`${staff.rank ? `${staff.rank} ` : ''}${staff.name}`}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
                 {trainingReportTemplate.autoNotify.recipients.staffNames.length > 0 ? (

@@ -69731,6 +69731,15 @@ const PlatformConfigurationSettings = ({
     if (unitA !== unitB) return unitA.localeCompare(unitB);
     return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
   });
+  const availableTrainingReportAutoNotifyStaffByUnit = (() => {
+    const selectedNames = new Set(trainingReportTemplate.autoNotify.recipients.staffNames || []);
+    const groups = /* @__PURE__ */ new Map();
+    trainingReportAutoNotifyStaffOptions.filter((staff) => !selectedNames.has(staff.name)).forEach((staff) => {
+      const unit = String(staff.unit || "").trim() || "No unit assigned";
+      groups.set(unit, [...groups.get(unit) || [], staff]);
+    });
+    return Array.from(groups.entries());
+  })();
   const trainingReportSyncOptions = configUnits.filter((unit) => isActiveRecord(unit) && String(unit.code || "").trim() && String(unit.code || "").trim() !== String(activeTrainingReportUnit?.code || "").trim()).map((unit) => ({
     code: String(unit.code || "").trim(),
     label: `${unit.code}${unit.name && unit.name !== unit.code ? ` - ${unit.name}` : ""}`
@@ -76862,7 +76871,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   },
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Add staff member..." }),
-                    trainingReportAutoNotifyStaffOptions.filter((staff) => !trainingReportTemplate.autoNotify.recipients.staffNames.includes(staff.name)).map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: `${staff.unit ? `${staff.unit} - ` : ""}${staff.rank ? `${staff.rank} ` : ""}${staff.name}` }, `${staff.unit || "unit"}-${staff.name}`))
+                    availableTrainingReportAutoNotifyStaffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: `${staff.rank ? `${staff.rank} ` : ""}${staff.name}` }, `${staff.unit || "unit"}-${staff.name}`)) }, `${unit}-auto-notify-staff-group`))
                   ]
                 }
               ) }),
