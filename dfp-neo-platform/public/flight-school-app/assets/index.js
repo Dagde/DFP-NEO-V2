@@ -27412,20 +27412,14 @@ const CourseRosterView = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseName }),
                     courseTrainees.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit })
                   ] }),
-                  courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-0.5 text-[11px] font-normal leading-tight text-white/85", children: [
+                  courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-1 text-[11px] font-normal leading-tight text-white/85", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "uppercase tracking-wide text-white/60", children: [
-                        courseCommanderLabel,
-                        ": "
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseRecord?.courseCommander || "Not assigned" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "uppercase tracking-wide text-white/60", children: courseCommanderLabel }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: courseRecord?.courseCommander || "Not assigned" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "uppercase tracking-wide text-white/60", children: [
-                        deputyCourseCommanderLabel,
-                        ": "
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseRecord?.deputyCourseCommander || "Not assigned" })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "uppercase tracking-wide text-white/60", children: deputyCourseCommanderLabel }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: courseRecord?.deputyCourseCommander || "Not assigned" })
                     ] })
                   ] })
                 ] }),

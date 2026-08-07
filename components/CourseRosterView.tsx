@@ -467,14 +467,14 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                     {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
                                                 </div>
                                                 {courseLeadershipEnabled && (
-                                                    <div className="mt-1 space-y-0.5 text-[11px] font-normal leading-tight text-white/85">
+                                                    <div className="mt-1 space-y-1 text-[11px] font-normal leading-tight text-white/85">
                                                         <div>
-                                                            <span className="uppercase tracking-wide text-white/60">{courseCommanderLabel}: </span>
-                                                            <span>{courseRecord?.courseCommander || 'Not assigned'}</span>
+                                                            <div className="uppercase tracking-wide text-white/60">{courseCommanderLabel}</div>
+                                                            <div>{courseRecord?.courseCommander || 'Not assigned'}</div>
                                                         </div>
                                                         <div>
-                                                            <span className="uppercase tracking-wide text-white/60">{deputyCourseCommanderLabel}: </span>
-                                                            <span>{courseRecord?.deputyCourseCommander || 'Not assigned'}</span>
+                                                            <div className="uppercase tracking-wide text-white/60">{deputyCourseCommanderLabel}</div>
+                                                            <div>{courseRecord?.deputyCourseCommander || 'Not assigned'}</div>
                                                         </div>
                                                     </div>
                                                 )}
