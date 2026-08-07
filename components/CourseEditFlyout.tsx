@@ -74,6 +74,14 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                 return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
             });
     }, [instructorsData, personnelDisplaySettings]);
+    const staffByUnit = useMemo(() => {
+        const groups = new Map<string, Instructor[]>();
+        sortedStaff.forEach((staff) => {
+            const unit = String(staff.unit || '').trim() || 'No unit assigned';
+            groups.set(unit, [...(groups.get(unit) || []), staff]);
+        });
+        return Array.from(groups.entries());
+    }, [sortedStaff]);
 
     const leadershipChanged =
         courseCommander !== (course?.courseCommander || '') ||
@@ -215,10 +223,14 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
                                         >
                                             <option value="">Not assigned</option>
-                                            {sortedStaff.map((staff) => (
-                                                <option key={`${staff.id || staff.idNumber || staff.name}-commander`} value={staff.name}>
-                                                    {staff.unit ? `${staff.unit} - ` : ''}{staff.rank ? `${staff.rank} ` : ''}{staff.name}
-                                                </option>
+                                            {staffByUnit.map(([unit, staffMembers]) => (
+                                                <optgroup key={`${unit}-commander-group`} label={unit}>
+                                                    {staffMembers.map((staff) => (
+                                                        <option key={`${staff.id || staff.idNumber || staff.name}-commander`} value={staff.name}>
+                                                            {staff.rank ? `${staff.rank} ` : ''}{staff.name}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
                                             ))}
                                         </select>
                                     </div>
@@ -231,10 +243,14 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
                                         >
                                             <option value="">Not assigned</option>
-                                            {sortedStaff.map((staff) => (
-                                                <option key={`${staff.id || staff.idNumber || staff.name}-deputy`} value={staff.name}>
-                                                    {staff.unit ? `${staff.unit} - ` : ''}{staff.rank ? `${staff.rank} ` : ''}{staff.name}
-                                                </option>
+                                            {staffByUnit.map(([unit, staffMembers]) => (
+                                                <optgroup key={`${unit}-deputy-group`} label={unit}>
+                                                    {staffMembers.map((staff) => (
+                                                        <option key={`${staff.id || staff.idNumber || staff.name}-deputy`} value={staff.name}>
+                                                            {staff.rank ? `${staff.rank} ` : ''}{staff.name}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
                                             ))}
                                         </select>
                                     </div>

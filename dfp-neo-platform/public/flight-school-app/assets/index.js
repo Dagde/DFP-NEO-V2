@@ -26280,6 +26280,14 @@ const CourseEditFlyout = ({
       return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, personnelDisplaySettings]);
+  const staffByUnit = reactExports.useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    sortedStaff2.forEach((staff) => {
+      const unit = String(staff.unit || "").trim() || "No unit assigned";
+      groups.set(unit, [...groups.get(unit) || [], staff]);
+    });
+    return Array.from(groups.entries());
+  }, [sortedStaff2]);
   const leadershipChanged = courseCommander !== (course?.courseCommander || "") || deputyCourseCommander !== (course?.deputyCourseCommander || "");
   const updateHasChanges = (nextCourseNumber = newCourseNumber, nextUnit = newUnit, nextCommander = courseCommander, nextDeputy = deputyCourseCommander) => {
     setHasChanges(
@@ -26407,11 +26415,10 @@ const CourseEditFlyout = ({
                         className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not assigned" }),
-                          sortedStaff2.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
-                            staff.unit ? `${staff.unit} - ` : "",
+                          staffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
                             staff.rank ? `${staff.rank} ` : "",
                             staff.name
-                          ] }, `${staff.id || staff.idNumber || staff.name}-commander`))
+                          ] }, `${staff.id || staff.idNumber || staff.name}-commander`)) }, `${unit}-commander-group`))
                         ]
                       }
                     )
@@ -26427,11 +26434,10 @@ const CourseEditFlyout = ({
                         className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not assigned" }),
-                          sortedStaff2.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
-                            staff.unit ? `${staff.unit} - ` : "",
+                          staffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
                             staff.rank ? `${staff.rank} ` : "",
                             staff.name
-                          ] }, `${staff.id || staff.idNumber || staff.name}-deputy`))
+                          ] }, `${staff.id || staff.idNumber || staff.name}-deputy`)) }, `${unit}-deputy-group`))
                         ]
                       }
                     )
