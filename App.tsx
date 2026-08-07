@@ -25896,10 +25896,12 @@ const App: React.FC = () => {
                             }
                         }
                         if (replace) {
-                            setPublishedSchedules(prev => ({ ...prev, [targetDate]: [] }));
-                            setBaselineSchedules(prev => ({ ...prev, [snapshotKey]: [] }));
+                            pushDfpDataDiag('snapshot:empty-replace-suppressed', {
+                                targetDate,
+                                snapshotKey,
+                                reason: 'A missing database snapshot must not clear a DFP date that may still exist in local state or be republished later.',
+                            });
                         }
-                        loadedSnapshotDates.current.add(snapshotKey);
                         pushDfpDataDiag('snapshot:load-empty', {
                             targetDate,
                             snapshotKey,
@@ -26049,7 +26051,7 @@ const App: React.FC = () => {
 
         const snapshotKey = getDailySnapshotKey(date, school, activeUnitCode);
         loadedSnapshotDates.current.delete(snapshotKey);
-        void loadSnapshotForDate(date, { force: true, replace: true, useCache: true });
+        void loadSnapshotForDate(date, { force: true, replace: false, useCache: true });
     }, [activeUnitCode, activeView, date, isInitialSetupWizardActive, loadSnapshotForDate, school, setupTestProfile]);
 
        // Show commit alert on app mount - DISABLED
