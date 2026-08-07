@@ -26321,6 +26321,7 @@ const CourseEditFlyout = ({
       await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
     }
     setHasChanges(false);
+    onClose();
   };
   const handleBackcourseClick = (trainee) => {
     setSelectedTrainee(trainee);

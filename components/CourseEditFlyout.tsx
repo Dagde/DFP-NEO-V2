@@ -127,6 +127,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
             await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
         }
         setHasChanges(false);
+        onClose();
     };
 
     const handleBackcourseClick = (trainee: Trainee) => {
