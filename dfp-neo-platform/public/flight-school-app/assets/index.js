@@ -7314,8 +7314,8 @@ const Dropdown$2 = ({ label, value, onChange, children, id }) => /* @__PURE__ */
   )
 ] });
 const normaliseContextValue = (value) => String(value || "").trim().toLowerCase();
-const resolveActiveLocationOption = (locationOptions, activeLocationCode2, platformConfig) => {
-  const active = String(activeLocationCode2 || "").trim();
+const resolveActiveLocationOption = (locationOptions, activeLocationCode, platformConfig) => {
+  const active = String(activeLocationCode || "").trim();
   if (!active) return locationOptions[0] || "";
   const candidates = /* @__PURE__ */ new Set([active]);
   const activeKey = normaliseContextValue(active);
@@ -7358,7 +7358,7 @@ const AddCourseFlyout = ({
   existingCourses,
   locations = [],
   units = [],
-  activeLocationCode: activeLocationCode2 = "",
+  activeLocationCode = "",
   activeUnitCode = "",
   platformConfig = null,
   serviceDefinitions = []
@@ -7366,8 +7366,8 @@ const AddCourseFlyout = ({
   const locationOptions = reactExports.useMemo(() => Array.from(new Set(locations.filter(Boolean))), [locations]);
   const unitOptions = reactExports.useMemo(() => buildUnitOptions(units, activeUnitCode), [units, activeUnitCode]);
   const defaultLocation = reactExports.useMemo(
-    () => resolveActiveLocationOption(locationOptions, activeLocationCode2, platformConfig),
-    [locationOptions, activeLocationCode2, platformConfig]
+    () => resolveActiveLocationOption(locationOptions, activeLocationCode, platformConfig),
+    [locationOptions, activeLocationCode, platformConfig]
   );
   const defaultUnit = reactExports.useMemo(
     () => resolveActiveUnitOption(unitOptions, activeUnitCode),
@@ -44620,7 +44620,7 @@ const CourseMetricsTab = ({
     const codes = operationalContext?.unitCodes && operationalContext.unitCodes.length > 0 ? operationalContext.unitCodes : String(operationalContext?.unitCode || "").split("+");
     return new Set(codes.map((code) => String(code || "").trim().toUpperCase()).filter(Boolean));
   }, [operationalContext?.unitCode, operationalContext?.unitCodes]);
-  const activeLocationCode2 = String(operationalContext?.locationCode || "").trim().toUpperCase();
+  const activeLocationCode = String(operationalContext?.locationCode || "").trim().toUpperCase();
   const getTrainingCodeFromItem2 = (item) => (item.courses || []).find(Boolean) || item.code || "";
   const matchesAirCombatAssignment = (item, kind, code, unitCode) => {
     const itemKind = item.lmpType === "Staff CAT" ? "training_package" : "course";
@@ -44636,7 +44636,7 @@ const CourseMetricsTab = ({
     const itemUnit = String(item.unit || "").trim().toUpperCase();
     const itemLocation = String(item.location || "").trim().toUpperCase();
     const unitMatches = activeUnitCodes.size === 0 || !itemUnit || activeUnitCodes.has(itemUnit);
-    const locationMatches = !activeLocationCode2 || !itemLocation || itemLocation === activeLocationCode2;
+    const locationMatches = !activeLocationCode || !itemLocation || itemLocation === activeLocationCode;
     return unitMatches && locationMatches;
   };
   const getStreamTitleFromItem = (item, code) => item.module && item.module !== code ? item.module : item.phase && item.phase !== code ? item.phase : item.eventDescription || code;
@@ -44712,7 +44712,7 @@ const CourseMetricsTab = ({
       [...assignments.courses, ...assignments.trainingPackages].forEach((assignment) => {
         const assignmentUnit = String(assignment.unitCode || staffUnit).trim().toUpperCase();
         if (activeUnitCodes.size > 0 && assignmentUnit && !activeUnitCodes.has(assignmentUnit)) return;
-        const assignmentLocation = String(assignment.locationCode || activeLocationCode2).trim().toUpperCase();
+        const assignmentLocation = String(assignment.locationCode || activeLocationCode).trim().toUpperCase();
         const stream = ensureStream(assignment.kind, assignment.code, assignment.title, assignmentUnit, assignmentLocation);
         stream.staff.add(staff.name);
         if (isAvailable) stream.availableStaff.add(staff.name);
@@ -44748,7 +44748,7 @@ const CourseMetricsTab = ({
     })).sort(
       (left, right) => left.kind.localeCompare(right.kind) || left.unitCode.localeCompare(right.unitCode) || left.code.localeCompare(right.code)
     );
-  }, [activeLocationCode2, activeUnitCodes, date, events, instructorsData, syllabusDetails]);
+  }, [activeLocationCode, activeUnitCodes, date, events, instructorsData, syllabusDetails]);
   const stripCourseSuffix = (value) => {
     const text = String(value || "").trim();
     const match = text.match(/^(.*?)\s+[–-]\s+([A-Z0-9][A-Z0-9 +/]*?)$/);
@@ -56699,7 +56699,7 @@ const SyllabusView = ({
   aircraftConfigurations = [],
   aircraftCrewComposition,
   crewPositionTerminology,
-  activeLocationCode: activeLocationCode2 = "",
+  activeLocationCode = "",
   activeUnitCode = "",
   trainingPackageTemplates = [],
   instructorsData = [],
@@ -56823,7 +56823,7 @@ const SyllabusView = ({
   const getCourseTitle = (code) => activeTab === "master" ? masterLmpTitleMap[code] || courseTitleMap[code] || code : courseTitleMap[code] || code;
   const normaliseContextCode2 = (value) => String(value || "").trim().toUpperCase();
   const activeUnitNormalised = normaliseContextCode2(effectiveActiveUnitCode);
-  const activeLocationNormalised = normaliseContextCode2(activeLocationCode2);
+  const activeLocationNormalised = normaliseContextCode2(activeLocationCode);
   const pushSetupTestLmpViewDiag = (stage, details = {}) => {
     if (typeof window === "undefined") return;
     const isSetupTest = new URLSearchParams(window.location.search).has("setupTest");
@@ -56831,7 +56831,7 @@ const SyllabusView = ({
     const entry = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
       stage,
-      activeLocationCode: activeLocationCode2,
+      activeLocationCode,
       activeUnitCode,
       effectiveActiveUnitCode,
       activeTab,
@@ -57048,11 +57048,11 @@ const SyllabusView = ({
     if (!isAirCombatModel || !activeTrainingAssignmentItem || !selectedCourseType) return null;
     return getAirCombatAssignmentFromItem(
       { ...activeTrainingAssignmentItem, courses: [selectedCourseType] },
-      activeLocationCode2,
+      activeLocationCode,
       effectiveActiveUnitCode,
       currentUserName
     );
-  }, [activeTrainingAssignmentItem, activeLocationCode2, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
+  }, [activeTrainingAssignmentItem, activeLocationCode, effectiveActiveUnitCode, currentUserName, isAirCombatModel, selectedCourseType]);
   const assignableAirCombatStaff = reactExports.useMemo(() => {
     if (!isAirCombatModel) return [];
     const targetUnit = String(effectiveActiveUnitCode || "").trim().toUpperCase();
@@ -84172,7 +84172,7 @@ const CoursesManagementView = ({
   onUpdateCourse,
   locations = [],
   units = [],
-  activeLocationCode: activeLocationCode2 = "",
+  activeLocationCode = "",
   activeUnitCode = "",
   operationalModel = "flight_school",
   syllabusDetails = [],
@@ -84410,7 +84410,7 @@ const CoursesManagementView = ({
         existingCourses: courseColors,
         locations,
         units,
-        activeLocationCode: activeLocationCode2,
+        activeLocationCode,
         activeUnitCode,
         platformConfig,
         serviceDefinitions
@@ -86281,7 +86281,7 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
-  activeLocationCode: activeLocationCode2 = "",
+  activeLocationCode = "",
   activeUnitCode = "",
   operationalModel = "flight_school",
   platformConfig = null,
@@ -86336,7 +86336,7 @@ const TrainingRecordsView = ({
           onUpdateCourse,
           locations,
           units,
-          activeLocationCode: activeLocationCode2,
+          activeLocationCode,
           activeUnitCode,
           operationalModel,
           syllabusDetails,
@@ -123957,7 +123957,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           toCourse,
           direction,
           unit: trainee.unit || activeUnitCode,
-          location: trainee.location || activeLocationCode || school,
+          location: trainee.location || school,
           userId: getCurrentUserId() ?? void 0
         })
       });
@@ -123973,7 +123973,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       description: direction === "forward-course" ? "Trainee forward-coursed" : direction === "back-course" ? "Trainee back-coursed" : "Trainee course changed",
       changes: `${trainee.rank} ${trainee.name} moved from ${fromCourse} to ${toCourse}`
     });
-  }, [activeLocationCode, activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath, scopedCourseColors]);
+  }, [activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath]);
   const renderActiveView = () => {
     switch (activeView) {
       case "Program Schedule":

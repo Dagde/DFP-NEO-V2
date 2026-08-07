@@ -42931,7 +42931,7 @@ appliedUpdates.forEach(update => {
                     toCourse,
                     direction,
                     unit: trainee.unit || activeUnitCode,
-                    location: trainee.location || activeLocationCode || school,
+                    location: trainee.location || school,
                     userId: getCurrentUserId() ?? undefined,
                 }),
             });
@@ -42948,7 +42948,7 @@ appliedUpdates.forEach(update => {
             description: direction === 'forward-course' ? 'Trainee forward-coursed' : direction === 'back-course' ? 'Trainee back-coursed' : 'Trainee course changed',
             changes: `${trainee.rank} ${trainee.name} moved from ${fromCourse} to ${toCourse}`
         });
-    }, [activeLocationCode, activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath, scopedCourseColors]);
+    }, [activeUnitCode, resolveCourseMovementDirection, school, scopedApiPath]);
 
 
     const renderActiveView = () => {
