@@ -112,6 +112,10 @@ import {
     writeSetupTestPersonnel,
     writeSetupTestPlatformConfig,
 } from './utils/setupTestMode';
+import {
+    isTraineeSuspended,
+    setTraineeSuspendedMarker,
+} from './utils/traineeStatus';
 
 import {
     classifyDayNightBySunTimes,
@@ -33848,6 +33852,30 @@ const App: React.FC = () => {
         ].filter(Boolean).join(', ');
 
         logAudit('Mass Completion', 'Edit', `Updated ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+        if (assessment.overallResult === 'F') {
+            const failedTrainee = allTraineesData.find((trainee: any) => (
+                trainee.fullName === assessment.traineeFullName ||
+                trainee.name === assessment.traineeFullName
+            )) || traineesData.find((trainee: any) => (
+                trainee.fullName === assessment.traineeFullName ||
+                trainee.name === assessment.traineeFullName
+            ));
+
+            if (failedTrainee && !isTraineeSuspended(failedTrainee)) {
+                const suspendedTrainee = {
+                    ...failedTrainee,
+                    isPaused: true,
+                    permissions: setTraineeSuspendedMarker(failedTrainee.permissions, true),
+                };
+                await handleUpdateTrainee(suspendedTrainee);
+                logAudit(
+                    'Trainee Roster',
+                    'Edit',
+                    `Suspended ${assessment.traineeFullName} after unsatisfactory ${configuredTrainingReportDisplayName}`,
+                    `Event: ${assessment.flightNumber}; Result: ${activeTrainingReportTemplate.overallResults.failLabel || 'Unsatisfactory'}`
+                );
+            }
+        }
         await maybeInsertTrainingReportExtraLmpEvent(assessment);
         await maybeExtendTrainingReportNextLmpEvent(assessment);
         await maybePassTrainingReportNotesToNextLmpEvent(assessment);
@@ -40419,9 +40447,18 @@ appliedUpdates.forEach(update => {
         }
     }, [liveSyncEnabled]);
 
-    const buildUnavailHash = useCallback((records: any[]): string => {
+    const buildPersonnelStatusHash = useCallback((records: any[]): string => {
         return records
-            .map(r => `${r.id}:${JSON.stringify((r.unavailability || []).map((u: any) => u.id).sort())}`)
+            .map(r => {
+                const permissions = Array.isArray(r.permissions) ? [...r.permissions].sort() : [];
+                return [
+                    r.id,
+                    r.idNumber,
+                    JSON.stringify((r.unavailability || []).map((u: any) => u.id).sort()),
+                    r.isPaused === true ? 'paused' : 'active',
+                    permissions.join(','),
+                ].join(':');
+            })
             .sort()
             .join('|');
     }, []);
@@ -40447,10 +40484,10 @@ appliedUpdates.forEach(update => {
                 logRoutineAppDebug('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
                 setInstructorsData(prev => {
                     const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
-                    const prevHash = buildUnavailHash(prevDbPersonnel);
-                    const newHash  = buildUnavailHash(dbPersonnel);
+                    const prevHash = buildPersonnelStatusHash(prevDbPersonnel);
+                    const newHash  = buildPersonnelStatusHash(dbPersonnel);
                     if (prevHash === newHash) return prev;
-                    logRoutineAppDebug('[Poll] Personnel unavailability CHANGED - updating state');
+                    logRoutineAppDebug('[Poll] Personnel availability/status CHANGED - updating state');
                     pollChanged = true;
                     const retainedSessionStaff = prev.filter(i => {
                         const source = (i as any)._dataSource;
@@ -40470,10 +40507,10 @@ appliedUpdates.forEach(update => {
                 logRoutineAppDebug('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                 setTraineesData(prev => {
                     const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
-                    const prevHash = buildUnavailHash(prevDbTrainees);
-                    const newHash  = buildUnavailHash(dbTrainees);
+                    const prevHash = buildPersonnelStatusHash(prevDbTrainees);
+                    const newHash  = buildPersonnelStatusHash(dbTrainees);
                     if (prevHash === newHash) return prev;
-                    logRoutineAppDebug('[Poll] Trainee unavailability CHANGED - updating state');
+                    logRoutineAppDebug('[Poll] Trainee availability/status CHANGED - updating state');
                     pollChanged = true;
                     const retainedSessionTrainees = prev.filter(t => {
                         const source = (t as any)._dataSource;
@@ -40493,7 +40530,7 @@ appliedUpdates.forEach(update => {
             console.error('[Poll] Error during poll:', e);
             return false;
         }
-    }, [buildUnavailHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing]);
+    }, [buildPersonnelStatusHash, dataSourceSettings.staff, dataSourceSettings.trainee, isUserEditing]);
 
     useEffect(() => {
         if (!liveSyncEnabled || isAddFlightTileModalOpen) return;
