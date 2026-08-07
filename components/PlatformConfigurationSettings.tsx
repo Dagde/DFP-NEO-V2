@@ -24,6 +24,7 @@ import {
   parseTaskProfileText,
 } from '../utils/taskProfiles';
 import {
+  comparePeopleByConfiguredRank,
   formatRankOrderText,
   getRankOrderFromEquivalency,
   normalisePersonnelDisplaySettings,

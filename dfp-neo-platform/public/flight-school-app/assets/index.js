@@ -4280,7 +4280,7 @@ const getRankSortIndex = (rank, settings, group = "staff") => {
   }
   return 1e4;
 };
-const comparePeopleByConfiguredRank$1 = (a, b, settings, group = "staff") => {
+const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   const safe2 = normalisePersonnelDisplaySettings(settings);
   const aName = splitPersonName(a);
   const bName = splitPersonName(b);
@@ -5209,7 +5209,7 @@ const matchesPermanentCallsignRolePolicy = (person, allowedRoles = []) => {
     return false;
   });
 };
-const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, settings, "staff"));
+const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank(a, b, settings, "staff"));
 const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
   let nextNumber = startingNumber;
   people.forEach((person) => {
@@ -26342,7 +26342,7 @@ const CourseEditFlyout = ({
     return [...instructorsData].filter((staff) => String(staff?.name || "").trim()).sort((a, b) => {
       const unitCompare = String(a.unit || "").localeCompare(String(b.unit || ""), void 0, { numeric: true, sensitivity: "base" });
       if (unitCompare !== 0) return unitCompare;
-      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, personnelDisplaySettings]);
   const staffByUnit = reactExports.useMemo(() => {
@@ -27314,7 +27314,7 @@ const CourseRosterView = ({
       groups[courseKey].push(trainee);
     });
     for (const course in groups) {
-      groups[course].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee"));
+      groups[course].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee"));
     }
     return groups;
   }, [traineesData, personnelDisplaySettings]);
@@ -28973,10 +28973,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       return candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey) && (!crewParts.crew || String(staff.crew || "").trim().toUpperCase() === crewParts.crew)) || candidates.find((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)) || candidates[0];
     }).filter(Boolean);
     if (rosterFromAttendees.length > 0) {
-      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
+      return rosterFromAttendees.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     }
     if (!eventCrewKey) return [];
-    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter((staff) => staffMatchesActiveFixedCrewUnit(staff, eventCrewKey)).filter((staff) => String(staff.crew || "").trim().toUpperCase() === crewParts.crew).filter((staff) => !staff.isAdminStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   }, [event, fixedCrewGroup, instructorsData, isFixedCrewCrewedEvent, activeUnitMemberCodes, personnelDisplaySettings]);
   const staffHasAvailabilityConflict = (staff, bookingWindow, eventDate) => {
     if (!eventDate) return false;
@@ -29003,7 +29003,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       ...getPersonnelForConflictCheck(event),
       ...rosteredFixedCrewMembers.map((member) => member.name)
     ].map((name) => String(name || "").trim()).filter(Boolean));
-    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter((candidate) => candidate.name !== staff.name).filter((candidate) => !assignedToCurrentEvent.has(candidate.name)).filter((candidate) => !candidate.isAdminStaff).filter((candidate) => normaliseFixedCrewUnitCode(candidate.unit) === crewUnit).filter((candidate) => fixedCrewStaffRolesMatch(candidate, staff)).filter((candidate) => !staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)).filter((candidate) => !staffHasEventConflict(candidate, bookingWindow)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   };
   const getFixedCrewSubstituteRejectReasons = (staff, bookingWindow, eventDate) => {
     const eventCrewKey = fixedCrewGroup || event.fixedCrewGroup || "";
@@ -29021,7 +29021,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (staffHasAvailabilityConflict(candidate, bookingWindow, eventDate)) reasons.push("unavailable during this event window");
       if (staffHasEventConflict(candidate, bookingWindow)) reasons.push("already assigned to another event in this event window");
       return { candidate, reasons };
-    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank$1(a.candidate, b.candidate, personnelDisplaySettings, "staff")).slice(0, 8);
+    }).filter((entry) => normaliseFixedCrewUnitCode(entry.candidate.unit) === crewUnit).filter((entry) => fixedCrewStaffRolesMatch(entry.candidate, staff) || getFixedCrewStaffRoleLabel(entry.candidate) === getFixedCrewStaffRoleLabel(staff)).filter((entry) => entry.reasons.length > 0).sort((a, b) => comparePeopleByConfiguredRank(a.candidate, b.candidate, personnelDisplaySettings, "staff")).slice(0, 8);
   };
   const fixedCrewRosterStatus = reactExports.useMemo(() => {
     const bookingWindow = getEventBookingWindow2(event);
@@ -29066,7 +29066,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (aPic !== bPic) return aPic - bPic;
       const roleDiff = roleRank(getFixedCrewStaffRoleLabel(a.staff)) - roleRank(getFixedCrewStaffRoleLabel(b.staff));
       if (roleDiff !== 0) return roleDiff;
-      return comparePeopleByConfiguredRank$1(a.staff, b.staff, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank(a.staff, b.staff, personnelDisplaySettings, "staff");
     }).reduce((groups, status) => {
       const role = getFixedCrewStaffRoleLabel(status.staff);
       const existing = groups.find((group) => group.role === role);
@@ -29077,7 +29077,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       const aRank = String(a.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       const bRank = String(b.role || "").trim().toLowerCase() === "pilot" ? 0 : 1;
       if (aRank !== bRank) return aRank - bRank;
-      const seniorityComparison = comparePeopleByConfiguredRank$1(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, "staff");
+      const seniorityComparison = comparePeopleByConfiguredRank(a.members[0]?.staff, b.members[0]?.staff, personnelDisplaySettings, "staff");
       if (seniorityComparison !== 0) return seniorityComparison;
       return a.role.localeCompare(b.role);
     });
@@ -29303,14 +29303,14 @@ ${swapNote}` : swapNote
     }, {});
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
-        (a, b) => comparePeopleByConfiguredRank$1(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
+        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
       );
     });
     const sortedUnits = Object.keys(grouped).sort((a, b) => {
       const firstA = grouped[a][0];
       const firstB = grouped[b][0];
       if (firstA && firstB) {
-        const rankComparison = comparePeopleByConfiguredRank$1(
+        const rankComparison = comparePeopleByConfiguredRank(
           firstA.instructor || firstA,
           firstB.instructor || firstB,
           personnelDisplaySettings,
@@ -29348,7 +29348,7 @@ ${swapNote}` : swapNote
     });
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
-        (a, b) => comparePeopleByConfiguredRank$1(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
+        (a, b) => comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, "staff")
       );
     });
     return { grouped, sortedUnits: Object.keys(grouped).sort() };
@@ -32623,7 +32623,7 @@ const AddFlightTileModal = ({
       const roleCompare = fixedCrewRoleGroupLabel(a).localeCompare(fixedCrewRoleGroupLabel(b), void 0, { numeric: true });
       if (roleCompare !== 0) return roleCompare;
     }
-    return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
   };
   const fixedCrewMembers = reactExports.useMemo(() => {
     const selectedGroup = parseFixedCrewGroupKey(fixedCrewGroup);
@@ -32818,13 +32818,13 @@ const AddFlightTileModal = ({
   };
   const getNames = (unit, selection) => {
     if (selection === "STAFF") {
-      return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((i) => ({
+      return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
         name: i.name,
         label: `${i.rank ? i.rank + " " : ""}${i.name}`,
         color: "#fff"
       }));
     }
-    return traineesData.filter((t) => (t.unit || "Unassigned") === unit && t.course === selection).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee")).map((t) => {
+    return traineesData.filter((t) => (t.unit || "Unassigned") === unit && t.course === selection).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((t) => {
       const twClass = courseColors[t.course] || "";
       const colourMap = {
         "bg-sky-500": "#38bdf8",
@@ -32862,19 +32862,19 @@ const AddFlightTileModal = ({
   };
   const getPicNames = (unit, selection) => {
     if (!shouldRestrictContinuationPicToPilots || selection !== "STAFF") return getNames(unit, selection);
-    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((i) => ({
+    return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
       name: i.name,
       label: `${i.rank ? i.rank + " " : ""}${i.name}`,
       color: "#fff"
     }));
   };
   const standardPersonOptions = reactExports.useMemo(() => {
-    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((person) => ({
+    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((person) => ({
       value: person.name,
       label: [person.rank, person.name, person.unit].filter(Boolean).join(" - "),
       group: "Staff"
     }));
-    const trainees2 = traineesData.sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
+    const trainees2 = traineesData.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
       value: person.fullName || person.name,
       label: [person.rank, person.fullName || person.name, person.course, person.unit].filter(Boolean).join(" - "),
       group: person.course || "Trainees"
@@ -55203,7 +55203,7 @@ const InstructorListView = ({
     return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
   };
   const qfis = reactExports.useMemo(() => {
-    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue2)).sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff"));
+    return instructorsData.filter(isActiveStaffRecord).filter((i) => isActiveStaffListRole(i, crewPositionTerminology, isFixedCrewModel, staffQualificationCatalogue2)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
   }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue2]);
   const staffRoleFilterOptions = reactExports.useMemo(() => {
     const optionMap = /* @__PURE__ */ new Map();
@@ -55276,7 +55276,7 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, personnelDisplaySettings, staffQualificationCatalogue2]);
   const ofis = reactExports.useMemo(() => {
@@ -55290,7 +55290,7 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
     return sorted;
   }, [instructorsData, personnelDisplaySettings]);
@@ -55308,7 +55308,7 @@ const InstructorListView = ({
       if (unitA !== unitB) {
         return unitA.localeCompare(unitB);
       }
-      return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
     });
   }, [instructorsData, isFixedCrewModel, personnelDisplaySettings, crewPositionTerminology, staffQualificationCatalogue2]);
   const fixedCrewGroups = reactExports.useMemo(() => {
@@ -56049,7 +56049,7 @@ const StaffView = (props) => {
       const unitA = normaliseUnitCode2(a.unit) || "ZZZ";
       const unitB = normaliseUnitCode2(b.unit) || "ZZZ";
       if (unitA !== unitB) return unitA.localeCompare(unitB);
-      return comparePeopleByConfiguredRank$1(a, b, props.personnelDisplaySettings, "staff");
+      return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
     }
     const roleA = isFlyingCrewRole(a) ? 0 : 1;
     const roleB = isFlyingCrewRole(b) ? 0 : 1;
@@ -56059,7 +56059,7 @@ const StaffView = (props) => {
     if (a.unit !== b.unit) {
       return a.unit.localeCompare(b.unit);
     }
-    return comparePeopleByConfiguredRank$1(a, b, props.personnelDisplaySettings, "staff");
+    return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "staff");
   });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3", children: [
@@ -56199,7 +56199,7 @@ const TraineeView = (props) => {
     if (a.course !== b.course) {
       return a.course.localeCompare(b.course);
     }
-    return comparePeopleByConfiguredRank$1(a, b, props.personnelDisplaySettings, "trainee");
+    return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, "trainee");
   }).map((t) => t.fullName);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-2", children: [
@@ -56320,7 +56320,7 @@ const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee, perso
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const sortedTrainees = reactExports.useMemo(
-    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "trainee")),
+    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")),
     [traineesData, personnelDisplaySettings]
   );
   const handleMouseEnter = (e, traineeFullName) => {
@@ -81180,7 +81180,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       const roleCompare = getFixedCrewPreviewRole(a).localeCompare(getFixedCrewPreviewRole(b));
       if (roleCompare) return roleCompare;
     }
-    return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings || void 0, "staff");
+    return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings || void 0, "staff");
   }), [fixedCrewPicName, fixedCrewRoster, personnelDisplaySettings]);
   const pilotLogbookOptions = reactExports.useMemo(() => {
     const options = [];
@@ -112936,7 +112936,7 @@ ${"=".repeat(60)}`);
     }).map((callsign) => String(callsign.code || "").trim()).filter(Boolean);
     return Array.from(new Set(options)).sort((a, b) => a.localeCompare(b));
   }, [activeContextUnitCodeSet, formationCallsigns, knownDfpLocationAliases, school]);
-  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
+  const neoAssistStaffListNames = reactExports.useMemo(() => [...instructorsData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((instructor) => instructor.name).filter(Boolean), [instructorsData, personnelDisplaySettings]);
   reactExports.useEffect(() => {
     const loadSettings = async () => {
       const startedAt = performance.now();
@@ -125296,7 +125296,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           if (unitA !== unitB) {
             return unitA.localeCompare(unitB);
           }
-          return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
         });
         logRoutineAppDebug("🔍 STAFF SCHEDULE - Location filtering and sorting applied");
         logRoutineAppDebug("🔍 School:", school);
@@ -125345,7 +125345,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           if (unitA !== unitB) {
             return unitA.localeCompare(unitB);
           }
-          return comparePeopleByConfiguredRank$1(a, b, personnelDisplaySettings, "staff");
+          return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
         });
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           NextDayInstructorScheduleView,
