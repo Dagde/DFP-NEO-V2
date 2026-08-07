@@ -284,6 +284,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 totalAircraft={props.totalAircraft}
                 operationalContext={props.operationalContext}
                 cancellationCodes={props.cancellationCodes}
+                syllabusDetails={props.syllabusDetails}
               />
             )}
           </div>

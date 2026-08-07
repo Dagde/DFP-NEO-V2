@@ -10,7 +10,7 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { showDarkAlert, showDarkPrompt } from '../DarkMessageModal';
-import type { CancellationCode, Instructor, ScheduleEvent, Trainee } from '../../types';
+import type { CancellationCode, Instructor, ScheduleEvent, SyllabusItemDetail, Trainee } from '../../types';
 import { verifyCurrentUserPassword } from '../../utils/passwordVerification';
 import { isTraineeSuspended } from '../../utils/traineeStatus';
 
@@ -97,6 +97,7 @@ interface BliTabProps {
   totalAircraft?: number;
   operationalContext?: BliOperationalContext;
   cancellationCodes?: CancellationCode[];
+  syllabusDetails?: SyllabusItemDetail[];
 }
 
 interface CourseMovementEvent {
@@ -153,6 +154,11 @@ interface CoursePassRateRow {
 interface CoursePassRateData {
   lmpOptions: CoursePassRateOption[];
   rows: CoursePassRateRow[];
+}
+
+interface AllocatedLmpCourseOption {
+  key: string;
+  label: string;
 }
 
 type CoursePassRateTimelineKey = 'all' | '5y' | '2y';
@@ -745,6 +751,53 @@ const buildBliRequestContext = (
 };
 
 const normaliseCourseCode = (value: unknown): string => String(value || '').trim();
+
+const buildAllocatedLmpCourseOptions = (syllabusDetails: SyllabusItemDetail[] = []): AllocatedLmpCourseOption[] => {
+  const options = new Map<string, AllocatedLmpCourseOption>();
+  syllabusDetails
+    .filter(item => (item as any)?.isActive !== false)
+    .filter(item => String(item?.lmpType || 'Master LMP') !== 'Staff CAT')
+    .forEach(item => {
+      (item.courses || []).forEach(course => {
+        const key = normaliseCourseCode(course);
+        if (!key) return;
+        const normalisedKey = key.toUpperCase();
+        if (!options.has(normalisedKey)) {
+          options.set(normalisedKey, { key, label: key });
+        }
+      });
+    });
+  return [...options.values()];
+};
+
+const filterPassRatesToAllocatedLmps = (
+  data: CoursePassRateData,
+  allocatedLmps: AllocatedLmpCourseOption[],
+): CoursePassRateData => {
+  const allowed = new Set(allocatedLmps.map(option => option.key.toUpperCase()));
+  if (allowed.size === 0) return { lmpOptions: [], rows: [] };
+  const rows = data.rows.filter(row => allowed.has(String(row.lmpType || '').trim().toUpperCase()));
+  const reportsByLmp = new Map<string, { courseCount: number; completedReports: number }>();
+  rows.forEach(row => {
+    const key = String(row.lmpType || '').trim().toUpperCase();
+    const current = reportsByLmp.get(key) || { courseCount: 0, completedReports: 0 };
+    current.courseCount += 1;
+    current.completedReports += Number(row.total || 0);
+    reportsByLmp.set(key, current);
+  });
+  return {
+    lmpOptions: allocatedLmps.map(option => {
+      const stats = reportsByLmp.get(option.key.toUpperCase()) || { courseCount: 0, completedReports: 0 };
+      return {
+        key: option.key,
+        label: option.label,
+        courseCount: stats.courseCount,
+        completedReports: stats.completedReports,
+      };
+    }),
+    rows,
+  };
+};
 
 const traineeMatchesBliUnit = (trainee: Trainee, context?: BliOperationalContext, selectedUnitScopeKey = 'combined'): boolean => {
   const selectedUnit = selectedUnitScopeKey.startsWith('unit:')
@@ -2052,7 +2105,7 @@ const MetricModal: React.FC<{
   );
 };
 
-const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, traineesData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
+const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, traineesData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [], syllabusDetails = [] }) => {
   const [metrics, setMetrics] = useState<BliMetricsResponse>(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2232,6 +2285,14 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   const courseOutcomeData = useMemo(() => (
     summariseCourseOutcomes(traineesData, courseMovements, operationalContext, selectedUnitScopeKey, selectedCourseOutcomeCourse)
   ), [courseMovements, operationalContext, selectedCourseOutcomeCourse, selectedUnitScopeKey, traineesData]);
+  const allocatedLmpCourseOptions = useMemo(
+    () => buildAllocatedLmpCourseOptions(syllabusDetails),
+    [syllabusDetails],
+  );
+  const scopedCoursePassRates = useMemo(
+    () => filterPassRatesToAllocatedLmps(coursePassRates, allocatedLmpCourseOptions),
+    [allocatedLmpCourseOptions, coursePassRates],
+  );
 
   useEffect(() => {
     if (courseOutcomeData.selectedCourse !== selectedCourseOutcomeCourse) {
@@ -2240,10 +2301,10 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
 
   useEffect(() => {
-    if (selectedPassRateLmp && !coursePassRates.lmpOptions.some(option => option.key === selectedPassRateLmp)) {
+    if (selectedPassRateLmp && !scopedCoursePassRates.lmpOptions.some(option => option.key === selectedPassRateLmp)) {
       setSelectedPassRateLmp('');
     }
-  }, [coursePassRates.lmpOptions, selectedPassRateLmp]);
+  }, [scopedCoursePassRates.lmpOptions, selectedPassRateLmp]);
 
   return (
     <div className="space-y-5">
@@ -2276,7 +2337,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
       )}
       {coursePassRateOpen && (
         <CoursePassRateModal
-          data={coursePassRates}
+          data={scopedCoursePassRates}
           selectedLmp={selectedPassRateLmp}
           timeline={selectedPassRateTimeline}
           date={date}
@@ -2351,7 +2412,7 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
         ))}
         <CourseOutcomeTile data={courseOutcomeData} onOpen={() => setCourseOutcomeOpen(true)} />
         <CoursePassRateTile
-          data={coursePassRates}
+          data={scopedCoursePassRates}
           selectedLmp={selectedPassRateLmp}
           timeline={selectedPassRateTimeline}
           date={date}

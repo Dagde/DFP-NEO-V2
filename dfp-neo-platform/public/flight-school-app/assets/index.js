@@ -48376,6 +48376,45 @@ const buildBliRequestContext = (context, unitScopeOptions, selectedUnitScopeKey)
   };
 };
 const normaliseCourseCode = (value) => String(value || "").trim();
+const buildAllocatedLmpCourseOptions = (syllabusDetails = []) => {
+  const options = /* @__PURE__ */ new Map();
+  syllabusDetails.filter((item) => item?.isActive !== false).filter((item) => String(item?.lmpType || "Master LMP") !== "Staff CAT").forEach((item) => {
+    (item.courses || []).forEach((course) => {
+      const key = normaliseCourseCode(course);
+      if (!key) return;
+      const normalisedKey = key.toUpperCase();
+      if (!options.has(normalisedKey)) {
+        options.set(normalisedKey, { key, label: key });
+      }
+    });
+  });
+  return [...options.values()];
+};
+const filterPassRatesToAllocatedLmps = (data, allocatedLmps) => {
+  const allowed = new Set(allocatedLmps.map((option) => option.key.toUpperCase()));
+  if (allowed.size === 0) return { lmpOptions: [], rows: [] };
+  const rows = data.rows.filter((row) => allowed.has(String(row.lmpType || "").trim().toUpperCase()));
+  const reportsByLmp = /* @__PURE__ */ new Map();
+  rows.forEach((row) => {
+    const key = String(row.lmpType || "").trim().toUpperCase();
+    const current = reportsByLmp.get(key) || { courseCount: 0, completedReports: 0 };
+    current.courseCount += 1;
+    current.completedReports += Number(row.total || 0);
+    reportsByLmp.set(key, current);
+  });
+  return {
+    lmpOptions: allocatedLmps.map((option) => {
+      const stats = reportsByLmp.get(option.key.toUpperCase()) || { courseCount: 0, completedReports: 0 };
+      return {
+        key: option.key,
+        label: option.label,
+        courseCount: stats.courseCount,
+        completedReports: stats.completedReports
+      };
+    }),
+    rows
+  };
+};
 const traineeMatchesBliUnit = (trainee, context, selectedUnitScopeKey = "combined") => {
   const selectedUnit = selectedUnitScopeKey.startsWith("unit:") ? normalizeUnitCode(selectedUnitScopeKey.slice(5)) : "";
   const contextUnit = normalizeUnitCode(context?.unitCode);
@@ -49495,7 +49534,7 @@ const MetricModal = ({ metric, onClose, date, events, currentAircraftAvailable, 
     }
   ) });
 };
-const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [] }) => {
+const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAvailable, totalAircraft, operationalContext, cancellationCodes = [], syllabusDetails = [] }) => {
   const [metrics, setMetrics] = reactExports.useState(() => buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft));
   const [loading, setLoading] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
@@ -49645,16 +49684,24 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
   }, [metrics.staffSeries, sortedStaff2]);
   const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
   const courseOutcomeData = reactExports.useMemo(() => summariseCourseOutcomes(traineesData, courseMovements, operationalContext, selectedUnitScopeKey, selectedCourseOutcomeCourse), [courseMovements, operationalContext, selectedCourseOutcomeCourse, selectedUnitScopeKey, traineesData]);
+  const allocatedLmpCourseOptions = reactExports.useMemo(
+    () => buildAllocatedLmpCourseOptions(syllabusDetails),
+    [syllabusDetails]
+  );
+  const scopedCoursePassRates = reactExports.useMemo(
+    () => filterPassRatesToAllocatedLmps(coursePassRates, allocatedLmpCourseOptions),
+    [allocatedLmpCourseOptions, coursePassRates]
+  );
   reactExports.useEffect(() => {
     if (courseOutcomeData.selectedCourse !== selectedCourseOutcomeCourse) {
       setSelectedCourseOutcomeCourse(courseOutcomeData.selectedCourse);
     }
   }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
   reactExports.useEffect(() => {
-    if (selectedPassRateLmp && !coursePassRates.lmpOptions.some((option) => option.key === selectedPassRateLmp)) {
+    if (selectedPassRateLmp && !scopedCoursePassRates.lmpOptions.some((option) => option.key === selectedPassRateLmp)) {
       setSelectedPassRateLmp("");
     }
-  }, [coursePassRates.lmpOptions, selectedPassRateLmp]);
+  }, [scopedCoursePassRates.lmpOptions, selectedPassRateLmp]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     openMetric && /* @__PURE__ */ jsxRuntimeExports.jsx(
       MetricModal,
@@ -49688,7 +49735,7 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
     coursePassRateOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
       CoursePassRateModal,
       {
-        data: coursePassRates,
+        data: scopedCoursePassRates,
         selectedLmp: selectedPassRateLmp,
         timeline: selectedPassRateTimeline,
         date,
@@ -49768,7 +49815,7 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         CoursePassRateTile,
         {
-          data: coursePassRates,
+          data: scopedCoursePassRates,
           selectedLmp: selectedPassRateLmp,
           timeline: selectedPassRateTimeline,
           date,
@@ -51981,7 +52028,8 @@ const BuildIntelligenceView = (props) => {
           currentAircraftAvailable: props.currentAircraftAvailable,
           totalAircraft: props.totalAircraft,
           operationalContext: props.operationalContext,
-          cancellationCodes: props.cancellationCodes
+          cancellationCodes: props.cancellationCodes,
+          syllabusDetails: props.syllabusDetails
         }
       )
     ] }) })
