@@ -1,6 +1,7 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
-import React, { useState, useEffect } from 'react';
-import { Trainee } from '../types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Course, Instructor, Trainee } from '../types';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface CourseEditFlyoutProps {
     courseName: string;
@@ -11,9 +12,13 @@ interface CourseEditFlyoutProps {
     onClose: () => void;
     onUpdateCourseNumber: (oldCourseNumber: string, newCourseNumber: string) => void;
     onUpdateCourseUnit: (courseNumber: string, newUnit: string) => void;
+    onUpdateCourseLeadership?: (courseNumber: string, leadership: { courseCommander: string; deputyCourseCommander: string }) => void | Promise<void>;
     onDeleteTrainee: (trainee: Trainee) => void;
     onBackcourseTrainee: (trainee: Trainee, newCourse: string) => void;
     courseColors: { [key: string]: string };
+    course?: Course;
+    instructorsData?: Instructor[];
+    personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
@@ -25,13 +30,19 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
     onClose,
     onUpdateCourseNumber,
     onUpdateCourseUnit,
+    onUpdateCourseLeadership,
     onDeleteTrainee,
     onBackcourseTrainee,
-    courseColors
+    courseColors,
+    course,
+    instructorsData = [],
+    personnelDisplaySettings
 }) => {
     const [newCourseNumber, setNewCourseNumber] = useState(courseName);
     const { isFrozen } = useSystemFreeze();
     const [newUnit, setNewUnit] = useState(courseUnit);
+    const [courseCommander, setCourseCommander] = useState(course?.courseCommander || '');
+    const [deputyCourseCommander, setDeputyCourseCommander] = useState(course?.deputyCourseCommander || '');
 
     // Log on mount and when key props change
     useEffect(() => {
@@ -41,29 +52,71 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
     useEffect(() => {
         setNewCourseNumber(courseName);
         setNewUnit(courseUnit);
-    }, [courseName, courseUnit]);
+        setCourseCommander(course?.courseCommander || '');
+        setDeputyCourseCommander(course?.deputyCourseCommander || '');
+    }, [courseName, courseUnit, course?.courseCommander, course?.deputyCourseCommander]);
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [targetCourse, setTargetCourse] = useState<string>('');
     const [showBackcourseConfirm, setShowBackcourseConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
 
+    const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
+    const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || 'Cse Commander';
+    const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || 'Deputy Cse Commander';
+
+    const sortedStaff = useMemo(() => {
+        return [...instructorsData]
+            .filter((staff) => String(staff?.name || '').trim())
+            .sort((a, b) => {
+                const unitCompare = String(a.unit || '').localeCompare(String(b.unit || ''), undefined, { numeric: true, sensitivity: 'base' });
+                if (unitCompare !== 0) return unitCompare;
+                return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
+            });
+    }, [instructorsData, personnelDisplaySettings]);
+
+    const leadershipChanged =
+        courseCommander !== (course?.courseCommander || '') ||
+        deputyCourseCommander !== (course?.deputyCourseCommander || '');
+
+    const updateHasChanges = (nextCourseNumber = newCourseNumber, nextUnit = newUnit, nextCommander = courseCommander, nextDeputy = deputyCourseCommander) => {
+        setHasChanges(
+            nextCourseNumber !== courseName ||
+            nextUnit !== courseUnit ||
+            nextCommander !== (course?.courseCommander || '') ||
+            nextDeputy !== (course?.deputyCourseCommander || '')
+        );
+    };
+
     const handleCourseNumberChange = (value: string) => {
         setNewCourseNumber(value);
-        setHasChanges(value !== courseName || newUnit !== courseUnit);
+        updateHasChanges(value, newUnit, courseCommander, deputyCourseCommander);
     };
 
     const handleUnitChange = (value: string) => {
         setNewUnit(value);
-        setHasChanges(newCourseNumber !== courseName || value !== courseUnit);
+        updateHasChanges(newCourseNumber, value, courseCommander, deputyCourseCommander);
     };
 
-    const handleSaveCourseDetails = () => {
+    const handleCourseCommanderChange = (value: string) => {
+        setCourseCommander(value);
+        updateHasChanges(newCourseNumber, newUnit, value, deputyCourseCommander);
+    };
+
+    const handleDeputyCourseCommanderChange = (value: string) => {
+        setDeputyCourseCommander(value);
+        updateHasChanges(newCourseNumber, newUnit, courseCommander, value);
+    };
+
+    const handleSaveCourseDetails = async () => {
         if (newCourseNumber !== courseName) {
             onUpdateCourseNumber(courseName, newCourseNumber);
         }
         if (newUnit !== courseUnit) {
             onUpdateCourseUnit(courseName, newUnit);
+        }
+        if (leadershipChanged && onUpdateCourseLeadership) {
+            await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
         }
         setHasChanges(false);
     };
@@ -149,6 +202,45 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                 </select>
                             </div>
                         </div>
+                        {courseLeadershipEnabled && (
+                            <div className="mt-4 rounded-lg border border-gray-700 bg-gray-900/70 p-4">
+                                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-cyan-100">Course Leadership</h4>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">{courseCommanderLabel}</label>
+                                        <select
+                                            value={courseCommander}
+                                            onChange={(e) => handleCourseCommanderChange(e.target.value)}
+                                            disabled={isFrozen}
+                                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
+                                        >
+                                            <option value="">Not assigned</option>
+                                            {sortedStaff.map((staff) => (
+                                                <option key={`${staff.id || staff.idNumber || staff.name}-commander`} value={staff.name}>
+                                                    {staff.unit ? `${staff.unit} - ` : ''}{staff.rank ? `${staff.rank} ` : ''}{staff.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">{deputyCourseCommanderLabel}</label>
+                                        <select
+                                            value={deputyCourseCommander}
+                                            onChange={(e) => handleDeputyCourseCommanderChange(e.target.value)}
+                                            disabled={isFrozen}
+                                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
+                                        >
+                                            <option value="">Not assigned</option>
+                                            {sortedStaff.map((staff) => (
+                                                <option key={`${staff.id || staff.idNumber || staff.name}-deputy`} value={staff.name}>
+                                                    {staff.unit ? `${staff.unit} - ` : ''}{staff.rank ? `${staff.rank} ` : ''}{staff.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         {hasChanges && (
                             <button
                                 onClick={handleSaveCourseDetails}

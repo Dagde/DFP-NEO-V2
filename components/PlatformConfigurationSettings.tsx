@@ -11051,6 +11051,56 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               info="Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             />
           </div>
+          <div id="platform-course-leadership-labels" className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-[220px] flex-1">
+                <h5 className="text-sm font-bold text-cyan-100">Course Leadership Labels</h5>
+                <p className="mt-1 max-w-3xl text-xs leading-relaxed text-cyan-50/75">
+                  Show course commander appointments on Trainee course cards and choose the local terms used for the two appointments.
+                </p>
+              </div>
+              <label className="flex min-w-[220px] items-center justify-between gap-3 rounded border border-cyan-400/20 bg-gray-950/60 px-3 py-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-cyan-100">Enabled</span>
+                <input
+                  type="checkbox"
+                  checked={personnelDisplaySettings.courseLeadershipEnabled}
+                  disabled={!canEditRankTerminology}
+                  onChange={(event) => updatePersonnelDisplaySettings({ courseLeadershipEnabled: event.target.checked })}
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className={`flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${
+                    personnelDisplaySettings.courseLeadershipEnabled
+                      ? 'border-cyan-400/60 bg-cyan-500/30'
+                      : 'border-gray-600 bg-gray-800'
+                  } ${canEditRankTerminology ? '' : 'opacity-50'}`}
+                >
+                  <span
+                    className={`h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${
+                      personnelDisplaySettings.courseLeadershipEnabled ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </span>
+              </label>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <DraftField
+                label="Course Commander Label"
+                value={personnelDisplaySettings.courseCommanderLabel}
+                disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
+                onCommit={(value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value })}
+                info="The first course leadership label shown directly under each course title on the Trainee page. Example: Cse Commander, Course Commander, Course Lead."
+              />
+              <DraftField
+                label="Deputy Course Commander Label"
+                value={personnelDisplaySettings.deputyCourseCommanderLabel}
+                disabled={!canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled}
+                onCommit={(value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value })}
+                info="The second course leadership label shown directly under each course title on the Trainee page. Example: Deputy Cse Commander, Deputy Course Commander, Course 2IC."
+              />
+            </div>
+          </div>
           <div className="rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-[220px] flex-1">

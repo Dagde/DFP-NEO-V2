@@ -10,6 +10,7 @@ import type { InsertLmpEventRequest } from './TraineeLmpView';
 import type { AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { PlatformConfig } from '../utils/platformConfigService';
+import type { Course } from '../types';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -52,6 +53,8 @@ interface TraineeViewProps {
   // Course edit callbacks
   onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
   onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
+  onUpdateCourseLeadership?: (courseNumber: string, leadership: { courseCommander: string; deputyCourseCommander: string }) => void | Promise<void>;
+  courses?: Course[];
   onBackcourseTrainee?: (trainee: any, newCourse: string) => void;
   masterCurrencies?: any[];
   currencyRequirements?: any[];
@@ -182,6 +185,8 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onOpenInstructorProfile={props.onOpenInstructorProfile}
             onUpdateCourseNumber={props.onUpdateCourseNumber}
             onUpdateCourseUnit={props.onUpdateCourseUnit}
+            onUpdateCourseLeadership={props.onUpdateCourseLeadership}
+            courses={props.courses}
             onBackcourseTrainee={props.onBackcourseTrainee}
             masterCurrencies={props.masterCurrencies}
             currencyRequirements={props.currencyRequirements}

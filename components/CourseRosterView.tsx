@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment, PhraseBank } from '../types';
+import { Course, Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment, PhraseBank } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -61,6 +61,8 @@ interface CourseRosterViewProps {
     // New callbacks for course editing
     onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
     onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
+    onUpdateCourseLeadership?: (courseNumber: string, leadership: { courseCommander: string; deputyCourseCommander: string }) => void | Promise<void>;
+    courses?: Course[];
     onBackcourseTrainee?: (trainee: Trainee, newCourse: string) => void;
     masterCurrencies?: MasterCurrency[];
     currencyRequirements?: CurrencyRequirement[];
@@ -161,6 +163,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onOpenInstructorProfile,
     onUpdateCourseNumber,
     onUpdateCourseUnit,
+    onUpdateCourseLeadership,
+    courses = [],
     onBackcourseTrainee,
     masterCurrencies = [],
     currencyRequirements = [],
@@ -289,6 +293,17 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
     const courseColorMap = view === 'active' ? courseColors : archivedCourses;
+    const courseRecordsByName = useMemo(() => {
+        const records = new Map<string, Course>();
+        courses.forEach((course) => {
+            const name = String(course?.name || '').trim();
+            if (name) records.set(name, course);
+        });
+        return records;
+    }, [courses]);
+    const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
+    const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || 'Cse Commander';
+    const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || 'Deputy Cse Commander';
 
     const handleConfirmRestore = (courseNumber: string) => {
         onRestoreCourse(courseNumber);
@@ -438,6 +453,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                 const pausedCount = courseTrainees.filter(t => t.isPaused && !isTraineeSuspended(t)).length;
 
                                 const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
+                                const courseRecord = courseRecordsByName.get(courseName);
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
                                         <div
@@ -446,8 +462,22 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                             style={isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {}}
                                         >
                                             <div>
-                                                <span>{courseName}</span>
-                                                {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
+                                                <div>
+                                                    <span>{courseName}</span>
+                                                    {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
+                                                </div>
+                                                {courseLeadershipEnabled && (
+                                                    <div className="mt-1 space-y-0.5 text-[11px] font-normal leading-tight text-white/85">
+                                                        <div>
+                                                            <span className="uppercase tracking-wide text-white/60">{courseCommanderLabel}: </span>
+                                                            <span>{courseRecord?.courseCommander || 'Not assigned'}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="uppercase tracking-wide text-white/60">{deputyCourseCommanderLabel}: </span>
+                                                            <span>{courseRecord?.deputyCourseCommander || 'Not assigned'}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {view === 'active' && (
@@ -618,9 +648,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 />
             )}
             {courseToEdit && (
-                <CourseEditFlyout
-                    courseName={courseToEdit}
-                    courseUnit={groupedTrainees[courseToEdit]?.[0]?.unit || ''}
+	                <CourseEditFlyout
+	                    courseName={courseToEdit}
+	                    course={courseRecordsByName.get(courseToEdit)}
+	                    courseUnit={groupedTrainees[courseToEdit]?.[0]?.unit || ''}
                     trainees={groupedTrainees[courseToEdit] || []}
                     availableCourses={activeCourseNumbers}
                     availableUnits={units}
@@ -631,13 +662,14 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         }
                         setCourseToEdit(null);
                     }}
-                    onUpdateCourseUnit={(courseNumber, newUnit) => {
-                        if (onUpdateCourseUnit) {
-                            onUpdateCourseUnit(courseNumber, newUnit);
-                        }
-                        setCourseToEdit(null);
-                    }}
-                    onDeleteTrainee={(trainee) => {
+	                    onUpdateCourseUnit={(courseNumber, newUnit) => {
+	                        if (onUpdateCourseUnit) {
+	                            onUpdateCourseUnit(courseNumber, newUnit);
+	                        }
+	                        setCourseToEdit(null);
+	                    }}
+	                    onUpdateCourseLeadership={onUpdateCourseLeadership}
+	                    onDeleteTrainee={(trainee) => {
                         onDeleteTrainee(trainee);
                     }}
                     onBackcourseTrainee={(trainee, newCourse) => {
@@ -645,9 +677,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             onBackcourseTrainee(trainee, newCourse);
                         }
                         setCourseToEdit(null);
-                    }}
-                    courseColors={courseColors}
-                />
+	                    }}
+	                    courseColors={courseColors}
+	                    instructorsData={instructorsData}
+	                    personnelDisplaySettings={personnelDisplaySettings}
+	                />
             )}
             {showBulkUpload && onBulkUpdateTrainees && onReplaceTrainees && (
                 <TraineeBulkUploadFlyout

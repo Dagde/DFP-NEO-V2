@@ -38,6 +38,9 @@ export interface PersonnelDisplaySettings {
   civilianTitles: string[];
   civilianContractorGroupName: string;
   instructorLabel: string;
+  courseLeadershipEnabled: boolean;
+  courseCommanderLabel: string;
+  deputyCourseCommanderLabel: string;
   simIpDisplayEnabled: boolean;
   simIpDisplayLabel: string;
   contractorStaffEventEligibility: {
@@ -330,6 +333,9 @@ export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: 'Civilian titles',
   instructorLabel: 'Instructor',
+  courseLeadershipEnabled: true,
+  courseCommanderLabel: 'Cse Commander',
+  deputyCourseCommanderLabel: 'Deputy Cse Commander',
   simIpDisplayEnabled: true,
   simIpDisplayLabel: 'Contractor Staff',
   contractorStaffEventEligibility: {
@@ -481,6 +487,9 @@ export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDispl
     civilianTitles,
     civilianContractorGroupName: preserveEditableTextSetting(input?.civilianContractorGroupName, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName),
     instructorLabel: preserveEditableTextSetting(input?.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel),
+    courseLeadershipEnabled: input?.courseLeadershipEnabled !== false,
+    courseCommanderLabel: preserveEditableTextSetting(input?.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel),
+    deputyCourseCommanderLabel: preserveEditableTextSetting(input?.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel),
     simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
     simIpDisplayLabel,
     contractorStaffEventEligibility: {

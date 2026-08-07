@@ -4062,6 +4062,9 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   civilianTitles: DEFAULT_CIVILIAN_TITLES,
   civilianContractorGroupName: "Civilian titles",
   instructorLabel: "Instructor",
+  courseLeadershipEnabled: true,
+  courseCommanderLabel: "Cse Commander",
+  deputyCourseCommanderLabel: "Deputy Cse Commander",
   simIpDisplayEnabled: true,
   simIpDisplayLabel: "Contractor Staff",
   contractorStaffEventEligibility: {
@@ -4171,6 +4174,9 @@ const normalisePersonnelDisplaySettings = (input) => {
     civilianTitles,
     civilianContractorGroupName: preserveEditableTextSetting(input?.civilianContractorGroupName, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.civilianContractorGroupName),
     instructorLabel: preserveEditableTextSetting(input?.instructorLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.instructorLabel),
+    courseLeadershipEnabled: input?.courseLeadershipEnabled !== false,
+    courseCommanderLabel: preserveEditableTextSetting(input?.courseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.courseCommanderLabel),
+    deputyCourseCommanderLabel: preserveEditableTextSetting(input?.deputyCourseCommanderLabel, DEFAULT_PERSONNEL_DISPLAY_SETTINGS.deputyCourseCommanderLabel),
     simIpDisplayEnabled: input?.simIpDisplayEnabled !== false,
     simIpDisplayLabel,
     contractorStaffEventEligibility: {
@@ -26238,38 +26244,73 @@ const CourseEditFlyout = ({
   onClose,
   onUpdateCourseNumber,
   onUpdateCourseUnit,
+  onUpdateCourseLeadership,
   onDeleteTrainee,
   onBackcourseTrainee,
-  courseColors
+  courseColors,
+  course,
+  instructorsData = [],
+  personnelDisplaySettings
 }) => {
   const [newCourseNumber, setNewCourseNumber] = reactExports.useState(courseName);
-  useSystemFreeze();
+  const { isFrozen } = useSystemFreeze();
   const [newUnit, setNewUnit] = reactExports.useState(courseUnit);
+  const [courseCommander, setCourseCommander] = reactExports.useState(course?.courseCommander || "");
+  const [deputyCourseCommander, setDeputyCourseCommander] = reactExports.useState(course?.deputyCourseCommander || "");
   reactExports.useEffect(() => {
   }, [courseName, courseUnit]);
   reactExports.useEffect(() => {
     setNewCourseNumber(courseName);
     setNewUnit(courseUnit);
-  }, [courseName, courseUnit]);
+    setCourseCommander(course?.courseCommander || "");
+    setDeputyCourseCommander(course?.deputyCourseCommander || "");
+  }, [courseName, courseUnit, course?.courseCommander, course?.deputyCourseCommander]);
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const [targetCourse, setTargetCourse] = reactExports.useState("");
   const [showBackcourseConfirm, setShowBackcourseConfirm] = reactExports.useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(false);
   const [hasChanges, setHasChanges] = reactExports.useState(false);
+  const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
+  const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || "Cse Commander";
+  const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
+  const sortedStaff2 = reactExports.useMemo(() => {
+    return [...instructorsData].filter((staff) => String(staff?.name || "").trim()).sort((a, b) => {
+      const unitCompare = String(a.unit || "").localeCompare(String(b.unit || ""), void 0, { numeric: true, sensitivity: "base" });
+      if (unitCompare !== 0) return unitCompare;
+      return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff");
+    });
+  }, [instructorsData, personnelDisplaySettings]);
+  const leadershipChanged = courseCommander !== (course?.courseCommander || "") || deputyCourseCommander !== (course?.deputyCourseCommander || "");
+  const updateHasChanges = (nextCourseNumber = newCourseNumber, nextUnit = newUnit, nextCommander = courseCommander, nextDeputy = deputyCourseCommander) => {
+    setHasChanges(
+      nextCourseNumber !== courseName || nextUnit !== courseUnit || nextCommander !== (course?.courseCommander || "") || nextDeputy !== (course?.deputyCourseCommander || "")
+    );
+  };
   const handleCourseNumberChange = (value) => {
     setNewCourseNumber(value);
-    setHasChanges(value !== courseName || newUnit !== courseUnit);
+    updateHasChanges(value, newUnit, courseCommander, deputyCourseCommander);
   };
   const handleUnitChange = (value) => {
     setNewUnit(value);
-    setHasChanges(newCourseNumber !== courseName || value !== courseUnit);
+    updateHasChanges(newCourseNumber, value, courseCommander, deputyCourseCommander);
   };
-  const handleSaveCourseDetails = () => {
+  const handleCourseCommanderChange = (value) => {
+    setCourseCommander(value);
+    updateHasChanges(newCourseNumber, newUnit, value, deputyCourseCommander);
+  };
+  const handleDeputyCourseCommanderChange = (value) => {
+    setDeputyCourseCommander(value);
+    updateHasChanges(newCourseNumber, newUnit, courseCommander, value);
+  };
+  const handleSaveCourseDetails = async () => {
     if (newCourseNumber !== courseName) {
       onUpdateCourseNumber(courseName, newCourseNumber);
     }
     if (newUnit !== courseUnit) {
       onUpdateCourseUnit(courseName, newUnit);
+    }
+    if (leadershipChanged && onUpdateCourseLeadership) {
+      await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
     }
     setHasChanges(false);
   };
@@ -26350,6 +26391,51 @@ const CourseEditFlyout = ({
                       children: availableUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: unit, children: unit }, unit))
                     }
                   )
+                ] })
+              ] }),
+              courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-gray-700 bg-gray-900/70 p-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "mb-3 text-xs font-semibold uppercase tracking-wide text-cyan-100", children: "Course Leadership" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: courseCommanderLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: courseCommander,
+                        onChange: (e) => handleCourseCommanderChange(e.target.value),
+                        disabled: isFrozen,
+                        className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not assigned" }),
+                          sortedStaff2.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
+                            staff.unit ? `${staff.unit} - ` : "",
+                            staff.rank ? `${staff.rank} ` : "",
+                            staff.name
+                          ] }, `${staff.id || staff.idNumber || staff.name}-commander`))
+                        ]
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: deputyCourseCommanderLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "select",
+                      {
+                        value: deputyCourseCommander,
+                        onChange: (e) => handleDeputyCourseCommanderChange(e.target.value),
+                        disabled: isFrozen,
+                        className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not assigned" }),
+                          sortedStaff2.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
+                            staff.unit ? `${staff.unit} - ` : "",
+                            staff.rank ? `${staff.rank} ` : "",
+                            staff.name
+                          ] }, `${staff.id || staff.idNumber || staff.name}-deputy`))
+                        ]
+                      }
+                    )
+                  ] })
                 ] })
               ] }),
               hasChanges && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -26434,7 +26520,7 @@ const CourseEditFlyout = ({
               className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white mb-4 focus:outline-none focus:ring-2 focus:ring-amber-500",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select target course..." }),
-                availableCourses.filter((c) => c !== courseName).map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course)),
+                availableCourses.filter((c) => c !== courseName).map((course2) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course2, children: course2 }, course2)),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "__NEW__", children: "+ Create New Course" })
               ]
             }
@@ -27080,6 +27166,8 @@ const CourseRosterView = ({
   onOpenInstructorProfile,
   onUpdateCourseNumber,
   onUpdateCourseUnit,
+  onUpdateCourseLeadership,
+  courses = [],
   onBackcourseTrainee,
   masterCurrencies = [],
   currencyRequirements = [],
@@ -27179,6 +27267,17 @@ const CourseRosterView = ({
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
   const coursesToDisplay = view2 === "active" ? activeCourseNumbers : archivedCourseNumbers;
   const courseColorMap = view2 === "active" ? courseColors : archivedCourses;
+  const courseRecordsByName = reactExports.useMemo(() => {
+    const records = /* @__PURE__ */ new Map();
+    courses.forEach((course) => {
+      const name = String(course?.name || "").trim();
+      if (name) records.set(name, course);
+    });
+    return records;
+  }, [courses]);
+  const courseLeadershipEnabled = personnelDisplaySettings?.courseLeadershipEnabled !== false;
+  const courseCommanderLabel = personnelDisplaySettings?.courseCommanderLabel?.trim() || "Cse Commander";
+  const deputyCourseCommanderLabel = personnelDisplaySettings?.deputyCourseCommanderLabel?.trim() || "Deputy Cse Commander";
   const handleConfirmRestore = (courseNumber) => {
     onRestoreCourse(courseNumber);
     setCourseToRestore(null);
@@ -27293,6 +27392,7 @@ const CourseRosterView = ({
         const suspendedCount = courseTrainees.filter((t) => isTraineeSuspended(t)).length;
         const pausedCount = courseTrainees.filter((t) => t.isPaused && !isTraineeSuspended(t)).length;
         const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
+        const courseRecord = courseRecordsByName.get(courseName);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
@@ -27302,8 +27402,26 @@ const CourseRosterView = ({
               style: isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {},
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseName }),
-                  courseTrainees.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit })
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseName }),
+                    courseTrainees.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit })
+                  ] }),
+                  courseLeadershipEnabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 space-y-0.5 text-[11px] font-normal leading-tight text-white/85", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "uppercase tracking-wide text-white/60", children: [
+                        courseCommanderLabel,
+                        ": "
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseRecord?.courseCommander || "Not assigned" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "uppercase tracking-wide text-white/60", children: [
+                        deputyCourseCommanderLabel,
+                        ": "
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseRecord?.deputyCourseCommander || "Not assigned" })
+                    ] })
+                  ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                   view2 === "active" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27474,6 +27592,7 @@ const CourseRosterView = ({
       CourseEditFlyout,
       {
         courseName: courseToEdit,
+        course: courseRecordsByName.get(courseToEdit),
         courseUnit: groupedTrainees[courseToEdit]?.[0]?.unit || "",
         trainees: groupedTrainees[courseToEdit] || [],
         availableCourses: activeCourseNumbers,
@@ -27491,6 +27610,7 @@ const CourseRosterView = ({
           }
           setCourseToEdit(null);
         },
+        onUpdateCourseLeadership,
         onDeleteTrainee: (trainee) => {
           onDeleteTrainee(trainee);
         },
@@ -27500,7 +27620,9 @@ const CourseRosterView = ({
           }
           setCourseToEdit(null);
         },
-        courseColors
+        courseColors,
+        instructorsData,
+        personnelDisplaySettings
       }
     ),
     showBulkUpload && onBulkUpdateTrainees && onReplaceTrainees && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -56069,6 +56191,8 @@ const TraineeView = (props) => {
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
           onUpdateCourseUnit: props.onUpdateCourseUnit,
+          onUpdateCourseLeadership: props.onUpdateCourseLeadership,
+          courses: props.courses,
           onBackcourseTrainee: props.onBackcourseTrainee,
           masterCurrencies: props.masterCurrencies,
           currencyRequirements: props.currencyRequirements,
@@ -76693,6 +76817,62 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               info: "Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             }
           )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { id: "platform-course-leadership-labels", className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-[220px] flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Course Leadership Labels" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs leading-relaxed text-cyan-50/75", children: "Show course commander appointments on Trainee course cards and choose the local terms used for the two appointments." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex min-w-[220px] items-center justify-between gap-3 rounded border border-cyan-400/20 bg-gray-950/60 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wider text-cyan-100", children: "Enabled" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: personnelDisplaySettings.courseLeadershipEnabled,
+                  disabled: !canEditRankTerminology,
+                  onChange: (event) => updatePersonnelDisplaySettings({ courseLeadershipEnabled: event.target.checked }),
+                  className: "peer sr-only"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  "aria-hidden": "true",
+                  className: `flex h-5 w-9 shrink-0 items-center rounded-full border px-0.5 transition ${personnelDisplaySettings.courseLeadershipEnabled ? "border-cyan-400/60 bg-cyan-500/30" : "border-gray-600 bg-gray-800"} ${canEditRankTerminology ? "" : "opacity-50"}`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "span",
+                    {
+                      className: `h-3.5 w-3.5 rounded-full bg-gray-100 shadow transition ${personnelDisplaySettings.courseLeadershipEnabled ? "translate-x-4" : "translate-x-0"}`
+                    }
+                  )
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid gap-3 lg:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              DraftField,
+              {
+                label: "Course Commander Label",
+                value: personnelDisplaySettings.courseCommanderLabel,
+                disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
+                onCommit: (value) => updatePersonnelDisplaySettings({ courseCommanderLabel: value }),
+                info: "The first course leadership label shown directly under each course title on the Trainee page. Example: Cse Commander, Course Commander, Course Lead."
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              DraftField,
+              {
+                label: "Deputy Course Commander Label",
+                value: personnelDisplaySettings.deputyCourseCommanderLabel,
+                disabled: !canEditRankTerminology || !personnelDisplaySettings.courseLeadershipEnabled,
+                onCommit: (value) => updatePersonnelDisplaySettings({ deputyCourseCommanderLabel: value }),
+                info: "The second course leadership label shown directly under each course title on the Trainee page. Example: Deputy Cse Commander, Deputy Course Commander, Course 2IC."
+              }
+            )
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-400/25 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
@@ -116182,6 +116362,51 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage("Failed to save changes to database");
     }
   };
+  const handleUpdateCourseLeadership = async (courseName, leadership) => {
+    const trimmedCommander = String(leadership.courseCommander || "").trim();
+    const trimmedDeputy = String(leadership.deputyCourseCommander || "").trim();
+    setCourses(
+      (prevCourses) => prevCourses.map(
+        (course) => course.name === courseName ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy } : course
+      )
+    );
+    const existingCourse = courses.find((course) => course.name === courseName);
+    const firstTraineeInCourse = traineesData.find((trainee) => trainee.course === courseName);
+    const courseToSave = {
+      name: courseName,
+      color: existingCourse?.color || courseColors[courseName] || "#6366f1",
+      startDate: existingCourse?.startDate || "",
+      gradDate: existingCourse?.gradDate || "",
+      raafStart: existingCourse?.raafStart || 0,
+      navyStart: existingCourse?.navyStart || 0,
+      armyStart: existingCourse?.armyStart || 0,
+      location: existingCourse?.location || firstTraineeInCourse?.location || activeLocationDisplayName,
+      unit: existingCourse?.unit || firstTraineeInCourse?.unit || activeUnitCode || "",
+      lmpType: existingCourse?.lmpType || "",
+      academicLmpType: existingCourse?.academicLmpType || "",
+      status: existingCourse?.status || "ACTIVE",
+      courseCommander: trimmedCommander,
+      deputyCourseCommander: trimmedDeputy
+    };
+    try {
+      const result = await saveCourse(courseToSave);
+      if (result.success) {
+        logAudit({
+          page: "Trainee Roster",
+          action: "edit",
+          description: "Course leadership updated",
+          changes: `${courseName}: ${personnelDisplaySettings.courseCommanderLabel || "Cse Commander"} ${trimmedCommander || "Not assigned"}, ${personnelDisplaySettings.deputyCourseCommanderLabel || "Deputy Cse Commander"} ${trimmedDeputy || "Not assigned"}`
+        });
+        setSuccessMessage(`Course leadership updated for ${courseName}.`);
+      } else {
+        console.error("[CourseEdit] Failed to update course leadership in DB:", result.error);
+        setErrorMessage("Failed to save course leadership to database");
+      }
+    } catch (error) {
+      console.error("[CourseEdit] Error updating course leadership:", error);
+      setErrorMessage("Failed to save course leadership to database");
+    }
+  };
   const handleUnarchiveCourseFromArchivedView = async (courseName) => {
     const color = archivedCourses[courseName];
     if (!color) return;
@@ -124768,6 +124993,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             events,
             traineesData,
             courseColors: scopedCourseColors,
+            courses,
             archivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
@@ -124874,6 +125100,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 changes: `${courseNumber} unit changed to ${newUnit}`
               });
             },
+            onUpdateCourseLeadership: handleUpdateCourseLeadership,
             onBackcourseTrainee: (trainee, newCourse) => {
               void handleMoveTraineeBetweenCourses(trainee, newCourse);
             },
@@ -124914,6 +125141,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             events,
             traineesData,
             courseColors: scopedCourseColors,
+            courses,
             archivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
@@ -125018,6 +125246,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 changes: `${courseNumber} unit changed to ${newUnit}`
               });
             },
+            onUpdateCourseLeadership: handleUpdateCourseLeadership,
             onBackcourseTrainee: (trainee, newCourse) => {
               void handleMoveTraineeBetweenCourses(trainee, newCourse);
             },

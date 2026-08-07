@@ -32784,6 +32784,59 @@ const App: React.FC = () => {
         }
     };
 
+    const handleUpdateCourseLeadership = async (
+        courseName: string,
+        leadership: { courseCommander: string; deputyCourseCommander: string }
+    ) => {
+        const trimmedCommander = String(leadership.courseCommander || '').trim();
+        const trimmedDeputy = String(leadership.deputyCourseCommander || '').trim();
+        setCourses(prevCourses =>
+            prevCourses.map(course =>
+                course.name === courseName
+                    ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy }
+                    : course
+            )
+        );
+
+        const existingCourse = courses.find(course => course.name === courseName);
+        const firstTraineeInCourse = traineesData.find(trainee => trainee.course === courseName);
+        const courseToSave: Course = {
+            name: courseName,
+            color: existingCourse?.color || courseColors[courseName] || '#6366f1',
+            startDate: existingCourse?.startDate || '',
+            gradDate: existingCourse?.gradDate || '',
+            raafStart: existingCourse?.raafStart || 0,
+            navyStart: existingCourse?.navyStart || 0,
+            armyStart: existingCourse?.armyStart || 0,
+            location: existingCourse?.location || firstTraineeInCourse?.location || activeLocationDisplayName,
+            unit: existingCourse?.unit || firstTraineeInCourse?.unit || activeUnitCode || '',
+            lmpType: existingCourse?.lmpType || '',
+            academicLmpType: existingCourse?.academicLmpType || '',
+            status: existingCourse?.status || 'ACTIVE',
+            courseCommander: trimmedCommander,
+            deputyCourseCommander: trimmedDeputy,
+        };
+
+        try {
+            const result = await saveCourseToDB(courseToSave);
+            if (result.success) {
+                logAudit({
+                    page: 'Trainee Roster',
+                    action: 'edit',
+                    description: 'Course leadership updated',
+                    changes: `${courseName}: ${personnelDisplaySettings.courseCommanderLabel || 'Cse Commander'} ${trimmedCommander || 'Not assigned'}, ${personnelDisplaySettings.deputyCourseCommanderLabel || 'Deputy Cse Commander'} ${trimmedDeputy || 'Not assigned'}`
+                });
+                setSuccessMessage(`Course leadership updated for ${courseName}.`);
+            } else {
+                console.error('[CourseEdit] Failed to update course leadership in DB:', result.error);
+                setErrorMessage('Failed to save course leadership to database');
+            }
+        } catch (error) {
+            console.error('[CourseEdit] Error updating course leadership:', error);
+            setErrorMessage('Failed to save course leadership to database');
+        }
+    };
+
     const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
         const color = archivedCourses[courseName];
         if (!color) return;
@@ -43253,6 +43306,7 @@ appliedUpdates.forEach(update => {
                             events={events}
                             traineesData={traineesData}
                             courseColors={scopedCourseColors}
+                            courses={courses}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
@@ -43365,6 +43419,7 @@ appliedUpdates.forEach(update => {
                                     changes: `${courseNumber} unit changed to ${newUnit}`
                                 });
                             }}
+                            onUpdateCourseLeadership={handleUpdateCourseLeadership}
                             onBackcourseTrainee={(trainee, newCourse) => {
                                 void handleMoveTraineeBetweenCourses(trainee, newCourse);
                             }}
@@ -43402,6 +43457,7 @@ appliedUpdates.forEach(update => {
                             events={events}
                             traineesData={traineesData}
                             courseColors={scopedCourseColors}
+                            courses={courses}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
@@ -43517,6 +43573,7 @@ appliedUpdates.forEach(update => {
                                     changes: `${courseNumber} unit changed to ${newUnit}`
                                 });
                             }}
+                            onUpdateCourseLeadership={handleUpdateCourseLeadership}
                             onBackcourseTrainee={(trainee, newCourse) => {
                                 void handleMoveTraineeBetweenCourses(trainee, newCourse);
                             }}

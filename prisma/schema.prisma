@@ -256,6 +256,8 @@ model Course {
   unit          String
   lmpType       String?
   academicLmpType String?
+  courseCommander String?
+  deputyCourseCommander String?
   status        String   @default("ACTIVE")
   color         String?
   createdAt     DateTime @default(now())

@@ -454,6 +454,7 @@ async function runPrismaRuntimeMaintenance(db) {
     // Ensure Course.lmpType column exists (migration for existing DBs)
     await ensureCourseLmpTypeColumn(db);
     await ensureAcademicLmpTypeColumns(db);
+    await ensureCourseLeadershipColumns(db);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(db);
     // Migrate CPT event durations to 1.0 hour
@@ -3441,6 +3442,7 @@ app.post('/api/currencies', async (req, res) => {
 app.get('/api/courses', async (req, res) => {
   try {
     const db = await getPrisma();
+    await ensureCourseLeadershipColumns(db);
     const scopedWhere = await buildScopedEntityWhere(req, db);
     const courses = await db.course.findMany({
       where: scopedWhere,
@@ -3479,6 +3481,8 @@ app.get('/api/courses', async (req, res) => {
       unit: c.unit || '',
       lmpType: c.lmpType || '',
       academicLmpType: c.academicLmpType || '',
+      courseCommander: c.courseCommander || '',
+      deputyCourseCommander: c.deputyCourseCommander || '',
       code: c.code || c.name,
     }));
     res.json({ courses: mapped });
@@ -3494,7 +3498,8 @@ app.post('/api/courses', async (req, res) => {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const db = context.db;
-    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, status } = req.body;
+    await ensureCourseLeadershipColumns(db);
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, courseCommander, deputyCourseCommander, status } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const course = await db.course.upsert({
       where: { code: name },
@@ -3509,6 +3514,8 @@ app.post('/api/courses', async (req, res) => {
         unit: unit || '',
         lmpType: lmpType || '',
         academicLmpType: academicLmpType || '',
+        courseCommander: courseCommander || '',
+        deputyCourseCommander: deputyCourseCommander || '',
         status: status || 'ACTIVE',
         updatedAt: new Date(),
       },
@@ -3525,6 +3532,8 @@ app.post('/api/courses', async (req, res) => {
         unit: unit || '',
         lmpType: lmpType || '',
         academicLmpType: academicLmpType || '',
+        courseCommander: courseCommander || '',
+        deputyCourseCommander: deputyCourseCommander || '',
         status: status || 'ACTIVE',
       },
     });
@@ -9346,6 +9355,20 @@ async function ensureAcademicLmpTypeColumns(db) {
     console.log('✅ Course.academicLmpType column ready');
   } catch (err) {
     console.error('❌ Failed to ensure Course.academicLmpType column:', err.message);
+  }
+}
+
+async function ensureCourseLeadershipColumns(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "courseCommander" TEXT;
+    `);
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "deputyCourseCommander" TEXT;
+    `);
+    console.log('✅ Course leadership columns ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course leadership columns:', err.message);
   }
 }
 

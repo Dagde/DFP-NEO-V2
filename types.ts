@@ -132,6 +132,8 @@ export interface Course {
   unit?: string;
   lmpType?: string;         // determines which syllabus events populate the Individual LMP (NEO Build)
   academicLmpType?: string; // determines which Academics events populate the Academic LMP tab
+  courseCommander?: string;
+  deputyCourseCommander?: string;
   status?: string;
 }
 
