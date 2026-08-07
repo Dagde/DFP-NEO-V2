@@ -48391,6 +48391,35 @@ const buildCourseOutcomeMetrics = (selectedCourse, trainees, movements) => {
     { key: "remaining", label: "Remaining on course", current: remaining, historicalAverage: historicalAverage("remaining") }
   ];
 };
+const COURSE_OUTCOME_STACK_KEYS = ["failed", "paused", "backCoursed", "forwardCoursed", "remaining"];
+const courseOutcomeStyle = (key) => {
+  switch (key) {
+    case "failed":
+      return { dot: "bg-rose-400", bg: "#fb7185", text: "text-rose-200" };
+    case "paused":
+      return { dot: "bg-amber-400", bg: "#fbbf24", text: "text-amber-200" };
+    case "backCoursed":
+      return { dot: "bg-violet-400", bg: "#a78bfa", text: "text-violet-200" };
+    case "forwardCoursed":
+      return { dot: "bg-sky-400", bg: "#38bdf8", text: "text-sky-200" };
+    case "remaining":
+      return { dot: "bg-emerald-400", bg: "#34d399", text: "text-emerald-200" };
+    case "started":
+    default:
+      return { dot: "bg-cyan-400", bg: "#22d3ee", text: "text-cyan-200" };
+  }
+};
+const summariseCourseOutcomes = (traineesData, movements, operationalContext, selectedUnitScopeKey, selectedCourse) => {
+  const scopedTrainees = traineesData.filter((trainee) => traineeMatchesBliUnit(trainee, operationalContext, selectedUnitScopeKey));
+  const scopedMovements = movements.filter((movement) => courseMovementMatchesBliUnit(movement, operationalContext, selectedUnitScopeKey));
+  const courses = Array.from(new Set([
+    ...scopedTrainees.map((trainee) => normaliseCourseCode(trainee.course)),
+    ...scopedMovements.map((movement) => normaliseCourseCode(movement.fromCourse))
+  ].filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true }));
+  const activeCourse = courses.includes(selectedCourse) ? selectedCourse : courses[0] || "";
+  const rows = activeCourse ? buildCourseOutcomeMetrics(activeCourse, scopedTrainees, scopedMovements) : [];
+  return { courses, selectedCourse: activeCourse, rows };
+};
 const buildMetricDefinitions = (metrics, date, events, currentAircraftAvailable, totalAircraft, selectedStaff) => {
   const dates = metrics.dates.length > 0 ? metrics.dates : [date];
   const fallback = buildFallbackMetrics(date, events, currentAircraftAvailable, totalAircraft);
@@ -48840,82 +48869,173 @@ const MetricTile = ({ metric, onOpen, cancellationCategories }) => {
     }
   );
 };
-const CourseOutcomeComparison = ({ traineesData, movements, operationalContext, selectedUnitScopeKey }) => {
-  const scopedTrainees = reactExports.useMemo(
-    () => traineesData.filter((trainee) => traineeMatchesBliUnit(trainee, operationalContext, selectedUnitScopeKey)),
-    [operationalContext, selectedUnitScopeKey, traineesData]
-  );
-  const scopedMovements = reactExports.useMemo(
-    () => movements.filter((movement) => courseMovementMatchesBliUnit(movement, operationalContext, selectedUnitScopeKey)),
-    [movements, operationalContext, selectedUnitScopeKey]
-  );
-  const courses = reactExports.useMemo(() => Array.from(new Set([
-    ...scopedTrainees.map((trainee) => normaliseCourseCode(trainee.course)),
-    ...scopedMovements.map((movement) => normaliseCourseCode(movement.fromCourse))
-  ].filter(Boolean))).sort((a, b) => a.localeCompare(b, void 0, { numeric: true })), [scopedMovements, scopedTrainees]);
-  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
-  reactExports.useEffect(() => {
-    if (courses.length === 0) {
-      setSelectedCourse("");
-      return;
-    }
-    if (!courses.includes(selectedCourse)) setSelectedCourse(courses[0]);
-  }, [courses, selectedCourse]);
-  const rows = reactExports.useMemo(() => selectedCourse ? buildCourseOutcomeMetrics(selectedCourse, scopedTrainees, scopedMovements) : [], [scopedMovements, scopedTrainees, selectedCourse]);
-  const axis = niceAxisRange$1(rows.flatMap((row) => [row.current, row.historicalAverage]), 5);
-  const max = Math.max(1, axis.max);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 shadow-[0_10px_26px_rgba(0,0,0,0.22)]", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-3", children: [
+const CourseOutcomeStackedBars = ({ rows }) => {
+  const started = rows.find((row) => row.key === "started");
+  const currentTotal = Math.max(1, Number(started?.current || 0));
+  const historicalTotal = Math.max(1, Number(started?.historicalAverage || 0));
+  const stackRows = COURSE_OUTCOME_STACK_KEYS.map((key) => rows.find((row) => row.key === key)).filter((row) => Boolean(row));
+  const renderStack = (kind) => {
+    const total = kind === "current" ? currentTotal : historicalTotal;
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-12 overflow-hidden rounded-md border border-slate-700/90 bg-slate-950/70", children: stackRows.map((row) => {
+      const value = Number(row[kind] || 0);
+      if (value <= 0) return null;
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "h-full min-w-[3px]",
+          style: {
+            width: `${Math.max(2, value / total * 100)}%`,
+            backgroundColor: courseOutcomeStyle(row.key).bg
+          },
+          title: `${row.label}: ${compactNumber(value, kind === "current" ? 0 : 1)}`
+        },
+        `${kind}-${row.key}`
+      );
+    }) });
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "Course Outcomes" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mt-1 text-lg font-bold text-white", children: "Course status comparison" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-xs leading-5 text-slate-400", children: "Current course counts are compared with historical course averages, normalised to the selected course intake size. Course movement history is captured from new back-course and forward-course actions." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between text-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold uppercase tracking-[0.16em] text-slate-400", children: "Selected course" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-bold text-cyan-200", children: [
+            compactNumber(currentTotal, 0),
+            " started"
+          ] })
+        ] }),
+        renderStack("current")
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Course" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "select",
-          {
-            value: selectedCourse,
-            onChange: (event) => setSelectedCourse(event.target.value),
-            className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
-            children: courses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
-          }
-        )
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between text-xs", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold uppercase tracking-[0.16em] text-slate-400", children: "Historical average" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-bold text-slate-200", children: [
+            compactNumber(historicalTotal, 1),
+            " started average"
+          ] })
+        ] }),
+        renderStack("historicalAverage")
       ] })
     ] }),
-    rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 rounded-md border border-slate-800 bg-slate-950/50 px-4 py-8 text-center text-sm text-slate-500", children: "No course roster data is available for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 space-y-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-end gap-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-cyan-400" }),
-          "Selected course"
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3", children: rows.map((row) => {
+      const style = courseOutcomeStyle(row.key);
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-slate-700/80 bg-slate-900/75 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${style.dot}` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500", children: row.label })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2 w-5 rounded bg-slate-500" }),
-          "Historical average"
-        ] })
-      ] }),
-      rows.map((row) => {
-        const currentPct = Math.max(0, Math.min(100, row.current / max * 100));
-        const historicalPct = Math.max(0, Math.min(100, row.historicalAverage / max * 100));
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[170px_minmax(0,1fr)_76px] items-center gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-slate-200", children: row.label }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 rounded bg-slate-950 ring-1 ring-slate-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded bg-cyan-400", style: { width: `${currentPct}%` } }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-3 rounded bg-slate-950 ring-1 ring-slate-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full rounded bg-slate-500", style: { width: `${historicalPct}%` } }) })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `text-xl font-bold ${style.text}`, children: compactNumber(row.current, 0) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-slate-500", children: "selected" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right text-xs text-slate-400", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-white", children: compactNumber(row.current, 0) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              compactNumber(row.historicalAverage, 1),
-              " avg"
-            ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl font-bold text-slate-200", children: compactNumber(row.historicalAverage, 1) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-slate-500", children: "historical avg" })
           ] })
-        ] }, row.key);
-      })
-    ] })
+        ] })
+      ] }, row.key);
+    }) })
   ] });
 };
+const CourseOutcomePreview = ({ rows }) => {
+  const started = rows.find((row) => row.key === "started");
+  const total = Math.max(1, Number(started?.current || 0));
+  const stackRows = COURSE_OUTCOME_STACK_KEYS.map((key) => rows.find((row) => row.key === key)).filter((row) => Boolean(row));
+  if (rows.length === 0) return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "No course roster data available" });
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-4 overflow-hidden rounded bg-slate-950 ring-1 ring-slate-800", children: stackRows.map((row) => {
+      const value = Number(row.current || 0);
+      if (value <= 0) return null;
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: "h-full min-w-[3px]",
+          style: { width: `${Math.max(3, value / total * 100)}%`, backgroundColor: courseOutcomeStyle(row.key).bg }
+        },
+        row.key
+      );
+    }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-x-3 gap-y-1", children: stackRows.slice(0, 4).map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 text-[10px] text-slate-400", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: row.label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: courseOutcomeStyle(row.key).text, children: compactNumber(row.current, 0) })
+    ] }, row.key)) })
+  ] });
+};
+const CourseOutcomeTile = ({ data, onOpen }) => {
+  const started = data.rows.find((row) => row.key === "started");
+  const remaining = data.rows.find((row) => row.key === "remaining");
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "button",
+    {
+      onClick: onOpen,
+      className: "group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$9, { className: "h-8 w-8" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$a, { className: "h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Course status comparison" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 min-h-[34px] text-xs leading-5 text-slate-400", children: [
+            "Stacked outcome view for ",
+            data.selectedCourse || "the selected course",
+            " against normalised historical course averages."
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-2xl font-bold tracking-normal text-white", children: compactNumber(remaining?.current || 0, 0) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-slate-500", children: [
+          "remaining of ",
+          compactNumber(started?.current || 0, 0),
+          " started"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CourseOutcomePreview, { rows: data.rows }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500", children: [
+          compactNumber(data.courses.length, 0),
+          " courses in scope"
+        ] })
+      ]
+    }
+  );
+};
+const CourseOutcomeModal = ({ data, selectedCourse, onCourseChange, onClose }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  "div",
+  {
+    className: "max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl",
+    onMouseDown: (event) => event.stopPropagation(),
+    children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5 flex flex-wrap items-start justify-between gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Course status comparison" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-slate-400", children: "Selected course outcomes are shown as a stacked bar and compared with historical course averages normalised to the selected course intake size." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-end gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "Course" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "select",
+              {
+                value: selectedCourse,
+                onChange: (event) => onCourseChange(event.target.value),
+                className: "h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
+                children: data.courses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: onClose,
+              className: "h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white",
+              children: "Close"
+            }
+          )
+        ] })
+      ] }),
+      data.rows.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-sm text-slate-400", children: "No course roster data is available for this unit." }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CourseOutcomeStackedBars, { rows: data.rows })
+    ]
+  }
+) });
 const BliPeriodWindow = ({ title, periodKey, boundary, isEditing, draft, onDraftChange, onRequestEdit, onSave, onCancel }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${isEditing ? "min-w-[220px]" : "min-w-[128px]"} rounded border border-slate-700/70 bg-slate-950/55 p-2 shadow-sm`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -49101,6 +49221,8 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
   const [courseMovements, setCourseMovements] = reactExports.useState([]);
   const [courseMovementError, setCourseMovementError] = reactExports.useState(null);
   const [openMetric, setOpenMetric] = reactExports.useState(null);
+  const [courseOutcomeOpen, setCourseOutcomeOpen] = reactExports.useState(false);
+  const [selectedCourseOutcomeCourse, setSelectedCourseOutcomeCourse] = reactExports.useState("");
   const [periodSettings, setPeriodSettings] = reactExports.useState(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = reactExports.useState(null);
   const [periodDraft, setPeriodDraft] = reactExports.useState(() => loadBliPeriodSettings());
@@ -49225,6 +49347,12 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
     return activeStaff?.name || sortedStaff2[0]?.name || "";
   }, [metrics.staffSeries, sortedStaff2]);
   const metricsList = reactExports.useMemo(() => buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
+  const courseOutcomeData = reactExports.useMemo(() => summariseCourseOutcomes(traineesData, courseMovements, operationalContext, selectedUnitScopeKey, selectedCourseOutcomeCourse), [courseMovements, operationalContext, selectedCourseOutcomeCourse, selectedUnitScopeKey, traineesData]);
+  reactExports.useEffect(() => {
+    if (courseOutcomeData.selectedCourse !== selectedCourseOutcomeCourse) {
+      setSelectedCourseOutcomeCourse(courseOutcomeData.selectedCourse);
+    }
+  }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     openMetric && /* @__PURE__ */ jsxRuntimeExports.jsx(
       MetricModal,
@@ -49244,6 +49372,15 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
         onUnitScopeChange: setSelectedUnitScopeKey,
         operationalContext,
         cancellationCodes
+      }
+    ),
+    courseOutcomeOpen && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CourseOutcomeModal,
+      {
+        data: courseOutcomeData,
+        selectedCourse: courseOutcomeData.selectedCourse,
+        onCourseChange: setSelectedCourseOutcomeCourse,
+        onClose: () => setCourseOutcomeOpen(false)
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative rounded-lg border border-cyan-500/25 bg-slate-900/80 p-4", children: [
@@ -49303,25 +49440,19 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300", children: error })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4", children: metricsList.map((metric) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      MetricTile,
-      {
-        metric,
-        onOpen: setOpenMetric,
-        cancellationCategories: metrics.cancellationsByCategory
-      },
-      metric.key
-    )) }),
-    courseMovementError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: courseMovementError }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      CourseOutcomeComparison,
-      {
-        traineesData,
-        movements: courseMovements,
-        operationalContext,
-        selectedUnitScopeKey
-      }
-    )
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4", children: [
+      metricsList.map((metric) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        MetricTile,
+        {
+          metric,
+          onOpen: setOpenMetric,
+          cancellationCategories: metrics.cancellationsByCategory
+        },
+        metric.key
+      )),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(CourseOutcomeTile, { data: courseOutcomeData, onOpen: () => setCourseOutcomeOpen(true) })
+    ] }),
+    courseMovementError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-300", children: courseMovementError })
   ] });
 };
 const numberLabel = (value, digits = 0) => value.toLocaleString("en-GB", { maximumFractionDigits: digits, minimumFractionDigits: digits });

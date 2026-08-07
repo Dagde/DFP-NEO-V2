@@ -121,6 +121,12 @@ interface CourseOutcomeMetric {
   historicalAverage: number;
 }
 
+interface CourseOutcomeData {
+  courses: string[];
+  selectedCourse: string;
+  rows: CourseOutcomeMetric[];
+}
+
 interface ChartPoint {
   date: string;
   value: number | null;
@@ -717,6 +723,44 @@ const buildCourseOutcomeMetrics = (
   ];
 };
 
+const COURSE_OUTCOME_STACK_KEYS: CourseOutcomeMetricKey[] = ['failed', 'paused', 'backCoursed', 'forwardCoursed', 'remaining'];
+
+const courseOutcomeStyle = (key: CourseOutcomeMetricKey): { dot: string; bg: string; text: string } => {
+  switch (key) {
+    case 'failed':
+      return { dot: 'bg-rose-400', bg: '#fb7185', text: 'text-rose-200' };
+    case 'paused':
+      return { dot: 'bg-amber-400', bg: '#fbbf24', text: 'text-amber-200' };
+    case 'backCoursed':
+      return { dot: 'bg-violet-400', bg: '#a78bfa', text: 'text-violet-200' };
+    case 'forwardCoursed':
+      return { dot: 'bg-sky-400', bg: '#38bdf8', text: 'text-sky-200' };
+    case 'remaining':
+      return { dot: 'bg-emerald-400', bg: '#34d399', text: 'text-emerald-200' };
+    case 'started':
+    default:
+      return { dot: 'bg-cyan-400', bg: '#22d3ee', text: 'text-cyan-200' };
+  }
+};
+
+const summariseCourseOutcomes = (
+  traineesData: Trainee[],
+  movements: CourseMovementEvent[],
+  operationalContext: BliOperationalContext | undefined,
+  selectedUnitScopeKey: string,
+  selectedCourse: string,
+): CourseOutcomeData => {
+  const scopedTrainees = traineesData.filter(trainee => traineeMatchesBliUnit(trainee, operationalContext, selectedUnitScopeKey));
+  const scopedMovements = movements.filter(movement => courseMovementMatchesBliUnit(movement, operationalContext, selectedUnitScopeKey));
+  const courses = Array.from(new Set([
+    ...scopedTrainees.map(trainee => normaliseCourseCode(trainee.course)),
+    ...scopedMovements.map(movement => normaliseCourseCode(movement.fromCourse)),
+  ].filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const activeCourse = courses.includes(selectedCourse) ? selectedCourse : courses[0] || '';
+  const rows = activeCourse ? buildCourseOutcomeMetrics(activeCourse, scopedTrainees, scopedMovements) : [];
+  return { courses, selectedCourse: activeCourse, rows };
+};
+
 const buildMetricDefinitions = (
   metrics: BliMetricsResponse,
   date: string,
@@ -1226,104 +1270,200 @@ const MetricTile: React.FC<{
   );
 };
 
-const CourseOutcomeComparison: React.FC<{
-  traineesData: Trainee[];
-  movements: CourseMovementEvent[];
-  operationalContext?: BliOperationalContext;
-  selectedUnitScopeKey: string;
-}> = ({ traineesData, movements, operationalContext, selectedUnitScopeKey }) => {
-  const scopedTrainees = useMemo(
-    () => traineesData.filter(trainee => traineeMatchesBliUnit(trainee, operationalContext, selectedUnitScopeKey)),
-    [operationalContext, selectedUnitScopeKey, traineesData],
-  );
-  const scopedMovements = useMemo(
-    () => movements.filter(movement => courseMovementMatchesBliUnit(movement, operationalContext, selectedUnitScopeKey)),
-    [movements, operationalContext, selectedUnitScopeKey],
-  );
-  const courses = useMemo(() => (
-    Array.from(new Set([
-      ...scopedTrainees.map(trainee => normaliseCourseCode(trainee.course)),
-      ...scopedMovements.map(movement => normaliseCourseCode(movement.fromCourse)),
-    ].filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  ), [scopedMovements, scopedTrainees]);
-  const [selectedCourse, setSelectedCourse] = useState('');
-
-  useEffect(() => {
-    if (courses.length === 0) {
-      setSelectedCourse('');
-      return;
-    }
-    if (!courses.includes(selectedCourse)) setSelectedCourse(courses[0]);
-  }, [courses, selectedCourse]);
-
-  const rows = useMemo(() => (
-    selectedCourse
-      ? buildCourseOutcomeMetrics(selectedCourse, scopedTrainees, scopedMovements)
-      : []
-  ), [scopedMovements, scopedTrainees, selectedCourse]);
-  const axis = niceAxisRange(rows.flatMap(row => [row.current, row.historicalAverage]), 5);
-  const max = Math.max(1, axis.max);
+const CourseOutcomeStackedBars: React.FC<{ rows: CourseOutcomeMetric[] }> = ({ rows }) => {
+  const started = rows.find(row => row.key === 'started');
+  const currentTotal = Math.max(1, Number(started?.current || 0));
+  const historicalTotal = Math.max(1, Number(started?.historicalAverage || 0));
+  const stackRows = COURSE_OUTCOME_STACK_KEYS
+    .map(key => rows.find(row => row.key === key))
+    .filter((row): row is CourseOutcomeMetric => Boolean(row));
+  const renderStack = (kind: 'current' | 'historicalAverage') => {
+    const total = kind === 'current' ? currentTotal : historicalTotal;
+    return (
+      <div className="flex h-12 overflow-hidden rounded-md border border-slate-700/90 bg-slate-950/70">
+        {stackRows.map(row => {
+          const value = Number(row[kind] || 0);
+          if (value <= 0) return null;
+          return (
+            <div
+              key={`${kind}-${row.key}`}
+              className="h-full min-w-[3px]"
+              style={{
+                width: `${Math.max(2, (value / total) * 100)}%`,
+                backgroundColor: courseOutcomeStyle(row.key).bg,
+              }}
+              title={`${row.label}: ${compactNumber(value, kind === 'current' ? 0 : 1)}`}
+            />
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
-    <section className="rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 shadow-[0_10px_26px_rgba(0,0,0,0.22)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-6 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
+      <div className="space-y-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">Course Outcomes</p>
-          <h3 className="mt-1 text-lg font-bold text-white">Course status comparison</h3>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
-            Current course counts are compared with historical course averages, normalised to the selected course intake size. Course movement history is captured from new back-course and forward-course actions.
-          </p>
+          <div className="mb-2 flex items-center justify-between text-xs">
+            <span className="font-semibold uppercase tracking-[0.16em] text-slate-400">Selected course</span>
+            <span className="font-bold text-cyan-200">{compactNumber(currentTotal, 0)} started</span>
+          </div>
+          {renderStack('current')}
         </div>
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Course</span>
-          <select
-            value={selectedCourse}
-            onChange={event => setSelectedCourse(event.target.value)}
-            className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
-          >
-            {courses.map(course => (
-              <option key={course} value={course}>{course}</option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <div className="mb-2 flex items-center justify-between text-xs">
+            <span className="font-semibold uppercase tracking-[0.16em] text-slate-400">Historical average</span>
+            <span className="font-bold text-slate-200">{compactNumber(historicalTotal, 1)} started average</span>
+          </div>
+          {renderStack('historicalAverage')}
+        </div>
       </div>
 
-      {rows.length === 0 ? (
-        <div className="mt-4 rounded-md border border-slate-800 bg-slate-950/50 px-4 py-8 text-center text-sm text-slate-500">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {rows.map(row => {
+          const style = courseOutcomeStyle(row.key);
+          return (
+            <div key={row.key} className="rounded-md border border-slate-700/80 bg-slate-900/75 p-3">
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{row.label}</span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <div>
+                  <div className={`text-xl font-bold ${style.text}`}>{compactNumber(row.current, 0)}</div>
+                  <div className="text-[11px] text-slate-500">selected</div>
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-slate-200">{compactNumber(row.historicalAverage, 1)}</div>
+                  <div className="text-[11px] text-slate-500">historical avg</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const CourseOutcomePreview: React.FC<{ rows: CourseOutcomeMetric[] }> = ({ rows }) => {
+  const started = rows.find(row => row.key === 'started');
+  const total = Math.max(1, Number(started?.current || 0));
+  const stackRows = COURSE_OUTCOME_STACK_KEYS
+    .map(key => rows.find(row => row.key === key))
+    .filter((row): row is CourseOutcomeMetric => Boolean(row));
+  if (rows.length === 0) return <div className="text-xs text-slate-500">No course roster data available</div>;
+  return (
+    <div className="space-y-2">
+      <div className="flex h-4 overflow-hidden rounded bg-slate-950 ring-1 ring-slate-800">
+        {stackRows.map(row => {
+          const value = Number(row.current || 0);
+          if (value <= 0) return null;
+          return (
+            <div
+              key={row.key}
+              className="h-full min-w-[3px]"
+              style={{ width: `${Math.max(3, (value / total) * 100)}%`, backgroundColor: courseOutcomeStyle(row.key).bg }}
+            />
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {stackRows.slice(0, 4).map(row => (
+          <div key={row.key} className="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+            <span className="truncate">{row.label}</span>
+            <span className={courseOutcomeStyle(row.key).text}>{compactNumber(row.current, 0)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const CourseOutcomeTile: React.FC<{
+  data: CourseOutcomeData;
+  onOpen: () => void;
+}> = ({ data, onOpen }) => {
+  const started = data.rows.find(row => row.key === 'started');
+  const remaining = data.rows.find(row => row.key === 'remaining');
+  return (
+    <button
+      onClick={onOpen}
+      className="group flex min-h-[214px] flex-col rounded-lg border border-slate-700/80 bg-slate-900/80 p-4 text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)] transition hover:border-cyan-400/60 hover:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-200">
+          <ChartBarIcon className="h-8 w-8" />
+        </div>
+        <ArrowTopRightOnSquareIcon className="h-4 w-4 text-slate-500 transition group-hover:text-cyan-300" />
+      </div>
+      <div className="mt-4">
+        <h3 className="text-base font-semibold text-white">Course status comparison</h3>
+        <p className="mt-1 min-h-[34px] text-xs leading-5 text-slate-400">
+          Stacked outcome view for {data.selectedCourse || 'the selected course'} against normalised historical course averages.
+        </p>
+      </div>
+      <div className="mt-3 text-2xl font-bold tracking-normal text-white">{compactNumber(remaining?.current || 0, 0)}</div>
+      <div className="text-xs text-slate-500">remaining of {compactNumber(started?.current || 0, 0)} started</div>
+      <div className="mt-4 flex-1">
+        <CourseOutcomePreview rows={data.rows} />
+      </div>
+      <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500">{compactNumber(data.courses.length, 0)} courses in scope</p>
+    </button>
+  );
+};
+
+const CourseOutcomeModal: React.FC<{
+  data: CourseOutcomeData;
+  selectedCourse: string;
+  onCourseChange: (course: string) => void;
+  onClose: () => void;
+}> = ({ data, selectedCourse, onCourseChange, onClose }) => (
+  <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8" onMouseDown={onClose}>
+    <div
+      className="max-h-[88vh] w-full max-w-6xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+      onMouseDown={event => event.stopPropagation()}
+    >
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
+          <h2 className="mt-1 text-2xl font-bold text-white">Course status comparison</h2>
+          <p className="mt-1 max-w-3xl text-sm text-slate-400">
+            Selected course outcomes are shown as a stacked bar and compared with historical course averages normalised to the selected course intake size.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end justify-end gap-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Course</span>
+            <select
+              value={selectedCourse}
+              onChange={event => onCourseChange(event.target.value)}
+              className="h-10 min-w-[180px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
+            >
+              {data.courses.map(course => (
+                <option key={course} value={course}>{course}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            onClick={onClose}
+            className="h-10 rounded-md border border-slate-700 px-3 text-sm font-semibold text-slate-300 hover:border-cyan-400 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      {data.rows.length === 0 ? (
+        <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-8 text-center text-sm text-slate-400">
           No course roster data is available for this unit.
         </div>
       ) : (
-        <div className="mt-5 space-y-3">
-          <div className="flex items-center justify-end gap-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            <span className="flex items-center gap-2"><span className="h-2 w-5 rounded bg-cyan-400" />Selected course</span>
-            <span className="flex items-center gap-2"><span className="h-2 w-5 rounded bg-slate-500" />Historical average</span>
-          </div>
-          {rows.map(row => {
-            const currentPct = Math.max(0, Math.min(100, (row.current / max) * 100));
-            const historicalPct = Math.max(0, Math.min(100, (row.historicalAverage / max) * 100));
-            return (
-              <div key={row.key} className="grid grid-cols-[170px_minmax(0,1fr)_76px] items-center gap-3">
-                <div className="text-sm font-semibold text-slate-200">{row.label}</div>
-                <div className="space-y-1.5">
-                  <div className="h-3 rounded bg-slate-950 ring-1 ring-slate-800">
-                    <div className="h-full rounded bg-cyan-400" style={{ width: `${currentPct}%` }} />
-                  </div>
-                  <div className="h-3 rounded bg-slate-950 ring-1 ring-slate-800">
-                    <div className="h-full rounded bg-slate-500" style={{ width: `${historicalPct}%` }} />
-                  </div>
-                </div>
-                <div className="text-right text-xs text-slate-400">
-                  <div className="font-bold text-white">{compactNumber(row.current, 0)}</div>
-                  <div>{compactNumber(row.historicalAverage, 1)} avg</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <CourseOutcomeStackedBars rows={data.rows} />
       )}
-    </section>
-  );
-};
+    </div>
+  </div>
+);
 
 const BliPeriodWindow: React.FC<{
   title: string;
@@ -1551,6 +1691,8 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   const [courseMovements, setCourseMovements] = useState<CourseMovementEvent[]>([]);
   const [courseMovementError, setCourseMovementError] = useState<string | null>(null);
   const [openMetric, setOpenMetric] = useState<MetricDefinition | null>(null);
+  const [courseOutcomeOpen, setCourseOutcomeOpen] = useState(false);
+  const [selectedCourseOutcomeCourse, setSelectedCourseOutcomeCourse] = useState('');
   const [periodSettings, setPeriodSettings] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
   const [editingPeriod, setEditingPeriod] = useState<PeriodKey | null>(null);
   const [periodDraft, setPeriodDraft] = useState<BliPeriodSettings>(() => loadBliPeriodSettings());
@@ -1700,6 +1842,16 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
     buildMetricDefinitions(metrics, date, events, currentAircraftAvailable, totalAircraft, previewStaff)
   ), [currentAircraftAvailable, date, events, metrics, previewStaff, totalAircraft]);
 
+  const courseOutcomeData = useMemo(() => (
+    summariseCourseOutcomes(traineesData, courseMovements, operationalContext, selectedUnitScopeKey, selectedCourseOutcomeCourse)
+  ), [courseMovements, operationalContext, selectedCourseOutcomeCourse, selectedUnitScopeKey, traineesData]);
+
+  useEffect(() => {
+    if (courseOutcomeData.selectedCourse !== selectedCourseOutcomeCourse) {
+      setSelectedCourseOutcomeCourse(courseOutcomeData.selectedCourse);
+    }
+  }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
+
   return (
     <div className="space-y-5">
       {openMetric && (
@@ -1719,6 +1871,14 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
           onUnitScopeChange={setSelectedUnitScopeKey}
           operationalContext={operationalContext}
           cancellationCodes={cancellationCodes}
+        />
+      )}
+      {courseOutcomeOpen && (
+        <CourseOutcomeModal
+          data={courseOutcomeData}
+          selectedCourse={courseOutcomeData.selectedCourse}
+          onCourseChange={setSelectedCourseOutcomeCourse}
+          onClose={() => setCourseOutcomeOpen(false)}
         />
       )}
 
@@ -1785,14 +1945,9 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
             cancellationCategories={metrics.cancellationsByCategory}
           />
         ))}
+        <CourseOutcomeTile data={courseOutcomeData} onOpen={() => setCourseOutcomeOpen(true)} />
       </div>
       {courseMovementError && <p className="text-xs text-amber-300">{courseMovementError}</p>}
-      <CourseOutcomeComparison
-        traineesData={traineesData}
-        movements={courseMovements}
-        operationalContext={operationalContext}
-        selectedUnitScopeKey={selectedUnitScopeKey}
-      />
     </div>
   );
 };
