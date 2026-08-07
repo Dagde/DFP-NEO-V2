@@ -274,6 +274,41 @@ const parseIsoDate = (value: string): Date => {
 
 const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
 
+const normaliseCourseStartDate = (value?: string): string => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const isoMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(raw);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
+    if (year > 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  const slashMatch = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/.exec(raw);
+  if (slashMatch) {
+    const first = Number(slashMatch[1]);
+    const second = Number(slashMatch[2]);
+    const yearValue = Number(slashMatch[3]);
+    const year = yearValue < 100 ? 2000 + yearValue : yearValue;
+    const month = second > 12 ? first : second;
+    const day = second > 12 ? second : first;
+    if (year > 1900 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  const parsed = Date.parse(raw);
+  if (Number.isFinite(parsed)) {
+    return toIsoDate(new Date(parsed));
+  }
+
+  return '';
+};
+
 const dateLabel = (value: string): string => {
   const date = parseIsoDate(value);
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
@@ -1547,7 +1582,7 @@ const rowFallsWithinCourseStartTimeline = (
 ): boolean => {
   const start = coursePassRateTimelineStart(referenceDate, timeline);
   if (!start) return true;
-  const courseStart = String(row.startDate || '').slice(0, 10);
+  const courseStart = normaliseCourseStartDate(row.startDate);
   if (!courseStart) return false;
   return courseStart >= start && courseStart <= referenceDate;
 };
@@ -1576,7 +1611,7 @@ const aggregatePassRateRows = (
         earliestStart: undefined,
         latestStart: undefined,
       };
-      const startDate = String(row.startDate || '').slice(0, 10);
+      const startDate = normaliseCourseStartDate(row.startDate);
       current.courseCount += 1;
       current.pass += Number(row.pass || 0);
       current.fail += Number(row.fail || 0);
