@@ -458,7 +458,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
                                         <div
                                             data-course-color="true"
-                                            className={`px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? '' : color} flex justify-between items-center`}
+                                            className={`relative px-4 py-2 pr-12 text-white font-bold text-lg ${isHexColor(color) ? '' : color}`}
                                             style={isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {}}
                                         >
                                             <div>
@@ -479,7 +479,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-1">
+                                            <div className="absolute right-2 top-2 flex items-center gap-1">
                                                 {view === 'active' && (
                                                     <button
                                                         onClick={() => !isFrozen && setCourseToEdit(courseName)} disabled={isFrozen}

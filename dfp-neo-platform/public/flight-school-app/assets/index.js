@@ -27398,7 +27398,7 @@ const CourseRosterView = ({
             "div",
             {
               "data-course-color": "true",
-              className: `px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? "" : color} flex justify-between items-center`,
+              className: `relative px-4 py-2 pr-12 text-white font-bold text-lg ${isHexColor(color) ? "" : color}`,
               style: isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {},
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -27423,7 +27423,7 @@ const CourseRosterView = ({
                     ] })
                   ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-2 top-2 flex items-center gap-1", children: [
                   view2 === "active" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
