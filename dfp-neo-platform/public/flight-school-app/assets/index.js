@@ -27289,8 +27289,9 @@ const CourseRosterView = ({
           const b = Math.round(parseInt(c.slice(5, 7), 16) * strength);
           return `rgb(${r}, ${g}, ${b})`;
         };
-        const activeCount = courseTrainees.filter((t) => !t.isPaused).length;
-        const pausedCount = courseTrainees.filter((t) => t.isPaused).length;
+        const activeCount = courseTrainees.filter((t) => !t.isPaused && !isTraineeSuspended(t)).length;
+        const suspendedCount = courseTrainees.filter((t) => isTraineeSuspended(t)).length;
+        const pausedCount = courseTrainees.filter((t) => t.isPaused && !isTraineeSuspended(t)).length;
         const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -27332,14 +27333,17 @@ const CourseRosterView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-1 text-right text-xs text-white opacity-70", children: [
             activeCount,
             " active",
-            pausedCount > 0 && `, ${pausedCount} paused`
+            pausedCount > 0 && `, ${pausedCount} paused`,
+            suspendedCount > 0 && `, ${suspendedCount} suspended`
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
             const nameColorClass = getTraineeNameColorClass(trainee);
+            const isSuspended = isTraineeSuspended(trainee);
+            const statusLabel = getTraineeStatusLabel(trainee);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "li",
               {
-                className: "flex items-center text-sm",
+                className: `flex items-center text-sm ${isSuspended ? "rounded border border-red-500/80 bg-red-950/20 px-1 py-0.5" : ""}`,
                 onMouseEnter: (e) => handleMouseEnter(e, trainee.fullName),
                 onMouseLeave: handleMouseLeave,
                 children: [
@@ -27355,11 +27359,12 @@ const CourseRosterView = ({
                         setSelectedTrainee(trainee);
                       },
                       disabled: !canViewTraineeProfile(trainee),
-                      title: canViewTraineeProfile(trainee) ? void 0 : "Your permission profile does not allow this trainee profile",
+                      title: canViewTraineeProfile(trainee) ? statusLabel : "Your permission profile does not allow this trainee profile",
                       className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? "opacity-50 cursor-not-allowed hover:no-underline" : ""}`,
                       children: trainee.name
                     }
-                  )
+                  ),
+                  isSuspended && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white", children: "Suspended" })
                 ]
               },
               trainee.fullName

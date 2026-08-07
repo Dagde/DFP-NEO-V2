@@ -21,6 +21,7 @@ import type { AircraftCrewComposition } from '../utils/aircraftCrewComposition';
 import type { OperationalModelCode, PlatformConfig } from '../utils/platformConfigService';
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { getTraineeStatusLabel, isTraineeSuspended } from '../utils/traineeStatus';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -325,7 +326,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     };
 
     const getTraineeNameColorClass = (trainee: Trainee): string => {
-        // RULE 1: RED for Paused/NTSC (highest priority - overrides all others)
+        // RULE 1: RED for Paused/Suspended (highest priority - overrides all others)
         if (trainee.isPaused) {
             return 'text-red-400 hover:text-red-300';
         }
@@ -432,8 +433,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                 };
 
                                 // Calculate active and paused counts
-                                const activeCount = courseTrainees.filter(t => !t.isPaused).length;
-                                const pausedCount = courseTrainees.filter(t => t.isPaused).length;
+                                const activeCount = courseTrainees.filter(t => !t.isPaused && !isTraineeSuspended(t)).length;
+                                const suspendedCount = courseTrainees.filter(t => isTraineeSuspended(t)).length;
+                                const pausedCount = courseTrainees.filter(t => t.isPaused && !isTraineeSuspended(t)).length;
 
                                 const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
                                 return (
@@ -474,18 +476,20 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                             </div>
                                         </div>
                                         <div className="px-4 py-1 text-right text-xs text-white opacity-70">
-                                            {activeCount} active{pausedCount > 0 && `, ${pausedCount} paused`}
+                                            {activeCount} active{pausedCount > 0 && `, ${pausedCount} paused`}{suspendedCount > 0 && `, ${suspendedCount} suspended`}
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-3">
                                             {courseTrainees.length > 0 ? (
                                                 <ul className="space-y-2">
                                                     {courseTrainees.map(trainee => {
                                                         const nameColorClass = getTraineeNameColorClass(trainee);
+                                                        const isSuspended = isTraineeSuspended(trainee);
+                                                        const statusLabel = getTraineeStatusLabel(trainee);
 
                                                         return (
                                                             <li
                                                                 key={trainee.fullName}
-                                                                className="flex items-center text-sm"
+                                                                className={`flex items-center text-sm ${isSuspended ? 'rounded border border-red-500/80 bg-red-950/20 px-1 py-0.5' : ''}`}
                                                                 onMouseEnter={(e) => handleMouseEnter(e, trainee.fullName)}
                                                                 onMouseLeave={handleMouseLeave}
                                                             >
@@ -499,11 +503,16 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                                         setSelectedTrainee(trainee);
                                                                     }}
                                                                     disabled={!canViewTraineeProfile(trainee)}
-                                                                    title={canViewTraineeProfile(trainee) ? undefined : 'Your permission profile does not allow this trainee profile'}
+                                                                    title={canViewTraineeProfile(trainee) ? statusLabel : 'Your permission profile does not allow this trainee profile'}
                                                                     className={`truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? 'opacity-50 cursor-not-allowed hover:no-underline' : ''}`}
                                                                 >
                                                                     {trainee.name}
                                                                 </button>
+                                                                {isSuspended && (
+                                                                    <span className="ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                                                                        Suspended
+                                                                    </span>
+                                                                )}
                                                             </li>
                                                         );
                                                     })}
