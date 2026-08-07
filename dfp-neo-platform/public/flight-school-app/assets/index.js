@@ -27404,30 +27404,36 @@ const CourseRosterView = ({
     return Number.isFinite(parsed) ? parsed : null;
   };
   const getLatestTrainingReportStatus = (trainee) => {
-    const reports = Array.from(pt051Assessments?.values() || []).filter((assessment) => assessment && assessment.isCompleted !== false && (assessment.traineeFullName === trainee.fullName || assessment.traineeFullName === trainee.name) && isNormalTrainingFlightOrSim(assessment.flightNumber || assessment.eventCode || assessment.eventId)).sort((a, b) => {
+    const reports = Array.from(pt051Assessments?.values() || []).filter((assessment) => assessment && assessment.isCompleted !== false && (assessment.traineeFullName === trainee.fullName || assessment.traineeFullName === trainee.name)).sort((a, b) => {
       const dateA = (/* @__PURE__ */ new Date(`${a.date || ""}T00:00:00`)).getTime() || 0;
       const dateB = (/* @__PURE__ */ new Date(`${b.date || ""}T00:00:00`)).getTime() || 0;
       if (dateA !== dateB) return dateB - dateA;
       return Number(b.startTime || 0) - Number(a.startTime || 0);
     });
     const latestReport = reports[0];
-    if (!latestReport) return null;
-    if (latestReport.overallResult === "F") return "failed";
+    if (!latestReport) return { status: null, hasReports: false };
+    if (latestReport.overallResult === "F") return { status: "failed", hasReports: true };
     const overallGrade = getNumericOverallGrade(latestReport.overallGrade);
-    if (overallGrade === 0) return "failed";
-    if (overallGrade === 1) return "marginal";
-    return null;
+    if (overallGrade === 0) return { status: "failed", hasReports: true };
+    if (overallGrade === 1) return { status: "marginal", hasReports: true };
+    return { status: null, hasReports: true };
   };
   const getTraineeNameColorClass = (trainee) => {
-    if (trainee.isPaused) {
+    if (isTraineeSuspended(trainee)) {
       return "text-red-400 hover:text-red-300";
     }
     const latestTrainingReportStatus = getLatestTrainingReportStatus(trainee);
-    if (latestTrainingReportStatus === "failed") {
+    if (latestTrainingReportStatus.status === "failed") {
       return "text-red-400 hover:text-red-300";
     }
-    if (latestTrainingReportStatus === "marginal") {
+    if (latestTrainingReportStatus.status === "marginal") {
       return "text-amber-400 hover:text-amber-300";
+    }
+    if (latestTrainingReportStatus.hasReports) {
+      return "text-green-400 hover:text-green-300";
+    }
+    if (trainee.isPaused) {
+      return "text-gray-300 hover:text-gray-200";
     }
     const traineeScores = scores.get(trainee.fullName) || [];
     const nonRemedialFlightFtdScores = traineeScores.filter((score) => {

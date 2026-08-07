@@ -364,7 +364,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         return Number.isFinite(parsed) ? parsed : null;
     };
 
-    const getLatestTrainingReportStatus = (trainee: Trainee): 'failed' | 'marginal' | null => {
+    const getLatestTrainingReportStatus = (trainee: Trainee): { status: 'failed' | 'marginal' | null; hasReports: boolean } => {
         const reports = Array.from(pt051Assessments?.values() || [])
             .filter((assessment: any) => (
                 assessment &&
@@ -372,8 +372,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 (
                     assessment.traineeFullName === trainee.fullName ||
                     assessment.traineeFullName === trainee.name
-                ) &&
-                isNormalTrainingFlightOrSim(assessment.flightNumber || assessment.eventCode || assessment.eventId)
+                )
             ))
             .sort((a: any, b: any) => {
                 const dateA = new Date(`${a.date || ''}T00:00:00`).getTime() || 0;
@@ -383,30 +382,38 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             });
 
         const latestReport = reports[0];
-        if (!latestReport) return null;
-        if (latestReport.overallResult === 'F') return 'failed';
+        if (!latestReport) return { status: null, hasReports: false };
+        if (latestReport.overallResult === 'F') return { status: 'failed', hasReports: true };
         const overallGrade = getNumericOverallGrade(latestReport.overallGrade);
-        if (overallGrade === 0) return 'failed';
-        if (overallGrade === 1) return 'marginal';
-        return null;
+        if (overallGrade === 0) return { status: 'failed', hasReports: true };
+        if (overallGrade === 1) return { status: 'marginal', hasReports: true };
+        return { status: null, hasReports: true };
     };
 
     const getTraineeNameColorClass = (trainee: Trainee): string => {
-        // RULE 1: RED for Paused/Suspended (highest priority - overrides all others)
-        if (trainee.isPaused) {
+        // RULE 1: RED + border for suspended trainees.
+        if (isTraineeSuspended(trainee)) {
             return 'text-red-400 hover:text-red-300';
         }
 
         // RULE 2: RED for a failed report, AMBER for a marginal report
         const latestTrainingReportStatus = getLatestTrainingReportStatus(trainee);
-        if (latestTrainingReportStatus === 'failed') {
+        if (latestTrainingReportStatus.status === 'failed') {
             return 'text-red-400 hover:text-red-300';
         }
-        if (latestTrainingReportStatus === 'marginal') {
+        if (latestTrainingReportStatus.status === 'marginal') {
             return 'text-amber-400 hover:text-amber-300';
         }
+        if (latestTrainingReportStatus.hasReports) {
+            return 'text-green-400 hover:text-green-300';
+        }
 
-        // RULE 3: Fall back to legacy score records when no completed report is available
+        // RULE 3: Paused trainees are unavailable, not failed.
+        if (trainee.isPaused) {
+            return 'text-gray-300 hover:text-gray-200';
+        }
+
+        // RULE 4: Fall back to legacy score records only when no completed report is available.
         const traineeScores = scores.get(trainee.fullName) || [];
 
         // Get all non-remedial Flight/FTD scores sorted by date (most recent first)
@@ -428,7 +435,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             }
         }
 
-        // RULE 4: GREEN for everyone else (default)
+        // RULE 5: GREEN for everyone else (default)
         return 'text-green-400 hover:text-green-300';
     };
 
