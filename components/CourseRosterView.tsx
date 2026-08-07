@@ -508,11 +508,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                                 >
                                                                     {trainee.name}
                                                                 </button>
-                                                                {isSuspended && (
-                                                                    <span className="ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                                                                        Suspended
-                                                                    </span>
-                                                                )}
                                                             </li>
                                                         );
                                                     })}

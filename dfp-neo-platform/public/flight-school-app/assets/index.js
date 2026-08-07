@@ -27363,8 +27363,7 @@ const CourseRosterView = ({
                       className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? "opacity-50 cursor-not-allowed hover:no-underline" : ""}`,
                       children: trainee.name
                     }
-                  ),
-                  isSuspended && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white", children: "Suspended" })
+                  )
                 ]
               },
               trainee.fullName
