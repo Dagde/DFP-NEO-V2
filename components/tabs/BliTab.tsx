@@ -2330,15 +2330,17 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
 
   useEffect(() => {
-    const firstOption = scopedCoursePassRates.lmpOptions[0]?.key || '';
+    const defaultOption = [...scopedCoursePassRates.lmpOptions]
+      .sort((a, b) => Number(b.startedTrainees || 0) - Number(a.startedTrainees || 0) || a.label.localeCompare(b.label, undefined, { numeric: true }))[0];
+    const defaultKey = defaultOption?.key || '';
     if (selectedPassRateLmp && scopedCoursePassRates.lmpOptions.some(option => option.key === selectedPassRateLmp)) {
       return;
     }
-    if (firstOption && selectedPassRateLmp !== firstOption) {
-      setSelectedPassRateLmp(firstOption);
+    if (defaultKey && selectedPassRateLmp !== defaultKey) {
+      setSelectedPassRateLmp(defaultKey);
       return;
     }
-    if (!firstOption && selectedPassRateLmp) setSelectedPassRateLmp('');
+    if (!defaultKey && selectedPassRateLmp) setSelectedPassRateLmp('');
   }, [scopedCoursePassRates.lmpOptions, selectedPassRateLmp]);
 
   return (
