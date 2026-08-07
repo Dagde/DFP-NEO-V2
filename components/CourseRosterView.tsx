@@ -346,7 +346,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             return 'text-red-400 hover:text-red-300';
         }
 
-        // RULE 2: AMBER for recent non-remedial poor performance
+        // RULE 2: RED for a failed event, AMBER for a marginal event
         const traineeScores = scores.get(trainee.fullName) || [];
 
         // Get all non-remedial Flight/FTD scores sorted by date (most recent first)
@@ -363,19 +363,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         if (nonRemedialFlightFtdScores.length > 0) {
             const lastNonRemedialScore = nonRemedialFlightFtdScores[0];
 
-            // Check if last non-remedial Flight/FTD was a fail (score = 0)
             if (lastNonRemedialScore.score === 0) {
-                return 'text-amber-400 hover:text-amber-300';
+                return 'text-red-400 hover:text-red-300';
             }
 
-            // Check if last TWO non-remedial Flight/FTD events both have score of 1
-            if (nonRemedialFlightFtdScores.length >= 2) {
-                const secondLastNonRemedialScore = nonRemedialFlightFtdScores[1];
-
-                // If both last two non-remedial Flight/FTD events have score = 1, mark as AMBER
-                if (lastNonRemedialScore.score === 1 && secondLastNonRemedialScore.score === 1) {
-                    return 'text-amber-400 hover:text-amber-300';
-                }
+            if (lastNonRemedialScore.score === 1) {
+                return 'text-amber-400 hover:text-amber-300';
             }
         }
 

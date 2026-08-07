@@ -5091,17 +5091,6 @@ const getInsertEventTypes = (config) => {
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes, false);
 };
-const TRAINEE_SUSPENDED_MARKER = "__DFP_TRAINEE_SUSPENDED__";
-const getVisiblePermissions = (permissions) => (permissions || []).filter((permission) => permission !== TRAINEE_SUSPENDED_MARKER);
-const isTraineeSuspended = (trainee) => Boolean(trainee?.permissions?.includes(TRAINEE_SUSPENDED_MARKER));
-const getTraineeStatusLabel = (trainee) => {
-  if (isTraineeSuspended(trainee)) return "Suspended";
-  return trainee?.isPaused ? "Paused" : "Active";
-};
-const setTraineeSuspendedMarker = (permissions, isSuspended) => {
-  const visiblePermissions = getVisiblePermissions(permissions);
-  return isSuspended ? [...visiblePermissions, TRAINEE_SUSPENDED_MARKER] : visiblePermissions;
-};
 const UNIT_CALLSIGN_ALLOCATION_METHOD_LABELS = {
   permanent: "Permanent",
   "per-flight": "Per Flight",
@@ -23725,6 +23714,17 @@ This action cannot be undone.`;
     }
   );
 };
+const TRAINEE_SUSPENDED_MARKER = "__DFP_TRAINEE_SUSPENDED__";
+const getVisiblePermissions = (permissions) => (permissions || []).filter((permission) => permission !== TRAINEE_SUSPENDED_MARKER);
+const isTraineeSuspended = (trainee) => Boolean(trainee?.permissions?.includes(TRAINEE_SUSPENDED_MARKER));
+const getTraineeStatusLabel = (trainee) => {
+  if (isTraineeSuspended(trainee)) return "Suspended";
+  return trainee?.isPaused ? "Paused" : "Active";
+};
+const setTraineeSuspendedMarker = (permissions, isSuspended) => {
+  const visiblePermissions = getVisiblePermissions(permissions);
+  return isSuspended ? [...visiblePermissions, TRAINEE_SUSPENDED_MARKER] : visiblePermissions;
+};
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -23926,11 +23926,11 @@ const TraineeProfileFlyout = ({
   const contentScrollRef = reactExports.useRef(null);
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const activeTrainingReportUnitCode = trainee.unit || "";
-  const activeTrainingReportTemplate2 = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
-  const activeTrainingReportDisplayName = activeTrainingReportTemplate2.displayName || activeTrainingReportTemplate2.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
+  const activeTrainingReportTemplate = trainingReportTemplate || getUnitTrainingReportTemplate(platformConfig, activeTrainingReportUnitCode) || DEFAULT_TRAINING_REPORT_TEMPLATE;
+  const activeTrainingReportDisplayName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName;
   const activeInstructorDisplayLabel = normalisePersonnelDisplaySettings(personnelDisplaySettings).instructorLabel || "Instructor";
   const activeReportAssessorDisplayLabel = resolveReportAssessorDisplayLabel(
-    activeTrainingReportTemplate2.modules.comments.fields.assessor,
+    activeTrainingReportTemplate.modules.comments.fields.assessor,
     activeInstructorDisplayLabel
   );
   const activeTrainingReportPhraseBank = getUnitTrainingReportPhraseBank(platformConfig, activeTrainingReportUnitCode, phraseBank);
@@ -25606,7 +25606,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     canEditPt051,
                     isLoading: pt051PerformanceLoading,
                     trainingReportTerminology,
-                    trainingReportTemplate: activeTrainingReportTemplate2,
+                    trainingReportTemplate: activeTrainingReportTemplate,
                     instructorLabel: activeReportAssessorDisplayLabel
                   }
                 ) });
@@ -25624,7 +25624,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     initialAssessment: currentAssessment,
                     instructorLabel: activeReportAssessorDisplayLabel,
                     trainingReportTerminology,
-                    trainingReportTemplate: activeTrainingReportTemplate2,
+                    trainingReportTemplate: activeTrainingReportTemplate,
                     trainingReportUnitCode: activeTrainingReportUnitCode,
                     trainingReportContextUnitCode: activeTrainingReportUnitCode,
                     formatResourceLabel: formatResourceDisplayLabel,
@@ -25662,8 +25662,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     insertEventTypes,
                     aircraftConfigurations,
                     aircraftCrewComposition,
-                    trainingReportDisplayName: activeTrainingReportTemplate2.displayName || activeTrainingReportTemplate2.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
-                    trainingReportStatusFieldLabel: activeTrainingReportTemplate2.modules.overallAssessment.fields.result || "Mission Status",
+                    trainingReportDisplayName: activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || DEFAULT_TRAINING_REPORT_TEMPLATE.displayName,
+                    trainingReportStatusFieldLabel: activeTrainingReportTemplate.modules.overallAssessment.fields.result || "Mission Status",
                     instructorLabel: activeReportAssessorDisplayLabel
                   }
                 ) });
@@ -27399,13 +27399,10 @@ const CourseRosterView = ({
     if (nonRemedialFlightFtdScores.length > 0) {
       const lastNonRemedialScore = nonRemedialFlightFtdScores[0];
       if (lastNonRemedialScore.score === 0) {
-        return "text-amber-400 hover:text-amber-300";
+        return "text-red-400 hover:text-red-300";
       }
-      if (nonRemedialFlightFtdScores.length >= 2) {
-        const secondLastNonRemedialScore = nonRemedialFlightFtdScores[1];
-        if (lastNonRemedialScore.score === 1 && secondLastNonRemedialScore.score === 1) {
-          return "text-amber-400 hover:text-amber-300";
-        }
+      if (lastNonRemedialScore.score === 1) {
+        return "text-amber-400 hover:text-amber-300";
       }
     }
     return "text-green-400 hover:text-green-300";
@@ -85584,19 +85581,19 @@ const TrainingRecordsExportView = ({
   phraseBank,
   hasTraineesEnabled = true
 }) => {
-  const activeTrainingReportTemplate2 = reactExports.useMemo(
+  const activeTrainingReportTemplate = reactExports.useMemo(
     () => normaliseTrainingReportTemplate(trainingReportTemplate || DEFAULT_TRAINING_REPORT_TEMPLATE),
     [trainingReportTemplate]
   );
-  const exportReportName = activeTrainingReportTemplate2.displayName || activeTrainingReportTemplate2.genericName || "Training Report";
+  const exportReportName = activeTrainingReportTemplate.displayName || activeTrainingReportTemplate.genericName || "Training Report";
   const exportAssessmentTitle = exportReportName;
   const exportAssessorLabel = resolveReportAssessorDisplayLabel(
-    activeTrainingReportTemplate2.modules.comments.fields.assessor,
+    activeTrainingReportTemplate.modules.comments.fields.assessor,
     instructorLabel2
   );
-  const exportCommentFieldLabels = activeTrainingReportTemplate2.modules.comments.fields;
-  const exportOverallFieldLabels = activeTrainingReportTemplate2.modules.overallAssessment.fields;
-  const enabledCompletionResults = activeTrainingReportTemplate2.completionResults.filter((result) => result.enabled !== false && normaliseCompletionStatusCode(result.code));
+  const exportCommentFieldLabels = activeTrainingReportTemplate.modules.comments.fields;
+  const exportOverallFieldLabels = activeTrainingReportTemplate.modules.overallAssessment.fields;
+  const enabledCompletionResults = activeTrainingReportTemplate.completionResults.filter((result) => result.enabled !== false && normaliseCompletionStatusCode(result.code));
   const primaryCompletionResult = enabledCompletionResults[0] || { code: "DCO", label: "Complete" };
   const primaryCompletionResultCode = normaliseCompletionStatusCode(primaryCompletionResult.code) || "DCO";
   const exportCompletionResultLabels = enabledCompletionResults.reduce((acc, result) => {
@@ -86718,7 +86715,7 @@ const TrainingRecordsExportView = ({
                     className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: activeTrainingReportTemplate2.overallResults.passLabel || "Satisfactory" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: activeTrainingReportTemplate.overallResults.passLabel || "Satisfactory" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -86730,7 +86727,7 @@ const TrainingRecordsExportView = ({
                     className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: activeTrainingReportTemplate2.overallResults.failLabel || "Unsatisfactory" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: activeTrainingReportTemplate.overallResults.failLabel || "Unsatisfactory" })
               ] })
             ] })
           ] }),
@@ -117559,23 +117556,6 @@ ${error instanceof Error ? error.message : String(error)}`,
       assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
     ].filter(Boolean).join(", ");
     logAudit("Mass Completion", "Edit", `Updated ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
-    if (assessment.overallResult === "F") {
-      const failedTrainee = allTraineesData.find((trainee) => trainee.fullName === assessment.traineeFullName || trainee.name === assessment.traineeFullName) || traineesData.find((trainee) => trainee.fullName === assessment.traineeFullName || trainee.name === assessment.traineeFullName);
-      if (failedTrainee && !isTraineeSuspended(failedTrainee)) {
-        const suspendedTrainee = {
-          ...failedTrainee,
-          isPaused: true,
-          permissions: setTraineeSuspendedMarker(failedTrainee.permissions, true)
-        };
-        await handleUpdateTrainee(suspendedTrainee);
-        logAudit(
-          "Trainee Roster",
-          "Edit",
-          `Suspended ${assessment.traineeFullName} after unsatisfactory ${configuredTrainingReportDisplayName}`,
-          `Event: ${assessment.flightNumber}; Result: ${activeTrainingReportTemplate.overallResults.failLabel || "Unsatisfactory"}`
-        );
-      }
-    }
     await maybeInsertTrainingReportExtraLmpEvent(assessment);
     await maybeExtendTrainingReportNextLmpEvent(assessment);
     await maybePassTrainingReportNotesToNextLmpEvent(assessment);

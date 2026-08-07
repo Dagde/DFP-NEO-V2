@@ -112,10 +112,6 @@ import {
     writeSetupTestPersonnel,
     writeSetupTestPlatformConfig,
 } from './utils/setupTestMode';
-import {
-    isTraineeSuspended,
-    setTraineeSuspendedMarker,
-} from './utils/traineeStatus';
 
 import {
     classifyDayNightBySunTimes,
@@ -33852,30 +33848,6 @@ const App: React.FC = () => {
         ].filter(Boolean).join(', ');
 
         logAudit('Mass Completion', 'Edit', `Updated ${configuredTrainingReportDisplayName} for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
-        if (assessment.overallResult === 'F') {
-            const failedTrainee = allTraineesData.find((trainee: any) => (
-                trainee.fullName === assessment.traineeFullName ||
-                trainee.name === assessment.traineeFullName
-            )) || traineesData.find((trainee: any) => (
-                trainee.fullName === assessment.traineeFullName ||
-                trainee.name === assessment.traineeFullName
-            ));
-
-            if (failedTrainee && !isTraineeSuspended(failedTrainee)) {
-                const suspendedTrainee = {
-                    ...failedTrainee,
-                    isPaused: true,
-                    permissions: setTraineeSuspendedMarker(failedTrainee.permissions, true),
-                };
-                await handleUpdateTrainee(suspendedTrainee);
-                logAudit(
-                    'Trainee Roster',
-                    'Edit',
-                    `Suspended ${assessment.traineeFullName} after unsatisfactory ${configuredTrainingReportDisplayName}`,
-                    `Event: ${assessment.flightNumber}; Result: ${activeTrainingReportTemplate.overallResults.failLabel || 'Unsatisfactory'}`
-                );
-            }
-        }
         await maybeInsertTrainingReportExtraLmpEvent(assessment);
         await maybeExtendTrainingReportNextLmpEvent(assessment);
         await maybePassTrainingReportNotesToNextLmpEvent(assessment);
