@@ -668,7 +668,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 	                        }
 	                        setCourseToEdit(null);
 	                    }}
-	                    onUpdateCourseLeadership={onUpdateCourseLeadership}
+		                    onUpdateCourseLeadership={async (courseNumber, leadership) => {
+		                        try {
+		                            await onUpdateCourseLeadership?.(courseNumber, leadership);
+		                        } finally {
+		                            setCourseToEdit(null);
+		                        }
+		                    }}
 	                    onDeleteTrainee={(trainee) => {
                         onDeleteTrainee(trainee);
                     }}

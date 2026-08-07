@@ -116,18 +116,22 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
         updateHasChanges(newCourseNumber, newUnit, courseCommander, value);
     };
 
-    const handleSaveCourseDetails = async () => {
-        if (newCourseNumber !== courseName) {
-            onUpdateCourseNumber(courseName, newCourseNumber);
-        }
-        if (newUnit !== courseUnit) {
-            onUpdateCourseUnit(courseName, newUnit);
-        }
-        if (leadershipChanged && onUpdateCourseLeadership) {
-            await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
-        }
+    const handleSaveCourseDetails = () => {
         setHasChanges(false);
         onClose();
+        void (async () => {
+            if (newCourseNumber !== courseName) {
+                onUpdateCourseNumber(courseName, newCourseNumber);
+            }
+            if (newUnit !== courseUnit) {
+                onUpdateCourseUnit(courseName, newUnit);
+            }
+            if (leadershipChanged && onUpdateCourseLeadership) {
+                await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
+            }
+        })().catch((error) => {
+            console.error('[CourseEditFlyout] Failed to save course details:', error);
+        });
     };
 
     const handleBackcourseClick = (trainee: Trainee) => {
