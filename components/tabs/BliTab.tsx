@@ -132,7 +132,7 @@ interface CoursePassRateOption {
   key: string;
   label: string;
   courseCount: number;
-  completedReports: number;
+  startedTrainees: number;
 }
 
 interface CoursePassRateRow {
@@ -796,22 +796,22 @@ const filterPassRatesToAllocatedLmps = (
   const allowed = new Set(allocatedLmps.map(option => option.key.toUpperCase()));
   if (allowed.size === 0) return { lmpOptions: [], rows: [] };
   const rows = data.rows.filter(row => allowed.has(String(row.lmpType || '').trim().toUpperCase()));
-  const reportsByLmp = new Map<string, { courseCount: number; completedReports: number }>();
+  const traineesByLmp = new Map<string, { courseCount: number; startedTrainees: number }>();
   rows.forEach(row => {
     const key = String(row.lmpType || '').trim().toUpperCase();
-    const current = reportsByLmp.get(key) || { courseCount: 0, completedReports: 0 };
+    const current = traineesByLmp.get(key) || { courseCount: 0, startedTrainees: 0 };
     current.courseCount += 1;
-    current.completedReports += Number(row.total || 0);
-    reportsByLmp.set(key, current);
+    current.startedTrainees += Number(row.total || 0);
+    traineesByLmp.set(key, current);
   });
   return {
     lmpOptions: allocatedLmps.map(option => {
-      const stats = reportsByLmp.get(option.key.toUpperCase()) || { courseCount: 0, completedReports: 0 };
+      const stats = traineesByLmp.get(option.key.toUpperCase()) || { courseCount: 0, startedTrainees: 0 };
       return {
         key: option.key,
         label: option.label,
         courseCount: stats.courseCount,
-        completedReports: stats.completedReports,
+        startedTrainees: stats.startedTrainees,
       };
     }),
     rows,
@@ -1739,9 +1739,8 @@ const buildPassRateTimelineSummaries = (
 const PassRateStack: React.FC<{ pass: number; fail: number; other: number }> = ({ pass, fail, other }) => {
   const total = Math.max(1, pass + fail + other);
   const segments = [
-    { key: 'pass', value: pass, color: '#22c55e', label: 'Pass' },
-    { key: 'fail', value: fail, color: '#ef4444', label: 'Fail' },
-    { key: 'other', value: other, color: '#94a3b8', label: 'No result' },
+    { key: 'pass', value: pass, color: '#22c55e', label: 'Not suspended' },
+    { key: 'fail', value: fail, color: '#ef4444', label: 'Suspended' },
   ];
   return (
     <div className="flex h-8 overflow-hidden rounded-md border border-slate-700/90 bg-slate-950/70">
@@ -1782,18 +1781,18 @@ const CoursePassRateTile: React.FC<{
       <div className="mt-4">
         <h3 className="text-base font-semibold text-white">Unit pass rates</h3>
         <p className="mt-1 min-h-[34px] text-xs leading-5 text-slate-400">
-          LMP course pass rates from current and historical unit course starts.
+          LMP course pass rates from started trainees and suspended course outcomes.
         </p>
       </div>
       <div className="mt-3 text-2xl font-bold tracking-normal text-white">
         {summary.passRate === null ? 'N/A' : `${compactNumber(summary.passRate, 1)}%`}
       </div>
-      <div className="text-xs text-slate-500">{compactNumber(summary.totals.total, 0)} completed reports · All years</div>
+      <div className="text-xs text-slate-500">{compactNumber(summary.totals.total, 0)} started trainees · All years</div>
       <div className="mt-4 flex-1">
         {summary.totals.total > 0 ? (
           <PassRateStack pass={summary.totals.pass} fail={summary.totals.fail} other={summary.totals.other} />
         ) : (
-          <div className="text-xs text-slate-500">No completed report data available</div>
+          <div className="text-xs text-slate-500">No started trainee data available</div>
         )}
       </div>
       <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500">{compactNumber(aggregates.length, 0)} LMP course{aggregates.length === 1 ? '' : 's'} shown</p>
@@ -1823,7 +1822,7 @@ const CoursePassRateModal: React.FC<{
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">BLI</p>
             <h2 className="mt-1 text-2xl font-bold text-white">Unit pass rates</h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-400">
-              Current and historical pass rates grouped by allocated LMP course. All year windows are displayed together using course start dates.
+              Current and historical pass rates grouped by allocated LMP course. A trainee counts as failed only when they are suspended from the course.
             </p>
           </div>
           <div className="flex flex-wrap items-end justify-end gap-3">
@@ -1866,9 +1865,8 @@ const CoursePassRateModal: React.FC<{
                   <p className="text-sm text-slate-400">All years, Last 5 years and Last 2 years shown together</p>
                 </div>
                 <div className="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Pass</span>
-                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Fail</span>
-                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-slate-400" />No result</span>
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Not suspended</span>
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Suspended</span>
                 </div>
               </div>
               <div className="space-y-3">
@@ -1883,7 +1881,7 @@ const CoursePassRateModal: React.FC<{
                     <PassRateStack pass={row.summary.totals.pass} fail={row.summary.totals.fail} other={row.summary.totals.other} />
                     <div className="text-right">
                       <div className="text-sm font-bold text-emerald-200">{row.summary.passRate === null ? 'N/A' : `${compactNumber(row.summary.passRate, 1)}%`}</div>
-                      <div className="text-[11px] text-slate-500">{compactNumber(row.summary.totals.total, 0)} reports</div>
+                      <div className="text-[11px] text-slate-500">{compactNumber(row.summary.totals.total, 0)} trainees</div>
                     </div>
                   </div>
                 ))}
@@ -1892,10 +1890,9 @@ const CoursePassRateModal: React.FC<{
 
             <aside className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
               <StatRow label="All years pass rate" value={allYearsSummary.passRate === null ? 'N/A' : `${compactNumber(allYearsSummary.passRate, 1)}%`} accent="text-emerald-200" />
-              <StatRow label="Passed" value={compactNumber(allYearsSummary.totals.pass, 0)} accent="text-emerald-200" />
-              <StatRow label="Failed" value={compactNumber(allYearsSummary.totals.fail, 0)} accent="text-rose-200" />
-              <StatRow label="No result" value={compactNumber(allYearsSummary.totals.other, 0)} accent="text-slate-200" />
-              <StatRow label="Completed reports" value={compactNumber(allYearsSummary.totals.total, 0)} />
+              <StatRow label="Not suspended" value={compactNumber(allYearsSummary.totals.pass, 0)} accent="text-emerald-200" />
+              <StatRow label="Suspended" value={compactNumber(allYearsSummary.totals.fail, 0)} accent="text-rose-200" />
+              <StatRow label="Started trainees" value={compactNumber(allYearsSummary.totals.total, 0)} />
               <StatRow label="Course starts" value={compactNumber(allYearsSummary.totals.courseCount, 0)} />
             </aside>
           </div>

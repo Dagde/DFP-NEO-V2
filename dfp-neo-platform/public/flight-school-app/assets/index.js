@@ -48394,22 +48394,22 @@ const filterPassRatesToAllocatedLmps = (data, allocatedLmps) => {
   const allowed = new Set(allocatedLmps.map((option) => option.key.toUpperCase()));
   if (allowed.size === 0) return { lmpOptions: [], rows: [] };
   const rows = data.rows.filter((row) => allowed.has(String(row.lmpType || "").trim().toUpperCase()));
-  const reportsByLmp = /* @__PURE__ */ new Map();
+  const traineesByLmp = /* @__PURE__ */ new Map();
   rows.forEach((row) => {
     const key = String(row.lmpType || "").trim().toUpperCase();
-    const current = reportsByLmp.get(key) || { courseCount: 0, completedReports: 0 };
+    const current = traineesByLmp.get(key) || { courseCount: 0, startedTrainees: 0 };
     current.courseCount += 1;
-    current.completedReports += Number(row.total || 0);
-    reportsByLmp.set(key, current);
+    current.startedTrainees += Number(row.total || 0);
+    traineesByLmp.set(key, current);
   });
   return {
     lmpOptions: allocatedLmps.map((option) => {
-      const stats = reportsByLmp.get(option.key.toUpperCase()) || { courseCount: 0, completedReports: 0 };
+      const stats = traineesByLmp.get(option.key.toUpperCase()) || { courseCount: 0, startedTrainees: 0 };
       return {
         key: option.key,
         label: option.label,
         courseCount: stats.courseCount,
-        completedReports: stats.completedReports
+        startedTrainees: stats.startedTrainees
       };
     }),
     rows
@@ -49199,9 +49199,8 @@ const buildPassRateTimelineSummaries = (rows, referenceDate, selectedLmp) => COU
 const PassRateStack = ({ pass, fail, other }) => {
   const total = Math.max(1, pass + fail + other);
   const segments = [
-    { key: "pass", value: pass, color: "#22c55e", label: "Pass" },
-    { key: "fail", value: fail, color: "#ef4444", label: "Fail" },
-    { key: "other", value: other, color: "#94a3b8", label: "No result" }
+    { key: "pass", value: pass, color: "#22c55e", label: "Not suspended" },
+    { key: "fail", value: fail, color: "#ef4444", label: "Suspended" }
   ];
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-8 overflow-hidden rounded-md border border-slate-700/90 bg-slate-950/70", children: segments.map((segment) => {
     if (segment.value <= 0) return null;
@@ -49231,14 +49230,14 @@ const CoursePassRateTile = ({ data, selectedLmp, date, onOpen }) => {
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-base font-semibold text-white", children: "Unit pass rates" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 min-h-[34px] text-xs leading-5 text-slate-400", children: "LMP course pass rates from current and historical unit course starts." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 min-h-[34px] text-xs leading-5 text-slate-400", children: "LMP course pass rates from started trainees and suspended course outcomes." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-2xl font-bold tracking-normal text-white", children: summary.passRate === null ? "N/A" : `${compactNumber(summary.passRate, 1)}%` }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-slate-500", children: [
           compactNumber(summary.totals.total, 0),
-          " completed reports · All years"
+          " started trainees · All years"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex-1", children: summary.totals.total > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(PassRateStack, { pass: summary.totals.pass, fail: summary.totals.fail, other: summary.totals.other }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "No completed report data available" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 flex-1", children: summary.totals.total > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(PassRateStack, { pass: summary.totals.pass, fail: summary.totals.fail, other: summary.totals.other }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-500", children: "No started trainee data available" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 text-[11px] uppercase tracking-[0.18em] text-slate-500", children: [
           compactNumber(aggregates.length, 0),
           " LMP course",
@@ -49263,7 +49262,7 @@ const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) 
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300", children: "BLI" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-2xl font-bold text-white", children: "Unit pass rates" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-slate-400", children: "Current and historical pass rates grouped by allocated LMP course. All year windows are displayed together using course start dates." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 max-w-3xl text-sm text-slate-400", children: "Current and historical pass rates grouped by allocated LMP course. A trainee counts as failed only when they are suspended from the course." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-end gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
@@ -49301,15 +49300,11 @@ const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) 
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2.5 w-2.5 rounded-full bg-emerald-500" }),
-                  "Pass"
+                  "Not suspended"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2.5 w-2.5 rounded-full bg-red-500" }),
-                  "Fail"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-2.5 w-2.5 rounded-full bg-slate-400" }),
-                  "No result"
+                  "Suspended"
                 ] })
               ] })
             ] }),
@@ -49329,17 +49324,16 @@ const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) 
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-emerald-200", children: row.summary.passRate === null ? "N/A" : `${compactNumber(row.summary.passRate, 1)}%` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
                   compactNumber(row.summary.totals.total, 0),
-                  " reports"
+                  " trainees"
                 ] })
               ] })
             ] }, row.key)) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "All years pass rate", value: allYearsSummary.passRate === null ? "N/A" : `${compactNumber(allYearsSummary.passRate, 1)}%`, accent: "text-emerald-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Passed", value: compactNumber(allYearsSummary.totals.pass, 0), accent: "text-emerald-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Failed", value: compactNumber(allYearsSummary.totals.fail, 0), accent: "text-rose-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "No result", value: compactNumber(allYearsSummary.totals.other, 0), accent: "text-slate-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Completed reports", value: compactNumber(allYearsSummary.totals.total, 0) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Not suspended", value: compactNumber(allYearsSummary.totals.pass, 0), accent: "text-emerald-200" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Suspended", value: compactNumber(allYearsSummary.totals.fail, 0), accent: "text-rose-200" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Started trainees", value: compactNumber(allYearsSummary.totals.total, 0) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Course starts", value: compactNumber(allYearsSummary.totals.courseCount, 0) })
           ] })
         ] })

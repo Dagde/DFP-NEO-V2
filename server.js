@@ -12708,14 +12708,15 @@ app.get('/api/bli/course-movements', async (req, res) => {
   }
 });
 
-// GET /api/bli/course-pass-rates - Completed training report pass/fail rates by LMP course.
+// GET /api/bli/course-pass-rates - Trainee suspension outcomes by allocated LMP course.
 app.get('/api/bli/course-pass-rates', async (req, res) => {
   try {
     const db = await getPrisma();
+    const suspendedPermission = '__DFP_TRAINEE_SUSPENDED__';
     const scopedWhere = hasScopeQuery(req) ? await buildScopedEntityWhere(req, db) : {};
     const courses = await db.course.findMany({
       where: scopedWhere,
-      select: { code: true, name: true, lmpType: true, unit: true, location: true, status: true, startDate: true, endDate: true },
+      select: { code: true, name: true, lmpType: true, unit: true, location: true, status: true, startDate: true, endDate: true, totalStudents: true },
       orderBy: [{ lmpType: 'asc' }, { name: 'asc' }],
     });
 
@@ -12724,41 +12725,45 @@ app.get('/api/bli/course-pass-rates', async (req, res) => {
       return res.json({ success: true, lmpOptions: [], rows: [], summary: null });
     }
 
-    const courseSql = sqlStringList(courseKeys);
-    const performanceRows = await db.$queryRawUnsafe(`
-      SELECT
-        "course",
-        UPPER(COALESCE("overallResult", '')) AS "overallResult",
-        COUNT(*)::int AS "count"
-      FROM "TraineePerformance"
-      WHERE "isCompleted" = true
-        AND "course" IN (${courseSql})
-      GROUP BY "course", UPPER(COALESCE("overallResult", ''))
-    `);
+    const trainees = await db.trainee.findMany({
+      where: scopedWhere,
+      select: {
+        id: true,
+        course: true,
+        lmpType: true,
+        academicLmpType: true,
+        permissions: true,
+      },
+    });
 
-    const statsByCourse = new Map();
-    (performanceRows || []).forEach((row) => {
-      const key = String(row.course || '').trim();
-      if (!key) return;
-      const result = String(row.overallResult || '').trim().toUpperCase();
-      const count = Number(row.count || 0);
-      const stats = statsByCourse.get(key) || { pass: 0, fail: 0, other: 0 };
-      if (result === 'P' || result === 'PASS') stats.pass += count;
-      else if (result === 'F' || result === 'FAIL') stats.fail += count;
-      else stats.other += count;
-      statsByCourse.set(key, stats);
+    const normalizeCourseKey = (value) => String(value || '').trim().toUpperCase();
+    const traineesByCourseKey = new Map();
+    trainees.forEach((trainee) => {
+      uniqueStrings([trainee.course, trainee.lmpType, trainee.academicLmpType].filter(Boolean))
+        .map(normalizeCourseKey)
+        .filter(Boolean)
+        .forEach((key) => {
+          const list = traineesByCourseKey.get(key) || [];
+          list.push(trainee);
+          traineesByCourseKey.set(key, list);
+        });
     });
 
     const rows = courses.map((course) => {
-      const stats = uniqueStrings([course.code, course.name].filter(Boolean))
-        .map((key) => statsByCourse.get(String(key).trim()))
+      const matchingTraineesById = new Map();
+      uniqueStrings([course.code, course.name].filter(Boolean))
+        .map(normalizeCourseKey)
         .filter(Boolean)
-        .reduce((acc, item) => ({
-          pass: acc.pass + item.pass,
-          fail: acc.fail + item.fail,
-          other: acc.other + item.other,
-        }), { pass: 0, fail: 0, other: 0 });
-      const total = stats.pass + stats.fail + stats.other;
+        .forEach((key) => {
+          (traineesByCourseKey.get(key) || []).forEach((trainee) => {
+            matchingTraineesById.set(trainee.id, trainee);
+          });
+        });
+      const matchingTrainees = [...matchingTraineesById.values()];
+      const configuredStarted = Number(course.totalStudents || 0);
+      const suspended = matchingTrainees.filter((trainee) => Array.isArray(trainee.permissions) && trainee.permissions.includes(suspendedPermission)).length;
+      const total = Math.max(configuredStarted > 0 ? configuredStarted : 0, matchingTrainees.length);
+      const notSuspended = Math.max(0, total - suspended);
       return {
         courseCode: course.code,
         courseName: course.name,
@@ -12768,11 +12773,11 @@ app.get('/api/bli/course-pass-rates', async (req, res) => {
         status: course.status,
         startDate: course.startDate,
         endDate: course.endDate,
-        pass: stats.pass,
-        fail: stats.fail,
-        other: stats.other,
+        pass: notSuspended,
+        fail: suspended,
+        other: 0,
         total,
-        passRate: total > 0 ? (stats.pass / total) * 100 : null,
+        passRate: total > 0 ? (notSuspended / total) * 100 : null,
       };
     });
 
@@ -12780,9 +12785,9 @@ app.get('/api/bli/course-pass-rates', async (req, res) => {
     rows.forEach((row) => {
       const key = String(row.lmpType || '').trim();
       if (!key) return;
-      const current = optionMap.get(key) || { key, label: key, courseCount: 0, completedReports: 0 };
+      const current = optionMap.get(key) || { key, label: key, courseCount: 0, startedTrainees: 0 };
       current.courseCount += 1;
-      current.completedReports += row.total;
+      current.startedTrainees += row.total;
       optionMap.set(key, current);
     });
 
