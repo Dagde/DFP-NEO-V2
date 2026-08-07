@@ -27387,14 +27387,51 @@ const CourseRosterView = ({
     setHoveredTrainee(null);
     setFlyoutPosition(null);
   };
+  const findSyllabusItemForEventKey = (eventKey) => {
+    const normalisedEventKey = String(eventKey || "").trim().toUpperCase();
+    if (!normalisedEventKey) return void 0;
+    return syllabusDetails.find((item) => String(item.id || "").trim().toUpperCase() === normalisedEventKey || String(item.code || "").trim().toUpperCase() === normalisedEventKey);
+  };
+  const isNormalTrainingFlightOrSim = (eventKey) => {
+    const syllabusItem = findSyllabusItemForEventKey(eventKey);
+    return Boolean(
+      syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial
+    );
+  };
+  const getNumericOverallGrade = (grade) => {
+    if (typeof grade === "number" && Number.isFinite(grade)) return grade;
+    const parsed = Number(String(grade || "").trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const getLatestTrainingReportStatus = (trainee) => {
+    const reports = Array.from(pt051Assessments?.values() || []).filter((assessment) => assessment && assessment.isCompleted !== false && (assessment.traineeFullName === trainee.fullName || assessment.traineeFullName === trainee.name) && isNormalTrainingFlightOrSim(assessment.flightNumber || assessment.eventCode || assessment.eventId)).sort((a, b) => {
+      const dateA = (/* @__PURE__ */ new Date(`${a.date || ""}T00:00:00`)).getTime() || 0;
+      const dateB = (/* @__PURE__ */ new Date(`${b.date || ""}T00:00:00`)).getTime() || 0;
+      if (dateA !== dateB) return dateB - dateA;
+      return Number(b.startTime || 0) - Number(a.startTime || 0);
+    });
+    const latestReport = reports[0];
+    if (!latestReport) return null;
+    if (latestReport.overallResult === "F") return "failed";
+    const overallGrade = getNumericOverallGrade(latestReport.overallGrade);
+    if (overallGrade === 0) return "failed";
+    if (overallGrade === 1) return "marginal";
+    return null;
+  };
   const getTraineeNameColorClass = (trainee) => {
     if (trainee.isPaused) {
       return "text-red-400 hover:text-red-300";
     }
+    const latestTrainingReportStatus = getLatestTrainingReportStatus(trainee);
+    if (latestTrainingReportStatus === "failed") {
+      return "text-red-400 hover:text-red-300";
+    }
+    if (latestTrainingReportStatus === "marginal") {
+      return "text-amber-400 hover:text-amber-300";
+    }
     const traineeScores = scores.get(trainee.fullName) || [];
     const nonRemedialFlightFtdScores = traineeScores.filter((score) => {
-      const syllabusItem = syllabusDetails.find((item) => item.id === score.event);
-      return syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial;
+      return isNormalTrainingFlightOrSim(score.event);
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (nonRemedialFlightFtdScores.length > 0) {
       const lastNonRemedialScore = nonRemedialFlightFtdScores[0];

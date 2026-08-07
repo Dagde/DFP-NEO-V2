@@ -340,23 +340,79 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         setFlyoutPosition(null);
     };
 
+    const findSyllabusItemForEventKey = (eventKey: unknown): SyllabusItemDetail | undefined => {
+        const normalisedEventKey = String(eventKey || '').trim().toUpperCase();
+        if (!normalisedEventKey) return undefined;
+        return syllabusDetails.find(item => (
+            String(item.id || '').trim().toUpperCase() === normalisedEventKey ||
+            String(item.code || '').trim().toUpperCase() === normalisedEventKey
+        ));
+    };
+
+    const isNormalTrainingFlightOrSim = (eventKey: unknown): boolean => {
+        const syllabusItem = findSyllabusItemForEventKey(eventKey);
+        return Boolean(
+            syllabusItem &&
+            (syllabusItem.type === 'Flight' || syllabusItem.type === 'FTD') &&
+            !syllabusItem.isRemedial
+        );
+    };
+
+    const getNumericOverallGrade = (grade: unknown): number | null => {
+        if (typeof grade === 'number' && Number.isFinite(grade)) return grade;
+        const parsed = Number(String(grade || '').trim());
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    const getLatestTrainingReportStatus = (trainee: Trainee): 'failed' | 'marginal' | null => {
+        const reports = Array.from(pt051Assessments?.values() || [])
+            .filter((assessment: any) => (
+                assessment &&
+                assessment.isCompleted !== false &&
+                (
+                    assessment.traineeFullName === trainee.fullName ||
+                    assessment.traineeFullName === trainee.name
+                ) &&
+                isNormalTrainingFlightOrSim(assessment.flightNumber || assessment.eventCode || assessment.eventId)
+            ))
+            .sort((a: any, b: any) => {
+                const dateA = new Date(`${a.date || ''}T00:00:00`).getTime() || 0;
+                const dateB = new Date(`${b.date || ''}T00:00:00`).getTime() || 0;
+                if (dateA !== dateB) return dateB - dateA;
+                return Number(b.startTime || 0) - Number(a.startTime || 0);
+            });
+
+        const latestReport = reports[0];
+        if (!latestReport) return null;
+        if (latestReport.overallResult === 'F') return 'failed';
+        const overallGrade = getNumericOverallGrade(latestReport.overallGrade);
+        if (overallGrade === 0) return 'failed';
+        if (overallGrade === 1) return 'marginal';
+        return null;
+    };
+
     const getTraineeNameColorClass = (trainee: Trainee): string => {
         // RULE 1: RED for Paused/Suspended (highest priority - overrides all others)
         if (trainee.isPaused) {
             return 'text-red-400 hover:text-red-300';
         }
 
-        // RULE 2: RED for a failed event, AMBER for a marginal event
+        // RULE 2: RED for a failed report, AMBER for a marginal report
+        const latestTrainingReportStatus = getLatestTrainingReportStatus(trainee);
+        if (latestTrainingReportStatus === 'failed') {
+            return 'text-red-400 hover:text-red-300';
+        }
+        if (latestTrainingReportStatus === 'marginal') {
+            return 'text-amber-400 hover:text-amber-300';
+        }
+
+        // RULE 3: Fall back to legacy score records when no completed report is available
         const traineeScores = scores.get(trainee.fullName) || [];
 
         // Get all non-remedial Flight/FTD scores sorted by date (most recent first)
         const nonRemedialFlightFtdScores = traineeScores
             .filter(score => {
-                const syllabusItem = syllabusDetails.find(item => item.id === score.event);
-                // Include only Flight or FTD events that are NOT remedial
-                return syllabusItem &&
-                       (syllabusItem.type === 'Flight' || syllabusItem.type === 'FTD') &&
-                       !syllabusItem.isRemedial;
+                return isNormalTrainingFlightOrSim(score.event);
             })
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -372,7 +428,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             }
         }
 
-        // RULE 3: GREEN for everyone else (default)
+        // RULE 4: GREEN for everyone else (default)
         return 'text-green-400 hover:text-green-300';
     };
 
