@@ -1807,9 +1807,15 @@ const CoursePassRateModal: React.FC<{
   onLmpChange: (value: string) => void;
   onClose: () => void;
 }> = ({ data, selectedLmp, date, onLmpChange, onClose }) => {
+  const [selectedTimeline, setSelectedTimeline] = useState<CoursePassRateTimelineKey>('all');
   const timelineSummaries = buildPassRateTimelineSummaries(data.rows, date, selectedLmp);
-  const allYearsSummary = timelineSummaries.find(item => item.key === 'all')?.summary || summarisePassRateAggregates([]);
+  const selectedTimelineSummary = timelineSummaries.find(item => item.key === selectedTimeline) || timelineSummaries[0];
+  const sideSummary = selectedTimelineSummary?.summary || summarisePassRateAggregates([]);
   const hasAnyRows = timelineSummaries.some(item => item.aggregates.length > 0);
+
+  useEffect(() => {
+    setSelectedTimeline('all');
+  }, [selectedLmp]);
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8" onMouseDown={onClose}>
@@ -1833,7 +1839,6 @@ const CoursePassRateModal: React.FC<{
                 onChange={event => onLmpChange(event.target.value)}
                 className="h-10 min-w-[220px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none"
               >
-                <option value="">All allocated LMP courses</option>
                 {data.lmpOptions.map(option => (
                   <option key={option.key} value={option.key}>{option.label}</option>
                 ))}
@@ -1861,8 +1866,8 @@ const CoursePassRateModal: React.FC<{
             <div className="rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{selectedLmp || 'All allocated LMP courses'}</h3>
-                  <p className="text-sm text-slate-400">All years, Last 5 years and Last 2 years shown together</p>
+                  <h3 className="text-lg font-semibold text-white">{selectedLmp}</h3>
+                  <p className="text-sm text-slate-400">Click a timeline row to update the summary panel</p>
                 </div>
                 <div className="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                   <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Not suspended</span>
@@ -1871,7 +1876,16 @@ const CoursePassRateModal: React.FC<{
               </div>
               <div className="space-y-3">
                 {timelineSummaries.map(row => (
-                  <div key={row.key} className="grid grid-cols-[180px_minmax(0,1fr)_78px] items-center gap-3">
+                  <button
+                    key={row.key}
+                    type="button"
+                    onClick={() => setSelectedTimeline(row.key)}
+                    className={`grid w-full grid-cols-[180px_minmax(0,1fr)_78px] items-center gap-3 rounded-md border p-2 text-left transition ${
+                      selectedTimeline === row.key
+                        ? 'border-cyan-400/70 bg-cyan-400/10'
+                        : 'border-transparent hover:border-slate-700 hover:bg-slate-900/70'
+                    }`}
+                  >
                     <div>
                       <div className="truncate text-sm font-semibold text-slate-200" title={row.label}>{row.label}</div>
                       <div className="text-[11px] text-slate-500">
@@ -1883,17 +1897,17 @@ const CoursePassRateModal: React.FC<{
                       <div className="text-sm font-bold text-emerald-200">{row.summary.passRate === null ? 'N/A' : `${compactNumber(row.summary.passRate, 1)}%`}</div>
                       <div className="text-[11px] text-slate-500">{compactNumber(row.summary.totals.total, 0)} trainees</div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
 
             <aside className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4">
-              <StatRow label="All years pass rate" value={allYearsSummary.passRate === null ? 'N/A' : `${compactNumber(allYearsSummary.passRate, 1)}%`} accent="text-emerald-200" />
-              <StatRow label="Not suspended" value={compactNumber(allYearsSummary.totals.pass, 0)} accent="text-emerald-200" />
-              <StatRow label="Suspended" value={compactNumber(allYearsSummary.totals.fail, 0)} accent="text-rose-200" />
-              <StatRow label="Started trainees" value={compactNumber(allYearsSummary.totals.total, 0)} />
-              <StatRow label="Course starts" value={compactNumber(allYearsSummary.totals.courseCount, 0)} />
+              <StatRow label={`${selectedTimelineSummary?.label || 'Selected'} pass rate`} value={sideSummary.passRate === null ? 'N/A' : `${compactNumber(sideSummary.passRate, 1)}%`} accent="text-emerald-200" />
+              <StatRow label="Not suspended" value={compactNumber(sideSummary.totals.pass, 0)} accent="text-emerald-200" />
+              <StatRow label="Suspended" value={compactNumber(sideSummary.totals.fail, 0)} accent="text-rose-200" />
+              <StatRow label="Started trainees" value={compactNumber(sideSummary.totals.total, 0)} />
+              <StatRow label="Course starts" value={compactNumber(sideSummary.totals.courseCount, 0)} />
             </aside>
           </div>
         )}
@@ -2316,9 +2330,15 @@ const BliTab: React.FC<BliTabProps> = ({ date, events, instructorsData, trainees
   }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
 
   useEffect(() => {
-    if (selectedPassRateLmp && !scopedCoursePassRates.lmpOptions.some(option => option.key === selectedPassRateLmp)) {
-      setSelectedPassRateLmp('');
+    const firstOption = scopedCoursePassRates.lmpOptions[0]?.key || '';
+    if (selectedPassRateLmp && scopedCoursePassRates.lmpOptions.some(option => option.key === selectedPassRateLmp)) {
+      return;
     }
+    if (firstOption && selectedPassRateLmp !== firstOption) {
+      setSelectedPassRateLmp(firstOption);
+      return;
+    }
+    if (!firstOption && selectedPassRateLmp) setSelectedPassRateLmp('');
   }, [scopedCoursePassRates.lmpOptions, selectedPassRateLmp]);
 
   return (

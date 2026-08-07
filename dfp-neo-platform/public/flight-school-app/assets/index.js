@@ -49249,9 +49249,14 @@ const CoursePassRateTile = ({ data, selectedLmp, date, onOpen }) => {
   );
 };
 const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) => {
+  const [selectedTimeline, setSelectedTimeline] = reactExports.useState("all");
   const timelineSummaries = buildPassRateTimelineSummaries(data.rows, date, selectedLmp);
-  const allYearsSummary = timelineSummaries.find((item) => item.key === "all")?.summary || summarisePassRateAggregates([]);
+  const selectedTimelineSummary = timelineSummaries.find((item) => item.key === selectedTimeline) || timelineSummaries[0];
+  const sideSummary = selectedTimelineSummary?.summary || summarisePassRateAggregates([]);
   const hasAnyRows = timelineSummaries.some((item) => item.aggregates.length > 0);
+  reactExports.useEffect(() => {
+    setSelectedTimeline("all");
+  }, [selectedLmp]);
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-6 py-8", onMouseDown: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -49267,16 +49272,13 @@ const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) 
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-end justify-end gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500", children: "LMP course" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "select",
                 {
                   value: selectedLmp,
                   onChange: (event) => onLmpChange(event.target.value),
                   className: "h-10 min-w-[220px] rounded-md border border-slate-700 bg-slate-950 px-3 text-sm font-semibold text-white focus:border-cyan-400 focus:outline-none",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All allocated LMP courses" }),
-                    data.lmpOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
-                  ]
+                  children: data.lmpOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.key, children: option.label }, option.key))
                 }
               )
             ] }),
@@ -49294,8 +49296,8 @@ const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) 
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center justify-between gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: selectedLmp || "All allocated LMP courses" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-400", children: "All years, Last 5 years and Last 2 years shown together" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: selectedLmp }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-400", children: "Click a timeline row to update the summary panel" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-2", children: [
@@ -49308,33 +49310,42 @@ const CoursePassRateModal = ({ data, selectedLmp, date, onLmpChange, onClose }) 
                 ] })
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: timelineSummaries.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[180px_minmax(0,1fr)_78px] items-center gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-semibold text-slate-200", title: row.label, children: row.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
-                  row.description,
-                  " · ",
-                  compactNumber(row.summary.totals.courseCount, 0),
-                  " course",
-                  row.summary.totals.courseCount === 1 ? "" : "s"
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(PassRateStack, { pass: row.summary.totals.pass, fail: row.summary.totals.fail, other: row.summary.totals.other }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-emerald-200", children: row.summary.passRate === null ? "N/A" : `${compactNumber(row.summary.passRate, 1)}%` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
-                  compactNumber(row.summary.totals.total, 0),
-                  " trainees"
-                ] })
-              ] })
-            ] }, row.key)) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: timelineSummaries.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                onClick: () => setSelectedTimeline(row.key),
+                className: `grid w-full grid-cols-[180px_minmax(0,1fr)_78px] items-center gap-3 rounded-md border p-2 text-left transition ${selectedTimeline === row.key ? "border-cyan-400/70 bg-cyan-400/10" : "border-transparent hover:border-slate-700 hover:bg-slate-900/70"}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "truncate text-sm font-semibold text-slate-200", title: row.label, children: row.label }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
+                      row.description,
+                      " · ",
+                      compactNumber(row.summary.totals.courseCount, 0),
+                      " course",
+                      row.summary.totals.courseCount === 1 ? "" : "s"
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(PassRateStack, { pass: row.summary.totals.pass, fail: row.summary.totals.fail, other: row.summary.totals.other }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-emerald-200", children: row.summary.passRate === null ? "N/A" : `${compactNumber(row.summary.passRate, 1)}%` }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-[11px] text-slate-500", children: [
+                      compactNumber(row.summary.totals.total, 0),
+                      " trainees"
+                    ] })
+                  ] })
+                ]
+              },
+              row.key
+            )) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/45 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "All years pass rate", value: allYearsSummary.passRate === null ? "N/A" : `${compactNumber(allYearsSummary.passRate, 1)}%`, accent: "text-emerald-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Not suspended", value: compactNumber(allYearsSummary.totals.pass, 0), accent: "text-emerald-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Suspended", value: compactNumber(allYearsSummary.totals.fail, 0), accent: "text-rose-200" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Started trainees", value: compactNumber(allYearsSummary.totals.total, 0) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Course starts", value: compactNumber(allYearsSummary.totals.courseCount, 0) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: `${selectedTimelineSummary?.label || "Selected"} pass rate`, value: sideSummary.passRate === null ? "N/A" : `${compactNumber(sideSummary.passRate, 1)}%`, accent: "text-emerald-200" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Not suspended", value: compactNumber(sideSummary.totals.pass, 0), accent: "text-emerald-200" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Suspended", value: compactNumber(sideSummary.totals.fail, 0), accent: "text-rose-200" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Started trainees", value: compactNumber(sideSummary.totals.total, 0) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(StatRow, { label: "Course starts", value: compactNumber(sideSummary.totals.courseCount, 0) })
           ] })
         ] })
       ]
@@ -49682,9 +49693,15 @@ const BliTab = ({ date, events, instructorsData, traineesData, currentAircraftAv
     }
   }, [courseOutcomeData.selectedCourse, selectedCourseOutcomeCourse]);
   reactExports.useEffect(() => {
-    if (selectedPassRateLmp && !scopedCoursePassRates.lmpOptions.some((option) => option.key === selectedPassRateLmp)) {
-      setSelectedPassRateLmp("");
+    const firstOption = scopedCoursePassRates.lmpOptions[0]?.key || "";
+    if (selectedPassRateLmp && scopedCoursePassRates.lmpOptions.some((option) => option.key === selectedPassRateLmp)) {
+      return;
     }
+    if (firstOption && selectedPassRateLmp !== firstOption) {
+      setSelectedPassRateLmp(firstOption);
+      return;
+    }
+    if (!firstOption && selectedPassRateLmp) setSelectedPassRateLmp("");
   }, [scopedCoursePassRates.lmpOptions, selectedPassRateLmp]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
     openMetric && /* @__PURE__ */ jsxRuntimeExports.jsx(
