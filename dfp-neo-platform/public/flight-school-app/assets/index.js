@@ -72026,7 +72026,8 @@ This removes the reusable permission profile from Settings. Users assigned only 
         ...buildBaseOption(user),
         rank: staff.rank,
         unit: staff.unit,
-        group: `Staff - ${String(staff.unit || "No unit assigned").trim()}`
+        category: "Staff",
+        group: String(staff.unit || "No unit assigned").trim()
       });
     });
     const traineesByDisplayOrder = [...traineesData].filter((trainee) => String(trainee?.name || trainee?.fullName || "").trim() && isActiveUnitPerson(trainee.unit)).sort((a, b) => {
@@ -72044,13 +72045,15 @@ This removes the reusable permission profile from Settings. Users assigned only 
         rank: trainee.rank,
         unit: trainee.unit,
         course,
-        group: `Trainees - ${course}`
+        category: "Trainees",
+        group: course
       });
     });
     userOptions.forEach((user) => {
       if (usedUserIds.has(user.id)) return;
       options.push({
         ...buildBaseOption(user),
+        category: "Other platform users",
         group: "Other platform users"
       });
     });
@@ -72059,9 +72062,14 @@ This removes the reusable permission profile from Settings. Users assigned only 
   const bulkAccessUserGroups = reactExports.useMemo(() => {
     const groups = /* @__PURE__ */ new Map();
     bulkAccessUserOptions.forEach((user) => {
-      groups.set(user.group, [...groups.get(user.group) || [], user]);
+      const categoryGroups = groups.get(user.category) || /* @__PURE__ */ new Map();
+      categoryGroups.set(user.group, [...categoryGroups.get(user.group) || [], user]);
+      groups.set(user.category, categoryGroups);
     });
-    return Array.from(groups.entries());
+    return Array.from(groups.entries()).map(([category, categoryGroups]) => ({
+      category,
+      groups: Array.from(categoryGroups.entries())
+    }));
   }, [bulkAccessUserOptions]);
   const toggleBulkAccessUser = (userId, checked) => {
     setBulkAccessUserIds((current) => checked ? Array.from(/* @__PURE__ */ new Set([...current, userId])) : current.filter((id) => id !== userId));
@@ -78032,25 +78040,28 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 space-y-3 overflow-y-auto pr-1", children: [
-                bulkAccessUserGroups.map(([groupName, users]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-10 rounded bg-gray-800 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-100", children: groupName }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "checkbox",
-                        className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
-                        checked: bulkAccessUserIds.includes(user.id),
-                        disabled: !canEditSection("platform-user-access"),
-                        onChange: (event) => toggleBulkAccessUser(user.id, event.target.checked)
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: [user.rank, user.name].filter(Boolean).join(" ") }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: user.username || user.email || user.id })
-                    ] })
-                  ] }, `${groupName}-${user.id}`)) })
-                ] }, groupName)),
+                bulkAccessUserGroups.map(({ category, groups }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 rounded border border-cyan-500/25 bg-cyan-950 px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide text-cyan-50", children: category }),
+                  groups.map(([groupName, users]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-800 bg-gray-950/50 p-2", children: [
+                    groupName !== category && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-1 rounded bg-gray-800/80 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-300", children: groupName }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                          checked: bulkAccessUserIds.includes(user.id),
+                          disabled: !canEditSection("platform-user-access"),
+                          onChange: (event) => toggleBulkAccessUser(user.id, event.target.checked)
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: [user.rank, user.name].filter(Boolean).join(" ") }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: user.username || user.email || user.id })
+                      ] })
+                    ] }, `${category}-${groupName}-${user.id}`)) })
+                  ] }, `${category}-${groupName}`))
+                ] }, category)),
                 bulkAccessUserGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-100", children: "No platform users are available for group assignment." })
               ] })
             ] }),

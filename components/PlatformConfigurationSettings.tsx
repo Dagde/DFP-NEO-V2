@@ -186,6 +186,7 @@ type BulkAccessUserOption = {
   rank?: string;
   unit?: string;
   course?: string;
+  category: string;
   group: string;
 };
 
@@ -5606,7 +5607,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...buildBaseOption(user),
         rank: staff.rank,
         unit: staff.unit,
-        group: `Staff - ${String(staff.unit || 'No unit assigned').trim()}`,
+        category: 'Staff',
+        group: String(staff.unit || 'No unit assigned').trim(),
       });
     });
 
@@ -5627,7 +5629,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         rank: trainee.rank,
         unit: trainee.unit,
         course,
-        group: `Trainees - ${course}`,
+        category: 'Trainees',
+        group: course,
       });
     });
 
@@ -5635,6 +5638,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       if (usedUserIds.has(user.id)) return;
       options.push({
         ...buildBaseOption(user),
+        category: 'Other platform users',
         group: 'Other platform users',
       });
     });
@@ -5643,11 +5647,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
 
   const bulkAccessUserGroups = useMemo(() => {
-    const groups = new Map<string, BulkAccessUserOption[]>();
+    const groups = new Map<string, Map<string, BulkAccessUserOption[]>>();
     bulkAccessUserOptions.forEach((user) => {
-      groups.set(user.group, [...(groups.get(user.group) || []), user]);
+      const categoryGroups = groups.get(user.category) || new Map<string, BulkAccessUserOption[]>();
+      categoryGroups.set(user.group, [...(categoryGroups.get(user.group) || []), user]);
+      groups.set(user.category, categoryGroups);
     });
-    return Array.from(groups.entries());
+    return Array.from(groups.entries()).map(([category, categoryGroups]) => ({
+      category,
+      groups: Array.from(categoryGroups.entries()),
+    }));
   }, [bulkAccessUserOptions]);
 
   const toggleBulkAccessUser = (userId: string, checked: boolean) => {
@@ -12152,28 +12161,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </span>
                 </div>
                 <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
-                  {bulkAccessUserGroups.map(([groupName, users]) => (
-                    <div key={groupName}>
-                      <div className="sticky top-0 z-10 rounded bg-gray-800 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-100">
-                        {groupName}
+                  {bulkAccessUserGroups.map(({ category, groups }) => (
+                    <div key={category} className="space-y-2">
+                      <div className="sticky top-0 z-20 rounded border border-cyan-500/25 bg-cyan-950 px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide text-cyan-50">
+                        {category}
                       </div>
-                      <div className="mt-1 space-y-1">
-                        {users.map((user) => (
-                          <label key={`${groupName}-${user.id}`} className="flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100">
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
-                              checked={bulkAccessUserIds.includes(user.id)}
-                              disabled={!canEditSection('platform-user-access')}
-                              onChange={(event) => toggleBulkAccessUser(user.id, event.target.checked)}
-                            />
-                            <span>
-                              <span className="block font-semibold">{[user.rank, user.name].filter(Boolean).join(' ')}</span>
-                              <span className="block text-xs text-gray-500">{user.username || user.email || user.id}</span>
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+                      {groups.map(([groupName, users]) => (
+                        <div key={`${category}-${groupName}`} className="rounded border border-gray-800 bg-gray-950/50 p-2">
+                          {groupName !== category && (
+                            <div className="mb-1 rounded bg-gray-800/80 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-300">
+                              {groupName}
+                            </div>
+                          )}
+                          <div className="space-y-1">
+                            {users.map((user) => (
+                              <label key={`${category}-${groupName}-${user.id}`} className="flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100">
+                                <input
+                                  type="checkbox"
+                                  className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                                  checked={bulkAccessUserIds.includes(user.id)}
+                                  disabled={!canEditSection('platform-user-access')}
+                                  onChange={(event) => toggleBulkAccessUser(user.id, event.target.checked)}
+                                />
+                                <span>
+                                  <span className="block font-semibold">{[user.rank, user.name].filter(Boolean).join(' ')}</span>
+                                  <span className="block text-xs text-gray-500">{user.username || user.email || user.id}</span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                   {bulkAccessUserGroups.length === 0 && (
