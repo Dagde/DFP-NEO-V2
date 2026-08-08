@@ -11891,7 +11891,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <UserSearchSelect
                 label="User"
                 value={selectedAccessUserId}
-                disabled={!canEditSection('platform-user-access')}
+                disabled={false}
                 users={userOptions}
                 search={userSearch}
                 onSearchChange={setUserSearch}

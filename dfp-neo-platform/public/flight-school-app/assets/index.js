@@ -77825,7 +77825,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
               {
                 label: "User",
                 value: selectedAccessUserId,
-                disabled: !canEditSection("platform-user-access"),
+                disabled: false,
                 users: userOptions,
                 search: userSearch,
                 onSearchChange: setUserSearch,
