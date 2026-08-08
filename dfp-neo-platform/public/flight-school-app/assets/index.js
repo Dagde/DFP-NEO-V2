@@ -71976,7 +71976,19 @@ This removes the reusable permission profile from Settings. Users assigned only 
         id: user.userId || user.username,
         name: displayUserName(user),
         username: user.username || user.userId || "",
-        email: user.email || ""
+        email: user.email || "",
+        staffRecordId: user.staffRecordId || "",
+        staffName: user.staffName || "",
+        staffRank: user.staffRank || "",
+        staffUnit: user.staffUnit || "",
+        staffLocation: user.staffLocation || "",
+        traineeRecordId: user.traineeRecordId || "",
+        traineeName: user.traineeName || "",
+        traineeFullName: user.traineeFullName || "",
+        traineeRank: user.traineeRank || "",
+        traineeCourse: user.traineeCourse || "",
+        traineeUnit: user.traineeUnit || "",
+        traineeLocation: user.traineeLocation || ""
       })).filter((user) => user.id);
       const platformUserIds = new Set(platformOptions.flatMap((user) => uniqueValues([user.id, user.username].map(toIdentifier))));
       const orphanOptions = configUserAccess.filter((access) => {
@@ -71998,7 +72010,9 @@ This removes the reusable permission profile from Settings. Users assigned only 
     activeUnitCode,
     ...String(activeCompositeUnitCode || "").split(/[+/]/)
   ].map((code) => String(code || "").trim().toUpperCase()).filter(Boolean))), [activeCompositeUnitCode, activeUnitCode, activeUnitCodes]);
-  const matchesBulkAccessPerson = (user, person) => {
+  const matchesBulkAccessPerson = (user, person, personType) => {
+    const linkedRecordId = personType === "staff" ? user.staffRecordId : user.traineeRecordId;
+    if (linkedRecordId && String(linkedRecordId).trim() === String(person.id || "").trim()) return true;
     const userKeys = uniqueValues([user.id, user.username, user.email, user.name].map((value) => String(value || "").trim().toLowerCase()));
     const personKeys = uniqueValues([person.id, person.email, person.name, person.fullName].map((value) => String(value || "").trim().toLowerCase()));
     return personKeys.some((key) => key && userKeys.includes(key));
@@ -72019,15 +72033,15 @@ This removes the reusable permission profile from Settings. Users assigned only 
     const options = [];
     const staffByDisplayOrder = [...instructorsData].filter((staff) => String(staff?.name || "").trim() && isActiveUnitPerson(staff.unit)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
     staffByDisplayOrder.forEach((staff) => {
-      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, staff));
+      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, staff, "staff"));
       if (!user || usedUserIds.has(user.id)) return;
       usedUserIds.add(user.id);
       options.push({
         ...buildBaseOption(user),
-        rank: staff.rank,
-        unit: staff.unit,
+        rank: staff.rank || user.staffRank,
+        unit: staff.unit || user.staffUnit,
         category: "Staff",
-        group: String(staff.unit || "No unit assigned").trim()
+        group: String(staff.unit || user.staffUnit || "No unit assigned").trim()
       });
     });
     const traineesByDisplayOrder = [...traineesData].filter((trainee) => String(trainee?.name || trainee?.fullName || "").trim() && isActiveUnitPerson(trainee.unit)).sort((a, b) => {
@@ -72036,14 +72050,14 @@ This removes the reusable permission profile from Settings. Users assigned only 
       return String(a.name || a.fullName || "").localeCompare(String(b.name || b.fullName || ""));
     });
     traineesByDisplayOrder.forEach((trainee) => {
-      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, trainee));
+      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, trainee, "trainee"));
       if (!user || usedUserIds.has(user.id)) return;
       usedUserIds.add(user.id);
-      const course = String(trainee.course || "No course assigned").trim();
+      const course = String(trainee.course || user.traineeCourse || "No course assigned").trim();
       options.push({
         ...buildBaseOption(user),
-        rank: trainee.rank,
-        unit: trainee.unit,
+        rank: trainee.rank || user.traineeRank,
+        unit: trainee.unit || user.traineeUnit,
         course,
         category: "Trainees",
         group: course
@@ -72051,6 +72065,29 @@ This removes the reusable permission profile from Settings. Users assigned only 
     });
     userOptions.forEach((user) => {
       if (usedUserIds.has(user.id)) return;
+      if (user.staffRecordId || user.staffName) {
+        usedUserIds.add(user.id);
+        options.push({
+          ...buildBaseOption(user),
+          rank: user.staffRank,
+          unit: user.staffUnit,
+          category: "Staff",
+          group: String(user.staffUnit || "No unit assigned").trim()
+        });
+        return;
+      }
+      if (user.traineeRecordId || user.traineeName || user.traineeFullName) {
+        usedUserIds.add(user.id);
+        options.push({
+          ...buildBaseOption(user),
+          rank: user.traineeRank,
+          unit: user.traineeUnit,
+          course: user.traineeCourse,
+          category: "Trainees",
+          group: String(user.traineeCourse || "No course assigned").trim()
+        });
+        return;
+      }
       options.push({
         ...buildBaseOption(user),
         category: "Other platform users",

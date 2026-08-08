@@ -2349,7 +2349,33 @@ app.get('/api/platform-config', async (req, res) => {
       db.$queryRawUnsafe(`SELECT * FROM "CommercialLicense" ORDER BY "licenseName"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialSchedulingRuleSet" ORDER BY "name"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialUserAccess" ORDER BY "displayName", "userId", "locationCode", "unitCode", "moduleCode"`),
-      db.$queryRawUnsafe(`SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive" FROM "User" ORDER BY "lastName", "firstName", username`),
+      db.$queryRawUnsafe(`
+        SELECT
+          u.id,
+          u."userId",
+          u.username,
+          u.email,
+          u."firstName",
+          u."lastName",
+          u.role,
+          u."isActive",
+          p.id AS "staffRecordId",
+          p.name AS "staffName",
+          p.rank AS "staffRank",
+          p.unit AS "staffUnit",
+          p.location AS "staffLocation",
+          t.id AS "traineeRecordId",
+          t.name AS "traineeName",
+          t."fullName" AS "traineeFullName",
+          t.rank AS "traineeRank",
+          t.course AS "traineeCourse",
+          t.unit AS "traineeUnit",
+          t.location AS "traineeLocation"
+        FROM "User" u
+        LEFT JOIN "Personnel" p ON p."userId" = u.id AND p."isActive" = true
+        LEFT JOIN "Trainee" t ON t."userId" = u.id AND t."isActive" = true
+        ORDER BY u."lastName", u."firstName", u.username
+      `),
     ]);
 
     const payload = {
