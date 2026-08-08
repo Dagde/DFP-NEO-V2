@@ -5587,6 +5587,25 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .filter(Boolean)))
   ), [activeCompositeUnitCode, activeUnitCode, activeUnitCodes]);
 
+  const getBulkAccessNameKeys = (value: unknown): string[] => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return [];
+    const splitName = raw.includes(',')
+      ? raw.split(',').map((part) => part.trim()).filter(Boolean).reverse().join(' ')
+      : raw;
+    const dottedName = raw.replace(/[._-]+/g, ' ');
+    const normaliseName = (name: string) => name.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    const tokenSortName = (name: string) => normaliseName(name).split(' ').filter(Boolean).sort().join(' ');
+    return uniqueValues([
+      normaliseName(raw),
+      normaliseName(splitName),
+      normaliseName(dottedName),
+      tokenSortName(raw),
+      tokenSortName(splitName),
+      tokenSortName(dottedName),
+    ].filter(Boolean));
+  };
+
   const matchesBulkAccessPerson = (user: {
     id: string;
     username: string;
@@ -5599,7 +5618,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (linkedRecordId && String(linkedRecordId).trim() === String(person.id || '').trim()) return true;
     const userKeys = uniqueValues([user.id, user.username, user.email, user.name].map((value) => String(value || '').trim().toLowerCase()));
     const personKeys = uniqueValues([person.id, person.email, person.name, person.fullName].map((value) => String(value || '').trim().toLowerCase()));
-    return personKeys.some((key) => key && userKeys.includes(key));
+    if (personKeys.some((key) => key && userKeys.includes(key))) return true;
+    const userNameKeys = uniqueValues([user.username, user.email?.split('@')[0], user.name].flatMap(getBulkAccessNameKeys));
+    const personNameKeys = uniqueValues([person.name, person.fullName].flatMap(getBulkAccessNameKeys));
+    return personNameKeys.some((key) => key && userNameKeys.includes(key));
   };
 
   const bulkAccessUserOptions = useMemo<BulkAccessUserOption[]>(() => {
@@ -12196,15 +12218,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </button>
             </div>
 
-            <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+            <div className="grid items-stretch gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="flex h-full min-h-[34rem] flex-col rounded border border-gray-700 bg-gray-950/70 p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className={labelClass}>People</span>
                   <span className="ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200">
                     {bulkAccessUserIds.length} selected
                   </span>
                 </div>
-                <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                   {bulkAccessUserGroups.map(({ category, groups }) => (
                     <div key={category} className="space-y-2">
                       <div className="sticky top-0 z-20 rounded border border-cyan-500/25 bg-cyan-950 px-2 py-1.5 text-xs font-extrabold uppercase tracking-wide text-cyan-50">
@@ -12246,14 +12268,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </div>
               </div>
 
-              <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+              <div className="flex h-full min-h-[34rem] flex-col rounded border border-gray-700 bg-gray-950/70 p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className={labelClass}>Permission Profiles</span>
                   <span className="ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200">
                     {bulkAccessProfileIds.length} selected
                   </span>
                 </div>
-                <div className="space-y-2">
+                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                   {permissionProfiles.map((profile) => (
                     <label key={`bulk-${profile.id}`} className="flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100">
                       <input
