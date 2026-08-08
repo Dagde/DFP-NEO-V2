@@ -69277,6 +69277,7 @@ const PlatformConfigurationSettings = ({
   currencyRequirements = [],
   syllabusDetails = [],
   instructorsData = [],
+  traineesData = [],
   unitCurrencyDefinitions = {},
   formationCallsigns = [],
   onUpdateFormationCallsigns
@@ -69320,6 +69321,8 @@ const PlatformConfigurationSettings = ({
   }, []);
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
+  const [bulkAccessUserIds, setBulkAccessUserIds] = reactExports.useState([]);
+  const [bulkAccessProfileIds, setBulkAccessProfileIds] = reactExports.useState([]);
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
@@ -71990,6 +71993,134 @@ This removes the reusable permission profile from Settings. Users assigned only 
     },
     [configPlatformUsers, configUserAccess]
   );
+  const activeBulkUnitCodes = reactExports.useMemo(() => Array.from(new Set([
+    ...Array.isArray(activeUnitCodes) ? activeUnitCodes : [],
+    activeUnitCode,
+    ...String(activeCompositeUnitCode || "").split(/[+/]/)
+  ].map((code) => String(code || "").trim().toUpperCase()).filter(Boolean))), [activeCompositeUnitCode, activeUnitCode, activeUnitCodes]);
+  const matchesBulkAccessPerson = (user, person) => {
+    const userKeys = uniqueValues([user.id, user.username, user.email, user.name].map((value) => String(value || "").trim().toLowerCase()));
+    const personKeys = uniqueValues([person.id, person.email, person.name, person.fullName].map((value) => String(value || "").trim().toLowerCase()));
+    return personKeys.some((key) => key && userKeys.includes(key));
+  };
+  const bulkAccessUserOptions = reactExports.useMemo(() => {
+    const usedUserIds = /* @__PURE__ */ new Set();
+    const isActiveUnitPerson = (unit) => {
+      if (activeBulkUnitCodes.length === 0) return true;
+      const personUnit = String(unit || "").trim().toUpperCase();
+      return !personUnit || activeBulkUnitCodes.includes(personUnit);
+    };
+    const buildBaseOption = (user) => ({
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email
+    });
+    const options = [];
+    const staffByDisplayOrder = [...instructorsData].filter((staff) => String(staff?.name || "").trim() && isActiveUnitPerson(staff.unit)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff"));
+    staffByDisplayOrder.forEach((staff) => {
+      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, staff));
+      if (!user || usedUserIds.has(user.id)) return;
+      usedUserIds.add(user.id);
+      options.push({
+        ...buildBaseOption(user),
+        rank: staff.rank,
+        unit: staff.unit,
+        group: `Staff - ${String(staff.unit || "No unit assigned").trim()}`
+      });
+    });
+    const traineesByDisplayOrder = [...traineesData].filter((trainee) => String(trainee?.name || trainee?.fullName || "").trim() && isActiveUnitPerson(trainee.unit)).sort((a, b) => {
+      const rankSort = comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee");
+      if (rankSort !== 0) return rankSort;
+      return String(a.name || a.fullName || "").localeCompare(String(b.name || b.fullName || ""));
+    });
+    traineesByDisplayOrder.forEach((trainee) => {
+      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, trainee));
+      if (!user || usedUserIds.has(user.id)) return;
+      usedUserIds.add(user.id);
+      const course = String(trainee.course || "No course assigned").trim();
+      options.push({
+        ...buildBaseOption(user),
+        rank: trainee.rank,
+        unit: trainee.unit,
+        course,
+        group: `Trainees - ${course}`
+      });
+    });
+    userOptions.forEach((user) => {
+      if (usedUserIds.has(user.id)) return;
+      options.push({
+        ...buildBaseOption(user),
+        group: "Other platform users"
+      });
+    });
+    return options;
+  }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
+  const bulkAccessUserGroups = reactExports.useMemo(() => {
+    const groups = /* @__PURE__ */ new Map();
+    bulkAccessUserOptions.forEach((user) => {
+      groups.set(user.group, [...groups.get(user.group) || [], user]);
+    });
+    return Array.from(groups.entries());
+  }, [bulkAccessUserOptions]);
+  const toggleBulkAccessUser = (userId, checked) => {
+    setBulkAccessUserIds((current) => checked ? Array.from(/* @__PURE__ */ new Set([...current, userId])) : current.filter((id) => id !== userId));
+  };
+  const toggleBulkAccessProfile = (profileId, checked) => {
+    setBulkAccessProfileIds((current) => checked ? Array.from(/* @__PURE__ */ new Set([...current, profileId])) : current.filter((id) => id !== profileId));
+  };
+  const applyBulkAccessProfiles = async () => {
+    if (!canEditSection("platform-user-access")) return;
+    const targetUserIds = bulkAccessUserIds.filter(Boolean);
+    const profileIds = bulkAccessProfileIds.filter(Boolean);
+    if (targetUserIds.length === 0 || profileIds.length === 0) {
+      await showDarkAlert("Select at least one person and one permission profile before applying group permissions.", "Group Permission Assignment", "warning");
+      return;
+    }
+    const selectedUsers = userOptions.filter((user) => targetUserIds.includes(user.id));
+    const defaultOrganisationCode = configOrganisations[0]?.code || "DEFAULT";
+    const defaultUnitCode = activeBulkUnitCodes[0] || activeUnitCode || "";
+    const defaultLocationCode = String(configUnits.find((unit) => String(unit.code || "").trim().toUpperCase() === String(defaultUnitCode || "").trim().toUpperCase())?.locationCode || configLocations[0]?.code || "").trim();
+    const targetIdSet = new Set(targetUserIds);
+    const selectedUsersById = new Map(selectedUsers.map((user) => [user.id, user]));
+    const createdRows = targetUserIds.filter((userId) => !(Array.isArray(config.userAccess) ? config.userAccess : []).some((access) => String(access.userId || "").trim() === userId || String(access.username || "").trim() === userId)).map((userId) => {
+      const user = selectedUsersById.get(userId);
+      return {
+        id: createClientRecordId("user-access"),
+        userId,
+        username: user?.username || userId,
+        displayName: user?.name || userId,
+        organisationCode: defaultOrganisationCode,
+        locationCode: defaultLocationCode || null,
+        unitCode: defaultUnitCode || null,
+        moduleCode: null,
+        role: "Viewer",
+        accessLevel: "Read",
+        status: "ACTIVE",
+        settings: { permissionProfileIds: profileIds }
+      };
+    });
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: [
+        ...(Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => {
+          const accessUserId = String(access.userId || "").trim();
+          const accessUsername = String(access.username || "").trim();
+          if (!targetIdSet.has(accessUserId) && !targetIdSet.has(accessUsername)) return access;
+          return {
+            ...access,
+            settings: {
+              ...access.settings || {},
+              permissionProfileIds: profileIds
+            }
+          };
+        }),
+        ...createdRows
+      ]
+    }));
+    if (targetUserIds[0]) setSelectedAccessUserId(targetUserIds[0]);
+    onShowSuccess(`Prepared permission profile update for ${targetUserIds.length} user${targetUserIds.length === 1 ? "" : "s"}. Press Save to store the change.`);
+  };
   const selectedAccessUser = reactExports.useMemo(
     () => configPlatformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
     [configPlatformUsers, selectedAccessUserId]
@@ -77874,6 +78005,82 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
             ] }, profile.id);
           }) })
         ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Group Permission Assignment" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Select multiple people, choose the permission profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: applyBulkAccessProfiles,
+                disabled: !canEditSection("platform-user-access") || bulkAccessUserIds.length === 0 || bulkAccessProfileIds.length === 0,
+                className: "rounded border border-cyan-500/40 bg-cyan-600/25 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/35 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Apply to Selected"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 xl:grid-cols-[1.2fr_0.8fr]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "People" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200", children: [
+                  bulkAccessUserIds.length,
+                  " selected"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 space-y-3 overflow-y-auto pr-1", children: [
+                bulkAccessUserGroups.map(([groupName, users]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-10 rounded bg-gray-800 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-100", children: groupName }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-1", children: users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                        checked: bulkAccessUserIds.includes(user.id),
+                        disabled: !canEditSection("platform-user-access"),
+                        onChange: (event) => toggleBulkAccessUser(user.id, event.target.checked)
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: [user.rank, user.name].filter(Boolean).join(" ") }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: user.username || user.email || user.id })
+                    ] })
+                  ] }, `${groupName}-${user.id}`)) })
+                ] }, groupName)),
+                bulkAccessUserGroups.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-100", children: "No platform users are available for group assignment." })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950/70 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: "Permission Profiles" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200", children: [
+                  bulkAccessProfileIds.length,
+                  " selected"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                    checked: bulkAccessProfileIds.includes(profile.id),
+                    disabled: !canEditSection("platform-user-access"),
+                    onChange: (event) => toggleBulkAccessProfile(profile.id, event.target.checked)
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: profile.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-500", children: profile.description })
+                ] })
+              ] }, `bulk-${profile.id}`)) })
+            ] })
+          ] })
+        ] }),
         visibleSelectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
         visibleSelectedAccessRows.map(({ access, index }) => {
           const appliesToAllFeatures = !access.moduleCode;
@@ -80897,6 +81104,7 @@ const SettingsViewWithMenu = (props) => {
               currencyRequirements: props.currencyRequirements,
               syllabusDetails: props.syllabusDetails,
               instructorsData: props.instructorsData,
+              traineesData: props.traineesData,
               unitCurrencyDefinitions: props.unitCurrencyDefinitions
             }
           )
@@ -80924,6 +81132,7 @@ const SettingsViewWithMenu = (props) => {
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
+            traineesData: props.traineesData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -80951,6 +81160,7 @@ const SettingsViewWithMenu = (props) => {
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
+            traineesData: props.traineesData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -80978,6 +81188,7 @@ const SettingsViewWithMenu = (props) => {
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
+            traineesData: props.traineesData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions
           }
         ),
@@ -81082,6 +81293,7 @@ const SettingsViewWithMenu = (props) => {
             currencyRequirements: props.currencyRequirements,
             syllabusDetails: props.syllabusDetails,
             instructorsData: props.instructorsData,
+            traineesData: props.traineesData,
             unitCurrencyDefinitions: props.unitCurrencyDefinitions,
             formationCallsigns: props.formationCallsigns,
             onUpdateFormationCallsigns: props.onUpdateFormationCallsigns

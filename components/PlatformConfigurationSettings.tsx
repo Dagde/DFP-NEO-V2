@@ -104,7 +104,7 @@ import {
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import type { CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail } from '../types';
+import type { CurrencyRequirement, FormationCallsign, Instructor, MasterCurrency, PhraseBank, SyllabusItemDetail, Trainee } from '../types';
 import {
   INSERT_EVENT_LABEL_MAX_LENGTH,
   normaliseInsertEventTypes,
@@ -178,6 +178,16 @@ type LicenseRuntimeStatus = {
 };
 
 type PermissionProfile = PlatformPermissionProfile;
+type BulkAccessUserOption = {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  rank?: string;
+  unit?: string;
+  course?: string;
+  group: string;
+};
 
 type AirfieldCatalogueEntry = {
   c?: string;
@@ -2181,6 +2191,7 @@ interface PlatformConfigurationSettingsProps {
   currencyRequirements?: CurrencyRequirement[];
   syllabusDetails?: SyllabusItemDetail[];
   instructorsData?: Instructor[];
+  traineesData?: Trainee[];
   unitCurrencyDefinitions?: Record<string, {
     masterCurrencies: MasterCurrency[];
     currencyRequirements: CurrencyRequirement[];
@@ -2211,6 +2222,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   currencyRequirements = [],
   syllabusDetails = [],
   instructorsData = [],
+  traineesData = [],
   unitCurrencyDefinitions = {},
   formationCallsigns = [],
   onUpdateFormationCallsigns,
@@ -2261,6 +2273,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
+  const [bulkAccessUserIds, setBulkAccessUserIds] = useState<string[]>([]);
+  const [bulkAccessProfileIds, setBulkAccessProfileIds] = useState<string[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
@@ -5549,6 +5563,167 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     },
     [configPlatformUsers, configUserAccess],
   );
+
+  const activeBulkUnitCodes = useMemo(() => (
+    Array.from(new Set([
+      ...(Array.isArray(activeUnitCodes) ? activeUnitCodes : []),
+      activeUnitCode,
+      ...String(activeCompositeUnitCode || '').split(/[+/]/),
+    ]
+      .map((code) => String(code || '').trim().toUpperCase())
+      .filter(Boolean)))
+  ), [activeCompositeUnitCode, activeUnitCode, activeUnitCodes]);
+
+  const matchesBulkAccessPerson = (user: { id: string; username: string; email: string; name: string }, person: { name?: string; fullName?: string; email?: string; id?: string }) => {
+    const userKeys = uniqueValues([user.id, user.username, user.email, user.name].map((value) => String(value || '').trim().toLowerCase()));
+    const personKeys = uniqueValues([person.id, person.email, person.name, person.fullName].map((value) => String(value || '').trim().toLowerCase()));
+    return personKeys.some((key) => key && userKeys.includes(key));
+  };
+
+  const bulkAccessUserOptions = useMemo<BulkAccessUserOption[]>(() => {
+    const usedUserIds = new Set<string>();
+    const isActiveUnitPerson = (unit?: string) => {
+      if (activeBulkUnitCodes.length === 0) return true;
+      const personUnit = String(unit || '').trim().toUpperCase();
+      return !personUnit || activeBulkUnitCodes.includes(personUnit);
+    };
+    const buildBaseOption = (user: { id: string; name: string; username: string; email: string }) => ({
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+    });
+    const options: BulkAccessUserOption[] = [];
+
+    const staffByDisplayOrder = [...instructorsData]
+      .filter((staff) => String(staff?.name || '').trim() && isActiveUnitPerson(staff.unit))
+      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
+    staffByDisplayOrder.forEach((staff) => {
+      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, staff));
+      if (!user || usedUserIds.has(user.id)) return;
+      usedUserIds.add(user.id);
+      options.push({
+        ...buildBaseOption(user),
+        rank: staff.rank,
+        unit: staff.unit,
+        group: `Staff - ${String(staff.unit || 'No unit assigned').trim()}`,
+      });
+    });
+
+    const traineesByDisplayOrder = [...traineesData]
+      .filter((trainee) => String(trainee?.name || trainee?.fullName || '').trim() && isActiveUnitPerson(trainee.unit))
+      .sort((a, b) => {
+        const rankSort = comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee');
+        if (rankSort !== 0) return rankSort;
+        return String(a.name || a.fullName || '').localeCompare(String(b.name || b.fullName || ''));
+      });
+    traineesByDisplayOrder.forEach((trainee) => {
+      const user = userOptions.find((candidate) => matchesBulkAccessPerson(candidate, trainee));
+      if (!user || usedUserIds.has(user.id)) return;
+      usedUserIds.add(user.id);
+      const course = String(trainee.course || 'No course assigned').trim();
+      options.push({
+        ...buildBaseOption(user),
+        rank: trainee.rank,
+        unit: trainee.unit,
+        course,
+        group: `Trainees - ${course}`,
+      });
+    });
+
+    userOptions.forEach((user) => {
+      if (usedUserIds.has(user.id)) return;
+      options.push({
+        ...buildBaseOption(user),
+        group: 'Other platform users',
+      });
+    });
+
+    return options;
+  }, [activeBulkUnitCodes, instructorsData, personnelDisplaySettings, traineesData, userOptions]);
+
+  const bulkAccessUserGroups = useMemo(() => {
+    const groups = new Map<string, BulkAccessUserOption[]>();
+    bulkAccessUserOptions.forEach((user) => {
+      groups.set(user.group, [...(groups.get(user.group) || []), user]);
+    });
+    return Array.from(groups.entries());
+  }, [bulkAccessUserOptions]);
+
+  const toggleBulkAccessUser = (userId: string, checked: boolean) => {
+    setBulkAccessUserIds((current) => (
+      checked
+        ? Array.from(new Set([...current, userId]))
+        : current.filter((id) => id !== userId)
+    ));
+  };
+
+  const toggleBulkAccessProfile = (profileId: string, checked: boolean) => {
+    setBulkAccessProfileIds((current) => (
+      checked
+        ? Array.from(new Set([...current, profileId]))
+        : current.filter((id) => id !== profileId)
+    ));
+  };
+
+  const applyBulkAccessProfiles = async () => {
+    if (!canEditSection('platform-user-access')) return;
+    const targetUserIds = bulkAccessUserIds.filter(Boolean);
+    const profileIds = bulkAccessProfileIds.filter(Boolean);
+    if (targetUserIds.length === 0 || profileIds.length === 0) {
+      await showDarkAlert('Select at least one person and one permission profile before applying group permissions.', 'Group Permission Assignment', 'warning');
+      return;
+    }
+
+    const selectedUsers = userOptions.filter((user) => targetUserIds.includes(user.id));
+    const defaultOrganisationCode = configOrganisations[0]?.code || 'DEFAULT';
+    const defaultUnitCode = activeBulkUnitCodes[0] || activeUnitCode || '';
+    const defaultLocationCode = String(configUnits.find((unit) => String(unit.code || '').trim().toUpperCase() === String(defaultUnitCode || '').trim().toUpperCase())?.locationCode || configLocations[0]?.code || '').trim();
+    const targetIdSet = new Set(targetUserIds);
+    const selectedUsersById = new Map(selectedUsers.map((user) => [user.id, user]));
+    const createdRows = targetUserIds
+      .filter((userId) => !(Array.isArray(config.userAccess) ? config.userAccess : []).some((access) => (
+        String(access.userId || '').trim() === userId || String(access.username || '').trim() === userId
+      )))
+      .map((userId) => {
+        const user = selectedUsersById.get(userId);
+        return {
+          id: createClientRecordId('user-access'),
+          userId,
+          username: user?.username || userId,
+          displayName: user?.name || userId,
+          organisationCode: defaultOrganisationCode,
+          locationCode: defaultLocationCode || null,
+          unitCode: defaultUnitCode || null,
+          moduleCode: null,
+          role: 'Viewer',
+          accessLevel: 'Read',
+          status: 'ACTIVE',
+          settings: { permissionProfileIds: profileIds },
+        };
+      });
+
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: [
+        ...(Array.isArray(prev.userAccess) ? prev.userAccess : []).map((access) => {
+          const accessUserId = String(access.userId || '').trim();
+          const accessUsername = String(access.username || '').trim();
+          if (!targetIdSet.has(accessUserId) && !targetIdSet.has(accessUsername)) return access;
+          return {
+            ...access,
+            settings: {
+              ...(access.settings || {}),
+              permissionProfileIds: profileIds,
+            },
+          };
+        }),
+        ...createdRows,
+      ],
+    }));
+    if (targetUserIds[0]) setSelectedAccessUserId(targetUserIds[0]);
+    onShowSuccess(`Prepared permission profile update for ${targetUserIds.length} user${targetUserIds.length === 1 ? '' : 's'}. Press Save to store the change.`);
+  };
 
   const selectedAccessUser = useMemo(
     () => configPlatformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
@@ -11947,6 +12122,93 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </label>
                 );
               })}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-cyan-500/25 bg-gray-900 p-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-white">Group Permission Assignment</h5>
+                <p className="mt-1 text-xs text-gray-400">
+                  Select multiple people, choose the permission profiles, then apply them together. Existing access scopes are updated; users without a scope receive one for the current unit.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={applyBulkAccessProfiles}
+                disabled={!canEditSection('platform-user-access') || bulkAccessUserIds.length === 0 || bulkAccessProfileIds.length === 0}
+                className="rounded border border-cyan-500/40 bg-cyan-600/25 px-3 py-2 text-xs font-bold text-cyan-50 hover:bg-cyan-500/35 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Apply to Selected
+              </button>
+            </div>
+
+            <div className="grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className={labelClass}>People</span>
+                  <span className="ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200">
+                    {bulkAccessUserIds.length} selected
+                  </span>
+                </div>
+                <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                  {bulkAccessUserGroups.map(([groupName, users]) => (
+                    <div key={groupName}>
+                      <div className="sticky top-0 z-10 rounded bg-gray-800 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-cyan-100">
+                        {groupName}
+                      </div>
+                      <div className="mt-1 space-y-1">
+                        {users.map((user) => (
+                          <label key={`${groupName}-${user.id}`} className="flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                              checked={bulkAccessUserIds.includes(user.id)}
+                              disabled={!canEditSection('platform-user-access')}
+                              onChange={(event) => toggleBulkAccessUser(user.id, event.target.checked)}
+                            />
+                            <span>
+                              <span className="block font-semibold">{[user.rank, user.name].filter(Boolean).join(' ')}</span>
+                              <span className="block text-xs text-gray-500">{user.username || user.email || user.id}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {bulkAccessUserGroups.length === 0 && (
+                    <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-100">
+                      No platform users are available for group assignment.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded border border-gray-700 bg-gray-950/70 p-3">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className={labelClass}>Permission Profiles</span>
+                  <span className="ml-auto rounded bg-gray-800 px-2 py-1 text-[11px] font-semibold text-gray-200">
+                    {bulkAccessProfileIds.length} selected
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {permissionProfiles.map((profile) => (
+                    <label key={`bulk-${profile.id}`} className="flex items-start gap-2 rounded border border-gray-800 bg-gray-950 px-2 py-2 text-sm text-gray-100">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                        checked={bulkAccessProfileIds.includes(profile.id)}
+                        disabled={!canEditSection('platform-user-access')}
+                        onChange={(event) => toggleBulkAccessProfile(profile.id, event.target.checked)}
+                      />
+                      <span>
+                        <span className="block font-semibold">{profile.name}</span>
+                        <span className="block text-xs text-gray-500">{profile.description}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
