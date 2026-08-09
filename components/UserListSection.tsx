@@ -208,33 +208,40 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         // If no callback provided, show a dark-themed notification
         const notification = document.createElement('div');
         notification.className = 'fixed top-4 right-4 bg-gray-800 border border-gray-600 rounded-lg p-4 shadow-lg z-50 max-w-md';
-        notification.innerHTML = `
-            <div class="flex items-start">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-white">
-                        ${user.userType === 'STAFF' ? 'Staff' : user.userType === 'TRAINEE' ? 'Trainee' : 'User'} Profile
-                    </p>
-                    <p class="mt-1 text-sm text-gray-300">
-                        ${user.name} (Personnel ID: ${user.pmkeysId})
-                    </p>
-                    <p class="mt-2 text-xs text-gray-400">
-                        Navigation to profile page will be implemented
-                    </p>
-                </div>
-                <div class="ml-4 flex-shrink-0">
-                    <button type="button" class="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none" onclick="this.closest('.fixed').remove()">
-                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        `;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex items-start';
+
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'flex-shrink-0';
+        const icon = document.createElement('span');
+        icon.className = 'inline-flex h-5 w-5 items-center justify-center rounded-full border border-sky-400 text-xs font-bold text-sky-400';
+        icon.textContent = 'i';
+        iconWrap.appendChild(icon);
+
+        const content = document.createElement('div');
+        content.className = 'ml-3';
+        const title = document.createElement('p');
+        title.className = 'text-sm font-medium text-white';
+        title.textContent = `${user.userType === 'STAFF' ? 'Staff' : user.userType === 'TRAINEE' ? 'Trainee' : 'User'} Profile`;
+        const details = document.createElement('p');
+        details.className = 'mt-1 text-sm text-gray-300';
+        details.textContent = `${user.name} (Personnel ID: ${user.pmkeysId})`;
+        const helper = document.createElement('p');
+        helper.className = 'mt-2 text-xs text-gray-400';
+        helper.textContent = 'Navigation to profile page will be implemented';
+        content.append(title, details, helper);
+
+        const closeWrap = document.createElement('div');
+        closeWrap.className = 'ml-4 flex-shrink-0';
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'inline-flex text-gray-400 hover:text-gray-500 focus:outline-none';
+        closeButton.textContent = 'x';
+        closeButton.addEventListener('click', () => notification.remove());
+        closeWrap.appendChild(closeButton);
+
+        wrapper.append(iconWrap, content, closeWrap);
+        notification.appendChild(wrapper);
         document.body.appendChild(notification);
         
         // Remove notification after 5 seconds

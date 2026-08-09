@@ -36,7 +36,35 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const ALLOWED_SPREADSHEET_EXTENSIONS = new Set(['.xlsx', '.xls', '.xlsm']);
+const ALLOWED_SPREADSHEET_MIME_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/vnd.ms-excel.sheet.macroenabled.12',
+  'application/octet-stream',
+]);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1,
+    fields: 25,
+    fieldNameSize: 80,
+    fieldSize: 256 * 1024,
+    parts: 35,
+  },
+  fileFilter: (req, file, cb) => {
+    const extension = path.extname(file?.originalname || '').toLowerCase();
+    const mimetype = String(file?.mimetype || '').toLowerCase();
+    if (!ALLOWED_SPREADSHEET_EXTENSIONS.has(extension)) {
+      return cb(new Error('Only Excel workbook files can be uploaded.'));
+    }
+    if (mimetype && !ALLOWED_SPREADSHEET_MIME_TYPES.has(mimetype)) {
+      return cb(new Error('The uploaded file type is not recognised as an Excel workbook.'));
+    }
+    cb(null, true);
+  },
+});
 
 const INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE = 'ICO';
 const INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
@@ -196,6 +224,44 @@ function isOriginAllowed(req) {
   return getAllowedOrigins().has(origin);
 }
 
+function buildSecurityConnectSources(req) {
+  const sources = new Set(["'self'"]);
+  const requestOrigin = getRequestOrigin(req);
+  if (requestOrigin) sources.add(requestOrigin);
+  getAllowedOrigins().forEach(origin => sources.add(origin));
+  return Array.from(sources).join(' ');
+}
+
+function setSecurityHeaders(req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline'",
+      `connect-src ${buildSecurityConnectSources(req)}`,
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+    ].join('; ')
+  );
+  next();
+}
+
 function requireConfiguredSecret(name, developmentFallback, aliases = []) {
   const candidates = [name, ...aliases];
   for (const candidate of candidates) {
@@ -269,6 +335,7 @@ const JWT_REFRESH_EXPIRY = '7d';
 const AVWX_API_TOKEN = (process.env.AVWX_API_TOKEN || process.env.VITE_AVWX_API_TOKEN || '').trim();
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
+app.use(setSecurityHeaders);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
@@ -2101,6 +2168,134 @@ const getRequestIp = (req) => {
   return forwardedFor || req.ip || 'unknown';
 };
 
+function createRateLimiter({ windowMs, maxRequests, keyPrefix, message }) {
+  const attempts = new Map();
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const ip = String(getRequestIp(req)).split(',')[0].trim() || 'unknown';
+    const key = `${keyPrefix}:${ip}`;
+    const current = attempts.get(key);
+    const resetAt = current && current.resetAt > now ? current.resetAt : now + windowMs;
+    const count = current && current.resetAt > now ? current.count + 1 : 1;
+    attempts.set(key, { count, resetAt });
+
+    if (attempts.size > 5000) {
+      for (const [entryKey, entry] of attempts.entries()) {
+        if (entry.resetAt <= now) attempts.delete(entryKey);
+      }
+    }
+
+    const remaining = Math.max(maxRequests - count, 0);
+    res.setHeader('X-RateLimit-Limit', String(maxRequests));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
+
+    if (count > maxRequests) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((resetAt - now) / 1000));
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+      console.warn('⚠️ Rate limit blocked request', {
+        path: req.path,
+        method: req.method,
+        ip,
+        resetAt: new Date(resetAt).toISOString(),
+      });
+      return res.status(429).json({
+        error: 'Too many requests',
+        message,
+        retryAfterSeconds,
+      });
+    }
+
+    next();
+  };
+}
+
+const authRateLimit = createRateLimiter({
+  keyPrefix: 'auth',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 20,
+  message: 'Too many sign-in or password attempts. Wait a few minutes, then try again.',
+});
+
+const adminSensitiveRateLimit = createRateLimiter({
+  keyPrefix: 'admin-sensitive',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 40,
+  message: 'Too many sensitive administration actions. Wait a few minutes, then try again.',
+});
+
+const uploadRateLimit = createRateLimiter({
+  keyPrefix: 'upload',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 12,
+  message: 'Too many workbook uploads. Wait a few minutes, then try again.',
+});
+
+function handleSingleSpreadsheetUpload(req, res, next) {
+  upload.single('file')(req, res, (error) => {
+    if (!error) return next();
+    const status = error instanceof multer.MulterError ? 400 : 415;
+    return res.status(status).json({
+      error: 'Upload rejected',
+      message: error.message || 'The uploaded file could not be accepted.',
+    });
+  });
+}
+
+function hasZipWorkbookSignature(buffer) {
+  return Buffer.isBuffer(buffer)
+    && buffer.length >= 4
+    && buffer[0] === 0x50
+    && buffer[1] === 0x4b;
+}
+
+function hasLegacyExcelSignature(buffer) {
+  const signature = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+  return Buffer.isBuffer(buffer)
+    && buffer.length >= signature.length
+    && signature.every((byte, index) => buffer[index] === byte);
+}
+
+function validateSpreadsheetUploadFile(file) {
+  if (!file?.buffer?.length) return 'No upload file supplied.';
+  const extension = path.extname(file.originalname || '').toLowerCase();
+  if (!ALLOWED_SPREADSHEET_EXTENSIONS.has(extension)) {
+    return 'Only Excel workbook files can be uploaded.';
+  }
+  if (extension === '.xls' && !hasLegacyExcelSignature(file.buffer) && !hasZipWorkbookSignature(file.buffer)) {
+    return 'The uploaded XLS file does not look like a valid Excel workbook.';
+  }
+  if ((extension === '.xlsx' || extension === '.xlsm') && !hasZipWorkbookSignature(file.buffer)) {
+    return 'The uploaded workbook does not look like a valid XLSX/XLSM file.';
+  }
+  return '';
+}
+
+function validateWorkbookShape(workbook) {
+  const sheetNames = Array.isArray(workbook?.SheetNames) ? workbook.SheetNames : [];
+  if (sheetNames.length === 0) return 'The upload file does not contain any worksheets.';
+  if (sheetNames.length > 25) return 'The workbook has too many worksheets for a syllabus upload.';
+
+  for (const sheetName of sheetNames) {
+    const worksheet = workbook.Sheets?.[sheetName];
+    const ref = worksheet?.['!ref'];
+    if (!ref) continue;
+    let range;
+    try {
+      range = XLSX.utils.decode_range(ref);
+    } catch {
+      return `Worksheet ${sheetName} has an invalid cell range.`;
+    }
+    const rowCount = range.e.r - range.s.r + 1;
+    const columnCount = range.e.c - range.s.c + 1;
+    if (rowCount > 5000) return `Worksheet ${sheetName} has too many rows for a syllabus upload.`;
+    if (columnCount > 120) return `Worksheet ${sheetName} has too many columns for a syllabus upload.`;
+    if (rowCount * columnCount > 200000) return `Worksheet ${sheetName} is too large for a syllabus upload.`;
+  }
+  return '';
+}
+
 const normaliseAircraftTypeTasKtas = (value) => {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
@@ -2761,7 +2956,7 @@ app.get('/api/platform-license/fingerprint', async (req, res) => {
   }
 });
 
-app.post('/api/platform-license/verify', async (req, res) => {
+app.post('/api/platform-license/verify', adminSensitiveRateLimit, async (req, res) => {
   try {
     const db = await getPrisma();
     const organisations = await db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`);
@@ -2793,7 +2988,7 @@ app.post('/api/platform-license/verify', async (req, res) => {
   }
 });
 
-app.post('/api/platform-license/import', async (req, res) => {
+app.post('/api/platform-license/import', adminSensitiveRateLimit, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
@@ -2870,7 +3065,7 @@ app.post('/api/platform-license/import', async (req, res) => {
   }
 });
 
-app.post('/api/platform-license/generate-development', async (req, res) => {
+app.post('/api/platform-license/generate-development', adminSensitiveRateLimit, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
@@ -6738,7 +6933,7 @@ function getUploadDuplicateSourceDetails(item) {
 }
 
 // POST /api/syllabus/bulk-upload - Import/update syllabus events from workbook
-app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) => {
+app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUpload, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
@@ -6763,7 +6958,21 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
       return res.status(400).json({ error: 'No upload file supplied' });
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const fileValidationError = validateSpreadsheetUploadFile(req.file);
+    if (fileValidationError) {
+      return res.status(415).json({ error: 'Upload rejected', message: fileValidationError });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, {
+      type: 'buffer',
+      cellFormula: false,
+      cellHTML: false,
+      cellNF: false,
+    });
+    const workbookShapeError = validateWorkbookShape(workbook);
+    if (workbookShapeError) {
+      return res.status(400).json({ error: 'Upload rejected', message: workbookShapeError });
+    }
     const worksheetName = workbook.SheetNames.includes('Syllabus_LMP')
       ? 'Syllabus_LMP'
       : workbook.SheetNames[0];
@@ -7294,7 +7503,7 @@ app.delete('/api/syllabus/:id', async (req, res) => {
 });
 
 // POST /api/auth/verify-password - Verify current user's password for destructive action confirmations
-app.post('/api/auth/verify-password', async (req, res) => {
+app.post('/api/auth/verify-password', authRateLimit, async (req, res) => {
   try {
     const db = await getPrisma();
     const { password } = req.body;
@@ -7371,7 +7580,7 @@ app.post('/api/auth/verify-password', async (req, res) => {
 });
 
 // POST /api/auth/direct-login - Browser app login used by the V2 React client
-app.post('/api/auth/direct-login', async (req, res) => {
+app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
   try {
     const db = await getPrisma();
     const { userId: loginUserId, password } = req.body || {};
@@ -7646,7 +7855,7 @@ app.post('/api/admin/direct-create-user', async (req, res) => {
   }
 });
 
-app.post('/api/admin/direct-reset-password', async (req, res) => {
+app.post('/api/admin/direct-reset-password', adminSensitiveRateLimit, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
@@ -7759,7 +7968,7 @@ app.post('/api/admin/direct-delete-user', async (req, res) => {
   }
 
   // POST /api/mobile/auth/login - Mobile JWT login
-  app.post('/api/mobile/auth/login', async (req, res) => {
+  app.post('/api/mobile/auth/login', authRateLimit, async (req, res) => {
     try {
       const db = await getPrisma();
       const { userId: loginUserId, password } = req.body;
@@ -8555,7 +8764,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   // ============================================================
 
 // POST /api/admin/set-user-password - Set or update a user's password (for initial setup/reset)
-app.post('/api/admin/set-user-password', async (req, res) => {
+app.post('/api/admin/set-user-password', adminSensitiveRateLimit, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
@@ -8666,7 +8875,7 @@ app.get('/api/admin/list-users', async (req, res) => {
 });
 
 // POST /api/admin/set-user-password-by-id - Set password using direct userId
-app.post('/api/admin/set-user-password-by-id', async (req, res) => {
+app.post('/api/admin/set-user-password-by-id', adminSensitiveRateLimit, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
