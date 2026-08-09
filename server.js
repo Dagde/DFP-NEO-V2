@@ -36,11 +36,10 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ALLOWED_SPREADSHEET_EXTENSIONS = new Set(['.xlsx', '.xls', '.xlsm']);
+const ALLOWED_SPREADSHEET_EXTENSIONS = new Set(['.xlsx', '.xls']);
 const ALLOWED_SPREADSHEET_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-excel',
-  'application/vnd.ms-excel.sheet.macroenabled.12',
   'application/octet-stream',
 ]);
 const upload = multer({
@@ -333,6 +332,7 @@ const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jw
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
 const AVWX_API_TOKEN = (process.env.AVWX_API_TOKEN || process.env.VITE_AVWX_API_TOKEN || '').trim();
+const SECURITY_EVENT_WEBHOOK_URL = (process.env.DFP_NEO_SECURITY_EVENT_WEBHOOK_URL || '').trim();
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
 app.use(setSecurityHeaders);
@@ -2200,6 +2200,18 @@ function createRateLimiter({ windowMs, maxRequests, keyPrefix, message }) {
         ip,
         resetAt: new Date(resetAt).toISOString(),
       });
+      recordSecurityAuditEvent(
+        req,
+        'RATE_LIMIT_BLOCKED',
+        'warning',
+        `Rate limit blocked ${req.method} ${req.path}`,
+        {
+          keyPrefix,
+          retryAfterSeconds,
+          windowMs,
+          maxRequests,
+        }
+      );
       return res.status(429).json({
         error: 'Too many requests',
         message,
@@ -2236,6 +2248,16 @@ function handleSingleSpreadsheetUpload(req, res, next) {
   upload.single('file')(req, res, (error) => {
     if (!error) return next();
     const status = error instanceof multer.MulterError ? 400 : 415;
+    recordSecurityAuditEvent(
+      req,
+      'UPLOAD_REJECTED',
+      status === 415 ? 'warning' : 'info',
+      'Workbook upload was rejected before processing',
+      {
+        reason: error.message || 'The uploaded file could not be accepted.',
+        multerCode: error instanceof multer.MulterError ? error.code : '',
+      }
+    );
     return res.status(status).json({
       error: 'Upload rejected',
       message: error.message || 'The uploaded file could not be accepted.',
@@ -2261,14 +2283,41 @@ function validateSpreadsheetUploadFile(file) {
   if (!file?.buffer?.length) return 'No upload file supplied.';
   const extension = path.extname(file.originalname || '').toLowerCase();
   if (!ALLOWED_SPREADSHEET_EXTENSIONS.has(extension)) {
+    if (extension === '.xlsm') return 'Macro-enabled Excel files are not accepted for syllabus uploads. Save the workbook as .xlsx and upload again.';
     return 'Only Excel workbook files can be uploaded.';
   }
   if (extension === '.xls' && !hasLegacyExcelSignature(file.buffer) && !hasZipWorkbookSignature(file.buffer)) {
     return 'The uploaded XLS file does not look like a valid Excel workbook.';
   }
-  if ((extension === '.xlsx' || extension === '.xlsm') && !hasZipWorkbookSignature(file.buffer)) {
-    return 'The uploaded workbook does not look like a valid XLSX/XLSM file.';
+  if (extension === '.xlsx' && !hasZipWorkbookSignature(file.buffer)) {
+    return 'The uploaded workbook does not look like a valid XLSX file.';
   }
+  return '';
+}
+
+function validateSpreadsheetThreatIndicators(file) {
+  if (!file?.buffer?.length) return 'No upload file supplied.';
+  const extension = path.extname(file.originalname || '').toLowerCase();
+  const searchable = file.buffer.toString('latin1').toLowerCase();
+  const blockedIndicators = [
+    { token: 'vbaproject.bin', reason: 'The workbook contains macro content.' },
+    { token: 'xl/embeddings/', reason: 'The workbook contains embedded objects.' },
+    { token: 'xl/activexcontrols/', reason: 'The workbook contains ActiveX controls.' },
+    { token: 'xl/externalLinks/'.toLowerCase(), reason: 'The workbook contains external workbook links.' },
+    { token: 'application/vnd.ms-office.activeX'.toLowerCase(), reason: 'The workbook contains ActiveX content.' },
+  ];
+
+  for (const indicator of blockedIndicators) {
+    if (searchable.includes(indicator.token)) return indicator.reason;
+  }
+
+  if (extension === '.xls') {
+    const legacyMacroIndicators = ['_vba_project', 'vba', 'macrosheet'];
+    if (legacyMacroIndicators.some(indicator => searchable.includes(indicator))) {
+      return 'The legacy XLS workbook appears to contain macro content.';
+    }
+  }
+
   return '';
 }
 
@@ -2516,6 +2565,73 @@ async function writePlatformConfigAuditEntries(db, req, entries) {
   }
 
   return { count: entries.length, written: Math.min(entries.length, entriesToWrite.length) };
+}
+
+function sanitiseSecurityEventDetails(details = {}) {
+  const safeDetails = { ...(details || {}) };
+  for (const key of Object.keys(safeDetails)) {
+    if (/password|token|secret|key/i.test(key)) {
+      safeDetails[key] = '[redacted]';
+    }
+  }
+  return safeDetails;
+}
+
+async function sendSecurityEventWebhook(event) {
+  if (!SECURITY_EVENT_WEBHOOK_URL || typeof fetch !== 'function') return;
+  try {
+    await fetch(SECURITY_EVENT_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    });
+  } catch (error) {
+    console.warn('⚠️ Security event webhook failed:', error.message);
+  }
+}
+
+async function writeSecurityAuditEvent(db, req, eventType, severity, summary, details = {}) {
+  try {
+    const actor = await resolveAuditUser(db, req);
+    if (!actor?.id) {
+      console.warn('⚠️ Security audit skipped: no active user could be resolved.', { eventType, severity, summary });
+      return { written: false, warning: 'No active user could be resolved for security audit logging' };
+    }
+
+    const event = {
+      source: 'Security Monitoring',
+      eventType,
+      severity,
+      summary,
+      details: sanitiseSecurityEventDetails(details),
+      path: req.originalUrl || req.url || req.path || '',
+      method: req.method,
+      ipAddress: getRequestIp(req),
+      userAgent: req.headers['user-agent'] || 'unknown',
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", changes, "ipAddress", "userAgent", "createdAt")
+       VALUES (gen_random_uuid()::text, $1, 'SECURITY_EVENT', 'SecurityMonitoring', $2, $3::jsonb, $4, $5, NOW())`,
+      actor.id,
+      eventType,
+      JSON.stringify(event),
+      event.ipAddress,
+      event.userAgent
+    );
+    await sendSecurityEventWebhook(event);
+    return { written: true };
+  } catch (error) {
+    console.warn('⚠️ Security audit event failed:', error.message);
+    return { written: false, warning: error.message };
+  }
+}
+
+function recordSecurityAuditEvent(req, eventType, severity, summary, details = {}) {
+  getPrisma()
+    .then((db) => writeSecurityAuditEvent(db, req, eventType, severity, summary, details))
+    .catch((error) => console.warn('⚠️ Security audit event could not be queued:', error.message));
 }
 
 app.get('/api/platform-config', async (req, res) => {
@@ -4662,6 +4778,129 @@ app.get('/api/audit/logs', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/audit/logs error:', error);
     res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message });
+  }
+});
+
+function mapSecurityAuditRow(row) {
+  const changes = row.changes || {};
+  const displayName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.username || row.userId || 'System';
+  return {
+    id: row.id,
+    eventType: changes.eventType || row.entityId || '',
+    severity: changes.severity || 'info',
+    summary: changes.summary || '',
+    details: changes.details || {},
+    path: changes.path || '',
+    method: changes.method || '',
+    ipAddress: row.ipAddress || changes.ipAddress || '',
+    userAgent: row.userAgent || changes.userAgent || '',
+    createdAt: row.createdAt,
+    userName: displayName,
+  };
+}
+
+// GET /api/security/events - Admin-only security event history
+app.get('/api/security/events', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+    const limit = Math.max(1, Math.min(Number(req.query.limit || 100), 500));
+    const severity = String(req.query.severity || '').trim().toLowerCase();
+    const eventType = String(req.query.eventType || '').trim().toUpperCase();
+    const params = [];
+    const where = [`a."entityType" = 'SecurityMonitoring'`];
+
+    if (severity) {
+      params.push(severity);
+      where.push(`LOWER(a.changes->>'severity') = $${params.length}`);
+    }
+
+    if (eventType) {
+      params.push(eventType);
+      where.push(`a."entityId" = $${params.length}`);
+    }
+
+    params.push(limit);
+    const rows = await db.$queryRawUnsafe(
+      `SELECT
+         a.id,
+         a."entityId",
+         a.changes,
+         a."ipAddress",
+         a."userAgent",
+         a."createdAt",
+         u.username,
+         u."userId",
+         u."firstName",
+         u."lastName"
+       FROM "AuditLog" a
+       LEFT JOIN "User" u ON u.id = a."userId"
+       WHERE ${where.join(' AND ')}
+       ORDER BY a."createdAt" DESC
+       LIMIT $${params.length}`,
+      ...params
+    );
+
+    res.json({ events: rows.map(mapSecurityAuditRow) });
+  } catch (error) {
+    console.error('❌ GET /api/security/events error:', error);
+    res.status(500).json({ error: 'Failed to fetch security events', details: error.message });
+  }
+});
+
+// GET /api/security/status - Admin-only security monitoring summary
+app.get('/api/security/status', async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const db = context.db;
+
+    const [severityRows, latestRows] = await Promise.all([
+      db.$queryRawUnsafe(
+        `SELECT COALESCE(LOWER(changes->>'severity'), 'info') AS severity, COUNT(*)::int AS count
+         FROM "AuditLog"
+         WHERE "entityType" = 'SecurityMonitoring'
+           AND "createdAt" >= NOW() - INTERVAL '30 days'
+         GROUP BY COALESCE(LOWER(changes->>'severity'), 'info')
+         ORDER BY count DESC`
+      ),
+      db.$queryRawUnsafe(
+        `SELECT
+           a.id,
+           a."entityId",
+           a.changes,
+           a."ipAddress",
+           a."userAgent",
+           a."createdAt",
+           u.username,
+           u."userId",
+           u."firstName",
+           u."lastName"
+         FROM "AuditLog" a
+         LEFT JOIN "User" u ON u.id = a."userId"
+         WHERE a."entityType" = 'SecurityMonitoring'
+         ORDER BY a."createdAt" DESC
+         LIMIT 5`
+      ),
+    ]);
+
+    const countsLast30Days = severityRows.reduce((acc, row) => {
+      acc[row.severity || 'info'] = Number(row.count || 0);
+      return acc;
+    }, { critical: 0, warning: 0, info: 0 });
+
+    res.json({
+      status: {
+        monitoringEnabled: true,
+        externalReportingConfigured: Boolean(SECURITY_EVENT_WEBHOOK_URL),
+        countsLast30Days,
+        latestEvents: latestRows.map(mapSecurityAuditRow),
+      },
+    });
+  } catch (error) {
+    console.error('❌ GET /api/security/status error:', error);
+    res.status(500).json({ error: 'Failed to fetch security status', details: error.message });
   }
 });
 
@@ -6960,7 +7199,28 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
 
     const fileValidationError = validateSpreadsheetUploadFile(req.file);
     if (fileValidationError) {
+      await writeSecurityAuditEvent(db, req, 'WORKBOOK_REJECTED', 'warning', 'Syllabus workbook upload was rejected', {
+        fileName: req.file.originalname || '',
+        fileSize: req.file.size || req.file.buffer?.length || 0,
+        reason: fileValidationError,
+        selectedCourseCode,
+        unitCode,
+        locationCode,
+      });
       return res.status(415).json({ error: 'Upload rejected', message: fileValidationError });
+    }
+
+    const threatIndicatorError = validateSpreadsheetThreatIndicators(req.file);
+    if (threatIndicatorError) {
+      await writeSecurityAuditEvent(db, req, 'WORKBOOK_REJECTED', 'critical', 'Syllabus workbook upload was rejected for unsafe content', {
+        fileName: req.file.originalname || '',
+        fileSize: req.file.size || req.file.buffer?.length || 0,
+        reason: threatIndicatorError,
+        selectedCourseCode,
+        unitCode,
+        locationCode,
+      });
+      return res.status(415).json({ error: 'Upload rejected', message: threatIndicatorError });
     }
 
     const workbook = XLSX.read(req.file.buffer, {
@@ -6971,6 +7231,14 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
     });
     const workbookShapeError = validateWorkbookShape(workbook);
     if (workbookShapeError) {
+      await writeSecurityAuditEvent(db, req, 'WORKBOOK_REJECTED', 'warning', 'Syllabus workbook upload was rejected for workbook size or structure', {
+        fileName: req.file.originalname || '',
+        fileSize: req.file.size || req.file.buffer?.length || 0,
+        reason: workbookShapeError,
+        selectedCourseCode,
+        unitCode,
+        locationCode,
+      });
       return res.status(400).json({ error: 'Upload rejected', message: workbookShapeError });
     }
     const worksheetName = workbook.SheetNames.includes('Syllabus_LMP')
@@ -6983,6 +7251,17 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
 
     const worksheet = workbook.Sheets[worksheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    await writeSecurityAuditEvent(db, req, 'WORKBOOK_ACCEPTED', 'info', 'Syllabus workbook upload passed security checks', {
+      fileName: req.file.originalname || '',
+      fileSize: req.file.size || req.file.buffer?.length || 0,
+      worksheetName,
+      rowCount: rows.length,
+      selectedCourseCode,
+      uploadMode,
+      lmpType,
+      unitCode,
+      locationCode,
+    });
     const created = [];
     const updated = [];
     const errors = [];
@@ -7601,6 +7880,10 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     );
 
     if (!users || users.length === 0 || !users[0].password) {
+      await writeSecurityAuditEvent(db, req, 'LOGIN_FAILED', 'warning', 'Direct login failed', {
+        reason: 'invalid_credentials',
+        suppliedUserId: String(loginUserId || '').slice(0, 120),
+      });
       return res.status(401).json({
         error: 'Invalid credentials',
         message: 'Invalid User ID or password',
@@ -7609,6 +7892,11 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
 
     const user = users[0];
     if (!user.isActive) {
+      await writeSecurityAuditEvent(db, req, 'LOGIN_BLOCKED', 'warning', 'Direct login blocked for inactive account', {
+        reason: 'account_inactive',
+        suppliedUserId: String(loginUserId || '').slice(0, 120),
+        userId: user.userId || user.username || user.id,
+      });
       return res.status(403).json({
         error: 'Account inactive',
         message: 'Your account has been deactivated',
@@ -7618,6 +7906,11 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     const bcrypt = require('bcryptjs');
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
+      await writeSecurityAuditEvent(db, req, 'LOGIN_FAILED', 'warning', 'Direct login failed', {
+        reason: 'invalid_credentials',
+        suppliedUserId: String(loginUserId || '').slice(0, 120),
+        userId: user.userId || user.username || user.id,
+      });
       return res.status(401).json({
         error: 'Invalid credentials',
         message: 'Invalid User ID or password',
