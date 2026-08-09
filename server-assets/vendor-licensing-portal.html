@@ -16,12 +16,8 @@
       --text: #f8fafc;
       --muted: #9aa8bd;
       --cyan: #22d3ee;
-      --green: #34d399;
-      --amber: #fbbf24;
-      --red: #f87171;
       --input: #050b16;
     }
-
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -30,7 +26,6 @@
       background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.14), transparent 36rem), var(--bg);
       color: var(--text);
     }
-
     button, input, select, textarea { font: inherit; }
     .shell { min-height: 100vh; padding: 28px; }
     .topbar {
@@ -41,7 +36,6 @@
       max-width: 1440px;
       margin: 0 auto 22px;
     }
-
     .eyebrow {
       margin: 0 0 8px;
       color: var(--cyan);
@@ -50,7 +44,6 @@
       letter-spacing: 0.18em;
       text-transform: uppercase;
     }
-
     h1 { margin: 0; font-size: clamp(30px, 4vw, 48px); line-height: 1; }
     .subtitle { margin: 12px 0 0; color: var(--muted); max-width: 760px; line-height: 1.55; }
     .status-card {
@@ -61,7 +54,6 @@
       padding: 16px;
       box-shadow: 0 22px 48px rgba(0,0,0,0.28);
     }
-
     .status-card strong { display: block; margin-bottom: 6px; }
     .status-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
     .grid {
@@ -72,7 +64,6 @@
       gap: 18px;
       align-items: start;
     }
-
     .panel {
       border: 1px solid var(--line);
       background: rgba(16, 27, 44, 0.82);
@@ -80,7 +71,6 @@
       overflow: hidden;
       box-shadow: 0 18px 42px rgba(0,0,0,0.24);
     }
-
     .panel-header {
       display: flex;
       align-items: center;
@@ -90,7 +80,6 @@
       border-bottom: 1px solid var(--line);
       background: rgba(15, 23, 42, 0.74);
     }
-
     .panel-header h2 { margin: 0; font-size: 18px; }
     .panel-header span { color: var(--muted); font-size: 12px; }
     .section { padding: 18px 20px; border-bottom: 1px solid var(--line); }
@@ -102,7 +91,6 @@
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
-
     .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .fields.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .field.full { grid-column: 1 / -1; }
@@ -117,16 +105,10 @@
       padding: 11px 12px;
       outline: none;
     }
-
     textarea { min-height: 112px; resize: vertical; line-height: 1.45; }
     input:focus, select:focus, textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(34,211,238,0.12); }
     .hint { margin: 6px 0 0; color: #7f8da3; font-size: 12px; line-height: 1.4; }
-    .checks {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .check {
       display: flex;
       align-items: flex-start;
@@ -140,7 +122,6 @@
       letter-spacing: 0;
       font-size: 14px;
     }
-
     .check input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: var(--cyan); }
     .actions {
       display: flex;
@@ -150,7 +131,6 @@
       background: rgba(15, 23, 42, 0.62);
       border-top: 1px solid var(--line);
     }
-
     .button {
       border: 1px solid rgba(148, 163, 184, 0.28);
       border-radius: 7px;
@@ -161,16 +141,10 @@
       min-height: 42px;
       padding: 10px 16px;
     }
-
     .button.primary { background: linear-gradient(#67e8f9, #06b6d4); border-color: #0891b2; }
     .button.secondary { background: #182438; color: var(--text); }
     .button:disabled { cursor: not-allowed; opacity: 0.55; }
-    .output {
-      min-height: 560px;
-      display: flex;
-      flex-direction: column;
-    }
-
+    .output { min-height: 560px; display: flex; flex-direction: column; }
     .summary {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -178,24 +152,10 @@
       padding: 18px 20px;
       border-bottom: 1px solid var(--line);
     }
-
-    .metric {
-      border: 1px solid var(--line);
-      background: var(--panel-2);
-      border-radius: 8px;
-      padding: 12px;
-    }
-
+    .metric { border: 1px solid var(--line); background: var(--panel-2); border-radius: 8px; padding: 12px; }
     .metric span { display: block; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
     .metric strong { display: block; margin-top: 6px; font-size: 20px; }
-    .result {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 18px 20px;
-      gap: 12px;
-    }
-
+    .result { flex: 1; display: flex; flex-direction: column; padding: 18px 20px; gap: 12px; }
     pre {
       flex: 1;
       margin: 0;
@@ -208,15 +168,7 @@
       color: #d1e7ff;
       font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
-
-    .message {
-      display: none;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
+    .message { display: none; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.45; }
     .message.show { display: block; }
     .message.ok { border: 1px solid rgba(52, 211, 153, 0.45); background: rgba(52, 211, 153, 0.12); color: #bbf7d0; }
     .message.error { border: 1px solid rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.12); color: #fecaca; }
@@ -230,13 +182,11 @@
       font-size: 13px;
       line-height: 1.45;
     }
-
     @media (max-width: 1080px) {
       .topbar, .grid { display: block; }
       .status-card { margin-top: 18px; }
       .grid .panel { margin-bottom: 18px; }
     }
-
     @media (max-width: 760px) {
       .shell { padding: 16px; }
       .fields, .fields.three, .checks, .summary { grid-template-columns: 1fr; }
@@ -249,142 +199,65 @@
       <div>
         <p class="eyebrow">DFP NEO Vendor Licensing</p>
         <h1>Licensing Portal</h1>
-        <p class="subtitle">
-          Create signed customer licence files for internet, private network and offline DFP NEO deployments.
-          This page is for the vendor only and should be hosted separately from customer systems.
-        </p>
+        <p class="subtitle">Create signed customer licence files for internet, private network and offline DFP NEO deployments. This page is for the vendor only and should be hosted separately from customer systems.</p>
       </div>
       <aside class="status-card">
         <strong>Recommended location: licensing.dfp-neo.com</strong>
         <p>Do not link this from the customer app home screen. Access should be by direct vendor URL, protected by vendor authentication, token control and server-side private key storage.</p>
       </aside>
     </header>
-
     <section class="grid">
       <form id="licenseForm" class="panel">
-        <div class="panel-header">
-          <div>
-            <h2>Licence Builder</h2>
-            <span>Enter contract scope, approved systems and deployment limits.</span>
-          </div>
-        </div>
-
+        <div class="panel-header"><div><h2>Licence Builder</h2><span>Enter contract scope, approved systems and deployment limits.</span></div></div>
         <div class="section">
           <h3>Vendor Access</h3>
-          <div class="fields">
-            <label class="field full">Vendor Portal Token
-              <input id="vendorToken" type="password" autocomplete="off" placeholder="Enter vendor portal token" />
-            </label>
-          </div>
+          <div class="fields"><label class="field full">Vendor Portal Token<input id="vendorToken" type="password" autocomplete="off" placeholder="Enter vendor portal token" /></label></div>
           <p class="hint">This token unlocks licence generation on the vendor licensing service. It is not the customer's DFP NEO password.</p>
         </div>
-
         <div class="section">
           <h3>Customer</h3>
           <div class="fields">
-            <label>Organisation Code
-              <input id="organisationCode" required placeholder="RAAF" />
-            </label>
-            <label>Organisation Name
-              <input id="organisationName" placeholder="Royal Australian Air Force" />
-            </label>
-            <label>Licence Key
-              <input id="licenseKey" required placeholder="RAAF-PROD-001" />
-            </label>
-            <label>Licence Name
-              <input id="licenseName" placeholder="RAAF Production Licence" />
-            </label>
+            <label>Organisation Code<input id="organisationCode" required placeholder="RAAF" /></label>
+            <label>Organisation Name<input id="organisationName" placeholder="Royal Australian Air Force" /></label>
+            <label>Licence Key<input id="licenseKey" required placeholder="RAAF-PROD-001" /></label>
+            <label>Licence Name<input id="licenseName" placeholder="RAAF Production Licence" /></label>
           </div>
         </div>
-
         <div class="section">
           <h3>Approved Systems</h3>
-          <label class="field full">Deployment Fingerprints
-            <textarea id="fingerprints" placeholder="One per line, for example&#10;DFP-RAAF-TRAIN-001&#10;DFP-RAAF-OPS-001&#10;DFP-RAAF-OFFLINE-001"></textarea>
-          </label>
-          <div class="checks" style="margin-top:10px">
-            <label class="check"><input id="allowAnyFingerprint" type="checkbox" /> Development/test only: allow any fingerprint</label>
-          </div>
+          <label class="field full">Deployment Fingerprints<textarea id="fingerprints" placeholder="One per line, for example&#10;DFP-RAAF-TRAIN-001&#10;DFP-RAAF-OPS-001&#10;DFP-RAAF-OFFLINE-001"></textarea></label>
+          <div class="checks" style="margin-top:10px"><label class="check"><input id="allowAnyFingerprint" type="checkbox" /> Development/test only: allow any fingerprint</label></div>
           <p class="hint">For a customer system, copy the fingerprint from Settings, Platform and Deployment, Licensing and Deployment.</p>
         </div>
-
         <div class="section">
           <h3>Dates and Deployment</h3>
           <div class="fields three">
-            <label>Deployment Model
-              <select id="deploymentMode">
-                <option>Online SaaS</option>
-                <option>Private Network</option>
-                <option>Fully Offline</option>
-                <option>Hybrid Offline Sync</option>
-              </select>
-            </label>
-            <label>Valid From
-              <input id="validFrom" type="date" />
-            </label>
-            <label>Valid Until
-              <input id="validUntil" type="date" />
-            </label>
-            <label>Validation Method
-              <select id="validationMethod">
-                <option>Online licence check</option>
-                <option>Private network licence server</option>
-                <option>Offline signed licence file</option>
-                <option>Hybrid cached licence</option>
-              </select>
-            </label>
-            <label>Enforcement Mode
-              <select id="enforcementMode">
-                <option>Monitor Only</option>
-                <option>Warn Only</option>
-                <option selected>Block Expired Licence</option>
-              </select>
-            </label>
-            <label>Offline Grace Days
-              <input id="offlineGraceDays" type="number" min="0" step="1" value="30" />
-            </label>
+            <label>Deployment Model<select id="deploymentMode"><option>Online SaaS</option><option>Private Network</option><option>Fully Offline</option><option>Hybrid Offline Sync</option></select></label>
+            <label>Valid From<input id="validFrom" type="date" /></label>
+            <label>Valid Until<input id="validUntil" type="date" /></label>
+            <label>Validation Method<select id="validationMethod"><option>Online licence check</option><option>Private network licence server</option><option>Offline signed licence file</option><option>Hybrid cached licence</option></select></label>
+            <label>Enforcement Mode<select id="enforcementMode"><option>Monitor Only</option><option>Warn Only</option><option selected>Block Expired Licence</option></select></label>
+            <label>Offline Grace Days<input id="offlineGraceDays" type="number" min="0" step="1" value="30" /></label>
           </div>
-          <div class="checks" style="margin-top:10px">
-            <label class="check"><input id="allowOfflineOperation" type="checkbox" /> Allow offline operation</label>
-          </div>
+          <div class="checks" style="margin-top:10px"><label class="check"><input id="allowOfflineOperation" type="checkbox" /> Allow offline operation</label></div>
         </div>
-
         <div class="section">
           <h3>Commercial Limits</h3>
           <div class="fields three">
-            <label>Max Users
-              <input id="maxUsers" type="number" min="0" step="1" placeholder="500" />
-            </label>
-            <label>Max Units
-              <input id="maxUnits" type="number" min="0" step="1" placeholder="20" />
-            </label>
-            <label>Max Aircraft Types
-              <input id="maxAircraftTypes" type="number" min="0" step="1" placeholder="10" />
-            </label>
+            <label>Max Users<input id="maxUsers" type="number" min="0" step="1" placeholder="500" /></label>
+            <label>Max Units<input id="maxUnits" type="number" min="0" step="1" placeholder="20" /></label>
+            <label>Max Aircraft Types<input id="maxAircraftTypes" type="number" min="0" step="1" placeholder="10" /></label>
           </div>
         </div>
-
         <div class="section">
           <h3>Licensed Modules</h3>
           <div class="checks" id="moduleChecks"></div>
-          <label class="field full" style="margin-top:12px">Additional Module Codes
-            <input id="additionalModules" placeholder="Comma separated, for example CUSTOM_ANALYTICS,DEPLOYMENT_READINESS" />
-          </label>
+          <label class="field full" style="margin-top:12px">Additional Module Codes<input id="additionalModules" placeholder="Comma separated, for example CUSTOM_ANALYTICS,DEPLOYMENT_READINESS" /></label>
         </div>
-
-        <div class="actions">
-          <button class="button primary" type="submit">Generate Signed Licence</button>
-          <button class="button secondary" type="button" id="resetForm">Reset</button>
-        </div>
+        <div class="actions"><button class="button primary" type="submit">Generate Signed Licence</button><button class="button secondary" type="button" id="resetForm">Reset</button></div>
       </form>
-
       <aside class="panel output">
-        <div class="panel-header">
-          <div>
-            <h2>Signed Licence Output</h2>
-            <span>Copy or download this file for the customer to import.</span>
-          </div>
-        </div>
+        <div class="panel-header"><div><h2>Signed Licence Output</h2><span>Copy or download this file for the customer to import.</span></div></div>
         <div class="summary">
           <div class="metric"><span>Customer</span><strong id="summaryCustomer">Not generated</strong></div>
           <div class="metric"><span>Fingerprints</span><strong id="summaryFingerprints">0</strong></div>
@@ -394,32 +267,14 @@
         <div class="result">
           <div id="message" class="message"></div>
           <pre id="output" aria-live="polite">No licence generated yet.</pre>
-          <div class="actions" style="padding:0;border:0;background:transparent">
-            <button class="button secondary" id="copyOutput" type="button" disabled>Copy</button>
-            <button class="button secondary" id="downloadOutput" type="button" disabled>Download JSON</button>
-          </div>
-          <div class="secure-note">
-            The private key must remain only on this vendor licensing service. Customer DFP NEO systems should receive the public key and the signed licence file, never the private key.
-          </div>
+          <div class="actions" style="padding:0;border:0;background:transparent"><button class="button secondary" id="copyOutput" type="button" disabled>Copy</button><button class="button secondary" id="downloadOutput" type="button" disabled>Download JSON</button></div>
+          <div class="secure-note">The private key must remain only on this vendor licensing service. Customer DFP NEO systems should receive the public key and the signed licence file, never the private key.</div>
         </div>
       </aside>
     </section>
   </main>
-
   <script>
-    const modules = [
-      ['DFP', 'Daily Flying Program'],
-      ['NEO_BUILD', 'NEO Build'],
-      ['TRAINING_REPORTS', 'Training Reports'],
-      ['BLI', 'Build Intelligence'],
-      ['FLIGHT_LINE', 'Flight Line'],
-      ['MESSAGES', 'Messages'],
-      ['AIR_COMBAT', 'Air Combat Model'],
-      ['FIXED_CREW', 'Fixed Crew Model'],
-      ['POOLED_CREW', 'Pooled Crew Model'],
-      ['DEPLOYMENT_READINESS', 'Deployment Readiness'],
-    ];
-
+    const modules = [['DFP','Daily Flying Program'],['NEO_BUILD','NEO Build'],['TRAINING_REPORTS','Training Reports'],['BLI','Build Intelligence'],['FLIGHT_LINE','Flight Line'],['MESSAGES','Messages'],['AIR_COMBAT','Air Combat Model'],['FIXED_CREW','Fixed Crew Model'],['POOLED_CREW','Pooled Crew Model'],['DEPLOYMENT_READINESS','Deployment Readiness']];
     const moduleChecks = document.getElementById('moduleChecks');
     modules.forEach(([code, label]) => {
       const item = document.createElement('label');
@@ -427,7 +282,6 @@
       item.innerHTML = '<input type="checkbox" data-module="' + code + '" checked /> <span><strong>' + label + '</strong><br><small>' + code + '</small></span>';
       moduleChecks.appendChild(item);
     });
-
     const getValue = (id) => document.getElementById(id).value.trim();
     const getNumber = (id) => {
       const value = getValue(id);
@@ -440,24 +294,20 @@
     const downloadOutput = document.getElementById('downloadOutput');
     let latestOutput = '';
     let latestFileName = 'dfp-neo-license.json';
-
     function showMessage(kind, text) {
       message.className = 'message show ' + kind;
       message.textContent = text;
     }
-
     function selectedModules() {
       const selected = Array.from(document.querySelectorAll('[data-module]:checked')).map((item) => item.dataset.module);
       return Array.from(new Set([...selected, ...getList(getValue('additionalModules'))]));
     }
-
     function updateSummary(payload) {
       document.getElementById('summaryCustomer').textContent = payload.organisationCode || 'Not generated';
       document.getElementById('summaryFingerprints').textContent = String((payload.fingerprints || []).length || (payload.allowAnyFingerprint ? 'Any' : 0));
       document.getElementById('summaryModules').textContent = String((payload.moduleCodes || []).length);
       document.getElementById('summaryExpiry').textContent = payload.validUntil || 'Not set';
     }
-
     document.getElementById('licenseForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       message.className = 'message';
@@ -482,19 +332,14 @@
         maxAircraftTypes: getNumber('maxAircraftTypes'),
         moduleCodes,
       };
-
       updateSummary(payload);
       output.textContent = 'Generating signed licence...';
       copyOutput.disabled = true;
       downloadOutput.disabled = true;
-
       try {
         const response = await fetch('/api/vendor-license/generate', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + payload.vendorToken,
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + payload.vendorToken },
           body: JSON.stringify(payload),
         });
         const body = await response.json();
@@ -511,13 +356,11 @@
         showMessage('error', error.message || 'Licence generation failed.');
       }
     });
-
     copyOutput.addEventListener('click', async () => {
       if (!latestOutput) return;
       await navigator.clipboard.writeText(latestOutput);
       showMessage('ok', 'Signed licence copied to clipboard.');
     });
-
     downloadOutput.addEventListener('click', () => {
       if (!latestOutput) return;
       const blob = new Blob([latestOutput + '\n'], { type: 'application/json' });
@@ -530,7 +373,6 @@
       link.remove();
       URL.revokeObjectURL(url);
     });
-
     document.getElementById('resetForm').addEventListener('click', () => {
       document.getElementById('licenseForm').reset();
       document.querySelectorAll('[data-module]').forEach((item) => { item.checked = true; });

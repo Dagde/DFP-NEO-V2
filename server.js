@@ -2458,6 +2458,17 @@ const getVendorLicensePortalToken = () => (
   ''
 );
 
+const getVendorLicensePortalHosts = () => String(process.env.DFP_VENDOR_LICENSE_PORTAL_HOSTS || '')
+  .split(',')
+  .map((host) => host.trim().toLowerCase())
+  .filter(Boolean);
+
+const getRequestHost = (req) => String(req.headers['x-forwarded-host'] || req.headers.host || '')
+  .split(',')[0]
+  .trim()
+  .toLowerCase()
+  .replace(/:\d+$/, '');
+
 function tokenEquals(received, expected) {
   const left = Buffer.from(String(received || ''));
   const right = Buffer.from(String(expected || ''));
@@ -2465,9 +2476,80 @@ function tokenEquals(received, expected) {
   return crypto.timingSafeEqual(left, right);
 }
 
+function isVendorLicenseHostAllowed(req) {
+  const allowedHosts = getVendorLicensePortalHosts();
+  if (process.env.NODE_ENV !== 'production' && allowedHosts.length === 0) return true;
+  const requestHost = getRequestHost(req);
+  return allowedHosts.some((host) => requestHost === host || requestHost.endsWith(`.${host}`));
+}
+
+const vendorLicenseRateLimit = new Map();
+function isVendorLicenseRateLimited(req) {
+  const windowMs = 15 * 60 * 1000;
+  const maxAttempts = Number(process.env.DFP_VENDOR_LICENSE_RATE_LIMIT || 20);
+  const now = Date.now();
+  const ip = String(req.headers['x-forwarded-for'] || req.ip || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  const existing = vendorLicenseRateLimit.get(ip) || { count: 0, resetAt: now + windowMs };
+  if (existing.resetAt <= now) {
+    vendorLicenseRateLimit.set(ip, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  existing.count += 1;
+  vendorLicenseRateLimit.set(ip, existing);
+  return existing.count > maxAttempts;
+}
+
+function setVendorLicensePortalHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+}
+
+function requireVendorLicensePortalPage(req, res) {
+  if (!isVendorLicensingPortalEnabled() || !isVendorLicenseHostAllowed(req)) {
+    res.status(404).send('Not found');
+    return false;
+  }
+
+  const expectedUser = process.env.DFP_VENDOR_LICENSE_PORTAL_USER || '';
+  const expectedPassword = process.env.DFP_VENDOR_LICENSE_PORTAL_PASSWORD || '';
+  if (process.env.NODE_ENV === 'production' && (!expectedUser || !expectedPassword)) {
+    res.status(503).send('Vendor licensing portal page authentication is not configured.');
+    return false;
+  }
+  if (!expectedUser || !expectedPassword) return true;
+
+  const authHeader = String(req.headers.authorization || '');
+  const encoded = authHeader.startsWith('Basic ') ? authHeader.slice(6) : '';
+  let suppliedUser = '';
+  let suppliedPassword = '';
+  try {
+    const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+    const splitIndex = decoded.indexOf(':');
+    suppliedUser = splitIndex >= 0 ? decoded.slice(0, splitIndex) : '';
+    suppliedPassword = splitIndex >= 0 ? decoded.slice(splitIndex + 1) : '';
+  } catch {}
+
+  if (!tokenEquals(suppliedUser, expectedUser) || !tokenEquals(suppliedPassword, expectedPassword)) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="DFP NEO Vendor Licensing", charset="UTF-8"');
+    res.status(401).send('Vendor authentication is required.');
+    return false;
+  }
+  return true;
+}
+
 function requireVendorLicensePortal(req, res) {
-  if (!isVendorLicensingPortalEnabled()) {
+  setVendorLicensePortalHeaders(res);
+  if (!isVendorLicensingPortalEnabled() || !isVendorLicenseHostAllowed(req)) {
     res.status(404).json({ error: 'Not found' });
+    return null;
+  }
+
+  if (isVendorLicenseRateLimited(req)) {
+    res.status(429).json({ error: 'Too many attempts', message: 'Wait before trying again.' });
     return null;
   }
 
@@ -2801,8 +2883,9 @@ app.post('/api/platform-license/generate-development', async (req, res) => {
 });
 
 app.get('/vendor/licensing', (req, res) => {
-  if (!isVendorLicensingPortalEnabled()) return res.status(404).send('Not found');
-  res.sendFile(path.join(__dirname, 'public', 'vendor-licensing-portal.html'));
+  setVendorLicensePortalHeaders(res);
+  if (!requireVendorLicensePortalPage(req, res)) return;
+  res.sendFile(path.join(__dirname, 'server-assets', 'vendor-licensing-portal.html'));
 });
 
 app.post('/api/vendor-license/generate', async (req, res) => {
