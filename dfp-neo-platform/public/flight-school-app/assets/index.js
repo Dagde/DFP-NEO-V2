@@ -76287,10 +76287,10 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/70", children: offlineMode && !license.offlineFingerprint ? "Offline fingerprint still required" : "Entitlements recorded" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border px-3 py-2 ${signatureStatus?.signatureState === "VERIFIED" ? "border-green-500/40 bg-green-500/10 text-green-100" : signatureStatus?.signatureState === "UNSIGNED_CONFIGURATION" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-100" : "border-red-500/40 bg-red-500/10 text-red-100"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 rounded border px-3 py-2 ${signatureStatus?.signatureState === "VERIFIED" ? "border-green-500/40 bg-green-500/10 text-green-100" : signatureStatus?.signatureState === "UNSIGNED_CONFIGURATION" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-100" : "border-red-500/40 bg-red-500/10 text-red-100"}`, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide opacity-80", children: "Signed File" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-base font-bold", children: signatureStatus?.signatureState || "Unknown" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs opacity-80", children: signatureStatus?.signatureDetail || "No licence verification result." })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 break-words text-sm font-bold leading-tight [overflow-wrap:anywhere]", children: (signatureStatus?.signatureState || "Unknown").replace(/_/g, " ") }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 break-words text-xs leading-snug opacity-80 [overflow-wrap:anywhere]", children: signatureStatus?.signatureDetail || "No licence verification result." })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [

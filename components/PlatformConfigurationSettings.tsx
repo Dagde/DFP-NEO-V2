@@ -10392,7 +10392,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       {offlineMode && !license.offlineFingerprint ? 'Offline fingerprint still required' : 'Entitlements recorded'}
                     </div>
                   </div>
-                  <div className={`rounded border px-3 py-2 ${
+                  <div className={`min-w-0 rounded border px-3 py-2 ${
                     signatureStatus?.signatureState === 'VERIFIED'
                       ? 'border-green-500/40 bg-green-500/10 text-green-100'
                       : signatureStatus?.signatureState === 'UNSIGNED_CONFIGURATION'
@@ -10400,8 +10400,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                         : 'border-red-500/40 bg-red-500/10 text-red-100'
                   }`}>
                     <div className="text-xs font-semibold uppercase tracking-wide opacity-80">Signed File</div>
-                    <div className="mt-1 text-base font-bold">{signatureStatus?.signatureState || 'Unknown'}</div>
-                    <div className="mt-1 text-xs opacity-80">{signatureStatus?.signatureDetail || 'No licence verification result.'}</div>
+                    <div className="mt-1 break-words text-sm font-bold leading-tight [overflow-wrap:anywhere]">
+                      {(signatureStatus?.signatureState || 'Unknown').replace(/_/g, ' ')}
+                    </div>
+                    <div className="mt-1 break-words text-xs leading-snug opacity-80 [overflow-wrap:anywhere]">{signatureStatus?.signatureDetail || 'No licence verification result.'}</div>
                   </div>
                 </div>
 

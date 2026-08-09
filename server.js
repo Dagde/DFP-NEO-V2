@@ -2446,10 +2446,12 @@ const readPackageMetadata = () => {
 const LICENSE_STATUS_CACHE_MS = Number(process.env.DFP_LICENSE_STATUS_CACHE_MS || 60_000);
 let licenseStatusCache = { expiresAt: 0, status: null };
 
+const isTruthyEnv = (value) => ['1', 'true', 'yes', 'on', 'enabled'].includes(String(value || '').trim().toLowerCase());
+
 const isVendorLicensingPortalEnabled = () => (
-  process.env.DFP_VENDOR_LICENSE_PORTAL_ENABLED === 'true' ||
-  process.env.DFP_ENABLE_VENDOR_LICENSE_PORTAL === 'true' ||
-  (process.env.NODE_ENV !== 'production' && process.env.DFP_DISABLE_VENDOR_LICENSE_PORTAL !== 'true')
+  isTruthyEnv(process.env.DFP_VENDOR_LICENSE_PORTAL_ENABLED) ||
+  isTruthyEnv(process.env.DFP_ENABLE_VENDOR_LICENSE_PORTAL) ||
+  (process.env.NODE_ENV !== 'production' && !isTruthyEnv(process.env.DFP_DISABLE_VENDOR_LICENSE_PORTAL))
 );
 
 const getVendorLicensePortalToken = () => (
@@ -2458,15 +2460,24 @@ const getVendorLicensePortalToken = () => (
   ''
 );
 
+const normalizeHostValue = (value) => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/^https?:\/\//, '')
+  .split('/')[0]
+  .replace(/:\d+$/, '');
+
 const getVendorLicensePortalHosts = () => String(process.env.DFP_VENDOR_LICENSE_PORTAL_HOSTS || '')
   .split(',')
-  .map((host) => host.trim().toLowerCase())
+  .map(normalizeHostValue)
   .filter(Boolean);
 
 const getRequestHost = (req) => String(req.headers['x-forwarded-host'] || req.headers.host || '')
   .split(',')[0]
   .trim()
   .toLowerCase()
+  .replace(/^https?:\/\//, '')
+  .split('/')[0]
   .replace(/:\d+$/, '');
 
 function tokenEquals(received, expected) {
