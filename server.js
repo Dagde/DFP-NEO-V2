@@ -4,10 +4,12 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import {
+  LICENSE_PAYLOAD_SCHEMA,
   buildImportedLicenseRecord,
   evaluateCommercialLicenses,
   getDeploymentFingerprint,
   getLicenseRuntimeMode,
+  normaliseLicenceEnforcementMode,
   signLicensePayload,
   verifySignedLicenseContent,
 } from './lib/licensing.js';
@@ -30,6 +32,7 @@ const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const XLSX = require('xlsx');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -2443,6 +2446,75 @@ const readPackageMetadata = () => {
 const LICENSE_STATUS_CACHE_MS = Number(process.env.DFP_LICENSE_STATUS_CACHE_MS || 60_000);
 let licenseStatusCache = { expiresAt: 0, status: null };
 
+const isVendorLicensingPortalEnabled = () => (
+  process.env.DFP_VENDOR_LICENSE_PORTAL_ENABLED === 'true' ||
+  process.env.DFP_ENABLE_VENDOR_LICENSE_PORTAL === 'true' ||
+  (process.env.NODE_ENV !== 'production' && process.env.DFP_DISABLE_VENDOR_LICENSE_PORTAL !== 'true')
+);
+
+const getVendorLicensePortalToken = () => (
+  process.env.DFP_VENDOR_LICENSE_PORTAL_TOKEN ||
+  process.env.DFP_VENDOR_LICENSING_TOKEN ||
+  ''
+);
+
+function tokenEquals(received, expected) {
+  const left = Buffer.from(String(received || ''));
+  const right = Buffer.from(String(expected || ''));
+  if (left.length !== right.length || right.length === 0) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
+function requireVendorLicensePortal(req, res) {
+  if (!isVendorLicensingPortalEnabled()) {
+    res.status(404).json({ error: 'Not found' });
+    return null;
+  }
+
+  const expectedToken = getVendorLicensePortalToken();
+  if (!expectedToken) {
+    res.status(503).json({
+      error: 'Vendor licensing portal is not configured',
+      message: 'Set DFP_VENDOR_LICENSE_PORTAL_TOKEN before generating licences.',
+    });
+    return null;
+  }
+
+  const authHeader = String(req.headers.authorization || '');
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const suppliedToken = bearerToken || req.headers['x-dfp-vendor-token'] || req.body?.vendorToken || '';
+  if (!tokenEquals(suppliedToken, expectedToken)) {
+    res.status(401).json({ error: 'Unauthorized', message: 'Valid vendor licensing token is required.' });
+    return null;
+  }
+
+  const privateKeyPem = process.env.DFP_LICENSE_PRIVATE_KEY || process.env.DFP_LICENCE_PRIVATE_KEY;
+  if (!privateKeyPem) {
+    res.status(503).json({
+      error: 'Private signing key is not configured',
+      message: 'Set DFP_LICENSE_PRIVATE_KEY on the vendor licensing service. Do not set it on customer deployments.',
+    });
+    return null;
+  }
+
+  return { privateKeyPem };
+}
+
+const normalisePortalString = (value) => String(value || '').trim();
+const normalisePortalNumber = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const normalisePortalList = (value) => {
+  if (Array.isArray(value)) return value.map(normalisePortalString).filter(Boolean);
+  return String(value || '')
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 async function getLicenseStatusSnapshot(db, { forceRefresh = false } = {}) {
   const now = Date.now();
   if (!forceRefresh && licenseStatusCache.status && licenseStatusCache.expiresAt > now) {
@@ -2489,6 +2561,7 @@ function isLicenseRecoveryPath(req) {
     pathName.startsWith('/api/auth/') ||
     pathName.startsWith('/api/mobile/auth/') ||
     pathName.startsWith('/api/platform-license/') ||
+    pathName.startsWith('/api/vendor-license/') ||
     pathName === '/api/platform-config' ||
     pathName === '/api/platform-deployment/manifest'
   );
@@ -2724,6 +2797,85 @@ app.post('/api/platform-license/generate-development', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/platform-license/generate-development error:', error);
     res.status(400).json({ error: 'Failed to generate development signed licence', details: error.message });
+  }
+});
+
+app.get('/vendor/licensing', (req, res) => {
+  if (!isVendorLicensingPortalEnabled()) return res.status(404).send('Not found');
+  res.sendFile(path.join(__dirname, 'public', 'vendor-licensing-portal.html'));
+});
+
+app.post('/api/vendor-license/generate', async (req, res) => {
+  try {
+    const vendorContext = requireVendorLicensePortal(req, res);
+    if (!vendorContext) return;
+
+    const body = req.body || {};
+    const licenseKey = normalisePortalString(body.licenseKey);
+    const organisationCode = normalisePortalString(body.organisationCode);
+    const fingerprints = normalisePortalList(body.fingerprints || body.fingerprint);
+    const allowAnyFingerprint = body.allowAnyFingerprint === true;
+    if (!licenseKey) return res.status(400).json({ error: 'Licence key is required.' });
+    if (!organisationCode) return res.status(400).json({ error: 'Organisation code is required.' });
+    if (!allowAnyFingerprint && fingerprints.length === 0) {
+      return res.status(400).json({ error: 'At least one deployment fingerprint is required.' });
+    }
+
+    const moduleCodes = normalisePortalList(body.moduleCodes || body.modules);
+    const deploymentFingerprint = fingerprints[0] || null;
+    const packageMetadata = readPackageMetadata();
+    const payload = {
+      schema: LICENSE_PAYLOAD_SCHEMA,
+      issuedAt: new Date().toISOString(),
+      application: {
+        application: packageMetadata.name || 'daily-flying-program',
+        version: packageMetadata.version || 'customer-package',
+        deploymentFingerprint,
+      },
+      customer: {
+        organisationCode,
+        organisationName: normalisePortalString(body.organisationName) || organisationCode,
+      },
+      license: {
+        licenseKey,
+        licenseName: normalisePortalString(body.licenseName) || licenseKey,
+        deploymentMode: normalisePortalString(body.deploymentMode) || 'Online SaaS',
+        status: 'ACTIVE',
+        validFrom: normalisePortalString(body.validFrom) || null,
+        validUntil: normalisePortalString(body.validUntil) || null,
+        maxUsers: normalisePortalNumber(body.maxUsers),
+        maxUnits: normalisePortalNumber(body.maxUnits),
+        maxAircraftTypes: normalisePortalNumber(body.maxAircraftTypes),
+        moduleCodes,
+        features: {
+          validationMethod: body.offline === true ? 'Offline signed licence file' : (normalisePortalString(body.validationMethod) || 'Online licence check'),
+          enforcementMode: normaliseLicenceEnforcementMode(body.enforcementMode),
+          offlineGraceDays: normalisePortalNumber(body.offlineGraceDays) ?? 30,
+          allowOfflineOperation: body.offline === true || body.allowOfflineOperation === true,
+        },
+      },
+      deployment: {
+        fingerprint: fingerprints.length === 1 ? fingerprints[0] : null,
+        allowedFingerprints: fingerprints,
+        allowAnyFingerprint,
+      },
+    };
+
+    const signedLicenseFile = signLicensePayload(payload, vendorContext.privateKeyPem, {
+      keyId: normalisePortalString(body.keyId) || process.env.DFP_LICENSE_KEY_ID || process.env.DFP_LICENCE_KEY_ID || 'primary',
+    });
+
+    res.json({
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      licenseKey,
+      organisationCode,
+      fingerprintCount: fingerprints.length,
+      signedLicenseFile,
+    });
+  } catch (error) {
+    console.error('❌ POST /api/vendor-license/generate error:', error);
+    res.status(400).json({ error: 'Failed to generate signed licence', details: error.message });
   }
 });
 
