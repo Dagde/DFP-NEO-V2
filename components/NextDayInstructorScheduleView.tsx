@@ -9,7 +9,7 @@ import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
+import { scheduleEventIncludesPersonRecord, schedulePersonnelNamesMatch as personnelNamesMatch } from '../utils/scheduleEventPersonnel';
 
 interface NextDayInstructorScheduleViewProps {
   events: ScheduleEvent[];

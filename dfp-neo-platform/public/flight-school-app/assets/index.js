@@ -89660,7 +89660,7 @@ const NextDayInstructorScheduleView = ({
     const uniqueEvents = events.filter((event, index, source) => source.findIndex((candidate) => candidate.id === event.id) === index);
     const tileRows = uniqueEvents.flatMap((event) => {
       const personnel = getPersonnel$2(event);
-      return instructors.filter((instructor) => personnel.some((person) => personnelNamesMatch(person, instructor.name))).map((instructor) => ({
+      return instructors.filter((instructor) => personnel.some((person) => schedulePersonnelNamesMatch(person, instructor.name))).map((instructor) => ({
         tileKey: `${event.id}-${instructor.name}`,
         eventId: event.id,
         instructor: instructor.name,
@@ -89728,7 +89728,7 @@ const NextDayInstructorScheduleView = ({
           const personnelToCheck = getPersonnel$2(eventToCheck);
           const existingPersonnel = getPersonnel$2(existingEvent);
           const conflictedPersonName = personnelToCheck.find(
-            (person) => existingPersonnel.some((existingPerson) => personnelNamesMatch(person, existingPerson))
+            (person) => existingPersonnel.some((existingPerson) => schedulePersonnelNamesMatch(person, existingPerson))
           );
           if (conflictedPersonName) {
             return { conflictingEvent: existingEvent, personName: conflictedPersonName };
@@ -90075,7 +90075,7 @@ const NextDayInstructorScheduleView = ({
                     let personToHighlight = null;
                     if (realtimeConflict) {
                       const personnelOnThisTile = getPersonnel$2(event);
-                      if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => personnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
+                      if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => schedulePersonnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
                         personToHighlight = realtimeConflict.conflictedPersonName;
                       }
                     }
@@ -95716,7 +95716,7 @@ const isPlaceholderPersonnelName = (name) => {
   return !normalizedName || PLACEHOLDER_PERSONNEL_NAMES.has(normalizedName);
 };
 const normalizePersonnelNameForMatch = (name) => (name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
-const personnelNamesMatch$1 = (a, b) => {
+const personnelNamesMatch = (a, b) => {
   const left = normalizePersonnelNameForMatch(a);
   const right = normalizePersonnelNameForMatch(b);
   return !!left && left === right;
@@ -95796,7 +95796,7 @@ const eventHasPersonWithRole = (event, personName, role) => {
   if (!ref) return false;
   return getPersonnelIdentityRefs(event).some((eventRef) => eventRef.key === ref.key);
 };
-const eventHasPerson = (event, personName) => getPersonnel(event).some((p) => personnelNamesMatch$1(p, personName));
+const eventHasPerson = (event, personName) => getPersonnel(event).some((p) => personnelNamesMatch(p, personName));
 const getCommonPersonnel = (eventA, eventB) => {
   const eventBPersonnelKeys = new Set(getPersonnelIdentityRefs(eventB).map((person) => person.key));
   return getPersonnelIdentityRefs(eventA).filter((person) => eventBPersonnelKeys.has(person.key)).map((person) => person.label);
@@ -98641,7 +98641,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const allowRequestedPicOutsideCrew = priorityEventRequiresRequestedPicCrew && Boolean(String(event.fixedCrewPic || event.pilot || "").trim());
       const requiresRequestedPriorityPerson = requestedPriorityPersonNames.length > 0 && !allowRequestedPicOutsideCrew;
       const randomiseCrewSelection = Boolean(event.fixedCrewRandomCrew) && !requestedCrewGroup;
-      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).filter(([, members]) => !requiresRequestedPriorityPerson || members.some((staff) => requestedPriorityPersonNames.some((name) => personnelNamesMatch$1(staff.name, name)))).sort(([leftCrew], [rightCrew]) => {
+      const candidates = Array.from(crewGroups.entries()).filter(([crew]) => crewMatchesFixedCrewEventOwnerUnit(crew, eventOwnerUnit)).filter(([crew]) => !requestedCrewGroup || normaliseFixedCrewGroupKey(crew) === requestedCrewGroup).filter(([, members]) => !requiresRequestedPriorityPerson || members.some((staff) => requestedPriorityPersonNames.some((name) => personnelNamesMatch(staff.name, name)))).sort(([leftCrew], [rightCrew]) => {
         if (randomiseCrewSelection) {
           const eventSeed = String(event.id || event.flightNumber || event.taskingRequestId || event.currencyDraftId || "fixed-crew-priority");
           return getFixedCrewStableRandomScore(`${buildDate}|${eventSeed}|${leftCrew}`) - getFixedCrewStableRandomScore(`${buildDate}|${eventSeed}|${rightCrew}`);
@@ -98737,10 +98737,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       for (const [crew, members] of candidates) {
         fixedCrewPerf.counters.crewCandidateEvaluations += 1;
         const requestedPicName = String(event.fixedCrewPic || event.pilot || "").trim();
-        const requestedPic = requestedPicName ? members.find((staff) => personnelNamesMatch$1(staff.name, requestedPicName) && staffHasPicQualification(staff)) : null;
-        const requestedExternalPic = requestedPicName && !requestedPic ? originalInstructors.find((staff) => personnelNamesMatch$1(staff.name, requestedPicName) && staffHasPicQualification(staff) && fixedCrewMatchesContextUnit(staff.unit)) : null;
+        const requestedPic = requestedPicName ? members.find((staff) => personnelNamesMatch(staff.name, requestedPicName) && staffHasPicQualification(staff)) : null;
+        const requestedExternalPic = requestedPicName && !requestedPic ? originalInstructors.find((staff) => personnelNamesMatch(staff.name, requestedPicName) && staffHasPicQualification(staff) && fixedCrewMatchesContextUnit(staff.unit)) : null;
         const pic = requestedPic || requestedExternalPic || members.find(staffHasPicQualification);
-        const assignmentMembers = pic && !members.some((staff) => personnelNamesMatch$1(staff.name, pic.name)) ? [pic, ...members] : members;
+        const assignmentMembers = pic && !members.some((staff) => personnelNamesMatch(staff.name, pic.name)) ? [pic, ...members] : members;
         const attemptBase = {
           event: event.flightNumber,
           eventId: event.id || null,
@@ -98890,8 +98890,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         flights365: countWithin(365, isPooledCrewFlightEvent),
         sims365: countWithin(365, isPooledCrewSimulatorEvent),
         previousAllocationFrequency: generatedForPerson.length,
-        partner30: history.filter((item) => getDaysSincePooledCrewEvent(item.date) !== null && getDaysSincePooledCrewEvent(item.date) <= 30 && !personnelNamesMatch$1(item.fixedCrewPic || item.pilot || item.instructor || "", staff.name)).length,
-        partner365: history.filter((item) => getDaysSincePooledCrewEvent(item.date) !== null && getDaysSincePooledCrewEvent(item.date) <= 365 && !personnelNamesMatch$1(item.fixedCrewPic || item.pilot || item.instructor || "", staff.name)).length
+        partner30: history.filter((item) => getDaysSincePooledCrewEvent(item.date) !== null && getDaysSincePooledCrewEvent(item.date) <= 30 && !personnelNamesMatch(item.fixedCrewPic || item.pilot || item.instructor || "", staff.name)).length,
+        partner365: history.filter((item) => getDaysSincePooledCrewEvent(item.date) !== null && getDaysSincePooledCrewEvent(item.date) <= 365 && !personnelNamesMatch(item.fixedCrewPic || item.pilot || item.instructor || "", staff.name)).length
       };
     };
     const pooledCrewRandomScore = (seed) => getFixedCrewStableRandomScore(seed) / 4294967295;
@@ -98960,7 +98960,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       const recipientIsPic = staffHasPicQualification(recipient.staff);
       const requiresPicSupervision = /upgrade|assessment|assess|check|instruct|supervis/i.test(`${event.flightNumber || ""} ${event.eventTitle || ""} ${event.training || ""}`);
-      const eligiblePartnerPilots = pilots.filter((staff) => !personnelNamesMatch$1(staff.name, recipient.staff.name));
+      const eligiblePartnerPilots = pilots.filter((staff) => !personnelNamesMatch(staff.name, recipient.staff.name));
       const preferredPartnerPool = eligiblePartnerPilots.filter((staff) => {
         if (!recipientIsPic) return staffHasPicQualification(staff);
         return requiresPicSupervision ? staffHasPicQualification(staff) : !staffHasPicQualification(staff);
@@ -101506,7 +101506,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       trainee.displayName
     ].map((value) => String(value || "").trim()).filter(Boolean);
     const exactLmpEntry = traineeNames.map((name) => [name, traineeLMPs.get(name)]).find(([, lmp2]) => Array.isArray(lmp2));
-    const fuzzyLmpEntry = exactLmpEntry ? null : Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some((candidate) => personnelNamesMatch$1(candidate, name)));
+    const fuzzyLmpEntry = exactLmpEntry ? null : Array.from(traineeLMPs.entries()).find(([name]) => traineeNames.some((candidate) => personnelNamesMatch(candidate, name)));
     const matchedLmpKey = exactLmpEntry?.[0] || fuzzyLmpEntry?.[0] || null;
     const lmp = exactLmpEntry?.[1] || fuzzyLmpEntry?.[1];
     const eventRefs = [
@@ -102305,7 +102305,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           student: existing.student || null,
           pilot: existing.pilot || null,
           source: existing._source || null,
-          personRoleRefs: getPersonnelIdentityRefs(existing).filter((ref) => personnelNamesMatch$1(ref.label, trainee.fullName))
+          personRoleRefs: getPersonnelIdentityRefs(existing).filter((ref) => personnelNamesMatch(ref.label, trainee.fullName))
         }))
       });
     }
@@ -102342,7 +102342,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             student: traineeTurnaroundConflict.student || null,
             pilot: traineeTurnaroundConflict.pilot || null,
             source: traineeTurnaroundConflict._source || null,
-            personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict).filter((ref) => personnelNamesMatch$1(ref.label, trainee.fullName))
+            personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict).filter((ref) => personnelNamesMatch(ref.label, trainee.fullName))
           },
           actualGap,
           requiredGap,
@@ -108206,7 +108206,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const primaryCounts = primaryPerson ? eventCounts.get(primaryPerson) : null;
       if (primaryCounts) primaryCounts.flightFtd = Math.max(0, primaryCounts.flightFtd - 1);
       const instructorName = event.instructor || "";
-      if (instructorName && !personnelNamesMatch$1(instructorName, primaryPerson)) {
+      if (instructorName && !personnelNamesMatch(instructorName, primaryPerson)) {
         const instructorCounts = eventCounts.get(instructorName);
         if (instructorCounts) instructorCounts.flightFtd = Math.max(0, instructorCounts.flightFtd - 1);
       }
@@ -108217,7 +108217,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const primaryCounts = primaryPerson ? eventCounts.get(primaryPerson) : null;
       if (primaryCounts) primaryCounts.flightFtd++;
       const instructorName = event.instructor || "";
-      if (instructorName && !personnelNamesMatch$1(instructorName, primaryPerson)) {
+      if (instructorName && !personnelNamesMatch(instructorName, primaryPerson)) {
         const instructorCounts = eventCounts.get(instructorName);
         if (instructorCounts) instructorCounts.flightFtd++;
       }
@@ -108621,7 +108621,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return isInstructorEligibleByUnit(instructor, trainee);
     };
     const findGroundRepair = (event, acceptedEvents2) => {
-      const trainee = trainees.find((t) => personnelNamesMatch$1(t.fullName, event._traineeName || event.student || event.pilot));
+      const trainee = trainees.find((t) => personnelNamesMatch(t.fullName, event._traineeName || event.student || event.pilot));
       const currentInstructor = instructors.find((instructor) => instructor.name === event.instructor);
       const eligibleInstructors = instructors.filter((instructor) => canUseInstructorForGround(instructor, trainee)).sort((a, b) => {
         if (a.name === event.instructor) return -1;
@@ -115142,7 +115142,7 @@ ${"=".repeat(60)}`);
       event.crewSelectionOrder
     ].forEach(addPerson2);
     Array.from(candidateNames).forEach((candidateName) => {
-      traineesData.filter((trainee) => personnelNamesMatch$1(trainee.fullName, candidateName) || personnelNamesMatch$1(trainee.name, candidateName)).forEach((trainee) => {
+      traineesData.filter((trainee) => personnelNamesMatch(trainee.fullName, candidateName) || personnelNamesMatch(trainee.name, candidateName)).forEach((trainee) => {
         addPerson2(trainee.fullName);
         addPerson2(trainee.name);
       });
@@ -115175,7 +115175,7 @@ ${"=".repeat(60)}`);
     };
     candidateNames.forEach((name) => {
       const exactLmp = traineeLMPs.get(name);
-      const fuzzyLmpEntry = exactLmp ? null : Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch$1(lmpName, name));
+      const fuzzyLmpEntry = exactLmp ? null : Array.from(traineeLMPs.entries()).find(([lmpName]) => personnelNamesMatch(lmpName, name));
       const lmp = exactLmp || fuzzyLmpEntry?.[1];
       if (eventCodeForDiag === "BGF20" || String(name || "").toLowerCase().includes("luna") || String(name || "").toLowerCase().includes("edwards")) {
         lmpMatchDiag.push({
@@ -116287,7 +116287,7 @@ ${"=".repeat(60)}`);
       const people = ref.role === "staff" ? allStaff : allTrainees;
       const matches = people.filter((person) => {
         const personName = "fullName" in person ? person.fullName : person.name;
-        return personnelNamesMatch$1(personName, ref.label) || personnelNamesMatch$1(person.name, ref.label);
+        return personnelNamesMatch(personName, ref.label) || personnelNamesMatch(person.name, ref.label);
       });
       const uniqueMatches = matches.filter((person, index, source) => {
         const key = getPersonIdentityDedupeKey(person, ref.role);
@@ -116296,7 +116296,7 @@ ${"=".repeat(60)}`);
       if (uniqueMatches.length <= 1) return;
       const resolvedRef = event.personnelRefs?.find((personRef) => {
         if (personRef.personType !== ref.role) return false;
-        if (!personnelNamesMatch$1(personRef.name, ref.label)) return false;
+        if (!personnelNamesMatch(personRef.name, ref.label)) return false;
         const personRefId = String(personRef.id || "").trim();
         const personRefIdNumber = String(personRef.idNumber || "").trim();
         return uniqueMatches.some((person) => personRefId && String(person.id || "").trim() === personRefId || personRefIdNumber && String(person.idNumber || "").trim() === personRefIdNumber);
@@ -121098,7 +121098,7 @@ The proposed event was not scheduled. Re-open the event and choose Accept Confli
       if (hasAssignedCrew(event)) continue;
       const picName = getEventPicName(event);
       if (!picName || isPlaceholderPersonnelName(picName) || /^CREW\b/i.test(picName)) continue;
-      const picStaff = instructorsData.find((staff) => personnelNamesMatch$1(staff.name, picName));
+      const picStaff = instructorsData.find((staff) => personnelNamesMatch(staff.name, picName));
       const eventUnit = normalisePromptUnitCode(event.fixedCrewUnit || event.unit || picStaff?.unit || activeUnitCode);
       const sameUnitCrews = Array.from(crewGroups.values()).filter((group) => !eventUnit || group.unit === eventUnit).sort((left, right) => left.label.localeCompare(right.label, void 0, { numeric: true }));
       if (sameUnitCrews.length === 0) {
@@ -125286,7 +125286,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   const generateTraineeRemedies = reactExports.useCallback((conflictedEvent, allEvents) => {
     const suggestions = [];
     const conflictedSyllabusId = conflictedEvent.flightNumber;
-    const otherTrainees = allTraineesData.filter((t) => !personnelNamesMatch$1(t.fullName, conflictedEvent.student) && !t.isPaused);
+    const otherTrainees = allTraineesData.filter((t) => !personnelNamesMatch(t.fullName, conflictedEvent.student) && !t.isPaused);
     for (const trainee of otherTrainees) {
       const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
       if (nextEvents.next?.id !== conflictedSyllabusId) {
@@ -125463,7 +125463,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       const originalCrew = getPersonnelIdentityRefs(problemEvent);
       for (const crewMember of originalCrew) {
         const personName = crewMember.label;
-        const person = crewMember.role === "staff" ? allInstructorsData.find((p) => personnelNamesMatch$1(p.name, personName)) : allTraineesData.find((p) => personnelNamesMatch$1(p.fullName, personName));
+        const person = crewMember.role === "staff" ? allInstructorsData.find((p) => personnelNamesMatch(p.name, personName)) : allTraineesData.find((p) => personnelNamesMatch(p.fullName, personName));
         if (!person) continue;
         if (isPersonStaticallyUnavailable2(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type)) return false;
         const hasOverlap = allEvents.some((e) => {
@@ -125710,7 +125710,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         const personName = candidates[0];
         const roleLabels = [];
         const addRole = (label, value) => {
-          if (personnelNamesMatch$1(value, personName) && !roleLabels.includes(label)) {
+          if (personnelNamesMatch(value, personName) && !roleLabels.includes(label)) {
             roleLabels.push(label);
           }
         };
@@ -125780,7 +125780,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     const personnel = getPersonnel(event);
     const allPersonnelData = [...allInstructorsData, ...allTraineesData];
     personnel.forEach((name) => {
-      const person = allPersonnelData.find((p) => personnelNamesMatch$1("fullName" in p ? p.fullName : p.name, name));
+      const person = allPersonnelData.find((p) => personnelNamesMatch("fullName" in p ? p.fullName : p.name, name));
       if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type)) {
         const unavailability = person.unavailability.find((u) => {
           const isInDateRange = u.allDay ? event.date >= u.startDate && event.date < u.endDate : event.date >= u.startDate && event.date <= u.endDate;
