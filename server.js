@@ -6346,7 +6346,7 @@ app.patch('/api/trainees/:id', async (req, res) => {
       'seatConfig', 'isPaused', 'unavailability', 'unit', 'flight', 'location',
       'phoneNumber', 'email', 'primaryInstructor', 'secondaryInstructor',
       'lastEventDate', 'lastFlightDate', 'currencyStatus', 'permissions',
-      'priorExperience', 'preferences', 'isActive', 'userId'
+      'priorExperience', 'preferences', 'isActive', 'photoUrl', 'userId'
     ];
     const sanitizedUpdates = {};
     for (const field of TRAINEE_FIELDS) {
@@ -10117,9 +10117,12 @@ async function ensureAcademicLmpTypeColumns(db) {
     await db.$executeRawUnsafe(`
       ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "preferences" JSONB;
     `);
-    console.log('✅ Trainee role/preferences columns ready');
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "photoUrl" TEXT;
+    `);
+    console.log('✅ Trainee role/preferences/photo columns ready');
   } catch (err) {
-    console.error('❌ Failed to ensure Trainee role/preferences columns:', err.message);
+    console.error('❌ Failed to ensure Trainee role/preferences/photo columns:', err.message);
   }
   try {
     // Add academicLmpType column to Course table if it doesn't exist

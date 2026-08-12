@@ -498,6 +498,7 @@ export interface Trainee {
   fullName: string;
   name: string;
   rank: TraineeRank;
+  photoUrl?: string | null;
   role?: string;
   course: string;
   seatConfig: SeatConfig;

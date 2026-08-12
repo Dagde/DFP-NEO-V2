@@ -493,9 +493,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Edit mode only: read file → store as pendingPhotoDataUrl (no API call yet)
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handlePhotoFile = async (file: File | undefined | null) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -522,6 +520,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     } finally {
       if (photoInputRef.current) photoInputRef.current.value = '';
     }
+  };
+
+  // Edit mode only: read file → store as pendingPhotoDataUrl (no API call yet)
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await handlePhotoFile(e.target.files?.[0]);
+  };
+
+  const handlePhotoDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await handlePhotoFile(e.dataTransfer.files?.[0]);
   };
 
   // Edit mode only: mark photo for removal on Save
@@ -1756,6 +1765,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div
                           className="relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden cursor-pointer group"
                           onClick={() => photoInputRef.current?.click()}
+                          onDragOver={e => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'copy';
+                          }}
+                          onDrop={handlePhotoDrop}
                           title="Click to change profile photo"
                         >
                           {(() => {
@@ -1773,11 +1787,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                               </>
                             ) : (
                               <>
-                                <div className="flex flex-col items-center gap-1">
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center">
                                   <span className="text-lg font-bold text-gray-300 leading-none select-none">
                                     {name.split(' ').filter((w: string) => /^[A-Z]/.test(w)).slice(-2).map((w: string) => w[0]).join('')}
                                   </span>
-                                  <span className="text-[8px] text-gray-500 leading-none">No photo</span>
+                                  <span className="text-[7px] text-gray-300 leading-tight break-words">
+                                    Click to add picture<br />or drag and drop
+                                  </span>
                                 </div>
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1904,11 +1920,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         {photoUrl ? (
                           <img src={photoUrl} alt={instructor.name} className="w-full h-full object-cover object-top" />
                         ) : (
-                          <div className="flex flex-col items-center gap-1">
+                          <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center">
                             <span className="text-lg font-bold text-gray-300 leading-none select-none">
                               {instructor.name.split(' ').filter((w: string) => /^[A-Z]/.test(w)).slice(-2).map((w: string) => w[0]).join('')}
                             </span>
-                            <span className="text-[8px] text-gray-500 leading-none">No photo</span>
+                            <span className="text-[7px] text-gray-300 leading-tight break-words">
+                              Click to add picture<br />or drag and drop
+                            </span>
                           </div>
                         )}
                       </div>

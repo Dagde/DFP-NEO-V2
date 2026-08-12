@@ -1088,6 +1088,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [phoneNumber, setPhoneNumber] = useState(trainee.phoneNumber || '');
     const [email, setEmail] = useState(trainee.email || '');
     const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
+    const [photoUrl, setPhotoUrl] = useState<string | null>(trainee.photoUrl || null);
+    const [pendingPhotoDataUrl, setPendingPhotoDataUrl] = useState<string | null>(null);
+    const [pendingPhotoRemoved, setPendingPhotoRemoved] = useState(false);
+    const [photoError, setPhotoError] = useState<string | null>(null);
+    const photoInputRef = useRef<HTMLInputElement>(null);
 
     const assignableMasterLmps = useMemo(() => {
         const courseCodes = new Set<string>();
@@ -1269,6 +1274,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setFlight(trainee.flight || '');
         setPhoneNumber(trainee.phoneNumber || '');
         setEmail(trainee.email || '');
+        setPhotoUrl(trainee.photoUrl || null);
+        setPendingPhotoDataUrl(null);
+        setPendingPhotoRemoved(false);
+        setPhotoError(null);
         setPermissions(trainee.permissions || []);
         setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
         setPriorExperience(trainee.priorExperience || initialExperience);
@@ -1459,6 +1468,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             traineeCallsign,
             secondaryCallsign,
             crew,
+            photoUrl: pendingPhotoRemoved ? null : (pendingPhotoDataUrl || photoUrl || null),
             permissions,
             preferences: {
                 ...(trainee.preferences && typeof trainee.preferences === 'object' ? trainee.preferences : {}),
@@ -1516,6 +1526,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             return;
         }
 
+        setPhotoUrl(updatedTrainee.photoUrl || null);
+        setPendingPhotoDataUrl(null);
+        setPendingPhotoRemoved(false);
+        setPhotoError(null);
         setIsEditing(false);
         if (isCreating) {
             onClose();
@@ -1529,6 +1543,50 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             resetState();
             setIsEditing(false);
         }
+    };
+
+    const handlePhotoFile = async (file: File | undefined | null) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            setPhotoError('Please select an image file.');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            setPhotoError('Image must be under 2 MB.');
+            return;
+        }
+
+        setPhotoError(null);
+        try {
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            setPendingPhotoDataUrl(dataUrl);
+            setPendingPhotoRemoved(false);
+        } catch (error: any) {
+            setPhotoError(`Could not read image: ${error.message}`);
+        } finally {
+            if (photoInputRef.current) photoInputRef.current.value = '';
+        }
+    };
+
+    const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        await handlePhotoFile(event.target.files?.[0]);
+    };
+
+    const handlePhotoDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await handlePhotoFile(event.dataTransfer.files?.[0]);
+    };
+
+    const handlePhotoRemoveInEdit = () => {
+        setPendingPhotoDataUrl(null);
+        setPendingPhotoRemoved(true);
+        setPhotoError(null);
     };
 
     const handlePermissionChange = (permission: string, isChecked: boolean) => {
@@ -2556,10 +2614,79 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     <div className={card3d + ` p-3 ${activeTab === 'lmp' || activeTab === 'pt051' ? 'hidden' : ''}`} style={card3dStyle}>
                       {isEditing ? (
                         <div className="space-y-4">
-                          <div className="flex items-center justify-between border-b border-gray-700/70 pb-2">
-                            <div>
-                              <h4 className="text-sm font-semibold text-white">Profile Details</h4>
-                              <p className="text-[11px] text-gray-400">Course, identity, contact and access settings.</p>
+                          <div className="flex items-start justify-between gap-4 border-b border-gray-700/70 pb-2">
+                            <div className="flex items-start gap-4">
+                              <input
+                                ref={photoInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handlePhotoSelect}
+                              />
+                              <div className="flex-shrink-0">
+                                <div
+                                  className="relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden cursor-pointer group"
+                                  onClick={() => photoInputRef.current?.click()}
+                                  onDragOver={event => {
+                                    event.preventDefault();
+                                    event.dataTransfer.dropEffect = 'copy';
+                                  }}
+                                  onDrop={handlePhotoDrop}
+                                  title="Click to change profile photo"
+                                >
+                                  {(() => {
+                                    const displayUrl = pendingPhotoRemoved ? null : (pendingPhotoDataUrl || photoUrl);
+                                    return displayUrl ? (
+                                      <>
+                                        <img src={displayUrl} alt={name} className="w-full h-full object-cover object-top" />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                          </svg>
+                                          <span className="text-[9px] text-white font-medium">Change</span>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center">
+                                          <span className="text-lg font-bold text-gray-300 leading-none select-none">
+                                            {name.split(' ').filter((word: string) => /^[A-Z]/.test(word)).slice(-2).map((word: string) => word[0]).join('')}
+                                          </span>
+                                          <span className="text-[7px] text-gray-300 leading-tight break-words">
+                                            Click to add picture<br />or drag and drop
+                                          </span>
+                                        </div>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                          </svg>
+                                          <span className="text-[9px] text-white font-medium">Upload</span>
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                                {photoError && (
+                                  <div className="mt-1 w-20 text-[8px] text-red-400 leading-tight break-words">{photoError}</div>
+                                )}
+                                {pendingPhotoDataUrl && (
+                                  <div className="mt-1 w-20 text-[8px] text-amber-400 text-center leading-tight">Pending save</div>
+                                )}
+                                {(pendingPhotoDataUrl || (photoUrl && !pendingPhotoRemoved)) && (
+                                  <button
+                                    onClick={handlePhotoRemoveInEdit}
+                                    className="mt-1 w-20 text-[8px] text-gray-500 hover:text-red-400 text-center transition-colors"
+                                    title="Remove profile photo"
+                                  >
+                                    Remove photo
+                                  </button>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-semibold text-white">Profile Details</h4>
+                                <p className="text-[11px] text-gray-400">Course, identity, contact and access settings.</p>
+                              </div>
                             </div>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isSuspended ? 'bg-red-600 text-white' : isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
                               {traineeStatusLabel}
@@ -2671,9 +2798,18 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           {/* Profile photo */}
                           <div className="flex-shrink-0">
                             <div className="w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden">
-                              <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                              </svg>
+                              {photoUrl ? (
+                                <img src={photoUrl} alt={trainee.name} className="w-full h-full object-cover object-top" />
+                              ) : (
+                                <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center">
+                                  <svg className="w-7 h-7 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                                  </svg>
+                                  <span className="text-[7px] text-gray-300 leading-tight break-words">
+                                    Click to add picture<br />or drag and drop
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
 

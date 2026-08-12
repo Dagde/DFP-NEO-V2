@@ -58,6 +58,7 @@ export async function PATCH(
       'unit', 'flight', 'location', 'service', 'seatConfig', 'isPaused',
       'traineeCallsign', 'primaryInstructor', 'secondaryInstructor',
       'phoneNumber', 'email', 'isActive', 'lastEventDate', 'lastFlightDate',
+      'photoUrl',
     ];
 
     for (const field of scalarFields) {

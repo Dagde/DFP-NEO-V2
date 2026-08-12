@@ -24453,6 +24453,11 @@ const TraineeProfileFlyout = ({
   const [phoneNumber, setPhoneNumber] = reactExports.useState(trainee.phoneNumber || "");
   const [email, setEmail] = reactExports.useState(trainee.email || "");
   const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
+  const [photoUrl, setPhotoUrl] = reactExports.useState(trainee.photoUrl || null);
+  const [pendingPhotoDataUrl, setPendingPhotoDataUrl] = reactExports.useState(null);
+  const [pendingPhotoRemoved, setPendingPhotoRemoved] = reactExports.useState(false);
+  const [photoError, setPhotoError] = reactExports.useState(null);
+  const photoInputRef = reactExports.useRef(null);
   const assignableMasterLmps = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     normaliseMasterLmpCatalogue(platformConfig).forEach((entry) => {
@@ -24607,6 +24612,10 @@ const TraineeProfileFlyout = ({
     setFlight(trainee.flight || "");
     setPhoneNumber(trainee.phoneNumber || "");
     setEmail(trainee.email || "");
+    setPhotoUrl(trainee.photoUrl || null);
+    setPendingPhotoDataUrl(null);
+    setPendingPhotoRemoved(false);
+    setPhotoError(null);
     setPermissions(trainee.permissions || []);
     setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
     setPriorExperience(trainee.priorExperience || initialExperience$1);
@@ -24737,6 +24746,7 @@ const TraineeProfileFlyout = ({
       traineeCallsign,
       secondaryCallsign,
       crew,
+      photoUrl: pendingPhotoRemoved ? null : pendingPhotoDataUrl || photoUrl || null,
       permissions,
       preferences: {
         ...trainee.preferences && typeof trainee.preferences === "object" ? trainee.preferences : {},
@@ -24784,6 +24794,10 @@ const TraineeProfileFlyout = ({
       await showDarkAlert("The trainee could not be saved. Please check the details and try again.", "Save Failed", "error");
       return;
     }
+    setPhotoUrl(updatedTrainee.photoUrl || null);
+    setPendingPhotoDataUrl(null);
+    setPendingPhotoRemoved(false);
+    setPhotoError(null);
     setIsEditing(false);
     if (isCreating) {
       onClose();
@@ -24796,6 +24810,45 @@ const TraineeProfileFlyout = ({
       resetState();
       setIsEditing(false);
     }
+  };
+  const handlePhotoFile = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please select an image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoError("Image must be under 2 MB.");
+      return;
+    }
+    setPhotoError(null);
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      setPendingPhotoDataUrl(dataUrl);
+      setPendingPhotoRemoved(false);
+    } catch (error) {
+      setPhotoError(`Could not read image: ${error.message}`);
+    } finally {
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+  const handlePhotoSelect = async (event) => {
+    await handlePhotoFile(event.target.files?.[0]);
+  };
+  const handlePhotoDrop = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await handlePhotoFile(event.dataTransfer.files?.[0]);
+  };
+  const handlePhotoRemoveInEdit = () => {
+    setPendingPhotoDataUrl(null);
+    setPendingPhotoRemoved(true);
+    setPhotoError(null);
   };
   const handlePermissionChange = (permission, isChecked) => {
     setPermissions(
@@ -25718,10 +25771,74 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                 ) });
               })(),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + ` p-3 ${activeTab === "lmp" || activeTab === "pt051" ? "hidden" : ""}`, style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700/70 pb-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Profile Details" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: "Course, identity, contact and access settings." })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 border-b border-gray-700/70 pb-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        ref: photoInputRef,
+                        type: "file",
+                        accept: "image/*",
+                        className: "hidden",
+                        onChange: handlePhotoSelect
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "div",
+                        {
+                          className: "relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden cursor-pointer group",
+                          onClick: () => photoInputRef.current?.click(),
+                          onDragOver: (event) => {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "copy";
+                          },
+                          onDrop: handlePhotoDrop,
+                          title: "Click to change profile photo",
+                          children: (() => {
+                            const displayUrl = pendingPhotoRemoved ? null : pendingPhotoDataUrl || photoUrl;
+                            return displayUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: displayUrl, alt: name, className: "w-full h-full object-cover object-top" }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
+                                /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 13a3 3 0 11-6 0 3 3 0 016 0z" })
+                                ] }),
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-white font-medium", children: "Change" })
+                              ] })
+                            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center", children: [
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: name.split(" ").filter((word) => /^[A-Z]/.test(word)).slice(-2).map((word) => word[0]).join("") }),
+                                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[7px] text-gray-300 leading-tight break-words", children: [
+                                  "Click to add picture",
+                                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                                  "or drag and drop"
+                                ] })
+                              ] }),
+                              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 4v16m8-8H4" }) }),
+                                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-white font-medium", children: "Upload" })
+                              ] })
+                            ] });
+                          })()
+                        }
+                      ),
+                      photoError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 w-20 text-[8px] text-red-400 leading-tight break-words", children: photoError }),
+                      pendingPhotoDataUrl && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 w-20 text-[8px] text-amber-400 text-center leading-tight", children: "Pending save" }),
+                      (pendingPhotoDataUrl || photoUrl && !pendingPhotoRemoved) && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          onClick: handlePhotoRemoveInEdit,
+                          className: "mt-1 w-20 text-[8px] text-gray-500 hover:text-red-400 text-center transition-colors",
+                          title: "Remove profile photo",
+                          children: "Remove photo"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Profile Details" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: "Course, identity, contact and access settings." })
+                    ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-bold ${isSuspended ? "bg-red-600 text-white" : isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: traineeStatusLabel })
                 ] }),
@@ -25791,7 +25908,14 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
               ] }) : (
                 /* VIEW MODE: avatar + data grid + permissions panel */
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-10 h-10 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }) }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden", children: photoUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: photoUrl, alt: trainee.name, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-7 h-7 text-gray-400 flex-shrink-0", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[7px] text-gray-300 leading-tight break-words", children: [
+                      "Click to add picture",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                      "or drag and drop"
+                    ] })
+                  ] }) }) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-2 flex-wrap", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: trainee.name }),
@@ -52861,8 +52985,7 @@ const InstructorProfileFlyout = ({
   const [photoUploading, setPhotoUploading] = reactExports.useState(false);
   const [photoError, setPhotoError] = reactExports.useState(null);
   const photoInputRef = React.useRef(null);
-  const handlePhotoSelect = async (e) => {
-    const file = e.target.files?.[0];
+  const handlePhotoFile = async (file) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setPhotoError("Please select an image file (JPG, PNG, GIF, WebP).");
@@ -52887,6 +53010,14 @@ const InstructorProfileFlyout = ({
     } finally {
       if (photoInputRef.current) photoInputRef.current.value = "";
     }
+  };
+  const handlePhotoSelect = async (e) => {
+    await handlePhotoFile(e.target.files?.[0]);
+  };
+  const handlePhotoDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await handlePhotoFile(e.dataTransfer.files?.[0]);
   };
   const handlePhotoRemoveInEdit = () => {
     setPendingPhotoDataUrl(null);
@@ -54079,6 +54210,11 @@ const InstructorProfileFlyout = ({
                   {
                     className: "relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden cursor-pointer group",
                     onClick: () => photoInputRef.current?.click(),
+                    onDragOver: (e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "copy";
+                    },
+                    onDrop: handlePhotoDrop,
                     title: "Click to change profile photo",
                     children: (() => {
                       const displayUrl = pendingPhotoRemoved ? null : pendingPhotoDataUrl || photoUrl;
@@ -54092,9 +54228,13 @@ const InstructorProfileFlyout = ({
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-white font-medium", children: "Change" })
                         ] })
                       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-1", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: name.split(" ").filter((w) => /^[A-Z]/.test(w)).slice(-2).map((w) => w[0]).join("") }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] text-gray-500 leading-none", children: "No photo" })
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[7px] text-gray-300 leading-tight break-words", children: [
+                            "Click to add picture",
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                            "or drag and drop"
+                          ] })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 4v16m8-8H4" }) }),
@@ -54186,9 +54326,13 @@ const InstructorProfileFlyout = ({
           ] }) : (
             /* VIEW MODE: avatar + data grid + qualifications panel */
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden", children: photoUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: photoUrl, alt: instructor.name, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden", children: photoUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: photoUrl, alt: instructor.name, className: "w-full h-full object-cover object-top" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-bold text-gray-300 leading-none select-none", children: instructor.name.split(" ").filter((w) => /^[A-Z]/.test(w)).slice(-2).map((w) => w[0]).join("") }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] text-gray-500 leading-none", children: "No photo" })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[7px] text-gray-300 leading-tight break-words", children: [
+                  "Click to add picture",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "or drag and drop"
+                ] })
               ] }) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-2 flex-wrap", children: [

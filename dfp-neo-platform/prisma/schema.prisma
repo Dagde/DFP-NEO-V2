@@ -179,6 +179,7 @@ model Trainee {
   location            String?
   phoneNumber         String?
   email               String?
+  photoUrl            String?
   primaryInstructor   String?
   secondaryInstructor String?
   lastEventDate       DateTime?
