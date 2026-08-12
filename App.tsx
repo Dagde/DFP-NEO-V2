@@ -43130,13 +43130,15 @@ appliedUpdates.forEach(update => {
 
         try {
             if (dbId && (trainee as any)._dataSource === 'database') {
+                const sessionToken = localStorage.getItem('dfp_session_token') || '';
                 const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
                     method: 'DELETE',
                     credentials: 'include',
+                    headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
                 });
                 if (!response.ok) {
-                    const errorText = await response.text().catch(() => '');
-                    throw new Error(errorText || `Delete failed (${response.status})`);
+                    const message = await readApiErrorMessage(response, `Could not delete ${traineeName}.`);
+                    throw new Error(message);
                 }
             } else {
                 console.warn(`[Trainee Delete] ${traineeName} has no database id; removing from local roster only.`);
@@ -43162,7 +43164,7 @@ appliedUpdates.forEach(update => {
             setSuccessMessage(`${traineeName} deleted.`);
         } catch (error) {
             console.error('[Trainee Delete] Failed:', error);
-            setSuccessMessage(`Delete failed: Could not delete ${traineeName}. ${error instanceof Error ? error.message : String(error)}`);
+            setShowInfoNotification(`Delete failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, [scopedApiPath]);
 

@@ -125894,13 +125894,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     const traineeName = trainee.fullName || trainee.name || "trainee";
     try {
       if (dbId && trainee._dataSource === "database") {
+        const sessionToken = localStorage.getItem("dfp_session_token") || "";
         const response = await fetch(scopedApiPath(`/api/trainees/${encodeURIComponent(dbId)}`), {
           method: "DELETE",
-          credentials: "include"
+          credentials: "include",
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
         });
         if (!response.ok) {
-          const errorText = await response.text().catch(() => "");
-          throw new Error(errorText || `Delete failed (${response.status})`);
+          const message = await readApiErrorMessage(response, `Could not delete ${traineeName}.`);
+          throw new Error(message);
         }
       } else {
         console.warn(`[Trainee Delete] ${traineeName} has no database id; removing from local roster only.`);
@@ -125921,7 +125923,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       setSuccessMessage(`${traineeName} deleted.`);
     } catch (error) {
       console.error("[Trainee Delete] Failed:", error);
-      setSuccessMessage(`Delete failed: Could not delete ${traineeName}. ${error instanceof Error ? error.message : String(error)}`);
+      setShowInfoNotification(`Delete failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);
   const resolveCourseMovementDirection = reactExports.useCallback((fromCourse, toCourse) => {
