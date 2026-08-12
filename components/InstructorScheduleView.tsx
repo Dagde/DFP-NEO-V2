@@ -229,6 +229,12 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     return [...events, ...unavailabilityEvents];
   }, [date, events, instructorsData]);
 
+  const uniqueEventsWithUnavailability = useMemo(() => (
+    eventsWithUnavailability.filter((event, index, source) =>
+      source.findIndex(candidate => candidate.id === event.id) === index
+    )
+  ), [eventsWithUnavailability]);
+
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -321,7 +327,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR + START_HOUR;
 
-    const eventData = eventsWithUnavailability.find(ev => ev.id === draggingState.mainEventId);
+    const eventData = uniqueEventsWithUnavailability.find(ev => ev.id === draggingState.mainEventId);
     if (!eventData) return;
 
     let clampedStartTime = newStartTime;
@@ -331,7 +337,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
 
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = eventsWithUnavailability.filter(event => event.id !== draggingState.mainEventId);
+    const otherEvents = uniqueEventsWithUnavailability.filter(event => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
 
     setRealtimeConflict(conflict ? { 
@@ -667,7 +673,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
               const barsForThisRow: React.ReactElement[] = [];
               
               if (showValidation) {
-                const instructorEventsForBars = eventsWithUnavailability
+                const instructorEventsForBars = uniqueEventsWithUnavailability
                   .filter(e => getPersonnel(e).includes(instructor.name))
                   .sort((a, b) => a.startTime - b.startTime);
                 
@@ -731,7 +737,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 }
               }
               
-              const instructorEvents = eventsWithUnavailability
+              const instructorEvents = uniqueEventsWithUnavailability
                 .filter(event => scheduleEventIncludesPersonRecord(event, instructor as any, {
                   personType: 'staff',
                   allPeople: instructorsData as any,

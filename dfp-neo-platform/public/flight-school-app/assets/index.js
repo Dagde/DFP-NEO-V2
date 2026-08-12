@@ -18443,6 +18443,9 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     const unavailabilityEvents = createUnavailabilityEvents$1(date, instructorsData, true);
     return [...events, ...unavailabilityEvents];
   }, [date, events, instructorsData]);
+  const uniqueEventsWithUnavailability = reactExports.useMemo(() => eventsWithUnavailability.filter(
+    (event, index, source) => source.findIndex((candidate) => candidate.id === event.id) === index
+  ), [eventsWithUnavailability]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -18515,14 +18518,14 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 + START_HOUR$5;
-    const eventData = eventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
+    const eventData = uniqueEventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
     let clampedStartTime = newStartTime;
     if (clampedStartTime < START_HOUR$5) clampedStartTime = START_HOUR$5;
     if (clampedStartTime + eventData.duration > END_HOUR$5) clampedStartTime = END_HOUR$5 - eventData.duration;
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = eventsWithUnavailability.filter((event) => event.id !== draggingState.mainEventId);
+    const otherEvents = uniqueEventsWithUnavailability.filter((event) => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
     setRealtimeConflict(conflict ? {
       conflictingEventId: conflict.conflictingEvent.id,
@@ -18835,7 +18838,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const instructorEventsForBars = eventsWithUnavailability.filter((e) => getPersonnel$5(e).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                  const instructorEventsForBars = uniqueEventsWithUnavailability.filter((e) => getPersonnel$5(e).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < instructorEventsForBars.length; i++) {
                     const currentEvent = instructorEventsForBars[i];
                     const prevEvent = instructorEventsForBars[i - 1];
@@ -18884,7 +18887,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                     }
                   }
                 }
-                const instructorEvents = eventsWithUnavailability.filter((event) => scheduleEventIncludesPersonRecord(event, instructor, {
+                const instructorEvents = uniqueEventsWithUnavailability.filter((event) => scheduleEventIncludesPersonRecord(event, instructor, {
                   personType: "staff",
                   allPeople: instructorsData
                 })).sort((a, b) => a.startTime - b.startTime);
@@ -19158,6 +19161,9 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
     const unavailabilityEvents = createUnavailabilityEvents(date, traineesData);
     return [...events, ...unavailabilityEvents];
   }, [date, events, traineesData]);
+  const uniqueEventsWithUnavailability = reactExports.useMemo(() => eventsWithUnavailability.filter(
+    (event, index, source) => source.findIndex((candidate) => candidate.id === event.id) === index
+  ), [eventsWithUnavailability]);
   const traineeRows = reactExports.useMemo(() => {
     const occurrenceCounts = /* @__PURE__ */ new Map();
     return trainees.map((fullName) => {
@@ -19248,14 +19254,14 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
     const gridRect = scheduleGridRef.current.getBoundingClientRect();
     const xInGrid = e.clientX - gridRect.left;
     const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$4 + START_HOUR$4;
-    const eventData = eventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
+    const eventData = uniqueEventsWithUnavailability.find((ev) => ev.id === draggingState.mainEventId);
     if (!eventData) return;
     let clampedStartTime = newStartTime;
     if (clampedStartTime < START_HOUR$4) clampedStartTime = START_HOUR$4;
     if (clampedStartTime + eventData.duration > END_HOUR$4) clampedStartTime = END_HOUR$4 - eventData.duration;
     const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
     const proposedEvent = { ...eventData, startTime: snappedStartTime };
-    const otherEvents = eventsWithUnavailability.filter((event) => event.id !== draggingState.mainEventId);
+    const otherEvents = uniqueEventsWithUnavailability.filter((event) => event.id !== draggingState.mainEventId);
     const conflict = findConflict([proposedEvent], otherEvents);
     setRealtimeConflict(conflict ? {
       conflictingEventId: conflict.conflictingEvent.id,
@@ -19511,7 +19517,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const traineeEventsForBars = events.filter((e) => eventIncludesTraineeRow(e, rowIndex)).sort((a, b) => a.startTime - b.startTime);
+                  const traineeEventsForBars = uniqueEventsWithUnavailability.filter((e) => eventIncludesTraineeRow(e, rowIndex)).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < traineeEventsForBars.length; i++) {
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
@@ -19560,7 +19566,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                     }
                   }
                 }
-                const traineeEvents = eventsWithUnavailability.filter((event) => eventIncludesTraineeRow(event, rowIndex)).sort((a, b) => a.startTime - b.startTime);
+                const traineeEvents = uniqueEventsWithUnavailability.filter((event) => eventIncludesTraineeRow(event, rowIndex)).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = traineeEvents.map((event) => {
                   const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                   const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;

@@ -195,6 +195,12 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
     return [...events, ...unavailabilityEvents];
   }, [date, events, traineesData]);
 
+  const uniqueEventsWithUnavailability = useMemo(() => (
+    eventsWithUnavailability.filter((event, index, source) =>
+      source.findIndex(candidate => candidate.id === event.id) === index
+    )
+  ), [eventsWithUnavailability]);
+
   const traineeRows = useMemo(() => {
     const occurrenceCounts = new Map<string, number>();
     return trainees.map(fullName => {
@@ -306,7 +312,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
       
       const newStartTime = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR + START_HOUR;
 
-      const eventData = eventsWithUnavailability.find(ev => ev.id === draggingState.mainEventId);
+      const eventData = uniqueEventsWithUnavailability.find(ev => ev.id === draggingState.mainEventId);
       if (!eventData) return;
 
       let clampedStartTime = newStartTime;
@@ -316,7 +322,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
       const snappedStartTime = Math.round(clampedStartTime * 12) / 12;
 
       const proposedEvent = { ...eventData, startTime: snappedStartTime };
-      const otherEvents = eventsWithUnavailability.filter(event => event.id !== draggingState.mainEventId);
+      const otherEvents = uniqueEventsWithUnavailability.filter(event => event.id !== draggingState.mainEventId);
       const conflict = findConflict([proposedEvent], otherEvents);
 
       setRealtimeConflict(conflict ? { 
@@ -593,7 +599,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
               const barsForThisRow: React.ReactElement[] = [];
               
               if (showValidation) {
-                const traineeEventsForBars = events
+                const traineeEventsForBars = uniqueEventsWithUnavailability
                   .filter(e => eventIncludesTraineeRow(e, rowIndex))
                   .sort((a, b) => a.startTime - b.startTime);
                 
@@ -657,7 +663,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                 }
               }
               
-              const traineeEvents = eventsWithUnavailability
+              const traineeEvents = uniqueEventsWithUnavailability
                 .filter(event => eventIncludesTraineeRow(event, rowIndex))
                 .sort((a, b) => a.startTime - b.startTime);
               
