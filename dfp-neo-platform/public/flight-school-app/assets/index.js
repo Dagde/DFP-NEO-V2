@@ -33645,20 +33645,53 @@ const AddFlightTileModal = ({
     [activeCallsignUnitCodes, unitCallsignSettings]
   );
   const normalisePersonNameForAddTile = reactExports.useCallback((value) => String(value || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase(), []);
-  const resolveAssignedCallsign = reactExports.useCallback((name) => {
+  const formatPersonnelCallsign = (info) => {
+    if (!info) return "";
+    if (info.callsign) return String(info.callsign || "").trim();
+    if (info.callsignPrefix && Number(info.callsignNumber) > 0) {
+      return `${String(info.callsignPrefix).trim()}${Number(info.callsignNumber)}`;
+    }
+    return "";
+  };
+  const findInstructorByRefOrName = reactExports.useCallback((name, selectedRef) => {
+    const refId = String(selectedRef?.id || "").trim();
+    const refIdNumber = String(selectedRef?.idNumber || "").trim();
+    if (refId || refIdNumber) {
+      const byRef = instructorsData.find((staff) => refId && String(staff.id || "").trim() === refId || refIdNumber && String(staff.idNumber || "").trim() === refIdNumber);
+      if (byRef) return byRef;
+    }
+    const cleanKey = normalisePersonNameForAddTile(name);
+    return instructorsData.find((staff) => normalisePersonNameForAddTile(staff.name) === cleanKey);
+  }, [instructorsData, normalisePersonNameForAddTile]);
+  const findTraineeByRefOrName = reactExports.useCallback((name, selectedRef) => {
+    const refId = String(selectedRef?.id || "").trim();
+    const refIdNumber = String(selectedRef?.idNumber || "").trim();
+    if (refId || refIdNumber) {
+      const byRef = traineesData.find((traineeRecord) => refId && String(traineeRecord.id || "").trim() === refId || refIdNumber && String(traineeRecord.idNumber || "").trim() === refIdNumber);
+      if (byRef) return byRef;
+    }
+    const cleanKey = normalisePersonNameForAddTile(name);
+    return traineesData.find((traineeRecord) => normalisePersonNameForAddTile(traineeRecord.fullName || traineeRecord.name) === cleanKey || normalisePersonNameForAddTile(traineeRecord.name) === cleanKey);
+  }, [normalisePersonNameForAddTile, traineesData]);
+  const resolveAssignedCallsign = reactExports.useCallback((name, selectedRef) => {
     const cleanName = String(name || "").trim();
     if (!cleanName) return "";
     const cleanKey = normalisePersonNameForAddTile(cleanName);
-    const assigned = personnelData?.get(cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === cleanKey)?.[1];
-    if (assigned?.callsign) return String(assigned.callsign || "").trim();
-    const instructor = instructorsData.find((staff) => normalisePersonNameForAddTile(staff.name) === cleanKey);
-    if (instructor) return String(instructor.callsign || instructor.preferences?.callsign || instructor.secondaryCallsign || "").trim();
-    const trainee = traineesData.find((traineeRecord) => normalisePersonNameForAddTile(traineeRecord.fullName || traineeRecord.name) === cleanKey || normalisePersonNameForAddTile(traineeRecord.name) === cleanKey);
+    const instructor = findInstructorByRefOrName(cleanName, selectedRef);
+    const trainee = findTraineeByRefOrName(cleanName, selectedRef);
+    const assigned = personnelData?.get(instructor?.name || trainee?.fullName || trainee?.name || cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === cleanKey)?.[1];
+    const assignedCallsign = formatPersonnelCallsign(assigned);
+    if (assignedCallsign) return assignedCallsign;
+    if (instructor) {
+      const direct = formatPersonnelCallsign(instructor);
+      if (direct) return direct;
+      return String(instructor.preferences?.callsign || instructor.secondaryCallsign || "").trim();
+    }
     const traineeKey = normalisePersonNameForAddTile(trainee?.fullName || trainee?.name || cleanName);
     const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName) || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === traineeKey)?.[1];
-    return String(trainee?.traineeCallsign || traineeAssigned?.callsign || "").trim();
-  }, [instructorsData, normalisePersonNameForAddTile, personnelData, traineesData]);
-  const selectedPicHasIndividualCallsign = reactExports.useMemo(() => Boolean(resolveAssignedCallsign(picName)), [picName, resolveAssignedCallsign]);
+    return String(trainee?.traineeCallsign || formatPersonnelCallsign(traineeAssigned) || "").trim();
+  }, [findInstructorByRefOrName, findTraineeByRefOrName, normalisePersonNameForAddTile, personnelData]);
+  const selectedPicHasIndividualCallsign = reactExports.useMemo(() => Boolean(resolveAssignedCallsign(picName, selectedPicRef)), [picName, resolveAssignedCallsign, selectedPicRef]);
   const locationFullName = currentLocationName || school;
   const filteredFormationCallsigns = reactExports.useMemo(() => {
     const currentLocation = String(locationFullName || "").trim().toUpperCase();
@@ -33793,18 +33826,20 @@ const AddFlightTileModal = ({
     }));
   };
   const standardPersonOptions = reactExports.useMemo(() => {
-    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((person) => ({
+    const unitLabel = (value) => String(value || "Unassigned").trim() || "Unassigned";
+    const courseLabel = (value) => String(value || "Trainees").trim() || "Trainees";
+    const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => unitLabel(a.unit).localeCompare(unitLabel(b.unit), void 0, { numeric: true, sensitivity: "base" }) || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((person) => ({
       value: `staff:${getPersonStableKey(person, "staff")}`,
       name: person.name,
       label: [person.rank, staffNameResolver.formatList(person)].filter(Boolean).join(" - "),
-      group: "Staff",
+      group: `${unitLabel(person.unit)} - Staff`,
       ref: makeSchedulePersonRef(person, "staff", "pilot")
     }));
-    const trainees2 = traineesData.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
+    const trainees2 = traineesData.sort((a, b) => unitLabel(a.unit).localeCompare(unitLabel(b.unit), void 0, { numeric: true, sensitivity: "base" }) || courseLabel(a.course).localeCompare(courseLabel(b.course), void 0, { numeric: true, sensitivity: "base" }) || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
       value: `trainee:${getPersonStableKey(person, "trainee")}`,
       name: person.fullName || person.name,
       label: [person.rank, traineeNameResolver.formatList(person)].filter(Boolean).join(" - "),
-      group: person.course || "Trainees",
+      group: `${unitLabel(person.unit)} - ${courseLabel(person.course)}`,
       ref: makeSchedulePersonRef(person, "trainee", "student")
     }));
     return [...staff, ...trainees2];
@@ -34004,10 +34039,10 @@ const AddFlightTileModal = ({
       return;
     }
     let picUnit = null;
-    const inst = instructorsData.find((i) => i.name === picName);
+    const inst = findInstructorByRefOrName(picName, selectedPicRef);
     if (inst) {
       picUnit = inst.unit || null;
-      const primary = resolveAssignedCallsign(picName) || inst.callsign || buildCallsignFromNumber(inst.callsignNumber) || "";
+      const primary = resolveAssignedCallsign(picName, selectedPicRef) || inst.callsign || buildCallsignFromNumber(inst.callsignNumber) || "";
       const secondary = inst.secondaryCallsign || "";
       const personal = [primary, secondary].filter(Boolean);
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
@@ -34018,10 +34053,10 @@ const AddFlightTileModal = ({
       setCallsign(primary || unitDefaultCallsign || (allOpts[0] || ""));
       return;
     }
-    const trainee = traineesData.find((t) => (t.fullName || t.name) === picName);
+    const trainee = findTraineeByRefOrName(picName, selectedPicRef);
     if (trainee) {
       picUnit = trainee.unit || null;
-      const cs = resolveAssignedCallsign(picName) || trainee.traineeCallsign || buildCallsignFromNumber(trainee.callsignNumber) || "";
+      const cs = resolveAssignedCallsign(picName, selectedPicRef) || trainee.traineeCallsign || buildCallsignFromNumber(trainee.callsignNumber) || "";
       const personal = cs ? [cs] : [];
       const formation = (formationCallsigns || []).filter((fc) => fc.unit && picUnit && fc.unit === picUnit).map((fc) => fc.name || fc.code).filter(Boolean);
       const unitOptions = selectedPicHasIndividualCallsign ? [] : unitCallsignEntries.map((entry) => buildUnitEventCallsign(entry.callsign, unitCallsignNumber));
@@ -34033,7 +34068,7 @@ const AddFlightTileModal = ({
     }
     setCallsign("");
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
   reactExports.useEffect(() => {
     if (suppressNextCategoryResetRef.current) {
       suppressNextCategoryResetRef.current = false;

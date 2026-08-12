@@ -2062,25 +2062,64 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       .replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '')
       .toLowerCase()
   ), []);
-  const resolveAssignedCallsign = useCallback((name?: string | null): string => {
-    const cleanName = String(name || '').trim();
-    if (!cleanName) return '';
-    const cleanKey = normalisePersonNameForAddTile(cleanName);
-    const assigned = personnelData?.get(cleanName)
-      || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === cleanKey)?.[1];
-    if (assigned?.callsign) return String(assigned.callsign || '').trim();
-    const instructor = instructorsData.find(staff => normalisePersonNameForAddTile(staff.name) === cleanKey);
-    if (instructor) return String(instructor.callsign || instructor.preferences?.callsign || instructor.secondaryCallsign || '').trim();
-    const trainee = traineesData.find(traineeRecord => (
+  const formatPersonnelCallsign = (info?: { callsignPrefix?: string; callsignNumber?: number; callsign?: string } | null): string => {
+    if (!info) return '';
+    if (info.callsign) return String(info.callsign || '').trim();
+    if (info.callsignPrefix && Number(info.callsignNumber) > 0) {
+      return `${String(info.callsignPrefix).trim()}${Number(info.callsignNumber)}`;
+    }
+    return '';
+  };
+  const findInstructorByRefOrName = useCallback((name?: string | null, selectedRef?: ScheduleEventPersonnelRef | null): Instructor | undefined => {
+    const refId = String(selectedRef?.id || '').trim();
+    const refIdNumber = String(selectedRef?.idNumber || '').trim();
+    if (refId || refIdNumber) {
+      const byRef = instructorsData.find(staff => (
+        (refId && String((staff as any).id || '').trim() === refId) ||
+        (refIdNumber && String(staff.idNumber || '').trim() === refIdNumber)
+      ));
+      if (byRef) return byRef;
+    }
+    const cleanKey = normalisePersonNameForAddTile(name);
+    return instructorsData.find(staff => normalisePersonNameForAddTile(staff.name) === cleanKey);
+  }, [instructorsData, normalisePersonNameForAddTile]);
+  const findTraineeByRefOrName = useCallback((name?: string | null, selectedRef?: ScheduleEventPersonnelRef | null): Trainee | undefined => {
+    const refId = String(selectedRef?.id || '').trim();
+    const refIdNumber = String(selectedRef?.idNumber || '').trim();
+    if (refId || refIdNumber) {
+      const byRef = traineesData.find(traineeRecord => (
+        (refId && String((traineeRecord as any).id || '').trim() === refId) ||
+        (refIdNumber && String(traineeRecord.idNumber || '').trim() === refIdNumber)
+      ));
+      if (byRef) return byRef;
+    }
+    const cleanKey = normalisePersonNameForAddTile(name);
+    return traineesData.find(traineeRecord => (
       normalisePersonNameForAddTile(traineeRecord.fullName || traineeRecord.name) === cleanKey
       || normalisePersonNameForAddTile(traineeRecord.name) === cleanKey
     ));
+  }, [normalisePersonNameForAddTile, traineesData]);
+  const resolveAssignedCallsign = useCallback((name?: string | null, selectedRef?: ScheduleEventPersonnelRef | null): string => {
+    const cleanName = String(name || '').trim();
+    if (!cleanName) return '';
+    const cleanKey = normalisePersonNameForAddTile(cleanName);
+    const instructor = findInstructorByRefOrName(cleanName, selectedRef);
+    const trainee = findTraineeByRefOrName(cleanName, selectedRef);
+    const assigned = personnelData?.get(instructor?.name || trainee?.fullName || trainee?.name || cleanName)
+      || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === cleanKey)?.[1];
+    const assignedCallsign = formatPersonnelCallsign(assigned);
+    if (assignedCallsign) return assignedCallsign;
+    if (instructor) {
+      const direct = formatPersonnelCallsign(instructor as any);
+      if (direct) return direct;
+      return String(instructor.preferences?.callsign || instructor.secondaryCallsign || '').trim();
+    }
     const traineeKey = normalisePersonNameForAddTile(trainee?.fullName || trainee?.name || cleanName);
     const traineeAssigned = personnelData?.get(trainee?.fullName || trainee?.name || cleanName)
       || Array.from(personnelData?.entries() || []).find(([personName]) => normalisePersonNameForAddTile(personName) === traineeKey)?.[1];
-    return String(trainee?.traineeCallsign || traineeAssigned?.callsign || '').trim();
-  }, [instructorsData, normalisePersonNameForAddTile, personnelData, traineesData]);
-  const selectedPicHasIndividualCallsign = useMemo(() => Boolean(resolveAssignedCallsign(picName)), [picName, resolveAssignedCallsign]);
+    return String(trainee?.traineeCallsign || formatPersonnelCallsign(traineeAssigned) || '').trim();
+  }, [findInstructorByRefOrName, findTraineeByRefOrName, normalisePersonNameForAddTile, personnelData]);
+  const selectedPicHasIndividualCallsign = useMemo(() => Boolean(resolveAssignedCallsign(picName, selectedPicRef)), [picName, resolveAssignedCallsign, selectedPicRef]);
 
   // ── Determine the current location full name from school ──────────────────
   const locationFullName = currentLocationName || school;
@@ -2253,24 +2292,33 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   // controls are not a dependable primary input method across browsers. These
   // options drive the fixed native controls below the preview instead.
   const standardPersonOptions = useMemo<PersonSelectOption[]>(() => {
+    const unitLabel = (value?: string | null) => String(value || 'Unassigned').trim() || 'Unassigned';
+    const courseLabel = (value?: string | null) => String(value || 'Trainees').trim() || 'Trainees';
     const staff = instructorsData
       .filter(person => !person.isAdminStaff)
       .filter(person => !shouldRestrictContinuationPicToPilots || isPilotStaff(person))
-      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
+      .sort((a, b) => (
+        unitLabel(a.unit).localeCompare(unitLabel(b.unit), undefined, { numeric: true, sensitivity: 'base' })
+        || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff')
+      ))
       .map(person => ({
         value: `staff:${getPersonStableKey(person as any, 'staff')}`,
         name: person.name,
         label: [person.rank, staffNameResolver.formatList(person as any)].filter(Boolean).join(' - '),
-        group: 'Staff',
+        group: `${unitLabel(person.unit)} - Staff`,
         ref: makeSchedulePersonRef(person as any, 'staff', 'pilot'),
       }));
     const trainees = traineesData
-      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee'))
+      .sort((a, b) => (
+        unitLabel(a.unit).localeCompare(unitLabel(b.unit), undefined, { numeric: true, sensitivity: 'base' })
+        || courseLabel(a.course).localeCompare(courseLabel(b.course), undefined, { numeric: true, sensitivity: 'base' })
+        || comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee')
+      ))
       .map(person => ({
         value: `trainee:${getPersonStableKey(person as any, 'trainee')}`,
         name: person.fullName || person.name,
         label: [person.rank, traineeNameResolver.formatList(person as any)].filter(Boolean).join(' - '),
-        group: person.course || 'Trainees',
+        group: `${unitLabel(person.unit)} - ${courseLabel(person.course)}`,
         ref: makeSchedulePersonRef(person as any, 'trainee', 'student'),
       }));
     return [...staff, ...trainees];
@@ -2547,11 +2595,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     let picUnit: string | null = null;
 
     // Check instructor first
-    const inst = instructorsData.find(i => i.name === picName);
+    const inst = findInstructorByRefOrName(picName, selectedPicRef);
     if (inst) {
       picUnit = inst.unit || null;
       // Build callsign: prefer explicit callsign string, fall back to callsignNumber + school prefix
-      const primary   = resolveAssignedCallsign(picName) || inst.callsign || buildCallsignFromNumber((inst as any).callsignNumber) || '';
+      const primary   = resolveAssignedCallsign(picName, selectedPicRef) || inst.callsign || buildCallsignFromNumber((inst as any).callsignNumber) || '';
       const secondary = inst.secondaryCallsign || '';
       const personal  = [primary, secondary].filter(Boolean);
       // Add formation callsigns that belong to the same unit as the PIC
@@ -2565,10 +2613,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     }
 
     // Check trainee
-    const trainee = traineesData.find(t => (t.fullName || t.name) === picName);
+    const trainee = findTraineeByRefOrName(picName, selectedPicRef);
     if (trainee) {
       picUnit = (trainee as any).unit || null;
-      const cs = resolveAssignedCallsign(picName) || trainee.traineeCallsign || buildCallsignFromNumber((trainee as any).callsignNumber) || '';
+      const cs = resolveAssignedCallsign(picName, selectedPicRef) || trainee.traineeCallsign || buildCallsignFromNumber((trainee as any).callsignNumber) || '';
       const personal = cs ? [cs] : [];
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
@@ -2582,7 +2630,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
+  }, [picName, findInstructorByRefOrName, findTraineeByRefOrName, selectedPicRef, formationCallsigns, isFixedCrewModel, defaultUnitCallsign, selectedPicHasIndividualCallsign, unitCallsignBase, unitCallsignEntries, unitCallsignNumber, resolveAssignedCallsign]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
