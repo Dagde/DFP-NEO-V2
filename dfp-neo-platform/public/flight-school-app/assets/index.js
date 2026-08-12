@@ -4846,19 +4846,22 @@ const getPersonDisplayName = (person) => String(person.fullName || person.name |
 const stripPersonContext = (value) => String(value || "").split(" – ")[0].split(" - ")[0].trim();
 const getNameParts = (value) => {
   const displayName = stripPersonContext(value);
-  if (!displayName) return { surname: "", firstInitial: "", displayName: "" };
+  if (!displayName) return { surname: "", firstName: "", firstInitial: "", displayName: "" };
   if (displayName.includes(",")) {
     const [surnamePart, givenPart = ""] = displayName.split(",");
+    const firstName2 = givenPart.trim().split(/\s+/).filter(Boolean)[0] || "";
     return {
       surname: surnamePart.trim(),
-      firstInitial: givenPart.trim().charAt(0).toUpperCase(),
+      firstName: firstName2,
+      firstInitial: firstName2.charAt(0).toUpperCase(),
       displayName
     };
   }
   const parts = displayName.split(/\s+/).filter(Boolean);
   const surname = parts.length > 1 ? parts[parts.length - 1] : displayName;
-  const firstInitial = parts.length > 1 ? parts[0].charAt(0).toUpperCase() : "";
-  return { surname, firstInitial, displayName };
+  const firstName = parts.length > 1 ? parts[0] : "";
+  const firstInitial = firstName.charAt(0).toUpperCase();
+  return { surname, firstName, firstInitial, displayName };
 };
 const getLastThreeIdDigits = (person) => {
   const digits = String(person?.idNumber || "").replace(/\D/g, "");
@@ -4903,15 +4906,18 @@ const buildCompactPersonNameResolver = (people = []) => {
   const personByName = /* @__PURE__ */ new Map();
   const surnameCounts = /* @__PURE__ */ new Map();
   const surnameInitialCounts = /* @__PURE__ */ new Map();
+  const surnameFirstNameCounts = /* @__PURE__ */ new Map();
   people.forEach((person) => {
     const displayName = getPersonDisplayName(person);
-    const { surname, firstInitial } = getNameParts(displayName);
+    const { surname, firstName, firstInitial } = getNameParts(displayName);
     const nameKey = normalisePersonName(displayName);
     const surnameKey = normalisePersonName(surname);
     const initialKey = `${surnameKey}|${firstInitial}`;
+    const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
     if (nameKey) personByName.set(nameKey, [...personByName.get(nameKey) || [], person]);
     if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
     if (surnameKey && firstInitial) surnameInitialCounts.set(initialKey, (surnameInitialCounts.get(initialKey) || 0) + 1);
+    if (surnameKey && firstName) surnameFirstNameCounts.set(firstNameKey, (surnameFirstNameCounts.get(firstNameKey) || 0) + 1);
   });
   const findPerson = (name) => {
     const key = normalisePersonName(stripPersonContext(name));
@@ -4933,10 +4939,10 @@ const buildCompactPersonNameResolver = (people = []) => {
   };
   const formatList = (person) => {
     const displayName = getPersonDisplayName(person) || "Unnamed person";
-    const { surname, firstInitial } = getNameParts(displayName);
+    const { surname, firstName } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
-    const initialKey = `${surnameKey}|${firstInitial}`;
-    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return displayName;
+    const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
+    if ((surnameFirstNameCounts.get(firstNameKey) || 0) <= 1) return displayName;
     const suffix = getLastThreeIdDigits(person);
     return suffix ? `${displayName} · ${suffix}` : displayName;
   };

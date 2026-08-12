@@ -18,21 +18,24 @@ export const getPersonDisplayName = (person: PersonIdentityRecord): string =>
 const stripPersonContext = (value: unknown): string =>
   String(value || '').split(' – ')[0].split(' - ')[0].trim();
 
-const getNameParts = (value: unknown): { surname: string; firstInitial: string; displayName: string } => {
+const getNameParts = (value: unknown): { surname: string; firstName: string; firstInitial: string; displayName: string } => {
   const displayName = stripPersonContext(value);
-  if (!displayName) return { surname: '', firstInitial: '', displayName: '' };
+  if (!displayName) return { surname: '', firstName: '', firstInitial: '', displayName: '' };
   if (displayName.includes(',')) {
     const [surnamePart, givenPart = ''] = displayName.split(',');
+    const firstName = givenPart.trim().split(/\s+/).filter(Boolean)[0] || '';
     return {
       surname: surnamePart.trim(),
-      firstInitial: givenPart.trim().charAt(0).toUpperCase(),
+      firstName,
+      firstInitial: firstName.charAt(0).toUpperCase(),
       displayName,
     };
   }
   const parts = displayName.split(/\s+/).filter(Boolean);
   const surname = parts.length > 1 ? parts[parts.length - 1] : displayName;
-  const firstInitial = parts.length > 1 ? parts[0].charAt(0).toUpperCase() : '';
-  return { surname, firstInitial, displayName };
+  const firstName = parts.length > 1 ? parts[0] : '';
+  const firstInitial = firstName.charAt(0).toUpperCase();
+  return { surname, firstName, firstInitial, displayName };
 };
 
 const getLastThreeIdDigits = (person?: PersonIdentityRecord): string => {
@@ -85,16 +88,19 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
   const personByName = new Map<string, PersonIdentityRecord[]>();
   const surnameCounts = new Map<string, number>();
   const surnameInitialCounts = new Map<string, number>();
+  const surnameFirstNameCounts = new Map<string, number>();
 
   people.forEach(person => {
     const displayName = getPersonDisplayName(person);
-    const { surname, firstInitial } = getNameParts(displayName);
+    const { surname, firstName, firstInitial } = getNameParts(displayName);
     const nameKey = normalisePersonName(displayName);
     const surnameKey = normalisePersonName(surname);
     const initialKey = `${surnameKey}|${firstInitial}`;
+    const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
     if (nameKey) personByName.set(nameKey, [...(personByName.get(nameKey) || []), person]);
     if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
     if (surnameKey && firstInitial) surnameInitialCounts.set(initialKey, (surnameInitialCounts.get(initialKey) || 0) + 1);
+    if (surnameKey && firstName) surnameFirstNameCounts.set(firstNameKey, (surnameFirstNameCounts.get(firstNameKey) || 0) + 1);
   });
 
   const findPerson = (name: unknown): PersonIdentityRecord | undefined => {
@@ -119,10 +125,10 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
 
   const formatList = (person: PersonIdentityRecord): string => {
     const displayName = getPersonDisplayName(person) || 'Unnamed person';
-    const { surname, firstInitial } = getNameParts(displayName);
+    const { surname, firstName } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
-    const initialKey = `${surnameKey}|${firstInitial}`;
-    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return displayName;
+    const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
+    if ((surnameFirstNameCounts.get(firstNameKey) || 0) <= 1) return displayName;
     const suffix = getLastThreeIdDigits(person);
     return suffix ? `${displayName} · ${suffix}` : displayName;
   };
