@@ -65264,6 +65264,13 @@ const UserListSection = ({
       }
     }, 5e3);
   };
+  const handleOpenProfile = (user) => {
+    if (onNavigateToProfile) {
+      onNavigateToProfile(user);
+      return;
+    }
+    void handleEditProfile(user);
+  };
   const handleDelete = (user) => {
     setSelectedUser(user);
     setShowDeleteConfirm(true);
@@ -65329,33 +65336,56 @@ const UserListSection = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Actions" })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700", children: filteredUsers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "px-6 py-12 text-center text-gray-400", children: loadError || "No users found" }) }) : filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-750 transition-colors", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-white", children: user.name }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.rank && user.service ? `${user.rank} - ${user.service}` : user.rank || user.service || "-" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.unit || "-" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.personnelId || "-" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.userType === "STAFF" ? "bg-sky-900 text-sky-200" : user.userType === "TRAINEE" ? "bg-green-900 text-green-200" : "bg-gray-900 text-gray-200"}`, children: user.userType || "STAFF" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-6 py-4 whitespace-nowrap text-right text-sm font-medium", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => void handleEditProfile(user),
-              className: "text-sky-400 hover:text-sky-300 mr-3",
-              title: "View Profile",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$3, { className: "h-5 w-5" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700", children: filteredUsers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "px-6 py-12 text-center text-gray-400", children: loadError || "No users found" }) }) : filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "tr",
+        {
+          className: "cursor-pointer hover:bg-gray-750 transition-colors focus-within:bg-gray-750",
+          onClick: () => handleOpenProfile(user),
+          onKeyDown: (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleOpenProfile(user);
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => handleDelete(user),
-              className: "text-red-400 hover:text-red-300",
-              title: "Delete User Account",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-5 w-5" })
-            }
-          )
-        ] })
-      ] }, user.id)) })
+          },
+          tabIndex: 0,
+          role: "button",
+          "aria-label": `Open profile for ${user.name}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-white", children: user.name }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.rank && user.service ? `${user.rank} - ${user.service}` : user.rank || user.service || "-" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.unit || "-" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-300", children: user.personnelId || "-" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.userType === "STAFF" ? "bg-sky-900 text-sky-200" : user.userType === "TRAINEE" ? "bg-green-900 text-green-200" : "bg-gray-900 text-gray-200"}`, children: user.userType || "STAFF" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-6 py-4 whitespace-nowrap text-right text-sm font-medium", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    void handleEditProfile(user);
+                  },
+                  className: "text-sky-400 hover:text-sky-300 mr-3",
+                  title: "Edit profile",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$3, { className: "h-5 w-5" })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    handleDelete(user);
+                  },
+                  className: "text-red-400 hover:text-red-300",
+                  title: "Delete User Account",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(ForwardRef$1, { className: "h-5 w-5" })
+                }
+              )
+            ] })
+          ]
+        },
+        user.id
+      )) })
     ] }) }),
     showDeleteConfirm && selectedUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white mb-4", children: "Confirm Delete User" }),

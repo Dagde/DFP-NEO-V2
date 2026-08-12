@@ -252,6 +252,14 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         }, 5000);
     };
 
+    const handleOpenProfile = (user: User) => {
+        if (onNavigateToProfile) {
+            onNavigateToProfile(user);
+            return;
+        }
+        void handleEditProfile(user);
+    };
+
     const handleDelete = (user: User) => {
         setSelectedUser(user);
         setShowDeleteConfirm(true);
@@ -356,7 +364,20 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                             </tr>
                         ) : (
                             filteredUsers.map((user) => (
-                                <tr key={user.id} className="hover:bg-gray-750 transition-colors">
+                                <tr
+                                    key={user.id}
+                                    className="cursor-pointer hover:bg-gray-750 transition-colors focus-within:bg-gray-750"
+                                    onClick={() => handleOpenProfile(user)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            handleOpenProfile(user);
+                                        }
+                                    }}
+                                    tabIndex={0}
+                                    role="button"
+                                    aria-label={`Open profile for ${user.name}`}
+                                >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm font-medium text-white">{user.name}</div>
                                     </td>
@@ -378,14 +399,20 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button
-                                            onClick={() => void handleEditProfile(user)}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                void handleEditProfile(user);
+                                            }}
                                             className="text-sky-400 hover:text-sky-300 mr-3"
-                                            title="View Profile"
+                                            title="Edit profile"
                                         >
                                             <PencilIcon className="h-5 w-5" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(user)}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleDelete(user);
+                                            }}
                                             className="text-red-400 hover:text-red-300"
                                             title="Delete User Account"
                                         >
