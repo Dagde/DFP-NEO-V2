@@ -8838,8 +8838,8 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
   const isDutySup = event.resourceId === "Duty Sup";
   const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
   const compactNameResolver = reactExports.useMemo(
-    () => buildCompactPersonNameResolver([...instructorsData, ...traineesData]),
-    [instructorsData, traineesData]
+    () => buildCompactPersonNameResolver([...event.personnelRefs || [], ...instructorsData, ...traineesData]),
+    [event.personnelRefs, instructorsData, traineesData]
   );
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";
@@ -118885,6 +118885,75 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     return saved;
   };
+  const annotateScheduleEventPersonnelRefs = (event) => {
+    const refsByKey = /* @__PURE__ */ new Map();
+    const cleanName = (value) => String(value || "").split(" – ")[0].split(" - ")[0].trim();
+    const addRef = (role, label, preferredType) => {
+      const name = cleanName(label);
+      if (!name || isPlaceholderPersonnelName(name)) return;
+      const nameKey = normalisePersonName(name);
+      const candidates = preferredType === "staff" ? instructorsData.filter((person2) => normalisePersonName(person2.name) === nameKey) : preferredType === "trainee" ? allTraineesData.filter((person2) => normalisePersonName(person2.name) === nameKey || normalisePersonName(person2.fullName) === nameKey) : [
+        ...instructorsData.filter((person2) => normalisePersonName(person2.name) === nameKey),
+        ...allTraineesData.filter((person2) => normalisePersonName(person2.name) === nameKey || normalisePersonName(person2.fullName) === nameKey)
+      ];
+      if (candidates.length !== 1) {
+        const existingRefs = (event.personnelRefs || []).filter((ref2) => ref2.role === role && (!preferredType || ref2.personType === preferredType) && normalisePersonName(ref2.name) === nameKey);
+        if (existingRefs.length === 1) {
+          const existingRef = existingRefs[0];
+          const key2 = [
+            existingRef.role,
+            existingRef.personType,
+            existingRef.idNumber || existingRef.id || normalisePersonName(existingRef.name)
+          ].join(":");
+          if (!refsByKey.has(key2)) refsByKey.set(key2, existingRef);
+        }
+        return;
+      }
+      const person = candidates[0];
+      const personType = "course" in person ? "trainee" : "staff";
+      const idNumber = Number(person.idNumber);
+      const ref = {
+        role,
+        personType,
+        name: person.name,
+        ...Number.isFinite(idNumber) ? { idNumber } : {},
+        ...person.id ? { id: person.id } : {},
+        rank: person.rank,
+        unit: person.unit,
+        ..."course" in person ? { course: person.course } : {}
+      };
+      const key = [
+        ref.role,
+        ref.personType,
+        ref.idNumber || ref.id || normalisePersonName(ref.name)
+      ].join(":");
+      if (!refsByKey.has(key)) refsByKey.set(key, ref);
+    };
+    const isTaskingEvent2 = event.isTaskingRequest === true || !!event.taskingRequestId || String(event.id || "").startsWith("tasking-");
+    const isSctEvent = isContinuationScheduleEvent(event);
+    const isFixedCrewEvent = Boolean(event.fixedCrewGroup || event.fixedCrewPic || event.crewSelectionOrder?.length);
+    if (isTaskingEvent2 || isSctEvent || isFixedCrewEvent) {
+      addRef("pilot", event.pilot || event.instructor || event.fixedCrewPic, "staff");
+      addRef("instructor", event.instructor, "staff");
+      addRef("fixedCrewPic", event.fixedCrewPic, "staff");
+      addRef("crew", event.crew, "staff");
+      event.crewSelectionOrder?.forEach((name) => addRef("crew", name, "staff"));
+      event.attendees?.forEach((name) => addRef("attendee", name, "staff"));
+    } else if (event.flightType === "Solo") {
+      addRef("pilot", event.pilot || event.student, "trainee");
+    } else {
+      addRef("instructor", event.instructor || event.pilot, "staff");
+      addRef("pilot", event.pilot, "staff");
+      addRef("student", event.student, "trainee");
+      addRef("crew", event.crew, "staff");
+      event.attendees?.forEach((name) => addRef("attendee", name, "trainee"));
+    }
+    const personnelRefs = Array.from(refsByKey.values());
+    return {
+      ...event,
+      ...personnelRefs.length > 0 ? { personnelRefs } : {}
+    };
+  };
   const handleSaveEvents = async (eventsToSave, isPriority) => {
     logScheduleDebug("🔵 ========== handleSaveEvents START ==========");
     logScheduleDebug("🔵 Called from:", new Error().stack?.split("\\n")[2]?.trim());
@@ -118915,7 +118984,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       denyPastDfpEdit("save changes");
       return;
     }
-    eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave);
+    eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave).map(annotateScheduleEventPersonnelRefs);
     const proposedMainEvent = eventsToSave[0];
     const isPotentialNextDayView = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const saveToNextDayBuildForConflict = oracleContextForModal ? oracleContext === "nextDayBuild" : proposedMainEvent.date === buildDfpDate && isPotentialNextDayView;
@@ -124364,10 +124433,10 @@ ${error instanceof Error ? error.message : String(error)}`,
     ];
     const resourceCandidates = configuredResourceCandidates.length > 0 ? [requestedResourceId, ...configuredResourceCandidates.filter((resourceId) => resourceId !== requestedResourceId)] : selectedResourceNumbers.map(resourceLabelForNumber);
     const firstClearResource = resourceCandidates.find((resourceId) => !existingEventsForDate.some((existingEvent) => String(existingEvent.resourceId || "").trim() === resourceId && checkTimeOverlap(candidateEventBase, existingEvent)));
-    const newEvent = {
+    const newEvent = annotateScheduleEventPersonnelRefs({
       ...candidateEventBase,
       resourceId: firstClearResource || requestedResourceId
-    };
+    });
     if (isNextDayContext) {
       setNextDayBuildEvents((prev) => [...prev, newEvent]);
       setShowAddGroundEvent(false);
@@ -124417,7 +124486,7 @@ ${error instanceof Error ? error.message : String(error)}`,
     }
     const eventId = v4();
     logRoutineAppDebug("🎓 [AcademicPublish] Generated event ID:", eventId);
-    const academicDayEvent = {
+    const academicDayEvent = annotateScheduleEventPersonnelRefs({
       id: eventId,
       date: data.date,
       type: "ground",
@@ -124444,7 +124513,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         color: t.color,
         isStandard: t.isStandard
       }))
-    };
+    });
     logRoutineAppDebug("🎓 [AcademicPublish] academicDayEvent constructed:", {
       id: academicDayEvent.id,
       date: academicDayEvent.date,

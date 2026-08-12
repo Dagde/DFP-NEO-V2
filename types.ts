@@ -327,6 +327,7 @@ export interface ScheduleEvent {
   student?: string;
   pilot?: string;
   crew?: string; // Second pilot for SCT events (not PIC)
+  personnelRefs?: ScheduleEventPersonnelRef[];
   group?: string;
   groupTraineeIds?: number[];
   flightNumber: string;
@@ -428,6 +429,19 @@ export interface ScheduleEvent {
   dayNight?: 'Day' | 'Night' | 'Day/Night';
   forcedInstructorConflict?: boolean;
   forcedInstructorConflictDetails?: string[];
+}
+
+export type ScheduleEventPersonnelRole = 'instructor' | 'student' | 'pilot' | 'crew' | 'attendee' | 'fixedCrewPic';
+
+export interface ScheduleEventPersonnelRef {
+  role: ScheduleEventPersonnelRole;
+  personType: 'staff' | 'trainee';
+  name: string;
+  idNumber?: number;
+  id?: string;
+  rank?: string;
+  unit?: string;
+  course?: string;
 }
 
 export type FlyingWindowExclusionRestriction = 'departures' | 'arrivals' | 'both';

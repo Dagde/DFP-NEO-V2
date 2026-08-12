@@ -250,8 +250,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
   const isDutySup = event.resourceId === 'Duty Sup';
   const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
   const compactNameResolver = useMemo(
-      () => buildCompactPersonNameResolver([...(instructorsData as any), ...(traineesData as any)]),
-      [instructorsData, traineesData]
+      () => buildCompactPersonNameResolver([...(event.personnelRefs || []), ...(instructorsData as any), ...(traineesData as any)]),
+      [event.personnelRefs, instructorsData, traineesData]
   );
   
   // Check if tile is too small for content (threshold e.g. 60px ~ 18 mins)
