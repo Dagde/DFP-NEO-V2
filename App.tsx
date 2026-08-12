@@ -65,7 +65,7 @@ import {
     type TrainingReportTemplate,
 } from './utils/trainingReportTerminology';
 import { getSctTerminology } from './utils/sctTerminology';
-import { formatPersonOptionLabel, normalisePersonName } from './utils/personIdentity';
+import { formatPersonOptionLabel, getPersonIdentityDedupeKey, normalisePersonName } from './utils/personIdentity';
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
@@ -30453,22 +30453,26 @@ const App: React.FC = () => {
                 const personName = 'fullName' in person ? person.fullName : person.name;
                 return personnelNamesMatch(personName, ref.label) || personnelNamesMatch(person.name, ref.label);
             });
+            const uniqueMatches = matches.filter((person, index, source) => {
+                const key = getPersonIdentityDedupeKey(person, ref.role);
+                return source.findIndex(candidate => getPersonIdentityDedupeKey(candidate, ref.role) === key) === index;
+            });
 
-            if (matches.length <= 1) return;
+            if (uniqueMatches.length <= 1) return;
 
             const resolvedRef = event.personnelRefs?.find(personRef => {
                 if (personRef.personType !== ref.role) return false;
                 if (!personnelNamesMatch(personRef.name, ref.label)) return false;
                 const personRefId = String(personRef.id || '').trim();
                 const personRefIdNumber = String(personRef.idNumber || '').trim();
-                return matches.some(person => (
+                return uniqueMatches.some(person => (
                     (personRefId && String(person.id || '').trim() === personRefId) ||
                     (personRefIdNumber && String(person.idNumber || '').trim() === personRefIdNumber)
                 ));
             });
 
             if (!resolvedRef) {
-                warnings.push(`Personnel identity warning - ${ref.label} matches ${matches.length} active ${ref.role === 'staff' ? 'staff records' : 'trainee records'}, but this event is still name-only. Open the tile, select the correct person, and Save so the event stores the Personnel ID.`);
+                warnings.push(`Personnel identity warning - ${ref.label} matches ${uniqueMatches.length} active ${ref.role === 'staff' ? 'staff people' : 'trainees'}. The tile label may show a visual ID suffix, but this saved event still has no stored Personnel ID for that role. Open the tile, select the correct person, and Save.`);
             }
         });
 
