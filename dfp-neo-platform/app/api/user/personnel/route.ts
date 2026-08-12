@@ -19,16 +19,16 @@ export async function GET() {
     console.log('🔍 [USER PERSONNEL] Fetching Personnel for current user:', session.user.userId);
 
     // Get the Personnel record linked to current user
-    // Try to match by userId first (direct link), then by idNumber (PMKEYS)
+    // Try to match by userId first (direct link), then by idNumber (Personnel ID)
     let personnel = await prisma.personnel.findFirst({
       where: {
         userId: session.user.userId
       }
     });
 
-    // If not found by userId, try to match by idNumber (PMKEYS)
+    // If not found by userId, try to match by idNumber (Personnel ID)
     if (!personnel) {
-      console.log('🔍 [USER PERSONNEL] No Personnel found by userId, trying idNumber (PMKEYS)...');
+      console.log('🔍 [USER PERSONNEL] No Personnel found by userId, trying idNumber (Personnel ID)...');
       
       // Find ALL Personnel records matching idNumber (to handle duplicates)
       const allMatches = await prisma.personnel.findMany({

@@ -25,8 +25,8 @@ Load profile data → Display appropriate dashboard
 | Table | Purpose | Fields |
 |-------|---------|--------|
 | **User** | Authentication only | `userId`, `password`, `role`, `firstName`, `lastName`, `email`, `isActive` |
-| **Personnel** | Staff profile data | PMKeys, qualifications, unavailability, logbook, etc. |
-| **Trainee** | Trainee profile data | PMKeys, course, progress, instructors, logbook, etc. |
+| **Personnel** | Staff profile data | Personnel ID, qualifications, unavailability, logbook, etc. |
+| **Trainee** | Trainee profile data | Personnel ID, course, progress, instructors, logbook, etc. |
 
 ---
 
@@ -38,7 +38,7 @@ Load profile data → Display appropriate dashboard
 // USER TABLE - Authentication only
 model User {
   id              String     @id @default(cuid())
-  userId          String     @unique  // PMKeys/ID (e.g., "12345678")
+  userId          String     @unique  // Personnel ID (e.g., "12345678")
   username        String     @unique  // Alternative login identifier
   email           String?    @unique
   password        String     // Hashed password
@@ -58,10 +58,10 @@ model User {
 // PERSONNEL TABLE - Staff profile data
 model Personnel {
   id              String   @id @default(cuid())
-  userId          String   @unique  // Links to User.userId (PMKeys)
+  userId          String   @unique  // Links to User.userId (Personnel ID)
   
   // Profile fields...
-  idNumber        Int      @unique  // PMKeys/ID (same as userId)
+  idNumber        Int      @unique  // Personnel ID (same as userId)
   name            String
   rank            String?
   
@@ -76,7 +76,7 @@ model Trainee {
   userId          String?  @unique  // Links to User.userId (optional - trainees may not have login)
   
   // Profile fields...
-  idNumber        Int      @unique  // PMKeys/ID
+  idNumber        Int      @unique  // Personnel ID
   name            String
   fullName        String
   rank            String?
@@ -227,24 +227,24 @@ if (!user) {
 
 ## 4. Field Naming Clarification
 
-### PMKeys/ID = userId
+### Personnel ID = userId
 
-You're correct! The PMKeys/ID (e.g., "12345678") should be the `userId` field.
+You're correct! The Personnel ID (e.g., "12345678") should be the `userId` field.
 
 **Recommended Naming Convention:**
 
 | Concept | Database Field | UI Display |
 |---------|----------------|------------|
-| Login Identifier | `userId` | "PMKeys/ID" or "Service Number" |
+| Login Identifier | `userId` | "Personnel ID" or "Service Number" |
 | Database Primary Key | `id` (auto-generated CUID) | Hidden (internal use) |
-| Profile ID Number | `idNumber` (in Personnel/Trainee) | "PMKeys/ID" (same as userId) |
+| Profile ID Number | `idNumber` (in Personnel/Trainee) | "Personnel ID" (same as userId) |
 
 ### Updated Schema with Consistent Naming
 
 ```prisma
 model User {
   id              String     @id @default(cuid())  // Internal ID (hidden)
-  userId          String     @unique              // PMKeys/ID (login identifier)
+  userId          String     @unique              // Personnel ID (login identifier)
   username        String     @unique              // Alternative (e.g., "john.smith")
   email           String?    @unique
   password        String                          // Hashed
@@ -260,8 +260,8 @@ model User {
 
 model Personnel {
   id              String   @id @default(cuid())  // Internal ID
-  userId          String   @unique              // Links to User.userId (PMKeys)
-  idNumber        Int      @unique              // PMKeys/ID (same value)
+  userId          String   @unique              // Links to User.userId (Personnel ID)
+  idNumber        Int      @unique              // Personnel ID (same value)
   
   // ... other fields
   name            String
@@ -272,7 +272,7 @@ model Personnel {
 model Trainee {
   id              String   @id @default(cuid())  // Internal ID
   userId          String?  @unique              // Links to User.userId (optional)
-  idNumber        Int      @unique              // PMKeys/ID
+  idNumber        Int      @unique              // Personnel ID
   
   // ... other fields
   name            String
@@ -487,7 +487,7 @@ await prisma.personnel.create({
 
 **Solution:** They should always match. Enforce this constraint:
 - User.userId = Personnel.idNumber = Trainee.idNumber
-- All represent the same PMKeys/ID
+- All represent the same Personnel ID
 
 ---
 
@@ -512,8 +512,8 @@ await prisma.personnel.create({
 4. Return data → User + Profile
 
 ### Field Naming:
-- **userId** = PMKeys/ID (login identifier)
-- **idNumber** = PMKeys/ID (in profile tables, same value)
+- **userId** = Personnel ID (login identifier)
+- **idNumber** = Personnel ID (in profile tables, same value)
 - **id** = Internal database ID (CUID, hidden)
 
 This architecture is **clean, secure, and scalable**. It will work perfectly for your use case.

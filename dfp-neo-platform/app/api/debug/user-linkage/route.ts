@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         name: user.personnel.name,
         rank: user.personnel.rank,
         unit: user.personnel.unit,
-        pmkeys: user.personnel.idNumber,
+        personnelId: user.personnel.idNumber,
         role: user.personnel.role
       } : null
     }));
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       name: personnel.name,
       rank: personnel.rank,
       unit: personnel.unit,
-      pmkeys: personnel.idNumber,
+      personnelId: personnel.idNumber,
       role: personnel.role,
       category: personnel.category,
       isActive: personnel.isActive,
@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
 
     const linkageSummary = realStaff.map(staff => ({
       personnelName: staff.name,
-      personnelId: staff.id,
-      pmkeys: staff.idNumber,
+      personnelRecordId: staff.id,
+      personnelId: staff.idNumber,
       userId: staff.userId,
       linked: !!staff.user,
       linkedUser: staff.user ? {

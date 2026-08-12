@@ -82,19 +82,19 @@ export async function POST(
       );
     }
 
-    // Verify PMKEYS match
+    // Verify Personnel ID match
     if (user.userId && personnel.idNumber) {
       if (user.userId !== personnel.idNumber.toString()) {
-        console.log('⚠️  [MANUAL-LINK] PMKEYS mismatch!');
-        console.log(`   User PMKEYS: ${user.userId}`);
-        console.log(`   Personnel PMKEYS: ${personnel.idNumber}`);
+        console.log('⚠️  [MANUAL-LINK] Personnel ID mismatch!');
+        console.log(`   User Personnel ID: ${user.userId}`);
+        console.log(`   Personnel record ID: ${personnel.idNumber}`);
         
         return NextResponse.json(
           { 
-            error: 'PMKEYS mismatch between User and Personnel',
-            userPmkeys: user.userId,
-            personnelPmkeys: personnel.idNumber,
-            warning: 'PMKEYS do not match - are you sure you want to link these records?'
+            error: 'Personnel ID mismatch between User and Personnel',
+            userPersonnelId: user.userId,
+            personnelRecordIdNumber: personnel.idNumber,
+            warning: 'The user and personnel record have different Personnel IDs. Confirm before linking.'
           },
           { status: 400 }
         );

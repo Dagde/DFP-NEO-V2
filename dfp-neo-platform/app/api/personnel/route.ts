@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
     
     const body = normalisePersonnelPayload(await request.json());
     console.log('🔍 [API POST] Request body:', JSON.stringify(body, null, 2));
-    console.log('🔗 [AUTO-LINK] Checking for existing User record with matching PMKEYS...');
+    console.log('🔗 [AUTO-LINK] Checking for existing User record with matching Personnel ID...');
     
-    // Auto-link to existing User by PMKEYS/userId
+    // Auto-link to existing User by Personnel ID/userId
     let linkedUserId = null;
     if (body.idNumber) {
       const existingUser = await prisma.user.findFirst({
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         console.log('✅ [AUTO-LINK] Found User record:', existingUser.username);
         linkedUserId = existingUser.id;
       } else {
-        console.log('ℹ️  [AUTO-LINK] No existing User record found for PMKEYS:', body.idNumber);
+        console.log('ℹ️  [AUTO-LINK] No existing User record found for Personnel ID:', body.idNumber);
       }
     } else {
       console.log('⚠️  [AUTO-LINK] No idNumber provided, cannot link to User');

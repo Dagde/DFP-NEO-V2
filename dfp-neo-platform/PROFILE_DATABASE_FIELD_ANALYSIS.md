@@ -220,7 +220,7 @@ model Personnel {
   userId                   String   // Links to User table
   
   // Basic Information
-  idNumber                 Int      @unique  // PMKeys/ID
+  idNumber                 Int      @unique  // Personnel ID
   name                     String
   rank                     String   // WGCDR, SQNLDR, FLTLT, FLGOFF, PLTOFF, Mr
   service                  String?  // 'RAAF', 'RAN', 'ARA'
@@ -283,7 +283,7 @@ model Trainee {
   userId                   String?  // Links to User table (optional - trainees may not have login)
   
   // Basic Information
-  idNumber                 Int      @unique  // PMKeys/ID
+  idNumber                 Int      @unique  // Personnel ID
   name                     String
   fullName                 String   // "Name – Course"
   rank                     String   // OFFCDT, PLTOFF, SQNLDR, WGCDR

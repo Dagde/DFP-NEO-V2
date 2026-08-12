@@ -135,7 +135,7 @@ export async function DELETE(
 
     console.log(`🔧 [DELETE] Attempting to delete personnel with ID/IDNumber: ${id}`);
 
-    // Try to find by id first (UUID), then by idNumber (PMKEYS)
+    // Try to find by id first (UUID), then by idNumber (Personnel ID)
     let personnel = await prisma.personnel.findUnique({
       where: { id },
     });

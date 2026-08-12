@@ -22145,7 +22145,7 @@ const App: React.FC = () => {
        if (user.userType === 'STAFF') {
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.personnelId,
              role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
@@ -22153,7 +22153,7 @@ const App: React.FC = () => {
        } else if (user.userType === 'TRAINEE') {
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.personnelId,
              role: user.role || 'Trainee'
           } as Trainee);
           handleNavigation('CourseRoster');
@@ -22193,7 +22193,7 @@ const App: React.FC = () => {
        if (user.userType === 'STAFF') {
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.personnelId,
              role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
@@ -22201,7 +22201,7 @@ const App: React.FC = () => {
        } else if (user.userType === 'TRAINEE') {
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.personnelId,
              role: user.role || 'Trainee'
           } as Trainee);
           handleNavigation('CourseRoster');
@@ -28782,7 +28782,7 @@ const App: React.FC = () => {
        if (user.userType === 'STAFF') {
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.personnelId,
              role: user.role || 'Pilot'
           } as Instructor);
           handleNavigation('Instructors');
@@ -28790,7 +28790,7 @@ const App: React.FC = () => {
        } else if (user.userType === 'TRAINEE') {
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.personnelId,
              role: user.role || 'Trainee'
           } as Trainee);
           handleNavigation('CourseRoster');
@@ -46013,11 +46013,11 @@ appliedUpdates.forEach(update => {
           logRoutineAppDebug('Opening staff profile:', user.name);
           // Try to find the full instructor object from instructorsData first
           const fullInstructor = instructorsData.find(i =>
-             i.idNumber === (user.pmkeysId || user.idNumber) || i.name === user.name
+             i.idNumber === (user.personnelId || user.idNumber) || i.name === user.name
           );
           setSelectedPersonForProfile(fullInstructor || {
              name: user.name,
-             idNumber: user.pmkeysId || user.idNumber,
+             idNumber: user.personnelId || user.idNumber,
              rank: user.rank,
              role: user.role || 'Pilot'
           } as Instructor);
@@ -46029,11 +46029,11 @@ appliedUpdates.forEach(update => {
           // This ensures all DB fields (unit, location, flight, etc.) are populated
           // Must use allTraineesData not traineesData (which is location-filtered)
           const fullTrainee = allTraineesData.find(t =>
-             t.idNumber === (user.pmkeysId || user.idNumber) || t.name === user.name
+             t.idNumber === (user.personnelId || user.idNumber) || t.name === user.name
           );
           setSelectedPersonForProfile(fullTrainee || {
              name: user.name,
-             idNumber: user.pmkeysId || user.idNumber,
+             idNumber: user.personnelId || user.idNumber,
              rank: user.rank,
              role: user.role || 'Trainee',
              course: user.course

@@ -36,16 +36,16 @@ async function queryDatabase() {
   if (realStaff.length > 0) {
     console.log('👥 REAL DATABASE STAFF:\n');
     console.log('┌────────────────────────────┬──────────────────┬──────────────┬──────────┬─────────────┐');
-    console.log('│ NAME                       │ RANK             │ UNIT         │ PMKEYS    │ USER ID     │');
+    console.log('│ NAME                       │ RANK             │ UNIT         │ Personnel ID    │ USER ID     │');
     console.log('├────────────────────────────┼──────────────────┼──────────────┼──────────┼─────────────┤');
     
     for (const staff of realStaff) {
       const name = staff.name.padEnd(26).substring(0, 26);
       const rank = (staff.rank || 'N/A').padEnd(16).substring(0, 16);
       const unit = (staff.unit || 'N/A').padEnd(12).substring(0, 12);
-      const pmkeys = (staff.idNumber || 'N/A').toString().padEnd(8).substring(0, 8);
+      const personnelId = (staff.idNumber || 'N/A').toString().padEnd(8).substring(0, 8);
       const userId = (staff.userId || 'N/A').toString().padEnd(11).substring(0, 11);
-      console.log(`│ ${name} │ ${rank} │ ${unit} │ ${pmkeys} │ ${userId} │`);
+      console.log(`│ ${name} │ ${rank} │ ${unit} │ ${personnelId} │ ${userId} │`);
     }
     console.log('└────────────────────────────┴──────────────────┴──────────────┴──────────┴─────────────┘\n');
   } else {
@@ -56,7 +56,7 @@ async function queryDatabase() {
   if (mockData.length > 0) {
     console.log('🎭 SAMPLE MOCKDATA (first 5):\n');
     console.log('┌────────────────────────────┬──────────────────┬──────────────┬──────────┐');
-    console.log('│ NAME                       │ RANK             │ UNIT         │ PMKEYS    │');
+    console.log('│ NAME                       │ RANK             │ UNIT         │ Personnel ID    │');
     console.log('├────────────────────────────┼──────────────────┼──────────────┼──────────┤');
     
     for (let i = 0; i < Math.min(5, mockData.length); i++) {
@@ -64,8 +64,8 @@ async function queryDatabase() {
       const name = staff.name.padEnd(26).substring(0, 26);
       const rank = (staff.rank || 'N/A').padEnd(16).substring(0, 16);
       const unit = (staff.unit || 'N/A').padEnd(12).substring(0, 12);
-      const pmkeys = (staff.idNumber || 'N/A').toString().padEnd(8).substring(0, 8);
-      console.log(`│ ${name} │ ${rank} │ ${unit} │ ${pmkeys} │`);
+      const personnelId = (staff.idNumber || 'N/A').toString().padEnd(8).substring(0, 8);
+      console.log(`│ ${name} │ ${rank} │ ${unit} │ ${personnelId} │`);
     }
     console.log(`└────────────────────────────┴──────────────────┴──────────────┴──────────┘`);
     console.log(`(and ${mockData.length - 5} more mockdata records)\n`);

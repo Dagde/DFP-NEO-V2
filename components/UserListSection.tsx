@@ -9,13 +9,13 @@ interface User {
     name: string;
     email: string;
     role: string;
-    pmkeysId?: string;
+    personnelId?: string;
+    profileId?: string;
     createdAt: string;
     rank?: string;
     service?: string;
     unit?: string;
     userType?: 'STAFF' | 'TRAINEE';
-    personnelId?: string;
 }
 
 interface UserListSectionProps {
@@ -53,7 +53,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         const term = searchTerm.toLowerCase();
         const filtered = users.filter(user => 
             user.name.toLowerCase().includes(term) ||
-            (user.pmkeysId && user.pmkeysId.toString().includes(term))
+            (user.personnelId && user.personnelId.toString().includes(term))
         );
         setFilteredUsers(filtered);
     }, [searchTerm, users]);
@@ -138,20 +138,20 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
             name: person.name || '',
             email: person.email || '',
             role: person.role || 'Staff',
-            pmkeysId: person.idNumber ? String(person.idNumber) : '',
+            personnelId: person.idNumber ? String(person.idNumber) : '',
             createdAt: '',
             rank: person.rank,
             service: person.service,
             unit: person.unit,
             userType: 'STAFF',
-            personnelId: person.id,
+            profileId: person.id,
         }));
         const traineeUsers: User[] = (traineeSource || []).map((person, index) => ({
             id: `trainee-${person.idNumber || index}`,
             name: person.fullName || person.name || '',
             email: person.email || '',
             role: person.role || 'Trainee',
-            pmkeysId: person.idNumber ? String(person.idNumber) : '',
+            personnelId: person.idNumber ? String(person.idNumber) : '',
             createdAt: '',
             rank: person.rank,
             service: person.service,
@@ -162,7 +162,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         return [...staffUsers, ...traineeUsers]
             .filter(user => user.name.trim())
             .filter(user => {
-                const key = `${user.userType}:${user.pmkeysId || user.name}`;
+                const key = `${user.userType}:${user.personnelId || user.name}`;
                 if (seen.has(key)) return false;
                 seen.add(key);
                 return true;
@@ -225,7 +225,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
         title.textContent = `${user.userType === 'STAFF' ? 'Staff' : user.userType === 'TRAINEE' ? 'Trainee' : 'User'} Profile`;
         const details = document.createElement('p');
         details.className = 'mt-1 text-sm text-gray-300';
-        details.textContent = `${user.name} (Personnel ID: ${user.pmkeysId})`;
+        details.textContent = `${user.name} (Personnel ID: ${user.personnelId})`;
         const helper = document.createElement('p');
         helper.className = 'mt-2 text-xs text-gray-400';
         helper.textContent = 'Navigation to profile page will be implemented';
@@ -369,7 +369,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                                         <div className="text-sm text-gray-300">{user.unit || '-'}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-300">{user.pmkeysId || '-'}</div>
+                                        <div className="text-sm text-gray-300">{user.personnelId || '-'}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.userType === 'STAFF' ? 'bg-sky-900 text-sky-200' : user.userType === 'TRAINEE' ? 'bg-green-900 text-green-200' : 'bg-gray-900 text-gray-200'}`}>

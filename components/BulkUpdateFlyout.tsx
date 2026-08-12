@@ -226,7 +226,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
             let skippedCount = 0;
 
             for (const row of json) {
-                const idValue = getValueFromRow(row, ['PMKeys/ID', 'PMKeys', 'ID', 'ID Number', 'IDNumber', 'Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID']);
+                const idValue = getValueFromRow(row, ['Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'ID', 'ID Number', 'IDNumber']);
 
                 if (idValue === null || idValue === undefined || String(idValue).trim() === '') {
                     skippedCount++;

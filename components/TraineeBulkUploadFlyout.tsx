@@ -53,7 +53,7 @@ const parseBoolean = (value: any): boolean => {
 };
 
 const parseTraineeRow = (row: any): Partial<Trainee> | null => {
-    const idValue = getNum(row, ['PMKeys/ID', 'PMKeys', 'ID', 'ID Number', 'IDNumber', 'Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'idNumber']);
+    const idValue = getNum(row, ['Personnel ID', 'Service ID', 'Employee ID', 'Employee Number', 'Personnel Number', 'Staff ID', 'ID', 'ID Number', 'IDNumber', 'idNumber']);
     if (idValue === undefined) return null;
 
     const parsed: Partial<Trainee> = { idNumber: idValue };

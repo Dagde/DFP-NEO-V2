@@ -27,7 +27,7 @@ async function investigateBurns() {
         burnsRecords.forEach((record, index) => {
             console.log(`\n--- Burns Record ${index + 1} ---`);
             console.log(`ID: ${record.id}`);
-            console.log(`PMKEYS (idNumber): ${record.idNumber}`);
+            console.log(`Personnel ID (idNumber): ${record.idNumber}`);
             console.log(`Name: ${record.name}`);
             console.log(`Rank: ${record.rank}`);
             console.log(`Role: ${record.role}`);

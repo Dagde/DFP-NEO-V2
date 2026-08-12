@@ -4188,7 +4188,7 @@ app.post('/api/personnel', async (req, res) => {
       ? Number(body.idNumber)
       : await generateUniquePersonnelIdNumber(db);
 
-    // Auto-link to existing User by PMKEYS
+    // Auto-link to existing User by Personnel ID
     let linkedUserId = null;
     if (idNumber) {
       const existingUser = await db.user.findFirst({
@@ -4604,15 +4604,15 @@ app.post('/api/audit/currency', async (req, res) => {
     }).join('; ');
 
     // Resolve the DB User for the audit entry
-    // User.userId = PMKEYS string (what frontend sends), User.id = UUID primary key (what AuditLog needs)
+    // User.userId = Personnel ID string (what frontend sends), User.id = UUID primary key (what AuditLog needs)
     let dbUserId = null;
 
-    // 1. Try by User.userId field (PMKEYS number sent from frontend)
+    // 1. Try by User.userId field (Personnel ID number sent from frontend)
     if (userId) {
       const user = await db.user.findFirst({ where: { userId: String(userId) } });
       if (user) {
         dbUserId = user.id;
-        console.log(`[Audit] Resolved user by userId/PMKEYS: ${userId} → dbUserId=${dbUserId}`);
+        console.log(`[Audit] Resolved user by userId/Personnel ID: ${userId} → dbUserId=${dbUserId}`);
       }
     }
 

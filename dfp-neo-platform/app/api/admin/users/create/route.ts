@@ -132,9 +132,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('🔗 [AUTO-LINK] Checking for existing Personnel record with matching PMKEYS...');
+    console.log('🔗 [AUTO-LINK] Checking for existing Personnel record with matching Personnel ID...');
     
-    // Auto-link to existing Personnel by PMKEYS/idNumber
+    // Auto-link to existing Personnel by Personnel ID/idNumber
     const existingPersonnel = await prisma.personnel.findFirst({
       where: { 
         idNumber: parseInt(normalizedUserId) || 0
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       console.log(`   User ID: ${user.id} (${normalizedUserId})`);
       console.log(`   Personnel ID: ${existingPersonnel.id} (${existingPersonnel.name})`);
     } else {
-      console.log('ℹ️  [AUTO-LINK] No existing Personnel record found for PMKEYS:', normalizedUserId);
+      console.log('ℹ️  [AUTO-LINK] No existing Personnel record found for Personnel ID:', normalizedUserId);
     }
 
     // Log user creation
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
       success: true,
       userId: user.id,
       username: user.username,
-      userPmkeys: user.userId,
+      userPersonnelId: user.userId,
     };
 
     // If invite link method, return the generated password

@@ -63,14 +63,14 @@ export async function GET(request: NextRequest) {
       return {
         id: p.id,
         name: p.name,
-        pmkeysId: p.idNumber ? p.idNumber.toString() : 'N/A',
+        personnelId: p.idNumber ? p.idNumber.toString() : 'N/A',
         role: p.role || 'STAFF',
         createdAt: p.createdAt.toISOString().split('T')[0],
         rank: p.rank,
         service: p.service || p.category || 'N/A',
         unit: p.unit || p.flight || 'N/A',
         userType: 'STAFF' as const,
-        personnelId: p.id,
+        profileId: p.id,
         email: p.email || 'N/A',
       };
     });
@@ -80,14 +80,14 @@ export async function GET(request: NextRequest) {
       return {
         id: t.id,
         name: t.name,
-        pmkeysId: t.idNumber ? t.idNumber.toString() : 'N/A',
+        personnelId: t.idNumber ? t.idNumber.toString() : 'N/A',
         role: 'TRAINEE',
         createdAt: t.createdAt ? t.createdAt.toISOString().split('T')[0] : 'N/A',
         rank: t.rank,
         service: t.service || 'N/A',
         unit: t.unit || t.course || 'N/A',
         userType: 'TRAINEE' as const,
-        personnelId: t.id,
+        profileId: t.id,
         email: 'N/A',
       };
     });

@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// GET /api/admin/users/[id]/find-personnel - Find Personnel by User's PMKEYS
+// GET /api/admin/users/[id]/find-personnel - Find Personnel by User's Personnel ID
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,11 +62,11 @@ export async function GET(
       });
     }
 
-    // Find Personnel by PMKEYS
+    // Find Personnel by Personnel ID
     if (!user.userId) {
       return NextResponse.json(
         { 
-          error: 'User does not have a PMKEYS',
+          error: 'User does not have a Personnel ID',
           user: {
             id: user.id,
             username: user.username
@@ -83,7 +83,7 @@ export async function GET(
       orderBy: { createdAt: 'desc' }
     });
 
-    console.log(`📊 [FIND-PERSONNEL] Found ${personnelList.length} Personnel record(s) for PMKEYS:`, user.userId);
+    console.log(`📊 [FIND-PERSONNEL] Found ${personnelList.length} Personnel record(s) for Personnel ID:`, user.userId);
 
     return NextResponse.json({
       success: true,
@@ -93,7 +93,7 @@ export async function GET(
         username: user.username,
         userId: user.userId,
         displayName: `${user.firstName} ${user.lastName}`.trim() || user.username,
-        pmkeys: user.userId
+        personnelId: user.userId
       },
       personnelCount: personnelList.length,
       personnel: personnelList.map(p => ({

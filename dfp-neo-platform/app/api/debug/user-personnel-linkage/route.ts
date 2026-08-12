@@ -48,7 +48,7 @@ export async function GET() {
       }
     });
 
-    // Try to find Personnel by idNumber (PMKEYS match)
+    // Try to find Personnel by idNumber (Personnel ID match)
     const personnelByIdNumber = await prisma.personnel.findFirst({
       where: {
         idNumber: parseInt(session.user.userId)

@@ -5,12 +5,12 @@
 ### Problem Identified
 The database has **209 Personnel records** all pointing to the **same User record** (`userId: cmk3m3d8w0000kymjmsdlxsy9`). This is causing issues when trying to:
 1. Add unique constraints to userId
-2. Update the schema to support individual PMKeys/ID for each person
+2. Update the schema to support individual Personnel ID for each person
 
 ### Root Cause
 The current Personnel table was created with:
 - All 209 personnel records linked to a single dummy user
-- No individual userIds (PMKeys/ID) for each person
+- No individual userIds (Personnel ID) for each person
 - A foreign key constraint preventing userId changes without corresponding User records
 
 ### Database Coverage Analysis
@@ -27,7 +27,7 @@ Instead of trying to fix the existing data, create a new clean structure:
 // Keep existing User table for authentication
 model User {
   id              String     @id @default(cuid())
-  userId          String     @unique  // PMKeys/ID for login
+  userId          String     @unique  // Personnel ID for login
   username        String     @unique
   email           String?    @unique
   password        String
@@ -123,7 +123,7 @@ Step-by-step fix the existing data:
 
 ### Phase 2: Data Migration
 1. Export existing Personnel data
-2. Create new User records for each person (with PMKeys/ID)
+2. Create new User records for each person (with Personnel ID)
 3. Update Personnel records to link to correct User records
 4. Import trainee data from mockData.ts
 

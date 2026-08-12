@@ -381,7 +381,7 @@ app.post('/api/personnel', async (req, res) => {
     const db = await getPrisma();
     const body = req.body;
 
-    // Auto-link to existing User by PMKEYS
+    // Auto-link to existing User by Personnel ID
     let linkedUserId = null;
     if (body.idNumber) {
       const existingUser = await db.user.findFirst({
