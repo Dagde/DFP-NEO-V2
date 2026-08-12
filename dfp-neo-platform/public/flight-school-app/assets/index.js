@@ -18114,12 +18114,12 @@ const END_HOUR$5 = 24;
 const TOTAL_HOURS$5 = END_HOUR$5 - START_HOUR$5;
 const PERSONNEL_COLUMN_WIDTH$3 = 160;
 const TIME_HEADER_HEIGHT$5 = 40;
-const addPersonnelName$1 = (personnel, value) => {
+const addPersonnelName$2 = (personnel, value) => {
   const name = String(value || "").trim();
   if (name) personnel.add(name);
 };
-const PERSONNEL_RANK_PREFIX_RE$2 = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
-const normalisePersonnelNameForMatch$1 = (name) => String(name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$2, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const PERSONNEL_RANK_PREFIX_RE$3 = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const normalisePersonnelNameForMatch$1 = (name) => String(name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$3, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
 const personnelNamesMatch$2 = (a, b) => {
   const left = normalisePersonnelNameForMatch$1(a);
   const right = normalisePersonnelNameForMatch$1(b);
@@ -18131,18 +18131,18 @@ const getPersonnel$5 = (event) => {
   const isTaskingEvent2 = eventRecord.isTaskingRequest === true || !!eventRecord.taskingRequestId || String(event.id || "").startsWith("tasking-");
   const isSctEvent = isContinuationScheduleEvent(event);
   if (isTaskingEvent2 || isSctEvent) {
-    addPersonnelName$1(personnel, event.pilot);
-    addPersonnelName$1(personnel, event.crew);
-    addPersonnelName$1(personnel, event.instructor);
+    addPersonnelName$2(personnel, event.pilot);
+    addPersonnelName$2(personnel, event.crew);
+    addPersonnelName$2(personnel, event.instructor);
   } else if (event.flightType === "Solo") {
-    addPersonnelName$1(personnel, event.pilot || event.student || event.instructor);
+    addPersonnelName$2(personnel, event.pilot || event.student || event.instructor);
   } else {
-    addPersonnelName$1(personnel, event.instructor || event.pilot);
-    addPersonnelName$1(personnel, event.crew);
-    addPersonnelName$1(personnel, event.student);
+    addPersonnelName$2(personnel, event.instructor || event.pilot);
+    addPersonnelName$2(personnel, event.crew);
+    addPersonnelName$2(personnel, event.student);
   }
-  event.attendees?.forEach((person) => addPersonnelName$1(personnel, person));
-  event.crewSelectionOrder?.forEach((person) => addPersonnelName$1(personnel, person));
+  event.attendees?.forEach((person) => addPersonnelName$2(personnel, person));
+  event.crewSelectionOrder?.forEach((person) => addPersonnelName$2(personnel, person));
   return Array.from(personnel);
 };
 const eventIncludesPerson$1 = (event, personName) => getPersonnel$5(event).some((eventPerson) => personnelNamesMatch$2(eventPerson, personName));
@@ -26303,11 +26303,50 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
+const PERSONNEL_RANK_PREFIX_RE$2 = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const PLACEHOLDER_PERSONNEL_NAMES$1 = /* @__PURE__ */ new Set(["tba", "to be advised", "multiple", "group"]);
+const normalisePersonnelNameForScheduleMatch = (name) => String(name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE$2, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const isPlaceholderPersonnelName$1 = (name) => {
+  const normalised = normalisePersonnelNameForScheduleMatch(name);
+  return !normalised || PLACEHOLDER_PERSONNEL_NAMES$1.has(normalised);
+};
+const addPersonnelName$1 = (personnel, name) => {
+  if (!isPlaceholderPersonnelName$1(name)) {
+    personnel.add(String(name || "").trim());
+  }
+};
+const getScheduleEventPersonnelNames = (event) => {
+  const personnel = /* @__PURE__ */ new Set();
+  const eventRecord = event;
+  addPersonnelName$1(personnel, event.instructor);
+  addPersonnelName$1(personnel, event.student);
+  addPersonnelName$1(personnel, event.pilot);
+  addPersonnelName$1(personnel, event.crew);
+  addPersonnelName$1(personnel, eventRecord.fixedCrewPic);
+  event.attendees?.forEach((person) => addPersonnelName$1(personnel, person));
+  event.crewSelectionOrder?.forEach((person) => addPersonnelName$1(personnel, person));
+  eventRecord._scheduledPrimaryStaff?.forEach((person) => addPersonnelName$1(personnel, person));
+  eventRecord._scheduledSupportStaff?.forEach((person) => addPersonnelName$1(personnel, person));
+  return Array.from(personnel);
+};
+const schedulePersonnelNamesMatch = (a, b) => {
+  const left = normalisePersonnelNameForScheduleMatch(a);
+  const right = normalisePersonnelNameForScheduleMatch(b);
+  return !!left && left === right;
+};
+const scheduleEventIncludesPerson = (event, personName) => getScheduleEventPersonnelNames(event).some((eventPerson) => schedulePersonnelNamesMatch(eventPerson, personName));
 const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
     return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+  const getOtherPersonnelText = (event) => {
+    const label = personType === "Instructor" ? "Other personnel" : "Staff/Crew";
+    const otherPersonnel = getScheduleEventPersonnelNames(event).filter((name) => !schedulePersonnelNamesMatch(name, personName));
+    const directCounterpart = personType === "Instructor" ? event.student : event.instructor || event.pilot;
+    const displayPersonnel = otherPersonnel.length > 0 ? otherPersonnel : directCounterpart ? [directCounterpart] : [];
+    return displayPersonnel.length > 0 ? `${label}: ${displayPersonnel.join(", ")}` : "";
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -26317,26 +26356,23 @@ const FlightInfoFlyout = ({ events, position, personName, personType, resourceDi
       "aria-live": "polite",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-sky-400 mb-2 border-b border-gray-700 pb-2", children: personName }),
-        events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: events.sort((a, b) => a.startTime - b.startTime).map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `p-2 rounded-md border-l-4 ${event.color.replace("bg-", "border-")}`, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center font-semibold text-sm", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              event.flightNumber,
-              event.type === "ftd" && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-indigo-400 font-bold", children: [
-                " (",
-                resourceDisplayNames.ftd,
-                ")"
-              ] })
+        events.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: events.sort((a, b) => a.startTime - b.startTime).map((event) => {
+          const otherPersonnelText = getOtherPersonnelText(event);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: `p-2 rounded-md border-l-4 ${event.color.replace("bg-", "border-")}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center font-semibold text-sm", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                event.flightNumber,
+                event.type === "ftd" && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-indigo-400 font-bold", children: [
+                  " (",
+                  resourceDisplayNames.ftd,
+                  ")"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatTime2(event.startTime) })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatTime2(event.startTime) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mt-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              personType === "Instructor" ? "Student" : "Instructor",
-              ": "
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: personType === "Instructor" ? event.student : event.instructor })
-          ] })
-        ] }, event.id)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "No flights scheduled for today." })
+            otherPersonnelText && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mt-1", children: otherPersonnelText })
+          ] }, event.id);
+        }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "No events scheduled for this day." })
       ]
     }
   );
@@ -27627,9 +27663,7 @@ const CourseRosterView = ({
   };
   const handleMouseEnter = (e, traineeFullName) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const traineeEvents = events.filter(
-      (event) => event.student === traineeFullName || event.flightType === "Solo" && event.pilot === traineeFullName
-    );
+    const traineeEvents = events.filter((event) => scheduleEventIncludesPerson(event, traineeFullName));
     setHoveredTrainee({ name: traineeFullName.split(" – ")[0], events: traineeEvents });
     setFlyoutPosition({ top: rect.top, left: rect.right + 10 });
   };
@@ -56063,7 +56097,7 @@ const InstructorListView = ({
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
       FlightInfoFlyout,
       {
-        events: events.filter((f) => f.instructor === hoveredInstructor),
+        events: events.filter((event) => scheduleEventIncludesPerson(event, hoveredInstructor)),
         position: flyoutPosition,
         personName: hoveredInstructor,
         personType: "Instructor"
@@ -126150,7 +126184,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           TraineeView,
           {
-            events,
+            events: eventsForStaffTraineeSchedule,
             traineesData,
             courseColors: scopedCourseColors,
             courses,
@@ -126298,7 +126332,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CourseRosterView,
           {
-            events,
+            events: eventsForStaffTraineeSchedule,
             traineesData,
             courseColors: scopedCourseColors,
             courses,
@@ -127138,7 +127172,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           StaffView,
           {
             onClose: handleCloseStaffView,
-            events,
+            events: eventsForStaffTraineeSchedule,
             traineesData,
             instructorsData,
             archivedInstructorsData,

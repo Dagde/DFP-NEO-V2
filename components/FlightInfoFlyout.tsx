@@ -2,6 +2,7 @@
 import React from 'react';
 import { ScheduleEvent } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { getScheduleEventPersonnelNames, schedulePersonnelNamesMatch } from '../utils/scheduleEventPersonnel';
 
 interface FlightInfoFlyoutProps {
   events: ScheduleEvent[];
@@ -18,6 +19,17 @@ const FlightInfoFlyout: React.FC<FlightInfoFlyoutProps> = ({ events, position, p
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
+  const getOtherPersonnelText = (event: ScheduleEvent): string => {
+    const label = personType === 'Instructor' ? 'Other personnel' : 'Staff/Crew';
+    const otherPersonnel = getScheduleEventPersonnelNames(event)
+      .filter(name => !schedulePersonnelNamesMatch(name, personName));
+    const directCounterpart = personType === 'Instructor' ? event.student : (event.instructor || event.pilot);
+    const displayPersonnel = otherPersonnel.length > 0
+      ? otherPersonnel
+      : (directCounterpart ? [directCounterpart] : []);
+    return displayPersonnel.length > 0 ? `${label}: ${displayPersonnel.join(', ')}` : '';
+  };
+
   return (
     <div
       style={{ top: `${position.top}px`, left: `${position.left}px` }}
@@ -27,21 +39,25 @@ const FlightInfoFlyout: React.FC<FlightInfoFlyoutProps> = ({ events, position, p
       <h3 className="text-lg font-bold text-sky-400 mb-2 border-b border-gray-700 pb-2">{personName}</h3>
       {events.length > 0 ? (
         <ul className="space-y-3">
-          {events.sort((a,b) => a.startTime - b.startTime).map(event => (
-            <li key={event.id} className={`p-2 rounded-md border-l-4 ${event.color.replace('bg-', 'border-')}`}>
-              <div className="flex justify-between items-center font-semibold text-sm">
-                <span>{event.flightNumber}{event.type === 'ftd' && <span className="text-indigo-400 font-bold"> ({resourceDisplayNames.ftd})</span>}</span>
-                <span>{formatTime(event.startTime)}</span>
-              </div>
-              <div className="text-xs text-gray-400 mt-1">
-                <span>{personType === 'Instructor' ? 'Student' : 'Instructor'}: </span>
-                <span>{personType === 'Instructor' ? event.student : event.instructor}</span>
-              </div>
-            </li>
-          ))}
+          {events.sort((a,b) => a.startTime - b.startTime).map(event => {
+            const otherPersonnelText = getOtherPersonnelText(event);
+            return (
+              <li key={event.id} className={`p-2 rounded-md border-l-4 ${event.color.replace('bg-', 'border-')}`}>
+                <div className="flex justify-between items-center font-semibold text-sm">
+                  <span>{event.flightNumber}{event.type === 'ftd' && <span className="text-indigo-400 font-bold"> ({resourceDisplayNames.ftd})</span>}</span>
+                  <span>{formatTime(event.startTime)}</span>
+                </div>
+                {otherPersonnelText && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    {otherPersonnelText}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       ) : (
-        <p className="text-gray-400 text-sm">No flights scheduled for today.</p>
+        <p className="text-gray-400 text-sm">No events scheduled for this day.</p>
       )}
     </div>
   );

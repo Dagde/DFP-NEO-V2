@@ -24,6 +24,7 @@ import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
+import { scheduleEventIncludesPerson } from '../utils/scheduleEventPersonnel';
 import {
     getPersonAssignedQualificationIds,
     personHasInstructorQualification,
@@ -907,7 +908,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       {/* Hover Flyout */}
       {hoveredInstructor && flyoutPosition && (
         <FlightInfoFlyout
-          events={events.filter(f => f.instructor === hoveredInstructor)}
+          events={events.filter(event => scheduleEventIncludesPerson(event, hoveredInstructor))}
           position={flyoutPosition}
           personName={hoveredInstructor}
           personType="Instructor"

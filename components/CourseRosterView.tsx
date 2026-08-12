@@ -13,6 +13,7 @@ import CourseEditFlyout from './CourseEditFlyout';
 import TraineeBulkUploadFlyout from './TraineeBulkUploadFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import { scheduleEventIncludesPerson } from '../utils/scheduleEventPersonnel';
 import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
@@ -327,10 +328,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, traineeFullName: string) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const traineeEvents = events.filter(event =>
-            event.student === traineeFullName ||
-            (event.flightType === 'Solo' && event.pilot === traineeFullName)
-        );
+        const traineeEvents = events.filter(event => scheduleEventIncludesPerson(event, traineeFullName));
         setHoveredTrainee({ name: traineeFullName.split(' – ')[0], events: traineeEvents });
         setFlyoutPosition({ top: rect.top, left: rect.right + 10 });
     };

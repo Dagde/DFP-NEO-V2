@@ -43504,7 +43504,7 @@ appliedUpdates.forEach(update => {
                 />;
             case 'Trainee':
                 return <TraineeView
-                            events={events}
+                            events={eventsForStaffTraineeSchedule}
                             traineesData={traineesData}
                             courseColors={scopedCourseColors}
                             courses={courses}
@@ -43655,7 +43655,7 @@ appliedUpdates.forEach(update => {
                         />;
             case 'CourseRoster':
                 return <CourseRosterView
-                            events={events}
+                            events={eventsForStaffTraineeSchedule}
                             traineesData={traineesData}
                             courseColors={scopedCourseColors}
                             courses={courses}
@@ -44543,7 +44543,7 @@ appliedUpdates.forEach(update => {
                 logRoutineAppDebug(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
                             onClose={handleCloseStaffView}
-                            events={events}
+                            events={eventsForStaffTraineeSchedule}
                             traineesData={traineesData}
                             instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
