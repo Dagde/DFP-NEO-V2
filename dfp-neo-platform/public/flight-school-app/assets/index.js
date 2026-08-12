@@ -18446,6 +18446,94 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   const uniqueEventsWithUnavailability = reactExports.useMemo(() => eventsWithUnavailability.filter(
     (event, index, source) => source.findIndex((candidate) => candidate.id === event.id) === index
   ), [eventsWithUnavailability]);
+  const renderDiagnostics = reactExports.useMemo(() => {
+    const inputIdCounts = /* @__PURE__ */ new Map();
+    eventsWithUnavailability.forEach((event) => {
+      const id = String(event.id || "");
+      if (id) inputIdCounts.set(id, (inputIdCounts.get(id) || 0) + 1);
+    });
+    const describeMatchBasis = (event, instructor) => {
+      const matchingRefs = (event.personnelRefs || []).filter(
+        (ref) => ref.personType === "staff" && personnelNamesMatch(ref.name, instructor.name)
+      );
+      if (matchingRefs.some((ref) => String(ref.idNumber || "").trim() && String(ref.idNumber || "").trim() === String(instructor.idNumber || "").trim())) {
+        return "personnel-id-ref";
+      }
+      if (matchingRefs.some((ref) => String(ref.id || "").trim() && String(ref.id || "").trim() === String(instructor.id || "").trim())) {
+        return "database-id-ref";
+      }
+      if (matchingRefs.length > 0) return "other-person-ref-same-name";
+      return getPersonnel$5(event).some((name) => personnelNamesMatch(name, instructor.name)) ? "name-fallback" : "unknown";
+    };
+    const tileRows = uniqueEventsWithUnavailability.flatMap(
+      (event) => instructors.filter((instructor) => scheduleEventIncludesPersonRecord(event, instructor, {
+        personType: "staff",
+        allPeople: instructorsData
+      })).map((instructor) => ({
+        tileKey: `${event.id}-${instructor.idNumber || instructor.id || instructor.name}`,
+        rowName: instructor.name,
+        rowId: instructor.id || "",
+        rowIdNumber: instructor.idNumber || "",
+        rowUnit: instructor.unit || "",
+        rowIndex: instructors.findIndex((candidate) => candidate === instructor),
+        matchBasis: describeMatchBasis(event, instructor),
+        eventId: String(event.id || ""),
+        date: event.date || "",
+        startTime: event.startTime,
+        duration: event.duration,
+        resourceId: event.resourceId || "",
+        flightNumber: event.flightNumber || "",
+        instructor: event.instructor || "",
+        student: event.student || "",
+        pilot: event.pilot || "",
+        crew: event.crew || "",
+        personnelRefs: event.personnelRefs || []
+      }))
+    );
+    const stackedGroups = Array.from(tileRows.reduce((groups, row) => {
+      const key = [
+        row.rowIdNumber || row.rowId || row.rowName,
+        row.startTime,
+        row.duration,
+        row.resourceId
+      ].join("|");
+      groups.set(key, [...groups.get(key) || [], row]);
+      return groups;
+    }, /* @__PURE__ */ new Map()).values()).filter((group) => group.length > 1).map((group) => ({
+      rowName: group[0].rowName,
+      rowId: group[0].rowId,
+      rowIdNumber: group[0].rowIdNumber,
+      startTime: group[0].startTime,
+      duration: group[0].duration,
+      resourceId: group[0].resourceId,
+      count: group.length,
+      events: group
+    }));
+    const duplicateInputEventIds = Array.from(inputIdCounts.entries()).filter(([, count]) => count > 1).map(([id, count]) => ({ id, count }));
+    return {
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      view: "StaffSchedule",
+      date,
+      eventCount: eventsWithUnavailability.length,
+      uniqueEventCount: uniqueEventsWithUnavailability.length,
+      staffCount: instructors.length,
+      tileCount: tileRows.length,
+      duplicateInputEventIds,
+      stackedGroups,
+      clarkRows: tileRows.filter((row) => row.rowName.toLowerCase().includes("clark, ava")),
+      sampleTiles: tileRows.slice(0, 120)
+    };
+  }, [date, eventsWithUnavailability, instructors, instructorsData, uniqueEventsWithUnavailability]);
+  reactExports.useEffect(() => {
+    try {
+      const existing = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
+      const next = [...Array.isArray(existing) ? existing : [], renderDiagnostics].slice(-40);
+      localStorage.setItem("neo_staff_schedule_render_diag", JSON.stringify(next));
+      window.neoStaffScheduleRenderDiag = next;
+    } catch (error) {
+      console.warn("[StaffScheduleDiag] Failed to store render diagnostic:", error);
+    }
+  }, [renderDiagnostics]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
