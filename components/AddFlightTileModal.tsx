@@ -974,6 +974,15 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const [triggerHovered, setTriggerHovered] = useState(false);
 
+  const getSuggestedCourse = useCallback((): string | null => {
+    const suggestedCode = String(nextLMPEvent?.code || nextLMPEvent?.id || '').trim();
+    if (!suggestedCode) return null;
+    return courseOptions.find(course => (
+      course !== CONTINUATION_COURSE_KEY
+      && getEventsForCourse(course).some(event => event.code === suggestedCode || event.id === suggestedCode)
+    )) || null;
+  }, [courseOptions, getEventsForCourse, nextLMPEvent]);
+
   const selectCourse = useCallback((course: string | null) => {
     setSelectedCourse(current => current === course ? current : course);
   }, []);
@@ -1034,15 +1043,15 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   useEffect(() => {
     if (!open) return;
     if (selectedCourse && courseOptions.includes(selectedCourse)) return;
-    setSelectedCourse(courseOptions[0] || null);
-  }, [courseOptions, open, selectedCourse]);
+    setSelectedCourse(getSuggestedCourse() || courseOptions[0] || null);
+  }, [courseOptions, getSuggestedCourse, open, selectedCourse]);
 
   const handleOpen = () => {
     if (disabled) return;
     updateDropdownPosition();
     setOpen(o => {
       const nextOpen = !o;
-      if (nextOpen && !selectedCourse) selectCourse(courseOptions[0] || null);
+      if (nextOpen && !selectedCourse) selectCourse(getSuggestedCourse() || courseOptions[0] || null);
       return nextOpen;
     });
   };
@@ -1789,6 +1798,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
   const [guidedStep, setGuidedStep] = useState<GuideStep>('startTime');
   const suppressNextCategoryResetRef = useRef(false);
+  const autoSelectedFlightNumberRef = useRef('');
   const aircraftConfigOptions = useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0
       ? aircraftConfigurationDefinitions
@@ -2361,6 +2371,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setPicSelectionValue(value);
     setPicName(option?.name || '');
     setSelectedPicRef(option?.ref || null);
+    if (eventCategory === 'lmp_event' && (flightType === 'Solo' || option?.ref?.personType === 'trainee')) {
+      autoSelectedFlightNumberRef.current = '';
+      setFlightNumber('');
+    }
     setGuidedStep('event');
   };
 
@@ -2369,6 +2383,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setStudentSelectionValue(value);
     setStudentName(option?.name || '');
     setSelectedStudentRef(option?.ref || null);
+    if (eventCategory === 'lmp_event') {
+      autoSelectedFlightNumberRef.current = '';
+      setFlightNumber('');
+    }
     setGuidedStep('instructor');
   };
 
@@ -2566,20 +2584,62 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const nextLMPEvent = useMemo(() => {
     if (eventCategory !== 'lmp_event') return null;
     const name = flightType === 'Solo' ? picName : studentName;
+    const selectedRef = flightType === 'Solo' ? selectedPicRef : selectedStudentRef;
     if (!name || !traineeLMPs) return null;
-    const lmp = traineeLMPs.get(name);
+    const selectedTrainee = findTraineeByRefOrName(name, selectedRef);
+    const candidateNames = Array.from(new Set([
+      name,
+      selectedTrainee?.fullName,
+      selectedTrainee?.name,
+    ].map(value => String(value || '').trim()).filter(Boolean)));
+    const lmp = candidateNames
+      .map(candidateName => traineeLMPs.get(candidateName))
+      .find(items => items?.length);
     if (!lmp?.length) return null;
-    const done = new Set((scores?.get(name) || []).map(s => s.event));
+    const done = new Set(candidateNames.flatMap(candidateName => (
+      (scores?.get(candidateName) || []).map(score => score.event)
+    )));
     const isFlight = (item: SyllabusItemDetail) =>
       item.type === 'Flight' || item.type === 'flight' ||
       (!item.type && !item.id?.includes('FTD') && !item.id?.includes('CPT') && !item.id?.includes('GS'));
+    const selectedId = String((selectedTrainee as any)?.id || selectedRef?.id || '').trim();
+    const selectedIdNumber = String(selectedTrainee?.idNumber || selectedRef?.idNumber || '').trim();
+    const candidateNameKeys = new Set(candidateNames.map(normalisePersonNameForAddTile).filter(Boolean));
+    const scheduledEventsForTrainee = eventsForDate.filter(event => {
+      const hasMatchingRef = (event.personnelRefs || []).some(ref => (
+        ref.personType === 'trainee'
+        && (
+          (selectedId && String(ref.id || '').trim() === selectedId)
+          || (selectedIdNumber && String(ref.idNumber || '').trim() === selectedIdNumber)
+        )
+      ));
+      if (hasMatchingRef) return true;
+
+      const eventNameKeys = [
+        event.student,
+        event.pilot,
+        ...(event.attendees || []),
+      ].map(normalisePersonNameForAddTile).filter(Boolean);
+      return eventNameKeys.some(eventNameKey => candidateNameKeys.has(eventNameKey));
+    });
+    const scheduled = new Set(scheduledEventsForTrainee.flatMap(event => [
+      event.flightNumber,
+      (event as any).eventCode,
+    ].map(value => String(value || '').trim()).filter(Boolean)));
+    const isDone = (item: SyllabusItemDetail) => Boolean(done.has(item.id) || done.has(item.code));
+    const isScheduled = (item: SyllabusItemDetail) => Boolean(scheduled.has(item.id) || scheduled.has(item.code));
+    const prerequisitesMet = (item: SyllabusItemDetail) => (item.prerequisites || []).every(prerequisite => done.has(prerequisite));
+
     for (const item of lmp) {
       if (!isFlight(item) || item.isRemedial) continue;
-      if (done.has(item.id) || done.has(item.code)) continue;
-      if (item.prerequisites.every(p => done.has(p))) return item;
+      if (isDone(item) || isScheduled(item)) continue;
+      if (prerequisitesMet(item)) return item;
     }
-    return lmp.find(item => isFlight(item) && !done.has(item.id) && !done.has(item.code)) || null;
-  }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
+    return lmp.find(item => isFlight(item) && !isDone(item) && !isScheduled(item))
+      || lmp.find(item => isFlight(item) && !isDone(item) && prerequisitesMet(item))
+      || lmp.find(item => isFlight(item) && !isDone(item))
+      || null;
+  }, [eventCategory, eventsForDate, findTraineeByRefOrName, flightType, normalisePersonNameForAddTile, picName, scores, selectedPicRef, selectedStudentRef, studentName, traineeLMPs]);
 
   // ── Auto-fill callsign from PIC profile + formation callsigns for same unit ──────────
   // Legacy numeric callsigns no longer infer unit prefixes. Use configured callsign strings instead.
@@ -2733,7 +2793,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [picName, studentName, flightNumber, traineeLMPs, isSingleSeatAircraft]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const resolveLmpDurationForEvent = (code: string, fallback?: number): number | undefined => {
+  const resolveLmpDurationForEvent = useCallback((code: string, fallback?: number): number | undefined => {
     if (!code) return undefined;
 
     const selectedName = flightType === 'Solo' ? picName : studentName;
@@ -2747,9 +2807,24 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       .find(value => Number.isFinite(value) && value > 0);
 
     return resolved;
-  };
+  }, [flightType, picName, studentName, syllabusDetails, traineeLMPs]);
+
+  useEffect(() => {
+    if (isEditingExistingEvent || eventCategory !== 'lmp_event') return;
+    const suggestedCode = String(nextLMPEvent?.code || nextLMPEvent?.id || '').trim();
+    if (!suggestedCode) return;
+    if (flightNumber && flightNumber !== autoSelectedFlightNumberRef.current) return;
+    if (flightNumber === suggestedCode) return;
+
+    autoSelectedFlightNumberRef.current = suggestedCode;
+    setFlightNumber(suggestedCode);
+    const lmpDuration = resolveLmpDurationForEvent(suggestedCode, nextLMPEvent?.duration || nextLMPEvent?.flightOrSimHours);
+    if (lmpDuration) setDuration(lmpDuration);
+    setGuidedStep('area');
+  }, [eventCategory, flightNumber, isEditingExistingEvent, nextLMPEvent, resolveLmpDurationForEvent]);
 
   const handleFlightNumberChange = (code: string, durationHrs?: number) => {
+    autoSelectedFlightNumberRef.current = '';
     const selectedProfile = findContinuationCurrencyProfile(code);
     const selectedProfileIsFormation = continuationProfileIsFormation(selectedProfile);
     if (selectedProfile && eventCategory !== 'sct') {

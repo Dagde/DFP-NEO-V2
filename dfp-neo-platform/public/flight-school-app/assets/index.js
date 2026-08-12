@@ -33441,6 +33441,7 @@ const AddFlightTileModal = ({
   const [deploymentAircraftCount, setDeploymentAircraftCount] = reactExports.useState(1);
   const [guidedStep, setGuidedStep] = reactExports.useState("startTime");
   const suppressNextCategoryResetRef = reactExports.useRef(false);
+  const autoSelectedFlightNumberRef = reactExports.useRef("");
   const aircraftConfigOptions = reactExports.useMemo(() => {
     const definitions = aircraftConfigurationDefinitions.length > 0 ? aircraftConfigurationDefinitions : [BASE_AIRCRAFT_CONFIG];
     return definitions.some((definition) => definition.id === BASE_AIRCRAFT_CONFIG.id) ? definitions : [BASE_AIRCRAFT_CONFIG, ...definitions];
@@ -33870,6 +33871,10 @@ const AddFlightTileModal = ({
     setPicSelectionValue(value);
     setPicName(option?.name || "");
     setSelectedPicRef(option?.ref || null);
+    if (eventCategory === "lmp_event" && (flightType === "Solo" || option?.ref?.personType === "trainee")) {
+      autoSelectedFlightNumberRef.current = "";
+      setFlightNumber("");
+    }
     setGuidedStep("event");
   };
   const handleStudentSelectionChange = (value) => {
@@ -33877,6 +33882,10 @@ const AddFlightTileModal = ({
     setStudentSelectionValue(value);
     setStudentName(option?.name || "");
     setSelectedStudentRef(option?.ref || null);
+    if (eventCategory === "lmp_event") {
+      autoSelectedFlightNumberRef.current = "";
+      setFlightNumber("");
+    }
     setGuidedStep("instructor");
   };
   const buildSavedPersonnelRefs = (crewMember, savedFlightType, index) => {
@@ -34013,21 +34022,48 @@ const AddFlightTileModal = ({
       }).filter((option) => Boolean(option.value))
     })).filter((group) => group.options.length > 0);
   }, [courseOptions, eventCategory, getContinuationDisplayLabel, getCourseDisplayLabel, sctEvents, sctShortLabel, syllabusByCourse]);
-  reactExports.useMemo(() => {
+  const nextLMPEvent = reactExports.useMemo(() => {
     if (eventCategory !== "lmp_event") return null;
     const name = flightType === "Solo" ? picName : studentName;
+    const selectedRef = flightType === "Solo" ? selectedPicRef : selectedStudentRef;
     if (!name || !traineeLMPs) return null;
-    const lmp = traineeLMPs.get(name);
+    const selectedTrainee = findTraineeByRefOrName(name, selectedRef);
+    const candidateNames = Array.from(new Set([
+      name,
+      selectedTrainee?.fullName,
+      selectedTrainee?.name
+    ].map((value) => String(value || "").trim()).filter(Boolean)));
+    const lmp = candidateNames.map((candidateName) => traineeLMPs.get(candidateName)).find((items) => items?.length);
     if (!lmp?.length) return null;
-    const done = new Set((scores?.get(name) || []).map((s) => s.event));
+    const done = new Set(candidateNames.flatMap((candidateName) => (scores?.get(candidateName) || []).map((score) => score.event)));
     const isFlight = (item) => item.type === "Flight" || item.type === "flight" || !item.type && !item.id?.includes("FTD") && !item.id?.includes("CPT") && !item.id?.includes("GS");
+    const selectedId = String(selectedTrainee?.id || selectedRef?.id || "").trim();
+    const selectedIdNumber = String(selectedTrainee?.idNumber || selectedRef?.idNumber || "").trim();
+    const candidateNameKeys = new Set(candidateNames.map(normalisePersonNameForAddTile).filter(Boolean));
+    const scheduledEventsForTrainee = eventsForDate.filter((event) => {
+      const hasMatchingRef = (event.personnelRefs || []).some((ref) => ref.personType === "trainee" && (selectedId && String(ref.id || "").trim() === selectedId || selectedIdNumber && String(ref.idNumber || "").trim() === selectedIdNumber));
+      if (hasMatchingRef) return true;
+      const eventNameKeys = [
+        event.student,
+        event.pilot,
+        ...event.attendees || []
+      ].map(normalisePersonNameForAddTile).filter(Boolean);
+      return eventNameKeys.some((eventNameKey) => candidateNameKeys.has(eventNameKey));
+    });
+    const scheduled = new Set(scheduledEventsForTrainee.flatMap((event) => [
+      event.flightNumber,
+      event.eventCode
+    ].map((value) => String(value || "").trim()).filter(Boolean)));
+    const isDone = (item) => Boolean(done.has(item.id) || done.has(item.code));
+    const isScheduled = (item) => Boolean(scheduled.has(item.id) || scheduled.has(item.code));
+    const prerequisitesMet = (item) => (item.prerequisites || []).every((prerequisite) => done.has(prerequisite));
     for (const item of lmp) {
       if (!isFlight(item) || item.isRemedial) continue;
-      if (done.has(item.id) || done.has(item.code)) continue;
-      if (item.prerequisites.every((p) => done.has(p))) return item;
+      if (isDone(item) || isScheduled(item)) continue;
+      if (prerequisitesMet(item)) return item;
     }
-    return lmp.find((item) => isFlight(item) && !done.has(item.id) && !done.has(item.code)) || null;
-  }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
+    return lmp.find((item) => isFlight(item) && !isDone(item) && !isScheduled(item)) || lmp.find((item) => isFlight(item) && !isDone(item) && prerequisitesMet(item)) || lmp.find((item) => isFlight(item) && !isDone(item)) || null;
+  }, [eventCategory, eventsForDate, findTraineeByRefOrName, flightType, normalisePersonNameForAddTile, picName, scores, selectedPicRef, selectedStudentRef, studentName, traineeLMPs]);
   const buildCallsignFromNumber = (_num) => {
     return "";
   };
@@ -34171,7 +34207,7 @@ const AddFlightTileModal = ({
     const item = lmp.find((i) => i.id === flightNumber || i.code === flightNumber);
     if (!isSingleSeatAircraft && item?.sortieType) setFlightType(item.sortieType);
   }, [picName, studentName, flightNumber, traineeLMPs, isSingleSeatAircraft]);
-  const resolveLmpDurationForEvent = (code, fallback) => {
+  const resolveLmpDurationForEvent = reactExports.useCallback((code, fallback) => {
     if (!code) return void 0;
     const selectedName = flightType === "Solo" ? picName : studentName;
     const matchesCode = (item) => item.id === code || item.code === code;
@@ -34180,8 +34216,21 @@ const AddFlightTileModal = ({
     const durationSource = selectedLmpItem || masterSyllabusItem;
     const resolved = [durationSource?.duration, durationSource?.flightOrSimHours, fallback].map((value) => Number(value)).find((value) => Number.isFinite(value) && value > 0);
     return resolved;
-  };
+  }, [flightType, picName, studentName, syllabusDetails, traineeLMPs]);
+  reactExports.useEffect(() => {
+    if (isEditingExistingEvent || eventCategory !== "lmp_event") return;
+    const suggestedCode = String(nextLMPEvent?.code || nextLMPEvent?.id || "").trim();
+    if (!suggestedCode) return;
+    if (flightNumber && flightNumber !== autoSelectedFlightNumberRef.current) return;
+    if (flightNumber === suggestedCode) return;
+    autoSelectedFlightNumberRef.current = suggestedCode;
+    setFlightNumber(suggestedCode);
+    const lmpDuration = resolveLmpDurationForEvent(suggestedCode, nextLMPEvent?.duration || nextLMPEvent?.flightOrSimHours);
+    if (lmpDuration) setDuration(lmpDuration);
+    setGuidedStep("area");
+  }, [eventCategory, flightNumber, isEditingExistingEvent, nextLMPEvent, resolveLmpDurationForEvent]);
   const handleFlightNumberChange = (code, durationHrs) => {
+    autoSelectedFlightNumberRef.current = "";
     const selectedProfile = findContinuationCurrencyProfile(code);
     const selectedProfileIsFormation = continuationProfileIsFormation(selectedProfile);
     if (selectedProfile && eventCategory !== "sct") {
