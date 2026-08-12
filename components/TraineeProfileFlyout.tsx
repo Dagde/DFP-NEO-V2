@@ -1092,7 +1092,26 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [pendingPhotoDataUrl, setPendingPhotoDataUrl] = useState<string | null>(null);
     const [pendingPhotoRemoved, setPendingPhotoRemoved] = useState(false);
     const [photoError, setPhotoError] = useState<string | null>(null);
+    const [photoUploading, setPhotoUploading] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
+
+    const savePhotoImmediately = async (dataUrl: string) => {
+        const updatedTrainee: Trainee = {
+            ...trainee,
+            photoUrl: dataUrl,
+        };
+        setPhotoUploading(true);
+        try {
+            await Promise.resolve(onUpdateTrainee(updatedTrainee));
+            setPhotoUrl(dataUrl);
+            setPendingPhotoDataUrl(null);
+            setPendingPhotoRemoved(false);
+        } catch {
+            setPhotoError('Photo upload failed. Please try again.');
+        } finally {
+            setPhotoUploading(false);
+        }
+    };
 
     const assignableMasterLmps = useMemo(() => {
         const courseCodes = new Set<string>();
@@ -1564,8 +1583,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
             });
-            setPendingPhotoDataUrl(dataUrl);
-            setPendingPhotoRemoved(false);
+            if (isEditing) {
+                setPendingPhotoDataUrl(dataUrl);
+                setPendingPhotoRemoved(false);
+            } else {
+                await savePhotoImmediately(dataUrl);
+            }
         } catch (error: any) {
             setPhotoError(`Could not read image: ${error.message}`);
         } finally {
@@ -2612,17 +2635,17 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                     {/* ── SECTION 1: MAIN PROFILE CARD ── */}
                     <div className={card3d + ` p-3 ${activeTab === 'lmp' || activeTab === 'pt051' ? 'hidden' : ''}`} style={card3dStyle}>
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePhotoSelect}
+                      />
                       {isEditing ? (
                         <div className="space-y-4">
                           <div className="flex items-start justify-between gap-4 border-b border-gray-700/70 pb-2">
                             <div className="flex items-start gap-4">
-                              <input
-                                ref={photoInputRef}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handlePhotoSelect}
-                              />
                               <div className="flex-shrink-0">
                                 <div
                                   className="relative w-20 h-24 bg-gray-700 rounded border border-gray-500 flex items-center justify-center overflow-hidden cursor-pointer group"
@@ -2794,24 +2817,54 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         </div>
                       ) : (
                         /* VIEW MODE: avatar + data grid + permissions panel */
-                        <div className="flex gap-4">
-                          {/* Profile photo */}
-                          <div className="flex-shrink-0">
-                            <div className="w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden">
-                              {photoUrl ? (
-                                <img src={photoUrl} alt={trainee.name} className="w-full h-full object-cover object-top" />
-                              ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center">
-                                  <svg className="w-7 h-7 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                                  </svg>
-                                  <span className="text-[7px] text-gray-300 leading-tight break-words">
-                                    Click to add picture<br />or drag and drop
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+	                        <div className="flex gap-4">
+	                          {/* Profile photo */}
+	                          <div className="flex-shrink-0">
+	                            <div
+                                  className="relative w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden cursor-pointer group"
+                                  onClick={() => photoInputRef.current?.click()}
+                                  onDragOver={event => {
+                                    event.preventDefault();
+                                    event.dataTransfer.dropEffect = 'copy';
+                                  }}
+                                  onDrop={handlePhotoDrop}
+                                  title="Click to add profile photo"
+                                >
+	                              {photoUrl ? (
+	                                <>
+                                      <img src={photoUrl} alt={trainee.name} className="w-full h-full object-cover object-top" />
+                                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span className="text-[9px] text-white font-medium">Change</span>
+                                      </div>
+                                    </>
+	                              ) : (
+	                                <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-center">
+	                                  <svg className="w-7 h-7 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+	                                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+	                                  </svg>
+	                                  <span className="text-[7px] text-gray-300 leading-tight break-words">
+	                                    Click to add picture<br />or drag and drop
+	                                  </span>
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        <span className="text-[9px] text-white font-medium">Upload</span>
+                                      </div>
+	                                </div>
+	                              )}
+	                            </div>
+                                {photoUploading && (
+                                  <div className="mt-1 w-20 text-[8px] text-sky-400 text-center">Saving…</div>
+                                )}
+                                {photoError && (
+                                  <div className="mt-1 w-20 text-[8px] text-red-400 leading-tight break-words">{photoError}</div>
+                                )}
+	                          </div>
 
                           {/* Name + data grid */}
                           <div className="flex-1 min-w-0">
