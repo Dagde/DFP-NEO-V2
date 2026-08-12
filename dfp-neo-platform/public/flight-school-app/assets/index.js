@@ -18262,6 +18262,14 @@ const getExactNameDuplicateCount = (person, allPeople = []) => {
     (candidate) => normalisePersonnelNameForScheduleMatch(getPersonScheduleName(candidate)) === personName
   ).length;
 };
+const isFirstExactNameDuplicateRecord = (person, allPeople = []) => {
+  const personName = normalisePersonnelNameForScheduleMatch(getPersonScheduleName(person));
+  if (!personName) return false;
+  const firstMatch = allPeople.find(
+    (candidate) => normalisePersonnelNameForScheduleMatch(getPersonScheduleName(candidate)) === personName
+  );
+  return Boolean(firstMatch && samePersonRecord(firstMatch, person));
+};
 const scheduleEventIncludesPersonRecord = (event, person, options = {}) => {
   const personName = getPersonScheduleName(person);
   if (!personName) return false;
@@ -18284,7 +18292,9 @@ const scheduleEventIncludesPersonRecord = (event, person, options = {}) => {
     if (matchingNameRefs.length > 0) return false;
   }
   const duplicateCount = getExactNameDuplicateCount(person, options.allPeople || []);
-  if (duplicateCount > 1) return false;
+  if (duplicateCount > 1) {
+    return isFirstExactNameDuplicateRecord(person, options.allPeople || []) ? scheduleEventIncludesPerson(event, personName) : false;
+  }
   return scheduleEventIncludesPerson(event, personName);
 };
 const PIXELS_PER_HOUR$5 = 200;

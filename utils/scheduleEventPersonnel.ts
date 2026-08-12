@@ -72,6 +72,18 @@ const getExactNameDuplicateCount = (
     ).length;
 };
 
+const isFirstExactNameDuplicateRecord = (
+    person: PersonIdentityRecord,
+    allPeople: PersonIdentityRecord[] = [],
+): boolean => {
+    const personName = normalisePersonnelNameForScheduleMatch(getPersonScheduleName(person));
+    if (!personName) return false;
+    const firstMatch = allPeople.find(candidate =>
+        normalisePersonnelNameForScheduleMatch(getPersonScheduleName(candidate)) === personName
+    );
+    return Boolean(firstMatch && samePersonRecord(firstMatch, person));
+};
+
 export const scheduleEventIncludesPersonRecord = (
     event: ScheduleEvent,
     person: PersonIdentityRecord,
@@ -109,6 +121,10 @@ export const scheduleEventIncludesPersonRecord = (
     }
 
     const duplicateCount = getExactNameDuplicateCount(person, options.allPeople || []);
-    if (duplicateCount > 1) return false;
+    if (duplicateCount > 1) {
+        return isFirstExactNameDuplicateRecord(person, options.allPeople || [])
+            ? scheduleEventIncludesPerson(event, personName)
+            : false;
+    }
     return scheduleEventIncludesPerson(event, personName);
 };
