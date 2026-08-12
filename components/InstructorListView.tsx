@@ -156,7 +156,7 @@ interface InstructorListViewProps {
   onAddTrainingReport?: (staff: Instructor) => void;
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
-  onUpdateInstructor: (data: Instructor) => void;
+  onUpdateInstructor: (data: Instructor) => void | Promise<void>;
   onNavigateToCurrency: (person: Instructor) => void;
   onBulkUpdateInstructors: (instructors: Instructor[]) => void;
   onArchiveInstructor: (id: string | number | null) => Promise<void> | void;

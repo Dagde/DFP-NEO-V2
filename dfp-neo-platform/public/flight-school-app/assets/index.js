@@ -53577,7 +53577,13 @@ const InstructorProfileFlyout = ({
       const changesStr = changes.length > 0 ? changes.join(", ") : "No field changes";
       logAudit({ action: "Edit", description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: "Staff" });
     }
-    onUpdateInstructor(updatedInstructor);
+    try {
+      await Promise.resolve(onUpdateInstructor(updatedInstructor));
+    } catch (error) {
+      console.error("Failed to save staff profile:", error);
+      await showDarkAlert("The staff record could not be saved. Please check the Personnel ID and try again.", "Save Failed", "error");
+      return;
+    }
     setIsEditing(false);
     if (isCreating) onClose();
   };
@@ -116716,13 +116722,13 @@ ${error instanceof Error ? error.message : String(error)}`,
       setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
       return;
     }
-    setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
     const dbId = data.id;
     logRoutineAppDebug("📝 [APP] DB ID:", dbId);
     logRoutineAppDebug("📝 [APP] Is DB trainee?", dbId && data._dataSource === "database");
     if (dbId && data._dataSource === "database") {
       try {
         const patchBody = {
+          idNumber: data.idNumber,
           name: data.name,
           fullName: data.fullName,
           rank: data.rank,
@@ -116752,6 +116758,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
+            idNumber: data.idNumber,
             name: data.name,
             fullName: data.fullName,
             rank: data.rank,
@@ -116781,16 +116788,26 @@ ${error instanceof Error ? error.message : String(error)}`,
           logRoutineAppDebug(`✅ DB trainee updated: ${data.name}`);
           const responseData = await response.json();
           logRoutineAppDebug("📝 [APP] Response data:", responseData);
+          const savedTrainee = {
+            ...responseData?.trainee || data,
+            _dataSource: "database"
+          };
+          const savedDbId = String(savedTrainee.id || dbId || "").trim();
+          const savedIdNumber = Number(savedTrainee.idNumber);
+          setTraineesData((prev) => prev.map((t) => String(t.id || "").trim() === savedDbId || Number(t.idNumber) === savedIdNumber ? savedTrainee : t));
         } else {
           const err = await response.text();
           console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
           console.error("❌ Response status:", response.status);
+          throw new Error(err || `Failed to update trainee (${response.status})`);
         }
       } catch (err) {
         console.error(`❌ Error updating DB trainee ${data.name}:`, err);
+        throw err;
       }
     } else {
       logRoutineAppDebug("⚠️ [APP] Skipping DB update - not a DB trainee or no ID");
+      setTraineesData((prev) => prev.map((t) => t.idNumber === data.idNumber ? data : t));
     }
   }, [activeUnitCode, getMasterLmpAccessContextForUnit, platformConfig]);
   const buildRemedialPackageLmp = (originalTraineeLMP, eventToRemediate, newEvents) => {
@@ -123298,13 +123315,17 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       return nextInstructor;
     };
     const normalisedInstructors = updatedInstructors.map(normaliseImportedInstructor);
-    const updatedMap = new Map(normalisedInstructors.map((i) => [i.idNumber, i]));
-    setInstructorsData((prevInstructors) => {
-      const existingIds = new Set(prevInstructors.map((i) => i.idNumber));
-      const updatedExisting = prevInstructors.map((i) => updatedMap.get(i.idNumber) || i);
-      const newToAdd = normalisedInstructors.filter((ui) => !existingIds.has(ui.idNumber));
-      return [...updatedExisting, ...newToAdd];
+    const uploadIdCounts = /* @__PURE__ */ new Map();
+    normalisedInstructors.forEach((instructor) => {
+      const number = Number(instructor.idNumber);
+      if (Number.isInteger(number) && number > 0) {
+        uploadIdCounts.set(number, (uploadIdCounts.get(number) || 0) + 1);
+      }
     });
+    const duplicateUploadIds = Array.from(uploadIdCounts.entries()).filter(([, count]) => count > 1).map(([id]) => id);
+    if (duplicateUploadIds.length > 0) {
+      throw new Error(`Duplicate Personnel ID in staff upload: ${duplicateUploadIds.join(", ")}`);
+    }
     const persistedInstructors = [];
     for (const importedInstructor of normalisedInstructors) {
       const existingInstructor = allInstructorsDataRef.current.find((i) => i.idNumber === importedInstructor.idNumber);
@@ -127199,6 +127220,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 unavailabilityLength: data.unavailability?.length || 0
               });
               const dbId = data.id;
+              let savedInstructor = null;
               try {
                 if (dbId) {
                   const response = await fetch(`/api/personnel/${dbId}`, {
@@ -127215,6 +127237,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   if (response.ok) {
                     const responseData = await response.json();
                     logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
+                    savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
                   }
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -127231,24 +127254,25 @@ ${error instanceof Error ? error.message : String(error)}`,
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(`Failed to create: ${response.status} ${errorData.error || "Unknown error"}`);
                   }
+                  const responseData = await response.json().catch(() => ({}));
+                  savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
                 }
               } catch (error) {
                 console.error("❌ Error saving instructor to database:", error);
+                throw error;
               }
+              const nextInstructor = savedInstructor || data;
+              const nextDbId = String(nextInstructor.id || dbId || "").trim();
+              const nextIdNumber = Number(nextInstructor.idNumber);
               setInstructorsData((prev) => {
-                if (dbId) {
-                  const exists = prev.some((i) => i.id === dbId);
+                if (nextDbId) {
+                  const exists = prev.some((i) => String(i.id || "").trim() === nextDbId);
                   if (exists) {
-                    return prev.map((i) => i.id === dbId ? data : i);
+                    return prev.map((i) => String(i.id || "").trim() === nextDbId ? nextInstructor : i);
                   }
-                  return [...prev, data];
-                } else {
-                  const exists = prev.some((i) => i.name === data.name);
-                  if (exists) {
-                    return prev.map((i) => i.name === data.name ? data : i);
-                  }
-                  return [...prev, data];
                 }
+                const withoutSameIdNumber = prev.filter((i) => Number(i.idNumber) !== nextIdNumber);
+                return [...withoutSameIdNumber, nextInstructor];
               });
             },
             onNavigateToCurrency: handleNavigateToCurrency,
@@ -127321,6 +127345,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                 unavailabilityLength: data.unavailability?.length || 0
               });
               const dbId = data.id;
+              let savedInstructor = null;
               try {
                 if (dbId) {
                   const response = await fetch(`/api/personnel/${dbId}`, {
@@ -127337,6 +127362,7 @@ ${error instanceof Error ? error.message : String(error)}`,
                   if (response.ok) {
                     const responseData = await response.json();
                     logRoutineAppDebug("📝 [APP] PATCH response data:", responseData);
+                    savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.updatedPersonnel || data);
                   }
                   if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
@@ -127353,24 +127379,25 @@ ${error instanceof Error ? error.message : String(error)}`,
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(`Failed to create: ${response.status} ${errorData.error || "Unknown error"}`);
                   }
+                  const responseData = await response.json().catch(() => ({}));
+                  savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
                 }
               } catch (error) {
                 console.error("❌ Error saving instructor to database:", error);
+                throw error;
               }
+              const nextInstructor = savedInstructor || data;
+              const nextDbId = String(nextInstructor.id || dbId || "").trim();
+              const nextIdNumber = Number(nextInstructor.idNumber);
               setInstructorsData((prev) => {
-                if (dbId) {
-                  const exists = prev.some((i) => i.id === dbId);
+                if (nextDbId) {
+                  const exists = prev.some((i) => String(i.id || "").trim() === nextDbId);
                   if (exists) {
-                    return prev.map((i) => i.id === dbId ? data : i);
+                    return prev.map((i) => String(i.id || "").trim() === nextDbId ? nextInstructor : i);
                   }
-                  return [...prev, data];
-                } else {
-                  const exists = prev.some((i) => i.name === data.name);
-                  if (exists) {
-                    return prev.map((i) => i.name === data.name ? data : i);
-                  }
-                  return [...prev, data];
                 }
+                const withoutSameIdNumber = prev.filter((i) => Number(i.idNumber) !== nextIdNumber);
+                return [...withoutSameIdNumber, nextInstructor];
               });
             },
             onNavigateToCurrency: handleNavigateToCurrency,

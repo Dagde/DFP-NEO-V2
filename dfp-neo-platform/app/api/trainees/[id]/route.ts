@@ -5,6 +5,53 @@ import { requireCapability } from '@/lib/permissions';
 
 const prisma = new PrismaClient();
 
+const isUsablePersonnelIdNumber = (value: any): boolean => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0;
+};
+
+const findPersonnelIdNumberConflict = async (idNumber: number, options: { excludePersonnelId?: string; excludeTraineeId?: string } = {}) => {
+  const personnelWhere: any = { idNumber };
+  if (options.excludePersonnelId) personnelWhere.id = { not: options.excludePersonnelId };
+  const traineeWhere: any = { idNumber };
+  if (options.excludeTraineeId) traineeWhere.id = { not: options.excludeTraineeId };
+  const [personnel, trainee] = await Promise.all([
+    prisma.personnel.findFirst({
+      where: personnelWhere,
+      select: { id: true, idNumber: true, name: true, rank: true, role: true, unit: true, isActive: true },
+    }),
+    prisma.trainee.findFirst({
+      where: traineeWhere,
+      select: { id: true, idNumber: true, name: true, fullName: true, rank: true, course: true, unit: true, isActive: true },
+    }),
+  ]);
+  if (personnel) return { type: 'staff', record: personnel };
+  if (trainee) return { type: 'trainee', record: trainee };
+  return null;
+};
+
+const personnelIdConflictResponse = (conflict: any) => {
+  const record = conflict?.record || {};
+  const label = conflict?.type === 'trainee' ? 'trainee' : 'staff/personnel';
+  return NextResponse.json(
+    {
+      error: `Personnel ID is already assigned to an existing ${label} record`,
+      conflict: {
+        type: conflict?.type || 'unknown',
+        id: record.id || null,
+        idNumber: record.idNumber || null,
+        name: record.fullName || record.name || null,
+        rank: record.rank || null,
+        role: record.role || null,
+        course: record.course || null,
+        unit: record.unit || null,
+        isActive: record.isActive ?? null,
+      },
+    },
+    { status: 409 }
+  );
+};
+
 // GET /api/trainees/:id
 export async function GET(
   request: NextRequest,
@@ -49,12 +96,19 @@ export async function PATCH(
     const body = await request.json();
 
     console.log(`[Trainee PATCH/:id] Updating trainee ${id}`, Object.keys(body));
+    const existingTrainee = await prisma.trainee.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existingTrainee) {
+      return NextResponse.json({ error: 'Trainee not found' }, { status: 404 });
+    }
 
     // Build update payload — only include fields that were provided
     const updateData: any = {};
 
     const scalarFields = [
-      'name', 'fullName', 'rank', 'course', 'lmpType', 'academicLmpType',
+      'idNumber', 'name', 'fullName', 'rank', 'course', 'lmpType', 'academicLmpType',
       'unit', 'flight', 'location', 'service', 'seatConfig', 'isPaused',
       'traineeCallsign', 'primaryInstructor', 'secondaryInstructor',
       'phoneNumber', 'email', 'isActive', 'lastEventDate', 'lastFlightDate',
@@ -70,6 +124,16 @@ export async function PATCH(
     if ('currencyStatus'   in body) updateData.currencyStatus   = body.currencyStatus;
     if ('unavailability'   in body) updateData.unavailability   = body.unavailability;
     if ('permissions'      in body) updateData.permissions      = body.permissions;
+    if ('idNumber' in updateData) {
+      if (!isUsablePersonnelIdNumber(updateData.idNumber)) {
+        return NextResponse.json({ error: 'Personnel ID is required' }, { status: 400 });
+      }
+      updateData.idNumber = Number(updateData.idNumber);
+      const idConflict = await findPersonnelIdNumberConflict(updateData.idNumber, { excludeTraineeId: existingTrainee.id });
+      if (idConflict) {
+        return personnelIdConflictResponse(idConflict);
+      }
+    }
 
     const trainee = await prisma.trainee.update({
       where: { id },

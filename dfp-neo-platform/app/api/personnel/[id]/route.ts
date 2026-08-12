@@ -47,6 +47,48 @@ const isUsablePersonnelIdNumber = (value: any): boolean => {
   return Number.isInteger(number) && number > 0;
 };
 
+const findPersonnelIdNumberConflict = async (idNumber: number, options: { excludePersonnelId?: string; excludeTraineeId?: string } = {}) => {
+  const personnelWhere: any = { idNumber };
+  if (options.excludePersonnelId) personnelWhere.id = { not: options.excludePersonnelId };
+  const traineeWhere: any = { idNumber };
+  if (options.excludeTraineeId) traineeWhere.id = { not: options.excludeTraineeId };
+  const [personnel, trainee] = await Promise.all([
+    prisma.personnel.findFirst({
+      where: personnelWhere,
+      select: { id: true, idNumber: true, name: true, rank: true, role: true, unit: true, isActive: true },
+    }),
+    prisma.trainee.findFirst({
+      where: traineeWhere,
+      select: { id: true, idNumber: true, name: true, fullName: true, rank: true, course: true, unit: true, isActive: true },
+    }),
+  ]);
+  if (personnel) return { type: 'staff', record: personnel };
+  if (trainee) return { type: 'trainee', record: trainee };
+  return null;
+};
+
+const personnelIdConflictResponse = (conflict: any) => {
+  const record = conflict?.record || {};
+  const label = conflict?.type === 'trainee' ? 'trainee' : 'staff/personnel';
+  return NextResponse.json(
+    {
+      error: `Personnel ID is already assigned to an existing ${label} record`,
+      conflict: {
+        type: conflict?.type || 'unknown',
+        id: record.id || null,
+        idNumber: record.idNumber || null,
+        name: record.fullName || record.name || null,
+        rank: record.rank || null,
+        role: record.role || null,
+        course: record.course || null,
+        unit: record.unit || null,
+        isActive: record.isActive ?? null,
+      },
+    },
+    { status: 409 }
+  );
+};
+
 const PERSONNEL_UPDATE_FIELDS = [
   'name',
   'rank',
@@ -222,7 +264,7 @@ export async function PATCH(
 
     const existingPersonnel = await prisma.personnel.findUnique({
       where: { id },
-      select: { preferences: true, qualifications: true },
+      select: { id: true, preferences: true, qualifications: true },
     });
 
     if (!existingPersonnel) {
@@ -244,6 +286,10 @@ export async function PATCH(
         );
       }
       data.idNumber = Number(data.idNumber);
+      const idConflict = await findPersonnelIdNumberConflict(data.idNumber, { excludePersonnelId: existingPersonnel.id });
+      if (idConflict) {
+        return personnelIdConflictResponse(idConflict);
+      }
     }
 
     if (body.callsign !== undefined || body.secondaryCallsign !== undefined || body.crew !== undefined || body.preferences !== undefined) {

@@ -634,6 +634,55 @@ function isUsablePersonnelIdNumber(value) {
   return Number.isInteger(number) && number > 0;
 }
 
+async function findPersonnelIdNumberConflict(db, idNumber, options = {}) {
+  const number = Number(idNumber);
+  if (!isUsablePersonnelIdNumber(number)) return null;
+  const personnelWhere = { idNumber: number };
+  if (options.excludePersonnelId) {
+    personnelWhere.id = { not: options.excludePersonnelId };
+  }
+  const traineeWhere = { idNumber: number };
+  if (options.excludeTraineeId) {
+    traineeWhere.id = { not: options.excludeTraineeId };
+  }
+  const [personnel, trainee] = await Promise.all([
+    db.personnel.findFirst({
+      where: personnelWhere,
+      select: { id: true, idNumber: true, name: true, rank: true, role: true, unit: true, isActive: true },
+    }),
+    db.trainee.findFirst({
+      where: traineeWhere,
+      select: { id: true, idNumber: true, name: true, fullName: true, rank: true, course: true, unit: true, isActive: true },
+    }),
+  ]);
+  if (personnel) {
+    return { type: 'staff', record: personnel };
+  }
+  if (trainee) {
+    return { type: 'trainee', record: trainee };
+  }
+  return null;
+}
+
+function sendPersonnelIdConflict(res, conflict) {
+  const record = conflict?.record || {};
+  const label = conflict?.type === 'trainee' ? 'trainee' : 'staff/personnel';
+  return res.status(409).json({
+    error: `Personnel ID is already assigned to an existing ${label} record`,
+    conflict: {
+      type: conflict?.type || 'unknown',
+      id: record.id || null,
+      idNumber: record.idNumber || null,
+      name: record.fullName || record.name || null,
+      rank: record.rank || null,
+      role: record.role || null,
+      course: record.course || null,
+      unit: record.unit || null,
+      isActive: record.isActive ?? null,
+    },
+  });
+}
+
 function logApiTiming(label, startedAt, details = {}) {
   const elapsedMs = Date.now() - startedAt;
   if (elapsedMs > 1000) {
@@ -4145,6 +4194,10 @@ app.post('/api/personnel', async (req, res) => {
       return res.status(400).json({ error: 'Personnel ID is required' });
     }
     const idNumber = Number(body.idNumber);
+    const idConflict = await findPersonnelIdNumberConflict(db, idNumber);
+    if (idConflict) {
+      return sendPersonnelIdConflict(res, idConflict);
+    }
 
     // Auto-link to existing User by Personnel ID
     let linkedUserId = null;
@@ -4250,6 +4303,10 @@ app.patch('/api/personnel/:id', async (req, res) => {
         return res.status(400).json({ error: 'Personnel ID is required' });
       }
       sanitizedUpdates.idNumber = Number(sanitizedUpdates.idNumber);
+      const idConflict = await findPersonnelIdNumberConflict(db, sanitizedUpdates.idNumber, { excludePersonnelId: existing.id });
+      if (idConflict) {
+        return sendPersonnelIdConflict(res, idConflict);
+      }
     }
 
     if ('crew' in updates) {
@@ -6094,40 +6151,9 @@ app.post('/api/trainees', async (req, res) => {
       return res.status(400).json({ error: 'Personnel ID is required' });
     }
     const traineeIdNumber = Number(idNumber);
-
-    // Check if trainee with this idNumber already exists
-    const existing = await db.trainee.findFirst({ where: { idNumber: traineeIdNumber } });
-    if (existing) {
-      // Update existing record instead
-      const updated = await db.trainee.update({
-        where: { id: existing.id },
-        data: {
-          name: name || existing.name,
-          fullName: fullName || name,
-          rank: rank || existing.rank,
-          role: role !== undefined ? role : existing.role,
-          course: course || existing.course,
-          lmpType: lmpType || existing.lmpType,
-          unit: unit !== undefined ? unit : existing.unit,
-          flight: flight !== undefined ? flight : existing.flight,
-          location: location !== undefined ? location : existing.location,
-          service: service || existing.service,
-          seatConfig: seatConfig || existing.seatConfig,
-          isPaused: isPaused !== undefined ? isPaused : existing.isPaused,
-          traineeCallsign: traineeCallsign !== undefined ? traineeCallsign : existing.traineeCallsign,
-          primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : existing.primaryInstructor),
-          secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : existing.secondaryInstructor),
-          phoneNumber: phoneNumber !== undefined ? phoneNumber : existing.phoneNumber,
-          email: email !== undefined ? email : existing.email,
-          permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : existing.permissions),
-          preferences: preferences && typeof preferences === 'object' && !Array.isArray(preferences) ? preferences : existing.preferences,
-          unavailability: unavailability || existing.unavailability,
-          isActive: true,
-        }
-      });
-      console.log(`✅ POST /api/trainees - updated existing: ${updated.name} (${updated.idNumber})`);
-      await ensureInitialIndividualLmpForTrainee(db, updated);
-      return res.json({ success: true, trainee: updated, action: 'updated' });
+    const idConflict = await findPersonnelIdNumberConflict(db, traineeIdNumber);
+    if (idConflict) {
+      return sendPersonnelIdConflict(res, idConflict);
     }
 
     // Create new trainee
@@ -6191,6 +6217,7 @@ app.post('/api/trainees/bulk', async (req, res) => {
     let updatedCount = 0;
     let skippedCount = 0;
     const results = [];
+    const seenUploadIdNumbers = new Set();
 
     // If replaceAll and course is specified, mark all existing trainees in that course as inactive first
     if (replaceAll && course) {
@@ -6215,6 +6242,17 @@ app.post('/api/trainees/bulk', async (req, res) => {
         }
 
         const idNum = Number(t.idNumber);
+        if (seenUploadIdNumbers.has(idNum)) {
+          skippedCount++;
+          results.push({
+            idNumber: t.idNumber,
+            name: t.name,
+            action: 'skipped',
+            error: 'Duplicate Personnel ID in upload',
+          });
+          continue;
+        }
+        seenUploadIdNumbers.add(idNum);
 
         // Look for existing trainee by idNumber in this course (or any course if no course filter)
         const whereClause = course 
@@ -6222,6 +6260,18 @@ app.post('/api/trainees/bulk', async (req, res) => {
           : { idNumber: idNum };
         
         const existing = await db.trainee.findFirst({ where: whereClause });
+        const idConflict = await findPersonnelIdNumberConflict(db, idNum, existing ? { excludeTraineeId: existing.id } : {});
+        if (idConflict) {
+          skippedCount++;
+          const conflictName = idConflict.record?.fullName || idConflict.record?.name || 'another person';
+          results.push({
+            idNumber: t.idNumber,
+            name: t.name,
+            action: 'skipped',
+            error: `Personnel ID is already assigned to ${conflictName}`,
+          });
+          continue;
+        }
 
         const traineeData = {
           name: t.name,
@@ -6322,6 +6372,10 @@ app.patch('/api/trainees/:id', async (req, res) => {
         return res.status(400).json({ error: 'Personnel ID is required' });
       }
       sanitizedUpdates.idNumber = Number(sanitizedUpdates.idNumber);
+      const idConflict = await findPersonnelIdNumberConflict(db, sanitizedUpdates.idNumber, { excludeTraineeId: existing.id });
+      if (idConflict) {
+        return sendPersonnelIdConflict(res, idConflict);
+      }
     }
 
     // Update the trainee record

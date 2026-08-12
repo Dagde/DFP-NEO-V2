@@ -80,7 +80,7 @@ interface InstructorProfileFlyoutProps {
   onClose: () => void;
   school: string;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
-  onUpdateInstructor: (data: Instructor) => void;
+  onUpdateInstructor: (data: Instructor) => void | Promise<void>;
   onNavigateToCurrency: (person: Instructor) => void;
   originRect: DOMRect | null;
   isClosing: boolean;
@@ -1008,7 +1008,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       logAudit({ action: 'Edit', description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: 'Staff' });
     }
 
-    onUpdateInstructor(updatedInstructor);
+    try {
+      await Promise.resolve(onUpdateInstructor(updatedInstructor));
+    } catch (error) {
+      console.error('Failed to save staff profile:', error);
+      await showDarkAlert('The staff record could not be saved. Please check the Personnel ID and try again.', 'Save Failed', 'error');
+      return;
+    }
     setIsEditing(false);
     if (isCreating) onClose();
   };
