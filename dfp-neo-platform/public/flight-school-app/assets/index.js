@@ -4938,7 +4938,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     return suffix ? `${base} · ${suffix}` : base || surname || cleaned;
   };
   const formatList = (person) => {
-    const displayName = getPersonDisplayName(person) || "Unnamed person";
+    const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || "Unnamed person";
     const { surname, firstName } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
@@ -27908,7 +27908,7 @@ const CourseRosterView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Trainee Roster" })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 md:p-6 pb-16 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: coursesToDisplay.map((courseName) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 md:p-6 pb-16 max-w-[1430px] mx-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(267px,267px))] gap-6", children: coursesToDisplay.map((courseName) => {
         const courseTrainees = groupedTrainees[courseName] || [];
         const color = courseColorMap[courseName] || "bg-gray-500";
         const darkenHexColor = (c) => {

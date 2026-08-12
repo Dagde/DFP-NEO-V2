@@ -124,7 +124,7 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
   };
 
   const formatList = (person: PersonIdentityRecord): string => {
-    const displayName = getPersonDisplayName(person) || 'Unnamed person';
+    const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || 'Unnamed person';
     const { surname, firstName } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
