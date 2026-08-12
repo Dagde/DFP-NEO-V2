@@ -24,6 +24,19 @@ export const samePersonRecord = (left: PersonIdentityRecord, right: PersonIdenti
   return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
 };
 
+export const getPersonStableKey = (person: PersonIdentityRecord, fallbackPrefix = 'person'): string => {
+  const id = String(person.id || '').trim();
+  if (id) return `db-${id}`;
+  const idNumber = String(person.idNumber || '').trim();
+  if (idNumber) return `pid-${idNumber}`;
+  const name = getPersonDisplayName(person);
+  const context = [person.unit, person.course, person.role].map(value => String(value || '').trim()).filter(Boolean).join('|');
+  return `${fallbackPrefix}-${name || 'unnamed'}${context ? `-${context}` : ''}`;
+};
+
+export const getPersonDomIdSuffix = (person: PersonIdentityRecord, fallbackPrefix = 'person'): string =>
+  getPersonStableKey(person, fallbackPrefix).replace(/[^A-Za-z0-9_-]+/g, '-');
+
 export const formatPersonOptionLabel = (person: PersonIdentityRecord): string => {
   const name = getPersonDisplayName(person) || 'Unnamed person';
   const parts = [

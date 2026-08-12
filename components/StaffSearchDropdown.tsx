@@ -1,9 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { formatPersonOptionLabel, getPersonStableKey } from '../utils/personIdentity';
 
 interface StaffMember {
+  id?: string | number;
+  idNumber?: string | number;
   name: string;
   rank: string;
   unit?: string;
+  role?: string;
 }
 
 interface StaffSearchDropdownProps {
@@ -99,7 +103,7 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full text-left px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${!selectedStaff && !defaultName ? 'text-gray-400' : ''}`}
+        className={`w-full text-left px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${!selectedStaff ? 'text-gray-400' : ''}`}
       >
         {displayValue || placeholder}
         <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
@@ -129,12 +133,12 @@ const StaffSearchDropdown: React.FC<StaffSearchDropdownProps> = ({
                 </div>
                 {members.map((person) => (
                   <button
-                    key={person.name}
+                    key={getPersonStableKey(person, 'staff')}
                     type="button"
                     onClick={() => handleSelect(person.name)}
                     className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 focus:bg-gray-700 focus:outline-none"
                   >
-                    <span className="font-medium">{person.rank}</span> {person.name}
+                    {formatPersonOptionLabel(person)}
                   </button>
                 ))}
               </div>

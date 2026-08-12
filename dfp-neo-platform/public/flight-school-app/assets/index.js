@@ -4851,6 +4851,16 @@ const samePersonRecord = (left, right) => {
   const rightIdNumber = String(right.idNumber || "").trim();
   return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
 };
+const getPersonStableKey = (person, fallbackPrefix = "person") => {
+  const id = String(person.id || "").trim();
+  if (id) return `db-${id}`;
+  const idNumber = String(person.idNumber || "").trim();
+  if (idNumber) return `pid-${idNumber}`;
+  const name = getPersonDisplayName(person);
+  const context = [person.unit, person.course, person.role].map((value) => String(value || "").trim()).filter(Boolean).join("|");
+  return `${fallbackPrefix}-${name || "unnamed"}${context ? `-${context}` : ""}`;
+};
+const getPersonDomIdSuffix = (person, fallbackPrefix = "person") => getPersonStableKey(person, fallbackPrefix).replace(/[^A-Za-z0-9_-]+/g, "-");
 const formatPersonOptionLabel = (person) => {
   const name = getPersonDisplayName(person) || "Unnamed person";
   const parts = [
@@ -27657,7 +27667,7 @@ const CourseRosterView = ({
   }, [traineesData, personnelDisplaySettings]);
   reactExports.useEffect(() => {
     if (selectedTrainee && !isCreatingNew) {
-      const updatedTrainee = traineesData.find((t) => t.id ? t.id === selectedTrainee.id : t.fullName === selectedTrainee.fullName);
+      const updatedTrainee = traineesData.find((t) => samePersonRecord(t, selectedTrainee));
       if (updatedTrainee) {
         const prevUnavailHash = JSON.stringify((selectedTrainee.unavailability || []).map((u) => u.id).sort());
         const newUnavailHash = JSON.stringify((updatedTrainee.unavailability || []).map((u) => u.id).sort());
@@ -27919,7 +27929,7 @@ const CourseRosterView = ({
                   )
                 ]
               },
-              trainee.fullName
+              getPersonStableKey(trainee, "trainee")
             );
           }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic text-center py-4", children: "No trainees assigned." }) })
         ] }, courseName);
@@ -55654,7 +55664,7 @@ const InstructorListView = ({
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = reactExports.useState("ALL");
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
-      const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
+      const matchingElement = document.getElementById(`instructor-row-${getPersonDomIdSuffix(selectedPersonForProfile, "staff")}`);
       if (matchingElement) {
         setOriginRect(matchingElement.getBoundingClientRect());
       }
@@ -55666,7 +55676,7 @@ const InstructorListView = ({
   }, [selectedPersonForProfile, onProfileOpened]);
   reactExports.useEffect(() => {
     if (selectedInstructor) {
-      const updatedInstructor = instructorsData.find((i) => i.id ? i.id === selectedInstructor.id : i.name === selectedInstructor.name);
+      const updatedInstructor = instructorsData.find((i) => samePersonRecord(i, selectedInstructor));
       if (updatedInstructor) {
         const prevUnavailHash = JSON.stringify((selectedInstructor.unavailability || []).map((u) => u.id).sort());
         const newUnavailHash = JSON.stringify((updatedInstructor.unavailability || []).map((u) => u.id).sort());
@@ -55881,7 +55891,7 @@ const InstructorListView = ({
     setFlyoutPosition(null);
   };
   const handleInstructorClick = (e, instructor) => {
-    if (selectedInstructor?.name === instructor.name) {
+    if (selectedInstructor && samePersonRecord(selectedInstructor, instructor)) {
       handleCloseProfile();
     } else {
       setIsArchiveMode(false);
@@ -55958,8 +55968,8 @@ const InstructorListView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "li",
       {
-        id: `instructor-row-${instructor.name}`,
-        className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${muted ? "bg-gray-800/25 text-gray-500 hover:bg-gray-800/40 hover:text-gray-400" : `${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`}`,
+        id: `instructor-row-${getPersonDomIdSuffix(instructor, "staff")}`,
+        className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${muted ? "bg-gray-800/25 text-gray-500 hover:bg-gray-800/40 hover:text-gray-400" : `${selectedInstructor && samePersonRecord(selectedInstructor, instructor) ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`}`,
         onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
         onMouseLeave: handleMouseLeave,
         onClick: (e) => {
@@ -55984,7 +55994,7 @@ const InstructorListView = ({
           isArchiveMode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-1 rounded-full text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) }) })
         ]
       },
-      instructor.name
+      getPersonStableKey(instructor, "staff")
     );
   }) });
   const renderStaffRoleFilterSelect = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 min-w-0", children: [
@@ -61723,7 +61733,7 @@ const StaffSearchDropdown = ({
         type: "button",
         onClick: () => !disabled && setIsOpen(!isOpen),
         disabled,
-        className: `w-full text-left px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${!selectedStaff && !defaultName ? "text-gray-400" : ""}`,
+        className: `w-full text-left px-3 py-2 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${!selectedStaff ? "text-gray-400" : ""}`,
         children: [
           displayValue || placeholder,
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "h-5 w-5 text-gray-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z", clipRule: "evenodd" }) }) })
@@ -61745,19 +61755,15 @@ const StaffSearchDropdown = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-48 overflow-y-auto", children: [
         Object.entries(filteredStaffByUnit).map(([unit, members]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-1 bg-gray-900 text-xs font-semibold text-gray-400 uppercase tracking-wider", children: unit }),
-          members.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          members.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
               type: "button",
               onClick: () => handleSelect(person.name),
               className: "w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 focus:bg-gray-700 focus:outline-none",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium", children: person.rank }),
-                " ",
-                person.name
-              ]
+              children: formatPersonOptionLabel(person)
             },
-            person.name
+            getPersonStableKey(person, "staff")
           ))
         ] }, unit)),
         Object.keys(filteredStaffByUnit).length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-4 text-sm text-gray-500 text-center", children: [

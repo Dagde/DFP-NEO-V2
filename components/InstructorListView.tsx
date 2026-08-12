@@ -32,6 +32,7 @@ import {
 } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
+import { getPersonDomIdSuffix, getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
 
 const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
@@ -259,7 +260,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     if (selectedPersonForProfile) {
         // Try to find element, though in grid it might be scrolled out.
         // If not found, originRect is null, which flyout handles gracefully (fades in center)
-        const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
+        const matchingElement = document.getElementById(`instructor-row-${getPersonDomIdSuffix(selectedPersonForProfile as any, 'staff')}`);
         if (matchingElement) {
             setOriginRect(matchingElement.getBoundingClientRect());
         }
@@ -272,9 +273,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   useEffect(() => {
     if (selectedInstructor) {
-        const updatedInstructor = instructorsData.find(i => (i as any).id
-            ? (i as any).id === (selectedInstructor as any).id
-            : i.name === selectedInstructor.name);
+        const updatedInstructor = instructorsData.find(i => samePersonRecord(i as any, selectedInstructor as any));
         if (updatedInstructor) {
             // Compare unavailability content specifically to detect iOS-submitted changes
             const prevUnavailHash = JSON.stringify((selectedInstructor.unavailability || []).map((u: any) => u.id).sort());
@@ -537,7 +536,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   };
 
   const handleInstructorClick = (e: React.MouseEvent<HTMLLIElement>, instructor: Instructor) => {
-    if (selectedInstructor?.name === instructor.name) {
+    if (selectedInstructor && samePersonRecord(selectedInstructor as any, instructor as any)) {
         handleCloseProfile();
     } else {
         setIsArchiveMode(false);
@@ -622,12 +621,12 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         const roleTextClass = muted ? 'text-gray-500' : (useRoleColours ? roleDisplay.textClassName : 'text-gray-300');
         return (
           <li
-            id={`instructor-row-${instructor.name}`}
-            key={instructor.name}
+            id={`instructor-row-${getPersonDomIdSuffix(instructor as any, 'staff')}`}
+            key={getPersonStableKey(instructor as any, 'staff')}
             className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${
                 muted
                     ? 'bg-gray-800/25 text-gray-500 hover:bg-gray-800/40 hover:text-gray-400'
-                    : `${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`
+                    : `${selectedInstructor && samePersonRecord(selectedInstructor as any, instructor as any) ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`
             }`}
             onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
             onMouseLeave={handleMouseLeave}

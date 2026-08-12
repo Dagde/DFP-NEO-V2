@@ -23,6 +23,7 @@ import type { OperationalModelCode, PlatformConfig } from '../utils/platformConf
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getTraineeStatusLabel, isTraineeSuspended } from '../utils/traineeStatus';
+import { getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -253,9 +254,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     // while the profile flyout is open, the flyout will re-render with the latest data.
     useEffect(() => {
         if (selectedTrainee && !isCreatingNew) {
-            const updatedTrainee = traineesData.find((t: Trainee) => (t as any).id
-                ? (t as any).id === (selectedTrainee as any).id
-                : t.fullName === selectedTrainee.fullName);
+            const updatedTrainee = traineesData.find((t: Trainee) => samePersonRecord(t as any, selectedTrainee as any));
 
             if (updatedTrainee) {
                 // Compare unavailability content specifically to detect iOS-submitted changes
@@ -563,7 +562,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
                                                         return (
                                                             <li
-                                                                key={trainee.fullName}
+                                                                key={getPersonStableKey(trainee as any, 'trainee')}
                                                                 className={`flex items-center text-sm ${isSuspended ? 'rounded border border-red-500/80 bg-red-950/20 px-1 py-0.5' : ''}`}
                                                                 onMouseEnter={(e) => handleMouseEnter(e, trainee.fullName)}
                                                                 onMouseLeave={handleMouseLeave}
