@@ -6,7 +6,7 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { normalisePersonnelNameForScheduleMatch, scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
+import { normalisePersonnelNameForScheduleMatch, scheduleEventIncludesPersonRecord, schedulePersonnelNamesMatch } from '../utils/scheduleEventPersonnel';
 
 interface TraineeScheduleViewProps {
   date: string;
@@ -51,6 +51,9 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     }
     return personnel;
 };
+
+const getTraineeScheduleRowIdentity = (trainee: { id?: string; idNumber?: number; fullName?: string; name?: string } | null | undefined): string =>
+    String(trainee?.idNumber || trainee?.id || trainee?.fullName || trainee?.name || '').trim();
 
 // Create unavailability events for rendering
 const createUnavailabilityEvents = (date: string, personnelData: Trainee[]): ScheduleEvent[] => {
@@ -157,6 +160,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
 
   const [draggingState, setDraggingState] = useState<{
     mainEventId: string;
+    rowIdentity: string;
     xOffset: number;
     initialPositions: Map<string, { startTime: number, rowIndex: number }>;
   } | null>(null);
@@ -265,7 +269,9 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                 const personnelToCheck = getPersonnel(eventToCheck);
                 const existingPersonnel = getPersonnel(existingEvent);
                 
-                const conflictedPersonName = personnelToCheck.find(p => existingPersonnel.includes(p));
+                const conflictedPersonName = personnelToCheck.find(person =>
+                    existingPersonnel.some(existingPerson => schedulePersonnelNamesMatch(person, existingPerson))
+                );
 
                 if (conflictedPersonName) {
                     return {
@@ -279,7 +285,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
     return null;
   }, [syllabusDetails]);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, event: ScheduleEvent) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, event: ScheduleEvent, rowIndex: number) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
     document.body.classList.add('no-select');
@@ -287,8 +293,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
     const rect = tileElement.getBoundingClientRect();
 
     const initialPositions = new Map<string, { startTime: number, rowIndex: number }>();
-    const traineeName = event.student || event.pilot || '';
-    const rowIndex = trainees.findIndex(t => t === traineeName);
+    const rowIdentity = getTraineeScheduleRowIdentity(traineeRows[rowIndex]) || String(rowIndex);
     
     if (rowIndex !== -1) {
         initialPositions.set(event.id, { startTime: event.startTime, rowIndex: rowIndex });
@@ -297,6 +302,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
     if (initialPositions.size > 0) {
         setDraggingState({
             mainEventId: event.id,
+            rowIdentity,
             xOffset: (e.clientX - rect.left) / zoomLevel,
             initialPositions,
         });
@@ -668,7 +674,9 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                 .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = traineeEvents.map(event => {
-                const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                const traineeRowIdentity = getTraineeScheduleRowIdentity(traineeRows[rowIndex]) || String(rowIndex);
+                const tileRenderKey = `${event.id}-${traineeRowIdentity}`;
+                const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id && draggingState.rowIdentity === traineeRowIdentity);
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
                 const isConflicting =
                   (showValidation && conflictingEventIds.has(event.id)) ||
@@ -682,14 +690,14 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                 let personToHighlight = null;
                 if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some(person => schedulePersonnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
                         personToHighlight = realtimeConflict.conflictedPersonName;
                     }
                 }
                 
                 return (
                   <FlightTile
-                    key={`${event.id}-${trainee}`}
+                    key={tileRenderKey}
                     event={event}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
@@ -710,7 +718,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                         } as any;
                         onSelectEvent(syntheticEvent);
                     }}
-                    onMouseDown={(e) => handleMouseDown(e, event)}
+                    onMouseDown={(e) => handleMouseDown(e, event, rowIndex)}
                     onMouseEnter={() => setHoveredEventId(event.id)}
                     onMouseLeave={() => setHoveredEventId(null)}
                     pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}

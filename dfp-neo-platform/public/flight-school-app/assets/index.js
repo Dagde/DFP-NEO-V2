@@ -19207,6 +19207,7 @@ const getPersonnel$4 = (event) => {
   }
   return personnel;
 };
+const getTraineeScheduleRowIdentity = (trainee) => String(trainee?.idNumber || trainee?.id || trainee?.fullName || trainee?.name || "").trim();
 const createUnavailabilityEvents = (date, personnelData) => {
   const unavailabilityEvents = [];
   personnelData.forEach((person) => {
@@ -19367,7 +19368,9 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
         if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
           const personnelToCheck = getPersonnel$4(eventToCheck);
           const existingPersonnel = getPersonnel$4(existingEvent);
-          const conflictedPersonName = personnelToCheck.find((p) => existingPersonnel.includes(p));
+          const conflictedPersonName = personnelToCheck.find(
+            (person) => existingPersonnel.some((existingPerson) => schedulePersonnelNamesMatch(person, existingPerson))
+          );
           if (conflictedPersonName) {
             return {
               conflictingEvent: existingEvent,
@@ -19379,21 +19382,21 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
     }
     return null;
   }, [syllabusDetails]);
-  const handleMouseDown = (e, event) => {
+  const handleMouseDown = (e, event, rowIndex) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
     document.body.classList.add("no-select");
     const tileElement = e.currentTarget;
     const rect = tileElement.getBoundingClientRect();
     const initialPositions = /* @__PURE__ */ new Map();
-    const traineeName = event.student || event.pilot || "";
-    const rowIndex = trainees.findIndex((t) => t === traineeName);
+    const rowIdentity = getTraineeScheduleRowIdentity(traineeRows[rowIndex]) || String(rowIndex);
     if (rowIndex !== -1) {
       initialPositions.set(event.id, { startTime: event.startTime, rowIndex });
     }
     if (initialPositions.size > 0) {
       setDraggingState({
         mainEventId: event.id,
+        rowIdentity,
         xOffset: (e.clientX - rect.left) / zoomLevel,
         initialPositions
       });
@@ -19719,7 +19722,9 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                 }
                 const traineeEvents = uniqueEventsWithUnavailability.filter((event) => eventIncludesTraineeRow(event, rowIndex)).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = traineeEvents.map((event) => {
-                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                  const traineeRowIdentity = getTraineeScheduleRowIdentity(traineeRows[rowIndex]) || String(rowIndex);
+                  const tileRenderKey = `${event.id}-${traineeRowIdentity}`;
+                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id && draggingState.rowIdentity === traineeRowIdentity);
                   const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
                   const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
                   const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
@@ -19728,7 +19733,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                   let personToHighlight = null;
                   if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel$4(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => schedulePersonnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
                       personToHighlight = realtimeConflict.conflictedPersonName;
                     }
                   }
@@ -19754,7 +19759,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                         };
                         onSelectEvent(syntheticEvent);
                       },
-                      onMouseDown: (e) => handleMouseDown(e, event),
+                      onMouseDown: (e) => handleMouseDown(e, event, rowIndex),
                       onMouseEnter: () => setHoveredEventId(event.id),
                       onMouseLeave: () => setHoveredEventId(null),
                       pixelsPerHour: PIXELS_PER_HOUR$4 * zoomLevel,
@@ -19772,7 +19777,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                       currentTime,
                       aircraftNumberSettings
                     },
-                    `${event.id}-${trainee}`
+                    tileRenderKey
                   );
                 });
                 return [rowHighlight, ...barsForThisRow, ...eventTiles];
