@@ -5458,7 +5458,7 @@ const InitialSetupWizard: React.FC<{
             ? effectiveTraineeRows.map((row, index) => {
                 const fullName = [row.surname, row.givenNames].filter(Boolean).join(', ') || row.givenNames || row.surname || `Trainee ${index + 1}`;
                 return {
-                    idNumber: Number(row.personnelId) || 4500000 + index + 1,
+                    idNumber: Number(row.personnelId) || 0,
                     fullName,
                     name: fullName,
                     rank: row.rank || 'Rank',

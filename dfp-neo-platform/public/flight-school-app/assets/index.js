@@ -14508,7 +14508,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
     const trainees = traineesEnabled ? effectiveTraineeRows.map((row, index) => {
       const fullName = [row.surname, row.givenNames].filter(Boolean).join(", ") || row.givenNames || row.surname || `Trainee ${index + 1}`;
       return {
-        idNumber: Number(row.personnelId) || 45e5 + index + 1,
+        idNumber: Number(row.personnelId) || 0,
         fullName,
         name: fullName,
         rank: row.rank || "Rank",
