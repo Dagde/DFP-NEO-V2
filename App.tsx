@@ -24175,8 +24175,18 @@ const App: React.FC = () => {
         }
     }
 
+    function readStaffScheduleRenderDiagEntries(): any[] {
+        try {
+            const stored = JSON.parse(localStorage.getItem('neo_staff_schedule_render_diag') || '[]');
+            return Array.isArray(stored) ? stored : [];
+        } catch {
+            return [];
+        }
+    }
+
     function buildDfpDataDiagReport(): Record<string, any> {
         const entries = readDfpDataDiagEntries();
+        const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
         const enrichedEntries = entries.map((entry, index) => {
             const previous = index > 0 ? entries[index - 1] : null;
             const entryPerfMs = typeof entry?.perfMs === 'number' ? entry.perfMs : null;
@@ -24230,8 +24240,11 @@ const App: React.FC = () => {
                 lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
                 slowestGaps,
                 stages,
+                staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
+                latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || [],
             },
             entries: enrichedEntries,
+            staffScheduleRenderTrace,
         };
     }
 
@@ -47545,7 +47558,7 @@ appliedUpdates.forEach(update => {
                     type="button"
                     onClick={downloadDfpDataDiagReport}
                     className="rounded border border-cyan-500/30 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-400/60 hover:text-cyan-100"
-                    title="Download startup/load diagnostic JSON report"
+                    title="Download startup/load and staff schedule render diagnostic JSON report"
                 >
                     Diag
                 </button>

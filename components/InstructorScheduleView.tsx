@@ -9,7 +9,7 @@ import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
-import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
+import { scheduleEventIncludesPersonRecord, schedulePersonnelNamesMatch } from '../utils/scheduleEventPersonnel';
 
 interface InstructorScheduleViewProps {
   date: string;
@@ -264,7 +264,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     });
     const describeMatchBasis = (event: ScheduleEvent, instructor: { id?: string; idNumber?: number; name: string }): string => {
       const matchingRefs = (event.personnelRefs || []).filter(ref =>
-        ref.personType === 'staff' && personnelNamesMatch(ref.name, instructor.name)
+        ref.personType === 'staff' && schedulePersonnelNamesMatch(ref.name, instructor.name)
       );
       if (matchingRefs.some(ref => String(ref.idNumber || '').trim() && String(ref.idNumber || '').trim() === String(instructor.idNumber || '').trim())) {
         return 'personnel-id-ref';
@@ -273,7 +273,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
         return 'database-id-ref';
       }
       if (matchingRefs.length > 0) return 'other-person-ref-same-name';
-      return getPersonnel(event).some(name => personnelNamesMatch(name, instructor.name)) ? 'name-fallback' : 'unknown';
+      return getPersonnel(event).some(name => schedulePersonnelNamesMatch(name, instructor.name)) ? 'name-fallback' : 'unknown';
     };
     const tileRows: StaffScheduleRenderTileDiag[] = uniqueEventsWithUnavailability.flatMap(event =>
       instructors
@@ -396,7 +396,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 const existingPersonnel = getPersonnel(existingEvent);
                 
                 const conflictedPersonName = personnelToCheck.find(person =>
-                    existingPersonnel.some(existingPerson => personnelNamesMatch(person, existingPerson))
+                    existingPersonnel.some(existingPerson => schedulePersonnelNamesMatch(person, existingPerson))
                 );
 
                 if (conflictedPersonName) {
@@ -876,7 +876,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 let personToHighlight = null;
                 if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some(person => personnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some(person => schedulePersonnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
                         personToHighlight = realtimeConflict.conflictedPersonName;
                     }
                 }

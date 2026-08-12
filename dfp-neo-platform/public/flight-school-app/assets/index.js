@@ -18454,7 +18454,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     });
     const describeMatchBasis = (event, instructor) => {
       const matchingRefs = (event.personnelRefs || []).filter(
-        (ref) => ref.personType === "staff" && personnelNamesMatch(ref.name, instructor.name)
+        (ref) => ref.personType === "staff" && schedulePersonnelNamesMatch(ref.name, instructor.name)
       );
       if (matchingRefs.some((ref) => String(ref.idNumber || "").trim() && String(ref.idNumber || "").trim() === String(instructor.idNumber || "").trim())) {
         return "personnel-id-ref";
@@ -18463,7 +18463,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
         return "database-id-ref";
       }
       if (matchingRefs.length > 0) return "other-person-ref-same-name";
-      return getPersonnel$5(event).some((name) => personnelNamesMatch(name, instructor.name)) ? "name-fallback" : "unknown";
+      return getPersonnel$5(event).some((name) => schedulePersonnelNamesMatch(name, instructor.name)) ? "name-fallback" : "unknown";
     };
     const tileRows = uniqueEventsWithUnavailability.flatMap(
       (event) => instructors.filter((instructor) => scheduleEventIncludesPersonRecord(event, instructor, {
@@ -18567,7 +18567,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
           const personnelToCheck = getPersonnel$5(eventToCheck);
           const existingPersonnel = getPersonnel$5(existingEvent);
           const conflictedPersonName = personnelToCheck.find(
-            (person) => existingPersonnel.some((existingPerson) => personnelNamesMatch(person, existingPerson))
+            (person) => existingPersonnel.some((existingPerson) => schedulePersonnelNamesMatch(person, existingPerson))
           );
           if (conflictedPersonName) {
             return {
@@ -18989,7 +18989,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                   let personToHighlight = null;
                   if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel$5(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => personnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
+                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.some((person) => schedulePersonnelNamesMatch(person, realtimeConflict.conflictedPersonName))) {
                       personToHighlight = realtimeConflict.conflictedPersonName;
                     }
                   }
@@ -110974,8 +110974,17 @@ const App = () => {
       return [];
     }
   }
+  function readStaffScheduleRenderDiagEntries() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
+      return Array.isArray(stored) ? stored : [];
+    } catch {
+      return [];
+    }
+  }
   function buildDfpDataDiagReport() {
     const entries = readDfpDataDiagEntries();
+    const staffScheduleRenderTrace = readStaffScheduleRenderDiagEntries();
     const enrichedEntries = entries.map((entry, index) => {
       const previous = index > 0 ? entries[index - 1] : null;
       const entryPerfMs = typeof entry?.perfMs === "number" ? entry.perfMs : null;
@@ -111021,9 +111030,12 @@ const App = () => {
         firstEntry: enrichedEntries[0] || null,
         lastEntry: enrichedEntries[enrichedEntries.length - 1] || null,
         slowestGaps,
-        stages
+        stages,
+        staffScheduleRenderTraceCount: staffScheduleRenderTrace.length,
+        latestStaffScheduleStackedGroups: staffScheduleRenderTrace.at(-1)?.stackedGroups || []
       },
-      entries: enrichedEntries
+      entries: enrichedEntries,
+      staffScheduleRenderTrace
     };
   }
   function downloadDfpDataDiagReport() {
@@ -130553,7 +130565,7 @@ Do you want to replace the existing entry?`,
           type: "button",
           onClick: downloadDfpDataDiagReport,
           className: "rounded border border-cyan-500/30 px-1.5 py-0.5 text-cyan-200 transition-colors hover:border-cyan-400/60 hover:text-cyan-100",
-          title: "Download startup/load diagnostic JSON report",
+          title: "Download startup/load and staff schedule render diagnostic JSON report",
           children: "Diag"
         }
       ),
