@@ -1093,6 +1093,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [pendingPhotoRemoved, setPendingPhotoRemoved] = useState(false);
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [photoUploading, setPhotoUploading] = useState(false);
+    const [photoLoadFailed, setPhotoLoadFailed] = useState(false);
     const photoInputRef = useRef<HTMLInputElement>(null);
 
     const savePhotoImmediately = async (dataUrl: string) => {
@@ -1106,6 +1107,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             setPhotoUrl(dataUrl);
             setPendingPhotoDataUrl(null);
             setPendingPhotoRemoved(false);
+            setPhotoLoadFailed(false);
         } catch {
             setPhotoError('Photo upload failed. Please try again.');
         } finally {
@@ -1297,6 +1299,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPendingPhotoDataUrl(null);
         setPendingPhotoRemoved(false);
         setPhotoError(null);
+        setPhotoLoadFailed(false);
         setPermissions(trainee.permissions || []);
         setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
         setPriorExperience(trainee.priorExperience || initialExperience);
@@ -1549,6 +1552,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPendingPhotoDataUrl(null);
         setPendingPhotoRemoved(false);
         setPhotoError(null);
+        setPhotoLoadFailed(false);
         setIsEditing(false);
         if (isCreating) {
             onClose();
@@ -1586,6 +1590,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             if (isEditing) {
                 setPendingPhotoDataUrl(dataUrl);
                 setPendingPhotoRemoved(false);
+                setPhotoLoadFailed(false);
             } else {
                 await savePhotoImmediately(dataUrl);
             }
@@ -1610,6 +1615,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setPendingPhotoDataUrl(null);
         setPendingPhotoRemoved(true);
         setPhotoError(null);
+        setPhotoLoadFailed(false);
     };
 
     const handlePermissionChange = (permission: string, isChecked: boolean) => {
@@ -2658,10 +2664,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   title="Click to change profile photo"
                                 >
                                   {(() => {
-                                    const displayUrl = pendingPhotoRemoved ? null : (pendingPhotoDataUrl || photoUrl);
+                                    const displayUrl = pendingPhotoRemoved ? null : (pendingPhotoDataUrl || (photoLoadFailed ? null : photoUrl));
                                     return displayUrl ? (
                                       <>
-                                        <img src={displayUrl} alt={name} className="w-full h-full object-cover object-top" />
+                                        <img
+                                          src={displayUrl}
+                                          alt={name}
+                                          className="w-full h-full object-cover object-top"
+                                          onError={() => setPhotoLoadFailed(true)}
+                                        />
                                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -2830,9 +2841,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                   onDrop={handlePhotoDrop}
                                   title="Click to add profile photo"
                                 >
-	                              {photoUrl ? (
+	                              {photoUrl && !photoLoadFailed ? (
 	                                <>
-                                      <img src={photoUrl} alt={trainee.name} className="w-full h-full object-cover object-top" />
+                                      <img
+                                        src={photoUrl}
+                                        alt={trainee.name}
+                                        className="w-full h-full object-cover object-top"
+                                        onError={() => setPhotoLoadFailed(true)}
+                                      />
                                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />

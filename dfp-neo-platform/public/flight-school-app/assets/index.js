@@ -24458,6 +24458,7 @@ const TraineeProfileFlyout = ({
   const [pendingPhotoRemoved, setPendingPhotoRemoved] = reactExports.useState(false);
   const [photoError, setPhotoError] = reactExports.useState(null);
   const [photoUploading, setPhotoUploading] = reactExports.useState(false);
+  const [photoLoadFailed, setPhotoLoadFailed] = reactExports.useState(false);
   const photoInputRef = reactExports.useRef(null);
   const savePhotoImmediately = async (dataUrl) => {
     const updatedTrainee = {
@@ -24470,6 +24471,7 @@ const TraineeProfileFlyout = ({
       setPhotoUrl(dataUrl);
       setPendingPhotoDataUrl(null);
       setPendingPhotoRemoved(false);
+      setPhotoLoadFailed(false);
     } catch {
       setPhotoError("Photo upload failed. Please try again.");
     } finally {
@@ -24634,6 +24636,7 @@ const TraineeProfileFlyout = ({
     setPendingPhotoDataUrl(null);
     setPendingPhotoRemoved(false);
     setPhotoError(null);
+    setPhotoLoadFailed(false);
     setPermissions(trainee.permissions || []);
     setAssignedQualifications(normaliseAssignedQualificationIds(trainee.preferences?.qualifications || [], normalisedQualificationCatalogue));
     setPriorExperience(trainee.priorExperience || initialExperience$1);
@@ -24816,6 +24819,7 @@ const TraineeProfileFlyout = ({
     setPendingPhotoDataUrl(null);
     setPendingPhotoRemoved(false);
     setPhotoError(null);
+    setPhotoLoadFailed(false);
     setIsEditing(false);
     if (isCreating) {
       onClose();
@@ -24850,6 +24854,7 @@ const TraineeProfileFlyout = ({
       if (isEditing) {
         setPendingPhotoDataUrl(dataUrl);
         setPendingPhotoRemoved(false);
+        setPhotoLoadFailed(false);
       } else {
         await savePhotoImmediately(dataUrl);
       }
@@ -24871,6 +24876,7 @@ const TraineeProfileFlyout = ({
     setPendingPhotoDataUrl(null);
     setPendingPhotoRemoved(true);
     setPhotoError(null);
+    setPhotoLoadFailed(false);
   };
   const handlePermissionChange = (permission, isChecked) => {
     setPermissions(
@@ -25819,9 +25825,17 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                             onDrop: handlePhotoDrop,
                             title: "Click to change profile photo",
                             children: (() => {
-                              const displayUrl = pendingPhotoRemoved ? null : pendingPhotoDataUrl || photoUrl;
+                              const displayUrl = pendingPhotoRemoved ? null : pendingPhotoDataUrl || (photoLoadFailed ? null : photoUrl);
                               return displayUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                                /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: displayUrl, alt: name, className: "w-full h-full object-cover object-top" }),
+                                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                                  "img",
+                                  {
+                                    src: displayUrl,
+                                    alt: name,
+                                    className: "w-full h-full object-cover object-top",
+                                    onError: () => setPhotoLoadFailed(true)
+                                  }
+                                ),
                                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
                                   /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
                                     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
@@ -25943,8 +25957,16 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                           },
                           onDrop: handlePhotoDrop,
                           title: "Click to add profile photo",
-                          children: photoUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: photoUrl, alt: trainee.name, className: "w-full h-full object-cover object-top" }),
+                          children: photoUrl && !photoLoadFailed ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "img",
+                              {
+                                src: photoUrl,
+                                alt: trainee.name,
+                                className: "w-full h-full object-cover object-top",
+                                onError: () => setPhotoLoadFailed(true)
+                              }
+                            ),
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
                               /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
                                 /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
@@ -53038,6 +53060,7 @@ const InstructorProfileFlyout = ({
   const [pendingPhotoRemoved, setPendingPhotoRemoved] = reactExports.useState(false);
   const [photoUploading, setPhotoUploading] = reactExports.useState(false);
   const [photoError, setPhotoError] = reactExports.useState(null);
+  const [photoLoadFailed, setPhotoLoadFailed] = reactExports.useState(false);
   const photoInputRef = React.useRef(null);
   const profilePhotoInitials = (value) => {
     const cleaned = String(value || "").replace(/,/g, " ").split(/\s+/).map((part) => part.trim()).filter(Boolean);
@@ -53065,6 +53088,7 @@ const InstructorProfileFlyout = ({
       setPhotoUrl(savedPhotoUrl);
       setPendingPhotoDataUrl(null);
       setPendingPhotoRemoved(false);
+      setPhotoLoadFailed(false);
       onUpdateInstructor({ ...instructor, photoUrl: savedPhotoUrl });
     } catch {
       setPhotoError("Photo upload failed. Please try again.");
@@ -53093,6 +53117,7 @@ const InstructorProfileFlyout = ({
       if (isEditing) {
         setPendingPhotoDataUrl(dataUrl);
         setPendingPhotoRemoved(false);
+        setPhotoLoadFailed(false);
       } else {
         await savePhotoImmediately(dataUrl);
       }
@@ -53114,6 +53139,7 @@ const InstructorProfileFlyout = ({
     setPendingPhotoDataUrl(null);
     setPendingPhotoRemoved(true);
     setPhotoError(null);
+    setPhotoLoadFailed(false);
     if (photoInputRef.current) photoInputRef.current.value = "";
   };
   const { primaryTrainees, secondaryTrainees } = reactExports.useMemo(() => {
@@ -53318,6 +53344,7 @@ const InstructorProfileFlyout = ({
     setPendingPhotoDataUrl(null);
     setPendingPhotoRemoved(false);
     setPhotoError(null);
+    setPhotoLoadFailed(false);
   };
   reactExports.useEffect(() => {
     resetState();
@@ -53393,6 +53420,7 @@ const InstructorProfileFlyout = ({
             const result = await response.json();
             finalPhotoUrl = result.photoUrl;
             setPhotoUrl(finalPhotoUrl);
+            setPhotoLoadFailed(false);
           } else {
             setPhotoError("Photo upload failed — other changes were saved.");
           }
@@ -53412,6 +53440,7 @@ const InstructorProfileFlyout = ({
           if (response.ok) {
             finalPhotoUrl = null;
             setPhotoUrl(null);
+            setPhotoLoadFailed(false);
           } else {
             setPhotoError("Photo removal failed — other changes were saved.");
           }
@@ -54309,9 +54338,17 @@ const InstructorProfileFlyout = ({
                       onDrop: handlePhotoDrop,
                       title: "Click to change profile photo",
                       children: (() => {
-                        const displayUrl = pendingPhotoRemoved ? null : pendingPhotoDataUrl || photoUrl;
+                        const displayUrl = pendingPhotoRemoved ? null : pendingPhotoDataUrl || (photoLoadFailed ? null : photoUrl);
                         return displayUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: displayUrl, alt: name, className: "w-full h-full object-cover object-top" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "img",
+                            {
+                              src: displayUrl,
+                              alt: name,
+                              className: "w-full h-full object-cover object-top",
+                              onError: () => setPhotoLoadFailed(true)
+                            }
+                          ),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
                               /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
@@ -54430,8 +54467,16 @@ const InstructorProfileFlyout = ({
                       },
                       onDrop: handlePhotoDrop,
                       title: "Click to add profile photo",
-                      children: photoUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("img", { src: photoUrl, alt: instructor.name, className: "w-full h-full object-cover object-top" }),
+                      children: photoUrl && !photoLoadFailed ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "img",
+                          {
+                            src: photoUrl,
+                            alt: instructor.name,
+                            className: "w-full h-full object-cover object-top",
+                            onError: () => setPhotoLoadFailed(true)
+                          }
+                        ),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-5 h-5 text-white", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" }),
