@@ -71,6 +71,8 @@ interface TraineeProfileFlyoutProps {
   traineesData?: Trainee[];
   onClose: () => void;
   onUpdateTrainee: (data: Trainee) => void | Promise<void>;
+  onRequestDeleteTrainee?: (trainee: Trainee) => void;
+  canManageTraineeRemoval?: boolean;
   events: ScheduleEvent[];
   school: string;
   onNavigateToHateSheet: (trainee: Trainee) => void;
@@ -421,6 +423,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   traineesData = [],
   onClose,
   onUpdateTrainee,
+  onRequestDeleteTrainee,
+  canManageTraineeRemoval = false,
   events,
   school,
   onNavigateToHateSheet,
@@ -1589,6 +1593,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             resetState();
             setIsEditing(false);
         }
+    };
+
+    const handleDeleteFromProfile = () => {
+        if (isCreating || !canManageTraineeRemoval || !onRequestDeleteTrainee) return;
+        onRequestDeleteTrainee(trainee);
     };
 
     const handlePhotoFile = async (file: File | undefined | null) => {
@@ -3165,6 +3174,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={handlePauseToggle} disabled={isFrozen} className={btnClass} style={{ color: isPaused ? '#16a34a' : '#dc2626' }}>{isPaused ? 'UNPAUSE' : 'PAUSE'}</button>
                           <button onClick={handleSuspendToggle} disabled={isFrozen} className={btnClass} style={{ color: isSuspended ? '#16a34a' : '#dc2626' }}>{isSuspended ? 'UNSUSPEND' : 'SUSPEND'}</button>
+                          {!isCreating && canManageTraineeRemoval && onRequestDeleteTrainee && (
+                            <button onClick={handleDeleteFromProfile} disabled={isFrozen} className={btnClass} style={{ color: '#dc2626' }}>DELETE</button>
+                          )}
                           <button onClick={handleSave} className={btnClass}>Save</button>
                           <button onClick={handleCancel} className={btnClass}>Cancel</button>
                         </>

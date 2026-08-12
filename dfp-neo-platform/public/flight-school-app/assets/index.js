@@ -23900,6 +23900,8 @@ const TraineeProfileFlyout = ({
   traineesData = [],
   onClose,
   onUpdateTrainee,
+  onRequestDeleteTrainee,
+  canManageTraineeRemoval = false,
   events,
   school,
   onNavigateToHateSheet,
@@ -24874,6 +24876,10 @@ Confirm the Personnel ID, unit and course are correct before saving this separat
       resetState();
       setIsEditing(false);
     }
+  };
+  const handleDeleteFromProfile = () => {
+    if (isCreating || !canManageTraineeRemoval || !onRequestDeleteTrainee) return;
+    onRequestDeleteTrainee(trainee);
   };
   const handlePhotoFile = async (file) => {
     if (!file) return;
@@ -26314,6 +26320,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, style: { color: isPaused ? "#16a34a" : "#dc2626" }, children: isPaused ? "UNPAUSE" : "PAUSE" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSuspendToggle, disabled: isFrozen, className: btnClass, style: { color: isSuspended ? "#16a34a" : "#dc2626" }, children: isSuspended ? "UNSUSPEND" : "SUSPEND" }),
+            !isCreating && canManageTraineeRemoval && onRequestDeleteTrainee && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleDeleteFromProfile, disabled: isFrozen, className: btnClass, style: { color: "#dc2626" }, children: "DELETE" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: btnClass, children: "Cancel" })
           ] })
@@ -26425,6 +26432,7 @@ const DeleteTraineeConfirmation = ({
   onConfirm,
   onArchive,
   canManageTraineeRemoval = false,
+  initialTrainee = null,
   traineesData,
   courseColors
 }) => {
@@ -26434,6 +26442,13 @@ const DeleteTraineeConfirmation = ({
   const [error, setError] = reactExports.useState("");
   const [action, setAction] = reactExports.useState("delete");
   const [isVerifying, setIsVerifying] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    if (!isOpen || !initialTrainee) return;
+    setSelectedCourse(initialTrainee.course || "");
+    setSelectedTrainee(initialTrainee);
+    setError("");
+    setAction("delete");
+  }, [initialTrainee, isOpen]);
   if (!isOpen) return null;
   const courses = Object.keys(courseColors).sort();
   const handleCourseChange = (course) => {
@@ -26441,8 +26456,9 @@ const DeleteTraineeConfirmation = ({
     setSelectedTrainee(null);
     setError("");
   };
-  const handleTraineeChange = (traineeFullName) => {
-    const trainee = traineesData.find((t) => t.fullName === traineeFullName);
+  const getTraineeOptionKey = (trainee) => String(trainee.id || trainee.idNumber || trainee.fullName || trainee.name || "");
+  const handleTraineeChange = (traineeKey) => {
+    const trainee = traineesData.find((t) => getTraineeOptionKey(t) === traineeKey);
     setSelectedTrainee(trainee || null);
     setError("");
   };
@@ -26524,16 +26540,12 @@ const DeleteTraineeConfirmation = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
-            value: selectedTrainee?.fullName || "",
+            value: selectedTrainee ? getTraineeOptionKey(selectedTrainee) : "",
             onChange: (e) => handleTraineeChange(e.target.value),
             className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select a trainee" }),
-              traineesInCourse.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: trainee.fullName, children: [
-                trainee.rank,
-                " ",
-                trainee.name
-              ] }, trainee.fullName))
+              traineesInCourse.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: getTraineeOptionKey(trainee), children: formatPersonOptionLabel(trainee) }, getTraineeOptionKey(trainee)))
             ]
           }
         )
@@ -27610,7 +27622,6 @@ const CourseRosterView = ({
   const [courseToRestore, setCourseToRestore] = reactExports.useState(null);
   const [hoveredTrainee, setHoveredTrainee] = reactExports.useState(null);
   const [flyoutPosition, setFlyoutPosition] = reactExports.useState(null);
-  const [selectedCourseForDeletion, setSelectedCourseForDeletion] = reactExports.useState("");
   const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = reactExports.useState(null);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = reactExports.useState(false);
   const normalisedCurrentUserRole = String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_");
@@ -27696,6 +27707,7 @@ const CourseRosterView = ({
   const handleDeleteTrainee = (trainee) => {
     onDeleteTrainee(trainee);
     setShowDeleteConfirmation(false);
+    setSelectedTraineeForDeletion(null);
   };
   const handleMouseEnter = (e, traineeFullName) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -27800,17 +27812,6 @@ const CourseRosterView = ({
               disabled: !onBulkUpdateTrainees || !onReplaceTrainees,
               className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed",
               children: "Upload"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => {
-                if (!canManageTraineeRemoval) return;
-                setShowDeleteConfirmation(true);
-              },
-              className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 ${canManageTraineeRemoval ? "" : "cursor-not-allowed"}`,
-              children: "Delete Trainee"
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-[5px]" }),
@@ -27936,10 +27937,14 @@ const CourseRosterView = ({
       DeleteTraineeConfirmation,
       {
         isOpen: showDeleteConfirmation,
-        onClose: () => setShowDeleteConfirmation(false),
+        onClose: () => {
+          setShowDeleteConfirmation(false);
+          setSelectedTraineeForDeletion(null);
+        },
         onConfirm: handleDeleteTrainee,
         onArchive: onArchiveTrainee,
         canManageTraineeRemoval,
+        initialTrainee: selectedTraineeForDeletion,
         traineesData,
         courseColors
       }
@@ -27956,6 +27961,13 @@ const CourseRosterView = ({
           setNewTraineeTemplate(null);
         },
         onUpdateTrainee: isCreatingNew ? onAddTrainee : onUpdateTrainee,
+        onRequestDeleteTrainee: (trainee) => {
+          setSelectedTraineeForDeletion(trainee);
+          setShowDeleteConfirmation(true);
+          setSelectedTrainee(null);
+          setProfileInitialTab(null);
+        },
+        canManageTraineeRemoval,
         events,
         school,
         onNavigateToHateSheet,

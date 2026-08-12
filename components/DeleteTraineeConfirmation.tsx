@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Trainee } from '../types';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { formatPersonOptionLabel } from '../utils/personIdentity';
 
 interface DeleteTraineeConfirmationProps {
     isOpen: boolean;
@@ -8,6 +9,7 @@ interface DeleteTraineeConfirmationProps {
     onConfirm: (trainee: Trainee) => Promise<void> | void;
     onArchive?: (trainee: Trainee) => Promise<void> | void;
     canManageTraineeRemoval?: boolean;
+    initialTrainee?: Trainee | null;
     traineesData: Trainee[];
     courseColors: { [key: string]: string };
 }
@@ -18,6 +20,7 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
     onConfirm,
     onArchive,
     canManageTraineeRemoval = false,
+    initialTrainee = null,
     traineesData,
     courseColors
 }) => {
@@ -27,6 +30,14 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
     const [error, setError] = useState<string>('');
     const [action, setAction] = useState<'delete' | 'archive'>('delete');
     const [isVerifying, setIsVerifying] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen || !initialTrainee) return;
+        setSelectedCourse(initialTrainee.course || '');
+        setSelectedTrainee(initialTrainee);
+        setError('');
+        setAction('delete');
+    }, [initialTrainee, isOpen]);
 
     if (!isOpen) return null;
 
@@ -38,8 +49,11 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
         setError('');
     };
 
-    const handleTraineeChange = (traineeFullName: string) => {
-        const trainee = traineesData.find(t => t.fullName === traineeFullName);
+    const getTraineeOptionKey = (trainee: Trainee): string =>
+        String((trainee as any).id || trainee.idNumber || trainee.fullName || trainee.name || '');
+
+    const handleTraineeChange = (traineeKey: string) => {
+        const trainee = traineesData.find(t => getTraineeOptionKey(t) === traineeKey);
         setSelectedTrainee(trainee || null);
         setError('');
     };
@@ -144,14 +158,14 @@ const DeleteTraineeConfirmation: React.FC<DeleteTraineeConfirmationProps> = ({
                                 Trainee *
                             </label>
                             <select
-                                value={selectedTrainee?.fullName || ''}
+                                value={selectedTrainee ? getTraineeOptionKey(selectedTrainee) : ''}
                                 onChange={(e) => handleTraineeChange(e.target.value)}
                                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                             >
                                 <option value="">Select a trainee</option>
                                 {traineesInCourse.map(trainee => (
-                                    <option key={trainee.fullName} value={trainee.fullName}>
-                                        {trainee.rank} {trainee.name}
+                                    <option key={getTraineeOptionKey(trainee)} value={getTraineeOptionKey(trainee)}>
+                                        {formatPersonOptionLabel(trainee)}
                                     </option>
                                 ))}
                             </select>

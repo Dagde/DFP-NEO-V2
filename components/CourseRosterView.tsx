@@ -208,7 +208,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
 
     // Delete Trainee state
-    const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
     const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const normalisedCurrentUserRole = String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
@@ -324,6 +323,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const handleDeleteTrainee = (trainee: Trainee) => {
         onDeleteTrainee(trainee);
         setShowDeleteConfirmation(false);
+        setSelectedTraineeForDeletion(null);
     };
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, traineeFullName: string) => {
@@ -471,15 +471,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         >
                             Upload
                         </button>
-                        <button
-                            onClick={() => {
-                                if (!canManageTraineeRemoval) return;
-                                setShowDeleteConfirmation(true);
-                            }}
-                            className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 ${canManageTraineeRemoval ? '' : 'cursor-not-allowed'}`}
-                        >
-                            Delete Trainee
-                        </button>
                         <div className="w-[5px]"></div>
                         <AuditButton pageName="Trainee Roster" />
                     </div>
@@ -617,10 +608,14 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             {showDeleteConfirmation && (
                 <DeleteTraineeConfirmation
                     isOpen={showDeleteConfirmation}
-                    onClose={() => setShowDeleteConfirmation(false)}
+                    onClose={() => {
+                        setShowDeleteConfirmation(false);
+                        setSelectedTraineeForDeletion(null);
+                    }}
                     onConfirm={handleDeleteTrainee}
                     onArchive={onArchiveTrainee}
                     canManageTraineeRemoval={canManageTraineeRemoval}
+                    initialTrainee={selectedTraineeForDeletion}
                     traineesData={traineesData}
                     courseColors={courseColors}
                 />
@@ -636,6 +631,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         setNewTraineeTemplate(null);
                     }}
                     onUpdateTrainee={isCreatingNew ? onAddTrainee : onUpdateTrainee}
+                    onRequestDeleteTrainee={(trainee) => {
+                        setSelectedTraineeForDeletion(trainee);
+                        setShowDeleteConfirmation(true);
+                        setSelectedTrainee(null);
+                        setProfileInitialTab(null);
+                    }}
+                    canManageTraineeRemoval={canManageTraineeRemoval}
                     events={events}
                     school={school}
                     onNavigateToHateSheet={onNavigateToHateSheet}
