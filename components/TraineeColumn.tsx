@@ -1,5 +1,5 @@
 import React from 'react';
-import { buildCompactPersonNameResolver, getPersonIdentityDedupeKey } from '../utils/personIdentity';
+import { buildCompactPersonNameResolver, getPersonIdentityDedupeKey, normalisePersonName } from '../utils/personIdentity';
 
 interface TraineeData {
   id?: string;
@@ -46,10 +46,6 @@ const TraineeColumn: React.FC<TraineeColumnProps> = ({ trainees, rowHeight, onRo
     return traineeObj?.course || '';
   };
 
-  const getTraineeRecord = (fullName: string, parsedName: string): TraineeData | undefined => (
-    traineesData.find(t => t.fullName === fullName || t.name === fullName || t.name === parsedName || t.fullName === parsedName)
-  );
-
   // Base color map — keyed by Tailwind color name only (no opacity suffix)
   // This handles both /50 and /80 variants used in the app
   const BASE_COLOR_MAP: { [key: string]: string } = {
@@ -94,9 +90,18 @@ const TraineeColumn: React.FC<TraineeColumnProps> = ({ trainees, rowHeight, onRo
   return (
     <div className="w-40 bg-gray-800 flex-shrink-0 h-full">
       <ul>
-        {trainees.map((fullName, index) => {
+        {(() => {
+          const occurrenceCounts = new Map<string, number>();
+          return trainees.map((fullName, index) => {
           const { name, course: parsedCourse } = parseTraineeName(fullName);
-          const traineeObj = getTraineeRecord(fullName, name);
+          const nameKey = normalisePersonName(name);
+          const occurrence = occurrenceCounts.get(nameKey) || 0;
+          occurrenceCounts.set(nameKey, occurrence + 1);
+          const matchingTrainees = traineesData.filter(t =>
+            normalisePersonName(t.fullName) === nameKey ||
+            normalisePersonName(t.name) === nameKey
+          );
+          const traineeObj = matchingTrainees[occurrence] || matchingTrainees[0];
           const course = getCourse(fullName, parsedCourse);
           const displayName = traineeObj
             ? traineeNameResolver.formatList(traineeObj as any)
@@ -118,7 +123,8 @@ const TraineeColumn: React.FC<TraineeColumnProps> = ({ trainees, rowHeight, onRo
                 </div>
               </li>
             );
-        })}
+          });
+        })()}
       </ul>
     </div>
   );

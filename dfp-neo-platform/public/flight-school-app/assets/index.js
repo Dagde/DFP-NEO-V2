@@ -18973,7 +18973,6 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     );
     return traineeObj?.course || "";
   };
-  const getTraineeRecord = (fullName, parsedName) => traineesData.find((t) => t.fullName === fullName || t.name === fullName || t.name === parsedName || t.fullName === parsedName);
   const BASE_COLOR_MAP = {
     "bg-sky-400": "#38BDF8",
     "bg-purple-400": "#C084FC",
@@ -19005,28 +19004,37 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     }
     return "#9CA3AF";
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: trainees.map((fullName, index) => {
-    const { name, course: parsedCourse } = parseTraineeName(fullName);
-    const traineeObj = getTraineeRecord(fullName, name);
-    const course = getCourse(fullName, parsedCourse);
-    const displayName = traineeObj ? traineeNameResolver.formatList(traineeObj) : name;
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "li",
-      {
-        ref: (el) => onRowRef?.(fullName, el),
-        className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 text-gray-300 border-b border-gray-700/50 ${onTraineeClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
-        style: { height: rowHeight },
-        onMouseEnter: () => onRowEnter?.(index),
-        onMouseLeave: () => onRowLeave?.(),
-        onClick: () => onTraineeClick?.(fullName),
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-medium leading-tight", children: displayName }),
-          course && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono leading-tight", style: { color: convertTailwindToHex(courseColors[course] || "bg-gray-400/50") }, children: course })
-        ] })
-      },
-      getPersonIdentityDedupeKey(traineeObj || { name: fullName }, "trainee")
-    );
-  }) }) });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: (() => {
+    const occurrenceCounts = /* @__PURE__ */ new Map();
+    return trainees.map((fullName, index) => {
+      const { name, course: parsedCourse } = parseTraineeName(fullName);
+      const nameKey = normalisePersonName(name);
+      const occurrence = occurrenceCounts.get(nameKey) || 0;
+      occurrenceCounts.set(nameKey, occurrence + 1);
+      const matchingTrainees = traineesData.filter(
+        (t) => normalisePersonName(t.fullName) === nameKey || normalisePersonName(t.name) === nameKey
+      );
+      const traineeObj = matchingTrainees[occurrence] || matchingTrainees[0];
+      const course = getCourse(fullName, parsedCourse);
+      const displayName = traineeObj ? traineeNameResolver.formatList(traineeObj) : name;
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "li",
+        {
+          ref: (el) => onRowRef?.(fullName, el),
+          className: `flex items-center justify-start pl-3 text-xs transition-colors duration-150 text-gray-300 border-b border-gray-700/50 ${onTraineeClick ? "cursor-pointer hover:bg-gray-700" : ""}`,
+          style: { height: rowHeight },
+          onMouseEnter: () => onRowEnter?.(index),
+          onMouseLeave: () => onRowLeave?.(),
+          onClick: () => onTraineeClick?.(fullName),
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-medium leading-tight", children: displayName }),
+            course && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono leading-tight", style: { color: convertTailwindToHex(courseColors[course] || "bg-gray-400/50") }, children: course })
+          ] })
+        },
+        getPersonIdentityDedupeKey(traineeObj || { name: fullName }, "trainee")
+      );
+    });
+  })() }) });
 };
 const PIXELS_PER_HOUR$4 = 200;
 const ROW_HEIGHT$4 = 32;
