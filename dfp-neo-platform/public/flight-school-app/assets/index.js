@@ -18490,12 +18490,12 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
         personnelRefs: event.personnelRefs || []
       }))
     );
-    const stackedGroups = Array.from(tileRows.reduce((groups, row) => {
+    const makeTileGroups = (rows, includeResource) => Array.from(rows.reduce((groups, row) => {
       const key = [
         row.rowIdNumber || row.rowId || row.rowName,
         row.startTime,
         row.duration,
-        row.resourceId
+        includeResource ? row.resourceId : ""
       ].join("|");
       groups.set(key, [...groups.get(key) || [], row]);
       return groups;
@@ -18509,6 +18509,57 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       count: group.length,
       events: group
     }));
+    const stackedGroups = makeTileGroups(tileRows, true);
+    const looseStackedGroups = makeTileGroups(tileRows, false);
+    const barRows = showValidation ? uniqueEventsWithUnavailability.flatMap((event) => {
+      const syllabus = syllabusDetails.find((d) => d.id === event.flightNumber);
+      if (!syllabus) return [];
+      const bars = [];
+      if (syllabus.preFlightTime > 0) {
+        bars.push({ barType: "pre", startTime: event.startTime - syllabus.preFlightTime, duration: syllabus.preFlightTime });
+      }
+      if (syllabus.postFlightTime > 0) {
+        bars.push({ barType: "post", startTime: event.startTime + event.duration, duration: syllabus.postFlightTime });
+      }
+      if (bars.length === 0) return [];
+      return instructors.filter((instructor) => scheduleEventIncludesPersonRecord(event, instructor, {
+        personType: "staff",
+        allPeople: instructorsData
+      })).flatMap((instructor) => bars.map((bar) => ({
+        barKey: `${event.id}-${bar.barType}-${instructor.idNumber || instructor.id || instructor.name}`,
+        barType: bar.barType,
+        rowName: instructor.name,
+        rowId: instructor.id || "",
+        rowIdNumber: instructor.idNumber || "",
+        eventId: String(event.id || ""),
+        startTime: bar.startTime,
+        duration: bar.duration,
+        eventStartTime: event.startTime,
+        eventDuration: event.duration,
+        resourceId: event.resourceId || "",
+        flightNumber: event.flightNumber || "",
+        matchBasis: describeMatchBasis(event, instructor)
+      })));
+    }) : [];
+    const stackedBarGroups = Array.from(barRows.reduce((groups, row) => {
+      const key = [
+        row.rowIdNumber || row.rowId || row.rowName,
+        row.startTime,
+        row.duration,
+        row.barType
+      ].join("|");
+      groups.set(key, [...groups.get(key) || [], row]);
+      return groups;
+    }, /* @__PURE__ */ new Map()).values()).filter((group) => group.length > 1).map((group) => ({
+      rowName: group[0].rowName,
+      rowId: group[0].rowId,
+      rowIdNumber: group[0].rowIdNumber,
+      barType: group[0].barType,
+      startTime: group[0].startTime,
+      duration: group[0].duration,
+      count: group.length,
+      bars: group
+    }));
     const duplicateInputEventIds = Array.from(inputIdCounts.entries()).filter(([, count]) => count > 1).map(([id, count]) => ({ id, count }));
     return {
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -18518,12 +18569,17 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
       uniqueEventCount: uniqueEventsWithUnavailability.length,
       staffCount: instructors.length,
       tileCount: tileRows.length,
+      barCount: barRows.length,
       duplicateInputEventIds,
       stackedGroups,
+      looseStackedGroups,
+      stackedBarGroups,
       clarkRows: tileRows.filter((row) => row.rowName.toLowerCase().includes("clark, ava")),
-      sampleTiles: tileRows.slice(0, 120)
+      clarkBars: barRows.filter((row) => row.rowName.toLowerCase().includes("clark, ava")),
+      sampleTiles: tileRows.slice(0, 120),
+      sampleBars: barRows.slice(0, 120)
     };
-  }, [date, eventsWithUnavailability, instructors, instructorsData, uniqueEventsWithUnavailability]);
+  }, [date, eventsWithUnavailability, instructors, instructorsData, showValidation, syllabusDetails, uniqueEventsWithUnavailability]);
   reactExports.useEffect(() => {
     try {
       const existing = JSON.parse(localStorage.getItem("neo_staff_schedule_render_diag") || "[]");
@@ -18926,7 +18982,10 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const instructorEventsForBars = uniqueEventsWithUnavailability.filter((e) => getPersonnel$5(e).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                  const instructorEventsForBars = uniqueEventsWithUnavailability.filter((event) => scheduleEventIncludesPersonRecord(event, instructor, {
+                    personType: "staff",
+                    allPeople: instructorsData
+                  })).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < instructorEventsForBars.length; i++) {
                     const currentEvent = instructorEventsForBars[i];
                     const prevEvent = instructorEventsForBars[i - 1];
