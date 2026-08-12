@@ -18333,6 +18333,7 @@ const getPersonnel$5 = (event) => {
   event.crewSelectionOrder?.forEach((person) => addPersonnelName$1(personnel, person));
   return Array.from(personnel);
 };
+const getStaffScheduleRowIdentity = (instructor) => String(instructor.idNumber || instructor.id || instructor.name || "").trim();
 const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) => {
   const unavailabilityEvents = [];
   personnelData.forEach((person) => {
@@ -18636,21 +18637,22 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
     }
     return null;
   }, [syllabusDetails]);
-  const handleMouseDown = (e, event) => {
+  const handleMouseDown = (e, event, instructor) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
     document.body.classList.add("no-select");
     const tileElement = e.currentTarget;
     const rect = tileElement.getBoundingClientRect();
     const initialPositions = /* @__PURE__ */ new Map();
-    const instructorName = getPersonnel$5(event)[0] || "";
-    const rowIndex = instructors.findIndex((i) => i.name === instructorName);
+    const rowIdentity = getStaffScheduleRowIdentity(instructor);
+    const rowIndex = instructors.findIndex((candidate) => getStaffScheduleRowIdentity(candidate) === rowIdentity);
     if (rowIndex !== -1) {
       initialPositions.set(event.id, { startTime: event.startTime, rowIndex });
     }
     if (initialPositions.size > 0) {
       setDraggingState({
         mainEventId: event.id,
+        rowIdentity,
         xOffset: (e.clientX - rect.left) / zoomLevel,
         initialPositions
       });
@@ -19039,7 +19041,9 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                   allPeople: instructorsData
                 })).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = instructorEvents.map((event) => {
-                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                  const instructorRowIdentity = getStaffScheduleRowIdentity(instructor);
+                  const tileRenderKey = `${event.id}-${instructorRowIdentity}`;
+                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id && draggingState.rowIdentity === instructorRowIdentity);
                   const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
                   const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
                   const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
@@ -19073,7 +19077,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                         };
                         onSelectEvent(syntheticEvent);
                       },
-                      onMouseDown: (e) => handleMouseDown(e, event),
+                      onMouseDown: (e) => handleMouseDown(e, event, instructor),
                       onMouseEnter: () => setHoveredEventId(event.id),
                       onMouseLeave: () => setHoveredEventId(null),
                       pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
@@ -19092,7 +19096,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                       aircraftNumberSettings,
                       disableLayoutTransition: true
                     },
-                    `${event.id}-${instructor.name}`
+                    tileRenderKey
                   );
                 });
                 return [rowHighlight, ...barsForThisRow, ...eventTiles];
@@ -30871,6 +30875,7 @@ ${swapNote}` : swapNote
       const savedStudentName = isFixedCrewCrewedEvent ? "" : isAirCombatSoloSctSave ? "" : c.student;
       const savedPilotName = isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot;
       const savedPersonnelRefs = [];
+      let sameNameInstructorRefUsedForPilot = false;
       const addSavedPersonnelRef = (ref) => {
         if (!ref || !ref.name) return;
         const key = [
@@ -30887,11 +30892,14 @@ ${swapNote}` : swapNote
         }
       };
       if (savedInstructorName) {
-        addSavedPersonnelRef(
-          resolveSelectedPersonRef(savedInstructorName, c.instructorRef, staffSelectOptions, "instructor")
-        );
+        const savedInstructorRef = resolveSelectedPersonRef(savedInstructorName, c.instructorRef, staffSelectOptions, "instructor");
+        addSavedPersonnelRef(savedInstructorRef);
+        if (savedPilotName && stripCrewSuffix(savedPilotName).toLowerCase() === stripCrewSuffix(savedInstructorName).toLowerCase() && savedInstructorRef?.personType === "staff") {
+          addSavedPersonnelRef(clonePersonRefForRole(savedInstructorRef, "pilot"));
+          sameNameInstructorRefUsedForPilot = true;
+        }
       }
-      if (savedPilotName) {
+      if (savedPilotName && !sameNameInstructorRefUsedForPilot) {
         addSavedPersonnelRef(
           resolveSelectedPersonRef(savedPilotName, c.pilotRef, staffSelectOptions, "pilot") || resolveSelectedPersonRef(savedPilotName, c.pilotRef, traineeSelectOptions, "pilot")
         );

@@ -115,6 +115,9 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     return Array.from(personnel);
 };
 
+const getStaffScheduleRowIdentity = (instructor: { id?: string; idNumber?: number; name: string }): string =>
+    String(instructor.idNumber || instructor.id || instructor.name || '').trim();
+
 // Create unavailability events for rendering
 const createUnavailabilityEvents = (date: string, personnelData: any[], isInstructor: boolean = true): ScheduleEvent[] => {
     const unavailabilityEvents: ScheduleEvent[] = [];
@@ -228,6 +231,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
 
   const [draggingState, setDraggingState] = useState<{
     mainEventId: string;
+    rowIdentity: string;
     xOffset: number;
     initialPositions: Map<string, { startTime: number, rowIndex: number }>;
   } | null>(null);
@@ -487,7 +491,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     return null;
 }, [syllabusDetails]);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, event: ScheduleEvent) => {
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, event: ScheduleEvent, instructor: { id?: string; idNumber?: number; name: string }) => {
     if (e.button !== 0) return;
     didDragRef.current = false;
     document.body.classList.add('no-select');
@@ -495,8 +499,8 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     const rect = tileElement.getBoundingClientRect();
 
     const initialPositions = new Map<string, { startTime: number, rowIndex: number }>();
-    const instructorName = getPersonnel(event)[0] || '';
-    const rowIndex = instructors.findIndex(i => i.name === instructorName);
+    const rowIdentity = getStaffScheduleRowIdentity(instructor);
+    const rowIndex = instructors.findIndex(candidate => getStaffScheduleRowIdentity(candidate) === rowIdentity);
     
     if (rowIndex !== -1) {
         initialPositions.set(event.id, { startTime: event.startTime, rowIndex });
@@ -505,6 +509,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
     if (initialPositions.size > 0) {
         setDraggingState({
             mainEventId: event.id,
+            rowIdentity,
             xOffset: (e.clientX - rect.left) / zoomLevel,
             initialPositions,
         });
@@ -941,7 +946,9 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = instructorEvents.map(event => {
-                const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                const instructorRowIdentity = getStaffScheduleRowIdentity(instructor);
+                const tileRenderKey = `${event.id}-${instructorRowIdentity}`;
+                const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id && draggingState.rowIdentity === instructorRowIdentity);
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
                 const isConflicting =
                   (showValidation && conflictingEventIds.has(event.id)) ||
@@ -962,7 +969,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                 
                 return (
                   <FlightTile
-                    key={`${event.id}-${instructor.name}`}
+                    key={tileRenderKey}
                     event={event}
                     traineesData={traineesData}
                     instructorsData={instructorsData as any}
@@ -981,7 +988,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                         } as any;
                         onSelectEvent(syntheticEvent);
                     }}
-                    onMouseDown={(e) => handleMouseDown(e, event)}
+                    onMouseDown={(e) => handleMouseDown(e, event, instructor)}
                     onMouseEnter={() => setHoveredEventId(event.id)}
                     onMouseLeave={() => setHoveredEventId(null)}
                     pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}

@@ -2727,6 +2727,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             const savedStudentName = isFixedCrewCrewedEvent ? '' : (isAirCombatSoloSctSave ? '' : c.student);
             const savedPilotName = isFixedCrewCrewedEvent ? fixedCrewDisplayPic : (isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot);
             const savedPersonnelRefs: ScheduleEventPersonnelRef[] = [];
+            let sameNameInstructorRefUsedForPilot = false;
             const addSavedPersonnelRef = (ref: ScheduleEventPersonnelRef | null) => {
                 if (!ref || !ref.name) return;
                 const key = [
@@ -2744,11 +2745,21 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             };
 
             if (savedInstructorName) {
-                addSavedPersonnelRef(
-                    resolveSelectedPersonRef(savedInstructorName, c.instructorRef, staffSelectOptions, 'instructor')
-                );
+                const savedInstructorRef = resolveSelectedPersonRef(savedInstructorName, c.instructorRef, staffSelectOptions, 'instructor');
+                addSavedPersonnelRef(savedInstructorRef);
+                if (
+                    savedPilotName &&
+                    stripCrewSuffix(savedPilotName).toLowerCase() === stripCrewSuffix(savedInstructorName).toLowerCase() &&
+                    savedInstructorRef?.personType === 'staff'
+                ) {
+                    addSavedPersonnelRef(clonePersonRefForRole(savedInstructorRef, 'pilot'));
+                    sameNameInstructorRefUsedForPilot = true;
+                }
             }
-            if (savedPilotName) {
+            if (
+                savedPilotName &&
+                !sameNameInstructorRefUsedForPilot
+            ) {
                 addSavedPersonnelRef(
                     resolveSelectedPersonRef(savedPilotName, c.pilotRef, staffSelectOptions, 'pilot')
                     || resolveSelectedPersonRef(savedPilotName, c.pilotRef, traineeSelectOptions, 'pilot')
