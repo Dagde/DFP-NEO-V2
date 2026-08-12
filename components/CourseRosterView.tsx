@@ -13,7 +13,7 @@ import CourseEditFlyout from './CourseEditFlyout';
 import TraineeBulkUploadFlyout from './TraineeBulkUploadFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
-import { scheduleEventIncludesPerson } from '../utils/scheduleEventPersonnel';
+import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 import type { TrainingReportTemplate, TrainingReportTerminology } from '../utils/trainingReportTerminology';
 import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
@@ -326,10 +326,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         setSelectedTraineeForDeletion(null);
     };
 
-    const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, traineeFullName: string) => {
+    const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, trainee: Trainee) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const traineeEvents = events.filter(event => scheduleEventIncludesPerson(event, traineeFullName));
-        setHoveredTrainee({ name: traineeFullName.split(' – ')[0], events: traineeEvents });
+        const traineeEvents = events.filter(event => scheduleEventIncludesPersonRecord(event, trainee as any, {
+            personType: 'trainee',
+            allPeople: traineesData as any,
+        }));
+        setHoveredTrainee({ name: trainee.fullName.split(' – ')[0], events: traineeEvents });
         setFlyoutPosition({ top: rect.top, left: rect.right + 10 });
     };
 
@@ -565,7 +568,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                             <li
                                                                 key={getPersonStableKey(trainee as any, 'trainee')}
                                                                 className={`flex items-center text-sm ${isSuspended ? 'rounded border border-red-500/80 bg-red-950/20 px-1 py-0.5' : ''}`}
-                                                                onMouseEnter={(e) => handleMouseEnter(e, trainee.fullName)}
+                                                                onMouseEnter={(e) => handleMouseEnter(e, trainee)}
                                                                 onMouseLeave={handleMouseLeave}
                                                             >
                                                                 <span className="font-mono text-gray-500 w-16 flex-shrink-0">{trainee.rank}</span>

@@ -24,7 +24,7 @@ import { type InsertEventTypeConfig } from '../utils/insertEventTypes';
 import { type AircraftConfigurationDefinition } from '../utils/aircraftConfigurationSettings';
 import { findCrewPositionEntry, getCrewPositionOptions, type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
-import { scheduleEventIncludesPerson } from '../utils/scheduleEventPersonnel';
+import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 import {
     getPersonAssignedQualificationIds,
     personHasInstructorQualification,
@@ -236,7 +236,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     defaultUnitCode = '',
     defaultLocationName = '',
 }) => {
-  const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
+  const [hoveredInstructor, setHoveredInstructor] = useState<{ instructor: Instructor; events: ScheduleEvent[] } | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
   const [originRect, setOriginRect] = useState<DOMRect | null>(null);
@@ -524,10 +524,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       Object.keys(otherStaffByUnit).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
   [otherStaffByUnit]);
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
+  const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructor: Instructor) => {
     if (selectedInstructor || isArchiveMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredInstructor(instructorName);
+    setHoveredInstructor({
+      instructor,
+      events: events.filter(event => scheduleEventIncludesPersonRecord(event, instructor as any, {
+        personType: 'staff',
+        allPeople: instructorsData as any,
+      })),
+    });
     setFlyoutPosition({ top: rect.top, left: rect.right + 10 });
   };
 
@@ -629,7 +635,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     ? 'bg-gray-800/25 text-gray-500 hover:bg-gray-800/40 hover:text-gray-400'
                     : `${selectedInstructor && samePersonRecord(selectedInstructor as any, instructor as any) ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`
             }`}
-            onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
+            onMouseEnter={(e) => handleMouseEnter(e, instructor)}
             onMouseLeave={handleMouseLeave}
             onClick={(e) => {
                 if (isArchiveMode) {
@@ -904,9 +910,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       {/* Hover Flyout */}
       {hoveredInstructor && flyoutPosition && (
         <FlightInfoFlyout
-          events={events.filter(event => scheduleEventIncludesPerson(event, hoveredInstructor))}
+          events={hoveredInstructor.events}
           position={flyoutPosition}
-          personName={hoveredInstructor}
+          personName={hoveredInstructor.instructor.name}
           personType="Instructor"
         />
       )}

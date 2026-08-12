@@ -6,6 +6,7 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { normalisePersonnelNameForScheduleMatch, scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 
 interface TraineeScheduleViewProps {
   date: string;
@@ -108,6 +109,16 @@ const createUnavailabilityEvents = (date: string, personnelData: Trainee[]): Sch
                     type: 'unavailability',
                     student: person.fullName,
                     pilot: person.fullName,
+                    personnelRefs: [{
+                        role: 'student',
+                        personType: 'trainee',
+                        name: person.fullName,
+                        id: String((person as any).id || '').trim() || undefined,
+                        idNumber: (person as any).idNumber,
+                        rank: person.rank,
+                        unit: person.unit,
+                        course: person.course,
+                    }],
                     flightNumber: 'UNAVAIL',
                     resourceName: person.fullName,
                     resourceId: `TRAINEE-${person.fullName}`,
@@ -183,6 +194,29 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
     const unavailabilityEvents = createUnavailabilityEvents(date, traineesData);
     return [...events, ...unavailabilityEvents];
   }, [date, events, traineesData]);
+
+  const traineeRows = useMemo(() => {
+    const occurrenceCounts = new Map<string, number>();
+    return trainees.map(fullName => {
+      const key = normalisePersonnelNameForScheduleMatch(fullName);
+      const occurrence = occurrenceCounts.get(key) || 0;
+      occurrenceCounts.set(key, occurrence + 1);
+      const matches = traineesData.filter(trainee =>
+        normalisePersonnelNameForScheduleMatch(trainee.fullName || trainee.name) === key ||
+        normalisePersonnelNameForScheduleMatch(trainee.name) === key
+      );
+      return matches[occurrence] || matches[0] || { fullName, name: fullName };
+    });
+  }, [trainees, traineesData]);
+
+  const eventIncludesTraineeRow = useCallback((event: ScheduleEvent, rowIndex: number): boolean => {
+    const trainee = traineeRows[rowIndex];
+    if (!trainee) return false;
+    return scheduleEventIncludesPersonRecord(event, trainee as any, {
+      personType: 'trainee',
+      allPeople: traineesData as any,
+    });
+  }, [traineeRows, traineesData]);
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -560,7 +594,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
               
               if (showValidation) {
                 const traineeEventsForBars = events
-                  .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee) || (e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)))
+                  .filter(e => eventIncludesTraineeRow(e, rowIndex))
                   .sort((a, b) => a.startTime - b.startTime);
                 
                 for (let i = 0; i < traineeEventsForBars.length; i++) {
@@ -623,11 +657,9 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                 }
               }
               
-              const traineeEvents = eventsWithUnavailability.filter(event => 
-                event.student === trainee || 
-                (event.flightType === 'Solo' && event.pilot === trainee) ||
-                (event.isAcademic && Array.isArray(event.attendees) && event.attendees.includes(trainee))
-              ).sort((a, b) => a.startTime - b.startTime);
+              const traineeEvents = eventsWithUnavailability
+                .filter(event => eventIncludesTraineeRow(event, rowIndex))
+                .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = traineeEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);

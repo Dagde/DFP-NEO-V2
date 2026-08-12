@@ -1,4 +1,6 @@
 import { ScheduleEvent } from '../types';
+import type { PersonIdentityRecord } from './personIdentity';
+import { getPersonDisplayName, samePersonRecord } from './personIdentity';
 
 const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
 
@@ -53,3 +55,60 @@ export const schedulePersonnelNamesMatch = (a?: string, b?: string): boolean => 
 
 export const scheduleEventIncludesPerson = (event: ScheduleEvent, personName?: string): boolean =>
     getScheduleEventPersonnelNames(event).some(eventPerson => schedulePersonnelNamesMatch(eventPerson, personName));
+
+const getPersonScheduleName = (person: PersonIdentityRecord): string =>
+    String(getPersonDisplayName(person) || person.name || '').trim();
+
+const getIdentityValue = (value: unknown): string => String(value ?? '').trim();
+
+const getExactNameDuplicateCount = (
+    person: PersonIdentityRecord,
+    allPeople: PersonIdentityRecord[] = [],
+): number => {
+    const personName = normalisePersonnelNameForScheduleMatch(getPersonScheduleName(person));
+    if (!personName) return 0;
+    return allPeople.filter(candidate =>
+        normalisePersonnelNameForScheduleMatch(getPersonScheduleName(candidate)) === personName
+    ).length;
+};
+
+export const scheduleEventIncludesPersonRecord = (
+    event: ScheduleEvent,
+    person: PersonIdentityRecord,
+    options: {
+        personType?: 'staff' | 'trainee';
+        allPeople?: PersonIdentityRecord[];
+    } = {},
+): boolean => {
+    const personName = getPersonScheduleName(person);
+    if (!personName) return false;
+
+    const eventRefs = event.personnelRefs || [];
+    if (eventRefs.length > 0) {
+        const matchingNameRefs = eventRefs.filter(ref => {
+            if (options.personType && ref.personType !== options.personType) return false;
+            return schedulePersonnelNamesMatch(ref.name, personName);
+        });
+
+        const matchingIdentityRef = matchingNameRefs.some(ref => {
+            const refId = getIdentityValue(ref.id);
+            const personId = getIdentityValue(person.id);
+            if (refId && personId && refId === personId) return true;
+
+            const refIdNumber = getIdentityValue(ref.idNumber);
+            const personIdNumber = getIdentityValue(person.idNumber);
+            if (refIdNumber && personIdNumber && refIdNumber === personIdNumber) return true;
+
+            return samePersonRecord(ref as PersonIdentityRecord, person);
+        });
+        if (matchingIdentityRef) return true;
+
+        // If the event already has identity refs for this displayed name, do not
+        // fall back to name matching and accidentally assign it to another duplicate.
+        if (matchingNameRefs.length > 0) return false;
+    }
+
+    const duplicateCount = getExactNameDuplicateCount(person, options.allPeople || []);
+    if (duplicateCount > 1) return false;
+    return scheduleEventIncludesPerson(event, personName);
+};

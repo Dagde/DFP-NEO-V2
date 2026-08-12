@@ -9,6 +9,7 @@ import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 
 interface NextDayInstructorScheduleViewProps {
   events: ScheduleEvent[];
@@ -43,27 +44,11 @@ const PERSONNEL_COLUMN_WIDTH = 160;
 const TIME_HEADER_HEIGHT = 40;
 type NextDayInstructorScheduleRow =
   | { type: 'unit'; unit: string; count: number }
-  | { type: 'person'; instructor: { name: string; rank: InstructorRank; unit?: string; role?: string } };
+  | { type: 'person'; instructor: { id?: string; idNumber?: number; name: string; rank: InstructorRank; unit?: string; role?: string } };
 
 const addPersonnelName = (personnel: Set<string>, value?: string) => {
     const name = String(value || '').trim();
     if (name) personnel.add(name);
-};
-
-const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
-
-const normalisePersonnelNameForMatch = (name?: string): string =>
-    String(name || '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(PERSONNEL_RANK_PREFIX_RE, '')
-        .replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '')
-        .toLowerCase();
-
-const personnelNamesMatch = (a?: string, b?: string): boolean => {
-    const left = normalisePersonnelNameForMatch(a);
-    const right = normalisePersonnelNameForMatch(b);
-    return !!left && left === right;
 };
 
 const getPersonnel = (event: ScheduleEvent): string[] => {
@@ -88,9 +73,6 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     event.crewSelectionOrder?.forEach(person => addPersonnelName(personnel, person));
     return Array.from(personnel);
 };
-
-const eventIncludesPerson = (event: ScheduleEvent, personName: string): boolean =>
-    getPersonnel(event).some(eventPerson => personnelNamesMatch(eventPerson, personName));
 
 const getValidationEventKey = (event: ScheduleEvent): string =>
     [
@@ -650,7 +632,12 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
                 />
               ) : null;
 
-              const instructorEvents = uniqueEvents.filter(event => eventIncludesPerson(event, instructor.name)).sort((a, b) => a.startTime - b.startTime);
+              const instructorEvents = uniqueEvents
+                .filter(event => scheduleEventIncludesPersonRecord(event, instructor as any, {
+                    personType: 'staff',
+                    allPeople: instructorsData as any,
+                }))
+                .sort((a, b) => a.startTime - b.startTime);
               const eventTiles = instructorEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;

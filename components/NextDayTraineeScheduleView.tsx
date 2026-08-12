@@ -4,6 +4,7 @@ import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
 import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import { normalisePersonnelNameForScheduleMatch, scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 
 interface NextDayTraineeScheduleViewProps {
   events: ScheduleEvent[];
@@ -181,6 +182,29 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
     
     return sorted;
   }, [trainees, traineesData]);
+
+  const sortedTraineeRows = useMemo(() => {
+    const occurrenceCounts = new Map<string, number>();
+    return sortedTrainees.map(fullName => {
+      const key = normalisePersonnelNameForScheduleMatch(fullName);
+      const occurrence = occurrenceCounts.get(key) || 0;
+      occurrenceCounts.set(key, occurrence + 1);
+      const matches = traineesData.filter(trainee =>
+        normalisePersonnelNameForScheduleMatch(trainee.fullName || trainee.name) === key ||
+        normalisePersonnelNameForScheduleMatch(trainee.name) === key
+      );
+      return matches[occurrence] || matches[0] || { fullName, name: fullName };
+    });
+  }, [sortedTrainees, traineesData]);
+
+  const eventIncludesTraineeRow = useCallback((event: ScheduleEvent, rowIndex: number): boolean => {
+    const trainee = sortedTraineeRows[rowIndex];
+    if (!trainee) return false;
+    return scheduleEventIncludesPersonRecord(event, trainee as any, {
+      personType: 'trainee',
+      allPeople: traineesData as any,
+    });
+  }, [sortedTraineeRows, traineesData]);
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -506,7 +530,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
               
               if (showValidation) {
                 const traineeEventsForBars = uniqueEvents
-                  .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee) || (e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)))
+                  .filter(e => eventIncludesTraineeRow(e, rowIndex))
                   .sort((a, b) => a.startTime - b.startTime);
                 
                 for (let i = 0; i < traineeEventsForBars.length; i++) {
@@ -569,11 +593,9 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
                 }
               }
               
-              const traineeEvents = uniqueEvents.filter(event => 
-                event.student === trainee || 
-                (event.flightType === 'Solo' && event.pilot === trainee) ||
-                (event.isAcademic && Array.isArray(event.attendees) && event.attendees.includes(trainee))
-              ).sort((a, b) => a.startTime - b.startTime);
+              const traineeEvents = uniqueEvents
+                .filter(event => eventIncludesTraineeRow(event, rowIndex))
+                .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = traineeEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);

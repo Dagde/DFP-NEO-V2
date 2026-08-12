@@ -9,6 +9,7 @@ import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
 import { isFixedCrewLikeOperationalModel, normaliseOperationalModel } from '../utils/platformConfigService';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
+import { scheduleEventIncludesPersonRecord } from '../utils/scheduleEventPersonnel';
 
 interface InstructorScheduleViewProps {
   date: string;
@@ -16,8 +17,8 @@ interface InstructorScheduleViewProps {
   onDateSelect?: (date: string) => void;
   snapshotDates?: string[];
   events: ScheduleEvent[];
-  instructors: { name: string; rank: InstructorRank; unit?: string; role?: string }[];
-  instructorsData: { name: string; rank: InstructorRank; unavailability?: any[] }[];
+  instructors: { id?: string; idNumber?: number; name: string; rank: InstructorRank; unit?: string; role?: string }[];
+  instructorsData: { id?: string; idNumber?: number; name: string; rank: InstructorRank; unit?: string; role?: string; unavailability?: any[] }[];
   traineesData: Trainee[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdateEvent: (updates: { eventId: string, newStartTime: number }[]) => void;
@@ -46,28 +47,12 @@ const PERSONNEL_COLUMN_WIDTH = 160;
 const TIME_HEADER_HEIGHT = 40;
 type InstructorScheduleRow =
   | { type: 'unit'; unit: string; count: number }
-  | { type: 'person'; instructor: { name: string; rank: InstructorRank; unit?: string; role?: string } };
+  | { type: 'person'; instructor: { id?: string; idNumber?: number; name: string; rank: InstructorRank; unit?: string; role?: string } };
 
 // --- Utility functions ---
 const addPersonnelName = (personnel: Set<string>, value?: string) => {
     const name = String(value || '').trim();
     if (name) personnel.add(name);
-};
-
-const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
-
-const normalisePersonnelNameForMatch = (name?: string): string =>
-    String(name || '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(PERSONNEL_RANK_PREFIX_RE, '')
-        .replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '')
-        .toLowerCase();
-
-const personnelNamesMatch = (a?: string, b?: string): boolean => {
-    const left = normalisePersonnelNameForMatch(a);
-    const right = normalisePersonnelNameForMatch(b);
-    return !!left && left === right;
 };
 
 const getPersonnel = (event: ScheduleEvent): string[] => {
@@ -92,9 +77,6 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     event.crewSelectionOrder?.forEach(person => addPersonnelName(personnel, person));
     return Array.from(personnel);
 };
-
-const eventIncludesPerson = (event: ScheduleEvent, personName: string): boolean =>
-    getPersonnel(event).some(eventPerson => personnelNamesMatch(eventPerson, personName));
 
 // Create unavailability events for rendering
 const createUnavailabilityEvents = (date: string, personnelData: any[], isInstructor: boolean = true): ScheduleEvent[] => {
@@ -154,6 +136,16 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
                     instructor: isInstructor ? person.name : undefined,
                     student: !isInstructor ? person.fullName : undefined,
                     pilot: !isInstructor ? person.fullName : undefined,
+                    personnelRefs: [{
+                        role: isInstructor ? 'instructor' : 'student',
+                        personType: isInstructor ? 'staff' : 'trainee',
+                        name: isInstructor ? person.name : person.fullName,
+                        id: String(person.id || '').trim() || undefined,
+                        idNumber: person.idNumber,
+                        rank: person.rank,
+                        unit: person.unit,
+                        course: person.course,
+                    }],
                     flightNumber: 'UNAVAIL',
                     resourceName: isInstructor ? person.name : person.fullName,
                     resourceId: isInstructor ? `INST-${person.name}` : `TRAINEE-${person.fullName}`,
@@ -740,7 +732,10 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
               }
               
               const instructorEvents = eventsWithUnavailability
-                .filter(event => eventIncludesPerson(event, instructor.name))
+                .filter(event => scheduleEventIncludesPersonRecord(event, instructor as any, {
+                  personType: 'staff',
+                  allPeople: instructorsData as any,
+                }))
                 .sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = instructorEvents.map(event => {
