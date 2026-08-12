@@ -65,6 +65,12 @@ export const getPersonStableKey = (person: PersonIdentityRecord, fallbackPrefix 
 export const getPersonDomIdSuffix = (person: PersonIdentityRecord, fallbackPrefix = 'person'): string =>
   getPersonStableKey(person, fallbackPrefix).replace(/[^A-Za-z0-9_-]+/g, '-');
 
+export const getPersonIdentityDedupeKey = (person: PersonIdentityRecord, fallbackPrefix = 'person'): string => {
+  const idNumber = String(person.idNumber || '').trim();
+  if (idNumber) return `pid-${idNumber}`;
+  return getPersonStableKey(person, fallbackPrefix);
+};
+
 export const formatPersonOptionLabel = (person: PersonIdentityRecord): string => {
   const name = getPersonDisplayName(person) || 'Unnamed person';
   const parts = [
@@ -85,12 +91,16 @@ export const describeDuplicateNamePerson = (person: PersonIdentityRecord): strin
 };
 
 export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = []) => {
+  const uniquePeople = people.filter((person, index, source) => {
+    const key = getPersonIdentityDedupeKey(person);
+    return source.findIndex(candidate => getPersonIdentityDedupeKey(candidate) === key) === index;
+  });
   const personByName = new Map<string, PersonIdentityRecord[]>();
   const surnameCounts = new Map<string, number>();
   const surnameInitialCounts = new Map<string, number>();
   const surnameFirstNameCounts = new Map<string, number>();
 
-  people.forEach(person => {
+  uniquePeople.forEach(person => {
     const displayName = getPersonDisplayName(person);
     const { surname, firstName, firstInitial } = getNameParts(displayName);
     const nameKey = normalisePersonName(displayName);

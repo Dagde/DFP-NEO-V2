@@ -46,7 +46,7 @@ import {
     type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import { buildCompactPersonNameResolver, type PersonIdentityRecord } from '../utils/personIdentity';
+import { buildCompactPersonNameResolver, getPersonIdentityDedupeKey, type PersonIdentityRecord } from '../utils/personIdentity';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -1520,17 +1520,34 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         
         // Filter out trainees to get staff only
         const staffOnly = instructorList.filter(name => !traineeNames.has(name));
+        const staffNameSet = new Set(staffOnly.map(name => String(name || '').trim()).filter(Boolean));
         
-        // Get instructor details to access unit and rank
-        const staffWithDetails = staffOnly.map(name => {
-            const instructor = instructorsData.find(i => i.name === name);
-            return {
-                name,
-                unit: instructor?.unit || 'Unknown',
-                rank: instructor?.rank || 'FLGOFF',
-                instructor
-            };
-        });
+        // Build options from staff records, not from duplicate name strings. Using
+        // Array.find(name) here makes every duplicate row point at the first record.
+        const staffRecordOptions = instructorsData
+            .filter(instructor => staffNameSet.has(String(instructor.name || '').trim()))
+            .map(instructor => ({
+                    name: instructor.name,
+                    unit: instructor.unit || 'Unknown',
+                    rank: instructor.rank || 'FLGOFF',
+                    value: getPersonIdentityDedupeKey(instructor as any, 'staff'),
+                    instructor,
+            }));
+        const uniqueStaffRecordOptions = staffRecordOptions.filter((option, index, options) =>
+            options.findIndex(candidate => candidate.value === option.value) === index
+        );
+        const staffWithDetails = [
+            ...uniqueStaffRecordOptions,
+            ...staffOnly
+                .filter(name => !instructorsData.some(instructor => instructor.name === name))
+                .map(name => ({
+                    name,
+                    unit: 'Unknown',
+                    rank: 'FLGOFF',
+                    value: String(name || '').trim(),
+                    instructor: undefined,
+                })),
+        ];
         
         // Group by unit
         const grouped = staffWithDetails.reduce((acc, instructor) => {
@@ -1575,7 +1592,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         String(staff?.role || '').trim().toLowerCase() === 'pilot';
 
     const airCombatPilotsByUnit = useMemo(() => {
-        const grouped: Record<string, Array<{ name: string; unit: string; rank: string; instructor?: Instructor }>> = {};
+        const grouped: Record<string, Array<{ name: string; unit: string; rank: string; value?: string; instructor?: Instructor }>> = {};
         if (!isAirCombatModel) return { grouped, sortedUnits: [] as string[] };
 
         const selectedPilotNames = new Set(
@@ -1605,7 +1622,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         ordered.forEach(staff => {
             const unit = staff.unit || 'Unknown';
             if (!grouped[unit]) grouped[unit] = [];
-            grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || 'FLGOFF', instructor: staff });
+            grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || 'FLGOFF', value: getPersonIdentityDedupeKey(staff as any, 'staff'), instructor: staff });
         });
 
         Object.keys(grouped).forEach(unit => {
@@ -1741,7 +1758,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                 const stats = personStats[instructor.name] || { rank: '' };
                                 const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                                 return (
-                                    <option key={instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
+                                    <option key={instructor.value || instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
                                         {displayText}
                                     </option>
                                 );
@@ -2980,7 +2997,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                    const stats = personStats[instructor.name] || { rank: '' };
                                                const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                                                return (
-                                                   <option key={instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
+                                                   <option key={instructor.value || instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
                                                        {displayText}
                                                    </option>
                                                );

@@ -4885,6 +4885,11 @@ const getPersonStableKey = (person, fallbackPrefix = "person") => {
   return `${fallbackPrefix}-${name || "unnamed"}${context ? `-${context}` : ""}`;
 };
 const getPersonDomIdSuffix = (person, fallbackPrefix = "person") => getPersonStableKey(person, fallbackPrefix).replace(/[^A-Za-z0-9_-]+/g, "-");
+const getPersonIdentityDedupeKey = (person, fallbackPrefix = "person") => {
+  const idNumber = String(person.idNumber || "").trim();
+  if (idNumber) return `pid-${idNumber}`;
+  return getPersonStableKey(person, fallbackPrefix);
+};
 const formatPersonOptionLabel = (person) => {
   const name = getPersonDisplayName(person) || "Unnamed person";
   const parts = [
@@ -4903,11 +4908,15 @@ const describeDuplicateNamePerson = (person) => {
   return parts.join("");
 };
 const buildCompactPersonNameResolver = (people = []) => {
+  const uniquePeople = people.filter((person, index, source) => {
+    const key = getPersonIdentityDedupeKey(person);
+    return source.findIndex((candidate) => getPersonIdentityDedupeKey(candidate) === key) === index;
+  });
   const personByName = /* @__PURE__ */ new Map();
   const surnameCounts = /* @__PURE__ */ new Map();
   const surnameInitialCounts = /* @__PURE__ */ new Map();
   const surnameFirstNameCounts = /* @__PURE__ */ new Map();
-  people.forEach((person) => {
+  uniquePeople.forEach((person) => {
     const displayName = getPersonDisplayName(person);
     const { surname, firstName, firstInitial } = getNameParts(displayName);
     const nameKey = normalisePersonName(displayName);
@@ -29845,15 +29854,27 @@ ${swapNote}` : swapNote
   const staffInstructorsByUnit = reactExports.useMemo(() => {
     const traineeNames = new Set(traineesData.map((t) => t.fullName));
     const staffOnly = instructorList.filter((name) => !traineeNames.has(name));
-    const staffWithDetails = staffOnly.map((name) => {
-      const instructor = instructorsData.find((i) => i.name === name);
-      return {
+    const staffNameSet = new Set(staffOnly.map((name) => String(name || "").trim()).filter(Boolean));
+    const staffRecordOptions = instructorsData.filter((instructor) => staffNameSet.has(String(instructor.name || "").trim())).map((instructor) => ({
+      name: instructor.name,
+      unit: instructor.unit || "Unknown",
+      rank: instructor.rank || "FLGOFF",
+      value: getPersonIdentityDedupeKey(instructor, "staff"),
+      instructor
+    }));
+    const uniqueStaffRecordOptions = staffRecordOptions.filter(
+      (option, index, options) => options.findIndex((candidate) => candidate.value === option.value) === index
+    );
+    const staffWithDetails = [
+      ...uniqueStaffRecordOptions,
+      ...staffOnly.filter((name) => !instructorsData.some((instructor) => instructor.name === name)).map((name) => ({
         name,
-        unit: instructor?.unit || "Unknown",
-        rank: instructor?.rank || "FLGOFF",
-        instructor
-      };
-    });
+        unit: "Unknown",
+        rank: "FLGOFF",
+        value: String(name || "").trim(),
+        instructor: void 0
+      }))
+    ];
     const grouped = staffWithDetails.reduce((acc, instructor) => {
       if (!acc[instructor.unit]) {
         acc[instructor.unit] = [];
@@ -29904,7 +29925,7 @@ ${swapNote}` : swapNote
     ordered.forEach((staff) => {
       const unit = staff.unit || "Unknown";
       if (!grouped[unit]) grouped[unit] = [];
-      grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || "FLGOFF", instructor: staff });
+      grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || "FLGOFF", value: getPersonIdentityDedupeKey(staff, "staff"), instructor: staff });
     });
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
@@ -29996,7 +30017,7 @@ ${swapNote}` : swapNote
             staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].map((instructor) => {
               const stats = personStats[instructor.name] || { rank: "" };
               const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor, staffNameResolver, instructor.name, instructor.rank || stats.rank);
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.id || instructor.idNumber || instructor.name);
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.value || instructor.id || instructor.idNumber || instructor.name);
             }) }, unit)),
             includePax && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "─── Other ───", children: /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PAX", children: "PAX" }) })
           ]
@@ -30925,7 +30946,7 @@ ${swapNote}` : swapNote
                 }).map((instructor) => {
                   const stats = personStats[instructor.name] || { rank: "" };
                   const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor, staffNameResolver, instructor.name, instructor.rank || stats.rank);
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.id || instructor.idNumber || instructor.name);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.value || instructor.id || instructor.idNumber || instructor.name);
                 }) }, unit))
               ]
             }
