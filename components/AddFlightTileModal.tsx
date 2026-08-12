@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
+import { ScheduleEvent, ScheduleEventPersonnelRef, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import {
@@ -39,6 +39,7 @@ import {
   type FixedCrewAvailabilityWindow,
 } from '../utils/fixedCrewAvailability';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { buildCompactPersonNameResolver, getPersonStableKey, type PersonIdentityRecord } from '../utils/personIdentity';
 
 const CONTINUATION_COURSE_KEY = '__continuation_events__';
 
@@ -222,6 +223,12 @@ type StableDropdownOption = {
   label: string;
   disabled?: boolean;
   isHeader?: boolean;
+};
+
+type PersonSelectOption = StableDropdownOption & {
+  name: string;
+  group: string;
+  ref: ScheduleEventPersonnelRef;
 };
 
 let activeAddFlightDropdownKey: string | null = null;
@@ -1745,6 +1752,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>(isSingleSeatAircraft ? 'Solo' : 'Dual');
   const [picName,       setPicName]       = useState('');
   const [studentName,   setStudentName]   = useState('');
+  const [picSelectionValue, setPicSelectionValue] = useState('');
+  const [studentSelectionValue, setStudentSelectionValue] = useState('');
+  const [selectedPicRef, setSelectedPicRef] = useState<ScheduleEventPersonnelRef | null>(null);
+  const [selectedStudentRef, setSelectedStudentRef] = useState<ScheduleEventPersonnelRef | null>(null);
   const [flightNumber,  setFlightNumber]  = useState('');
   const [startTime,     setStartTime]     = useState(8.0);
   const [duration,      setDuration]      = useState(1.2);
@@ -1795,6 +1806,32 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       .filter(candidate => candidate.formationId === initialEvent.formationId)
       .sort((a, b) => Number(a.formationPosition || 0) - Number(b.formationPosition || 0));
   }, [eventsForDate, initialEvent]);
+  const getPersonRefIdNumber = (person: PersonIdentityRecord): number | undefined => {
+    const numericId = Number(person.idNumber);
+    return Number.isFinite(numericId) ? numericId : undefined;
+  };
+  const makeSchedulePersonRef = (
+    person: PersonIdentityRecord,
+    personType: 'staff' | 'trainee',
+    role: ScheduleEventPersonnelRef['role'],
+  ): ScheduleEventPersonnelRef => ({
+    role,
+    personType,
+    name: String(person.fullName || person.name || '').trim(),
+    id: String(person.id || '').trim() || undefined,
+    idNumber: getPersonRefIdNumber(person),
+    rank: String(person.rank || '').trim() || undefined,
+    unit: String(person.unit || '').trim() || undefined,
+    course: String(person.course || '').trim() || undefined,
+  });
+  const staffNameResolver = useMemo(
+    () => buildCompactPersonNameResolver(instructorsData as any),
+    [instructorsData],
+  );
+  const traineeNameResolver = useMemo(
+    () => buildCompactPersonNameResolver(traineesData as any),
+    [traineesData],
+  );
   const normaliseFixedCrewUnitCode = (value?: string | null) => String(value || '').trim().toUpperCase();
   const activeFixedCrewUnitCodes = useMemo(() => {
     const rawUnits = activeUnitCodes.length > 0
@@ -2161,7 +2198,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
         .map(i => ({
           name: i.name,
-          label: `${i.rank ? i.rank + ' ' : ''}${i.name}`,
+          label: `${i.rank ? i.rank + ' - ' : ''}${staffNameResolver.formatList(i as any)}`,
           color: '#fff',
         }));
     }
@@ -2187,7 +2224,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         const textColor = colourMap[twClass] || '#fff';
         return {
           name: t.fullName || t.name,
-          label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}${t.course ? ' (' + t.course + ')' : ''}`,
+          label: `${t.rank ? t.rank + ' - ' : ''}${traineeNameResolver.formatList(t as any)}`,
           color: textColor,
         };
       });
@@ -2207,7 +2244,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
       .map(i => ({
         name: i.name,
-        label: `${i.rank ? i.rank + ' ' : ''}${i.name}`,
+        label: `${i.rank ? i.rank + ' - ' : ''}${staffNameResolver.formatList(i as any)}`,
         color: '#fff',
       }));
   };
@@ -2215,25 +2252,99 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   // The preview is useful for seeing the resulting tile, but its small overlay
   // controls are not a dependable primary input method across browsers. These
   // options drive the fixed native controls below the preview instead.
-  const standardPersonOptions = useMemo(() => {
+  const standardPersonOptions = useMemo<PersonSelectOption[]>(() => {
     const staff = instructorsData
       .filter(person => !person.isAdminStaff)
       .filter(person => !shouldRestrictContinuationPicToPilots || isPilotStaff(person))
       .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
       .map(person => ({
-        value: person.name,
-        label: [person.rank, person.name, person.unit].filter(Boolean).join(' - '),
+        value: `staff:${getPersonStableKey(person as any, 'staff')}`,
+        name: person.name,
+        label: [person.rank, staffNameResolver.formatList(person as any)].filter(Boolean).join(' - '),
         group: 'Staff',
+        ref: makeSchedulePersonRef(person as any, 'staff', 'pilot'),
       }));
     const trainees = traineesData
       .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee'))
       .map(person => ({
-        value: person.fullName || person.name,
-        label: [person.rank, person.fullName || person.name, person.course, person.unit].filter(Boolean).join(' - '),
+        value: `trainee:${getPersonStableKey(person as any, 'trainee')}`,
+        name: person.fullName || person.name,
+        label: [person.rank, traineeNameResolver.formatList(person as any)].filter(Boolean).join(' - '),
         group: person.course || 'Trainees',
+        ref: makeSchedulePersonRef(person as any, 'trainee', 'student'),
       }));
     return [...staff, ...trainees];
-  }, [instructorsData, isPilotStaff, personnelDisplaySettings, shouldRestrictContinuationPicToPilots, traineesData]);
+  }, [instructorsData, isPilotStaff, makeSchedulePersonRef, personnelDisplaySettings, shouldRestrictContinuationPicToPilots, staffNameResolver, traineeNameResolver, traineesData]);
+
+  const personRefsMatch = (left?: ScheduleEventPersonnelRef | null, right?: ScheduleEventPersonnelRef | null): boolean => {
+    if (!left || !right) return false;
+    const leftId = String(left.id || '').trim();
+    const rightId = String(right.id || '').trim();
+    if (leftId && rightId) return leftId === rightId;
+    const leftIdNumber = String(left.idNumber || '').trim();
+    const rightIdNumber = String(right.idNumber || '').trim();
+    return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
+  };
+
+  const getPersonSelectionValue = useCallback((name: string, selectedRef?: ScheduleEventPersonnelRef | null): string => {
+    if (!name) return '';
+    const refMatch = selectedRef
+      ? standardPersonOptions.find(option => personRefsMatch(option.ref, selectedRef))
+      : null;
+    if (refMatch) return refMatch.value;
+    return standardPersonOptions.find(option => option.name === name)?.value || '';
+  }, [standardPersonOptions]);
+
+  const clonePersonRefForRole = (
+    ref: ScheduleEventPersonnelRef | undefined | null,
+    role: ScheduleEventPersonnelRef['role'],
+  ): ScheduleEventPersonnelRef | null => ref ? { ...ref, role } : null;
+
+  const resolvePersonRefForName = useCallback((name: string, selectedRef?: ScheduleEventPersonnelRef | null): ScheduleEventPersonnelRef | null => {
+    if (!name) return null;
+    const refMatch = selectedRef
+      ? standardPersonOptions.find(option => personRefsMatch(option.ref, selectedRef))
+      : null;
+    return (refMatch || standardPersonOptions.find(option => option.name === name))?.ref || null;
+  }, [standardPersonOptions]);
+
+  const handlePicSelectionChange = (value: string) => {
+    const option = standardPersonOptions.find(person => person.value === value);
+    setPicSelectionValue(value);
+    setPicName(option?.name || '');
+    setSelectedPicRef(option?.ref || null);
+    setGuidedStep('event');
+  };
+
+  const handleStudentSelectionChange = (value: string) => {
+    const option = standardPersonOptions.find(person => person.value === value);
+    setStudentSelectionValue(value);
+    setStudentName(option?.name || '');
+    setSelectedStudentRef(option?.ref || null);
+    setGuidedStep('instructor');
+  };
+
+  const buildSavedPersonnelRefs = (
+    crewMember: FormationCrewDraft,
+    savedFlightType: 'Dual' | 'Solo',
+    index: number,
+  ): ScheduleEventPersonnelRef[] => {
+    const refs: ScheduleEventPersonnelRef[] = [];
+    const picRef = clonePersonRefForRole(
+      resolvePersonRefForName(crewMember.picName, index === 0 ? selectedPicRef : null),
+      'pilot',
+    );
+    if (picRef) refs.push(picRef);
+
+    if (savedFlightType === 'Dual') {
+      const secondPersonRef = resolvePersonRefForName(crewMember.studentName, index === 0 ? selectedStudentRef : null);
+      const secondPersonRole: ScheduleEventPersonnelRef['role'] = secondPersonRef?.personType === 'staff' ? 'crew' : 'student';
+      const savedSecondPersonRef = clonePersonRefForRole(secondPersonRef, secondPersonRole);
+      if (savedSecondPersonRef) refs.push(savedSecondPersonRef);
+    }
+
+    return refs;
+  };
 
   const normaliseFormationPersonName = (value?: string | null): string => String(value || '').trim().toUpperCase();
   const getFormationAssignedNames = (exceptName?: string | null): Set<string> => {
@@ -2482,7 +2593,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       suppressNextCategoryResetRef.current = false;
       return;
     }
-    setPicName(''); setStudentName(''); setFlightNumber('');
+    setPicName(''); setStudentName(''); setPicSelectionValue(''); setStudentSelectionValue(''); setSelectedPicRef(null); setSelectedStudentRef(null); setFlightNumber('');
     setStartTime(8.0); setDuration(1.2);
     setArea(opAreas[0] || '-'); setAircraftNumber('001');
     setOrigin(school); setDestination(school);
@@ -2543,6 +2654,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (!isSingleSeatAircraft) return;
     setFlightType('Solo');
     setStudentName('');
+    setStudentSelectionValue('');
+    setSelectedStudentRef(null);
     setFormationCrew(prev => prev.map(crewMember => ({ ...crewMember, flightType: 'Solo', studentName: '' })));
   }, [isSingleSeatAircraft]);
 
@@ -2652,6 +2765,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const handlePicNameChange = (name: string) => {
     setPicName(name);
+    const ref = resolvePersonRefForName(name);
+    setPicSelectionValue(getPersonSelectionValue(name, ref));
+    setSelectedPicRef(ref);
     setGuidedStep('event');
   };
 
@@ -2940,6 +3056,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
       crewDrafts.forEach((crewMember, index) => {
         const savedFlightType = isFormation ? crewMember.flightType : flightType;
+        const savedPersonnelRefs = buildSavedPersonnelRefs(crewMember, savedFlightType, index);
         const savedCallsign = isFormation
           ? (formationType ? `${formationType}${index + 1}` : crewMember.callsign)
           : eventCategory === 'sct'
@@ -2955,6 +3072,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           instructor: isFormation ? '' : (savedFlightType === 'Dual' ? crewMember.picName : ''),
           student: savedFlightType === 'Dual' ? crewMember.studentName : '',
           pilot: crewMember.picName,
+          personnelRefs: savedPersonnelRefs,
           startTime,
           duration,
           area,
@@ -3431,8 +3549,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">PIC</label>
                     <select
-                      value={picName}
-                      onChange={event => handlePicNameChange(event.target.value)}
+                      value={picSelectionValue || getPersonSelectionValue(picName, selectedPicRef)}
+                      onChange={event => handlePicSelectionChange(event.target.value)}
                       className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
                     >
                       <option value="">Select PIC</option>
@@ -3449,14 +3567,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     <div>
                       <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-gray-400">Second Person</label>
                       <select
-                        value={studentName}
-                        onChange={event => { setStudentName(event.target.value); setGuidedStep('instructor'); }}
+                        value={studentSelectionValue || getPersonSelectionValue(studentName, selectedStudentRef)}
+                        onChange={event => handleStudentSelectionChange(event.target.value)}
                         className="w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none"
                       >
                         <option value="">Select second person</option>
                         {Array.from(new Set(standardPersonOptions.map(person => person.group))).map(group => (
                           <optgroup key={group} label={group}>
-                            {standardPersonOptions.filter(person => person.group === group && person.value !== picName).map(person => (
+                            {standardPersonOptions.filter(person => person.group === group && person.value !== (picSelectionValue || getPersonSelectionValue(picName, selectedPicRef))).map(person => (
                               <option key={`${group}-${person.value}`} value={person.value}>{person.label}</option>
                             ))}
                           </optgroup>

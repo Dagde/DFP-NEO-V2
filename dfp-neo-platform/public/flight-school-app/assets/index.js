@@ -33049,6 +33049,10 @@ const AddFlightTileModal = ({
   const [flightType, setFlightType] = reactExports.useState(isSingleSeatAircraft ? "Solo" : "Dual");
   const [picName, setPicName] = reactExports.useState("");
   const [studentName, setStudentName] = reactExports.useState("");
+  const [picSelectionValue, setPicSelectionValue] = reactExports.useState("");
+  const [studentSelectionValue, setStudentSelectionValue] = reactExports.useState("");
+  const [selectedPicRef, setSelectedPicRef] = reactExports.useState(null);
+  const [selectedStudentRef, setSelectedStudentRef] = reactExports.useState(null);
   const [flightNumber, setFlightNumber] = reactExports.useState("");
   const [startTime, setStartTime] = reactExports.useState(8);
   const [duration, setDuration] = reactExports.useState(1.2);
@@ -33093,6 +33097,28 @@ const AddFlightTileModal = ({
     if (!initialEvent?.formationId) return initialEvent ? [initialEvent] : [];
     return eventsForDate.filter((candidate) => candidate.formationId === initialEvent.formationId).sort((a, b) => Number(a.formationPosition || 0) - Number(b.formationPosition || 0));
   }, [eventsForDate, initialEvent]);
+  const getPersonRefIdNumber = (person) => {
+    const numericId = Number(person.idNumber);
+    return Number.isFinite(numericId) ? numericId : void 0;
+  };
+  const makeSchedulePersonRef = (person, personType, role) => ({
+    role,
+    personType,
+    name: String(person.fullName || person.name || "").trim(),
+    id: String(person.id || "").trim() || void 0,
+    idNumber: getPersonRefIdNumber(person),
+    rank: String(person.rank || "").trim() || void 0,
+    unit: String(person.unit || "").trim() || void 0,
+    course: String(person.course || "").trim() || void 0
+  });
+  const staffNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver(instructorsData),
+    [instructorsData]
+  );
+  const traineeNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver(traineesData),
+    [traineesData]
+  );
   const normaliseFixedCrewUnitCode2 = (value) => String(value || "").trim().toUpperCase();
   const activeFixedCrewUnitCodes = reactExports.useMemo(() => {
     const rawUnits = activeUnitCodes.length > 0 ? activeUnitCodes : String(activeUnitCode || "").split("+");
@@ -33363,7 +33389,7 @@ const AddFlightTileModal = ({
     if (selection === "STAFF") {
       return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
         name: i.name,
-        label: `${i.rank ? i.rank + " " : ""}${i.name}`,
+        label: `${i.rank ? i.rank + " - " : ""}${staffNameResolver.formatList(i)}`,
         color: "#fff"
       }));
     }
@@ -33392,7 +33418,7 @@ const AddFlightTileModal = ({
       const textColor = colourMap[twClass] || "#fff";
       return {
         name: t.fullName || t.name,
-        label: `${t.rank ? t.rank + " " : ""}${t.fullName || t.name}${t.course ? " (" + t.course + ")" : ""}`,
+        label: `${t.rank ? t.rank + " - " : ""}${traineeNameResolver.formatList(t)}`,
         color: textColor
       };
     });
@@ -33407,23 +33433,77 @@ const AddFlightTileModal = ({
     if (!shouldRestrictContinuationPicToPilots || selection !== "STAFF") return getNames(unit, selection);
     return instructorsData.filter((i) => (i.unit || "Unassigned") === unit).filter(isPilotStaff).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((i) => ({
       name: i.name,
-      label: `${i.rank ? i.rank + " " : ""}${i.name}`,
+      label: `${i.rank ? i.rank + " - " : ""}${staffNameResolver.formatList(i)}`,
       color: "#fff"
     }));
   };
   const standardPersonOptions = reactExports.useMemo(() => {
     const staff = instructorsData.filter((person) => !person.isAdminStaff).filter((person) => !shouldRestrictContinuationPicToPilots || isPilotStaff(person)).sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "staff")).map((person) => ({
-      value: person.name,
-      label: [person.rank, person.name, person.unit].filter(Boolean).join(" - "),
-      group: "Staff"
+      value: `staff:${getPersonStableKey(person, "staff")}`,
+      name: person.name,
+      label: [person.rank, staffNameResolver.formatList(person)].filter(Boolean).join(" - "),
+      group: "Staff",
+      ref: makeSchedulePersonRef(person, "staff", "pilot")
     }));
     const trainees2 = traineesData.sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, "trainee")).map((person) => ({
-      value: person.fullName || person.name,
-      label: [person.rank, person.fullName || person.name, person.course, person.unit].filter(Boolean).join(" - "),
-      group: person.course || "Trainees"
+      value: `trainee:${getPersonStableKey(person, "trainee")}`,
+      name: person.fullName || person.name,
+      label: [person.rank, traineeNameResolver.formatList(person)].filter(Boolean).join(" - "),
+      group: person.course || "Trainees",
+      ref: makeSchedulePersonRef(person, "trainee", "student")
     }));
     return [...staff, ...trainees2];
-  }, [instructorsData, isPilotStaff, personnelDisplaySettings, shouldRestrictContinuationPicToPilots, traineesData]);
+  }, [instructorsData, isPilotStaff, makeSchedulePersonRef, personnelDisplaySettings, shouldRestrictContinuationPicToPilots, staffNameResolver, traineeNameResolver, traineesData]);
+  const personRefsMatch = (left, right) => {
+    if (!left || !right) return false;
+    const leftId = String(left.id || "").trim();
+    const rightId = String(right.id || "").trim();
+    if (leftId && rightId) return leftId === rightId;
+    const leftIdNumber = String(left.idNumber || "").trim();
+    const rightIdNumber = String(right.idNumber || "").trim();
+    return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
+  };
+  const getPersonSelectionValue = reactExports.useCallback((name, selectedRef) => {
+    if (!name) return "";
+    const refMatch = selectedRef ? standardPersonOptions.find((option) => personRefsMatch(option.ref, selectedRef)) : null;
+    if (refMatch) return refMatch.value;
+    return standardPersonOptions.find((option) => option.name === name)?.value || "";
+  }, [standardPersonOptions]);
+  const clonePersonRefForRole = (ref, role) => ref ? { ...ref, role } : null;
+  const resolvePersonRefForName = reactExports.useCallback((name, selectedRef) => {
+    if (!name) return null;
+    const refMatch = selectedRef ? standardPersonOptions.find((option) => personRefsMatch(option.ref, selectedRef)) : null;
+    return (refMatch || standardPersonOptions.find((option) => option.name === name))?.ref || null;
+  }, [standardPersonOptions]);
+  const handlePicSelectionChange = (value) => {
+    const option = standardPersonOptions.find((person) => person.value === value);
+    setPicSelectionValue(value);
+    setPicName(option?.name || "");
+    setSelectedPicRef(option?.ref || null);
+    setGuidedStep("event");
+  };
+  const handleStudentSelectionChange = (value) => {
+    const option = standardPersonOptions.find((person) => person.value === value);
+    setStudentSelectionValue(value);
+    setStudentName(option?.name || "");
+    setSelectedStudentRef(option?.ref || null);
+    setGuidedStep("instructor");
+  };
+  const buildSavedPersonnelRefs = (crewMember, savedFlightType, index) => {
+    const refs = [];
+    const picRef = clonePersonRefForRole(
+      resolvePersonRefForName(crewMember.picName, index === 0 ? selectedPicRef : null),
+      "pilot"
+    );
+    if (picRef) refs.push(picRef);
+    if (savedFlightType === "Dual") {
+      const secondPersonRef = resolvePersonRefForName(crewMember.studentName, index === 0 ? selectedStudentRef : null);
+      const secondPersonRole = secondPersonRef?.personType === "staff" ? "crew" : "student";
+      const savedSecondPersonRef = clonePersonRefForRole(secondPersonRef, secondPersonRole);
+      if (savedSecondPersonRef) refs.push(savedSecondPersonRef);
+    }
+    return refs;
+  };
   const normaliseFormationPersonName = (value) => String(value || "").trim().toUpperCase();
   const getFormationAssignedNames = (exceptName) => {
     const allowedCurrent = normaliseFormationPersonName(exceptName);
@@ -33606,6 +33686,10 @@ const AddFlightTileModal = ({
     }
     setPicName("");
     setStudentName("");
+    setPicSelectionValue("");
+    setStudentSelectionValue("");
+    setSelectedPicRef(null);
+    setSelectedStudentRef(null);
     setFlightNumber("");
     setStartTime(8);
     setDuration(1.2);
@@ -33672,6 +33756,8 @@ const AddFlightTileModal = ({
     if (!isSingleSeatAircraft) return;
     setFlightType("Solo");
     setStudentName("");
+    setStudentSelectionValue("");
+    setSelectedStudentRef(null);
     setFormationCrew((prev) => prev.map((crewMember) => ({ ...crewMember, flightType: "Solo", studentName: "" })));
   }, [isSingleSeatAircraft]);
   reactExports.useEffect(() => {
@@ -33764,10 +33850,6 @@ const AddFlightTileModal = ({
       }
     }
     setGuidedStep("area");
-  };
-  const handlePicNameChange = (name) => {
-    setPicName(name);
-    setGuidedStep("event");
   };
   const selectedFixedCrewEvent = fixedCrewEventOptions.find((item) => getFixedCrewEventOptionKey(item) === fixedCrewEventKey) || fixedCrewEventOptions.find((item) => item.code === flightNumber || item.id === flightNumber);
   const selectedFixedCrewCurrencyProfile = fixedCrewCurrencyProfileOptions.find((profile) => getFixedCrewCurrencyProfileOptionKey(profile) === fixedCrewEventKey || profile.code === flightNumber || profile.name === flightNumber || profile.currency === flightNumber);
@@ -33986,6 +34068,7 @@ const AddFlightTileModal = ({
       ] : [{ flightType, picName, studentName, callsign }];
       crewDrafts.forEach((crewMember, index) => {
         const savedFlightType = isFormation ? crewMember.flightType : flightType;
+        const savedPersonnelRefs = buildSavedPersonnelRefs(crewMember, savedFlightType, index);
         const savedCallsign = isFormation ? formationType ? `${formationType}${index + 1}` : crewMember.callsign : eventCategory === "sct" ? resolveAssignedCallsign(crewMember.picName) || crewMember.callsign : crewMember.callsign;
         eventsToSave.push({
           id: v4(),
@@ -33997,6 +34080,7 @@ const AddFlightTileModal = ({
           instructor: isFormation ? "" : savedFlightType === "Dual" ? crewMember.picName : "",
           student: savedFlightType === "Dual" ? crewMember.studentName : "",
           pilot: crewMember.picName,
+          personnelRefs: savedPersonnelRefs,
           startTime,
           duration,
           area,
@@ -34467,8 +34551,8 @@ const AddFlightTileModal = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "select",
                         {
-                          value: picName,
-                          onChange: (event) => handlePicNameChange(event.target.value),
+                          value: picSelectionValue || getPersonSelectionValue(picName, selectedPicRef),
+                          onChange: (event) => handlePicSelectionChange(event.target.value),
                           className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
                           children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select PIC" }),
@@ -34482,15 +34566,12 @@ const AddFlightTileModal = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsxs(
                         "select",
                         {
-                          value: studentName,
-                          onChange: (event) => {
-                            setStudentName(event.target.value);
-                            setGuidedStep("instructor");
-                          },
+                          value: studentSelectionValue || getPersonSelectionValue(studentName, selectedStudentRef),
+                          onChange: (event) => handleStudentSelectionChange(event.target.value),
                           className: "w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none",
                           children: [
                             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select second person" }),
-                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group && person.value !== picName).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
+                            Array.from(new Set(standardPersonOptions.map((person) => person.group))).map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group, children: standardPersonOptions.filter((person) => person.group === group && person.value !== (picSelectionValue || getPersonSelectionValue(picName, selectedPicRef))).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: person.value, children: person.label }, `${group}-${person.value}`)) }, group))
                           ]
                         }
                       )
