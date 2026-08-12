@@ -14,12 +14,16 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<Fet
   try {
     const url = `${API_BASE}${endpoint}`;
     console.log('🌐 API Request:', url);
+    const sessionToken = typeof window !== 'undefined'
+      ? localStorage.getItem('dfp_session_token') || ''
+      : '';
     
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
         ...options?.headers,
       },
     });

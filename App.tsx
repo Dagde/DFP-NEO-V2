@@ -32975,18 +32975,12 @@ const App: React.FC = () => {
     ) => {
         const trimmedCommander = String(leadership.courseCommander || '').trim();
         const trimmedDeputy = String(leadership.deputyCourseCommander || '').trim();
-        setCourses(prevCourses =>
-            prevCourses.map(course =>
-                course.name === courseName
-                    ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy }
-                    : course
-            )
-        );
 
-        const existingCourse = courses.find(course => course.name === courseName);
+        const existingCourse = courses.find(course => course.name === courseName || course.code === courseName);
         const firstTraineeInCourse = traineesData.find(trainee => trainee.course === courseName);
         const courseToSave: Course = {
-            name: courseName,
+            name: existingCourse?.name || courseName,
+            code: existingCourse?.code || courseName,
             color: existingCourse?.color || courseColors[courseName] || '#6366f1',
             startDate: existingCourse?.startDate || '',
             gradDate: existingCourse?.gradDate || '',
@@ -33005,6 +32999,13 @@ const App: React.FC = () => {
         try {
             const result = await saveCourseToDB(courseToSave);
             if (result.success) {
+                setCourses(prevCourses =>
+                    prevCourses.map(course =>
+                        course.name === courseName || course.code === courseName
+                            ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy }
+                            : course
+                    )
+                );
                 logAudit({
                     page: 'Trainee Roster',
                     action: 'edit',
@@ -33015,10 +33016,12 @@ const App: React.FC = () => {
             } else {
                 console.error('[CourseEdit] Failed to update course leadership in DB:', result.error);
                 setErrorMessage('Failed to save course leadership to database');
+                throw new Error(result.error || 'Failed to save course leadership to database');
             }
         } catch (error) {
             console.error('[CourseEdit] Error updating course leadership:', error);
             setErrorMessage('Failed to save course leadership to database');
+            throw error;
         }
     };
 

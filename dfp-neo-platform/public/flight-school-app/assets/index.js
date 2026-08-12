@@ -26628,22 +26628,23 @@ const CourseEditFlyout = ({
     setDeputyCourseCommander(value);
     updateHasChanges(newCourseNumber, newUnit, courseCommander, value);
   };
-  const handleSaveCourseDetails = () => {
-    setHasChanges(false);
-    onClose();
-    void (async () => {
+  const handleSaveCourseDetails = async () => {
+    try {
       if (newCourseNumber !== courseName) {
-        onUpdateCourseNumber(courseName, newCourseNumber);
+        await Promise.resolve(onUpdateCourseNumber(courseName, newCourseNumber));
       }
       if (newUnit !== courseUnit) {
-        onUpdateCourseUnit(courseName, newUnit);
+        await Promise.resolve(onUpdateCourseUnit(courseName, newUnit));
       }
       if (leadershipChanged && onUpdateCourseLeadership) {
         await onUpdateCourseLeadership(courseName, { courseCommander, deputyCourseCommander });
       }
-    })().catch((error) => {
+      setHasChanges(false);
+      onClose();
+    } catch (error) {
       console.error("[CourseEditFlyout] Failed to save course details:", error);
-    });
+      setHasChanges(true);
+    }
   };
   const handleBackcourseClick = (trainee) => {
     setSelectedTrainee(trainee);
@@ -27974,11 +27975,8 @@ const CourseRosterView = ({
           setCourseToEdit(null);
         },
         onUpdateCourseLeadership: async (courseNumber, leadership) => {
-          try {
-            await onUpdateCourseLeadership?.(courseNumber, leadership);
-          } finally {
-            setCourseToEdit(null);
-          }
+          await onUpdateCourseLeadership?.(courseNumber, leadership);
+          setCourseToEdit(null);
         },
         onDeleteTrainee: (trainee) => {
           onDeleteTrainee(trainee);
@@ -90516,11 +90514,13 @@ async function fetchAPI(endpoint, options) {
   try {
     const url = `${API_BASE}${endpoint}`;
     console.log("🌐 API Request:", url);
+    const sessionToken = typeof window !== "undefined" ? localStorage.getItem("dfp_session_token") || "" : "";
     const response = await fetch(url, {
       ...options,
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
         ...options?.headers
       }
     });
@@ -117509,15 +117509,11 @@ ${error instanceof Error ? error.message : String(error)}`,
   const handleUpdateCourseLeadership = async (courseName, leadership) => {
     const trimmedCommander = String(leadership.courseCommander || "").trim();
     const trimmedDeputy = String(leadership.deputyCourseCommander || "").trim();
-    setCourses(
-      (prevCourses) => prevCourses.map(
-        (course) => course.name === courseName ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy } : course
-      )
-    );
-    const existingCourse = courses.find((course) => course.name === courseName);
+    const existingCourse = courses.find((course) => course.name === courseName || course.code === courseName);
     const firstTraineeInCourse = traineesData.find((trainee) => trainee.course === courseName);
     const courseToSave = {
-      name: courseName,
+      name: existingCourse?.name || courseName,
+      code: existingCourse?.code || courseName,
       color: existingCourse?.color || courseColors[courseName] || "#6366f1",
       startDate: existingCourse?.startDate || "",
       gradDate: existingCourse?.gradDate || "",
@@ -117535,6 +117531,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     try {
       const result = await saveCourse(courseToSave);
       if (result.success) {
+        setCourses(
+          (prevCourses) => prevCourses.map(
+            (course) => course.name === courseName || course.code === courseName ? { ...course, courseCommander: trimmedCommander, deputyCourseCommander: trimmedDeputy } : course
+          )
+        );
         logAudit({
           page: "Trainee Roster",
           action: "edit",
@@ -117545,10 +117546,12 @@ ${error instanceof Error ? error.message : String(error)}`,
       } else {
         console.error("[CourseEdit] Failed to update course leadership in DB:", result.error);
         setErrorMessage("Failed to save course leadership to database");
+        throw new Error(result.error || "Failed to save course leadership to database");
       }
     } catch (error) {
       console.error("[CourseEdit] Error updating course leadership:", error);
       setErrorMessage("Failed to save course leadership to database");
+      throw error;
     }
   };
   const handleUnarchiveCourseFromArchivedView = async (courseName) => {

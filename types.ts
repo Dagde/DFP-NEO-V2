@@ -122,6 +122,7 @@ export type CurrencyDefinition = MasterCurrency | CurrencyRequirement;
 
 export interface Course {
   name: string;
+  code?: string;
   color: string;
   startDate: string;
   gradDate: string;

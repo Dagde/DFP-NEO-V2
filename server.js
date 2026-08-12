@@ -4082,11 +4082,11 @@ app.post('/api/courses', async (req, res) => {
     if (!context) return;
     const db = context.db;
     await ensureCourseLeadershipColumns(db);
-    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, courseCommander, deputyCourseCommander, status } = req.body;
-    if (!name) return res.status(400).json({ error: 'name is required' });
-    const course = await db.course.upsert({
-      where: { code: name },
-      update: {
+    const { name, code, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, courseCommander, deputyCourseCommander, status } = req.body;
+    const courseName = String(name || code || '').trim();
+    const courseCode = String(code || name || '').trim();
+    if (!courseName || !courseCode) return res.status(400).json({ error: 'name is required' });
+    const updateData = {
         color: color || '#6366f1',
         startDate: startDate || '',
         endDate: gradDate || '',
@@ -4101,10 +4101,28 @@ app.post('/api/courses', async (req, res) => {
         deputyCourseCommander: deputyCourseCommander || '',
         status: status || 'ACTIVE',
         updatedAt: new Date(),
+    };
+    const existingCourse = await db.course.findFirst({
+      where: {
+        OR: [
+          { code: courseCode },
+          { name: courseName },
+        ],
       },
-      create: {
-        name,
-        code: name,
+    });
+    const course = existingCourse
+      ? await db.course.update({
+        where: { id: existingCourse.id },
+        data: {
+          ...updateData,
+          name: courseName,
+          code: existingCourse.code || courseCode,
+        },
+      })
+      : await db.course.create({
+      data: {
+        name: courseName,
+        code: courseCode,
         color: color || '#6366f1',
         startDate: startDate || '',
         endDate: gradDate || '',
