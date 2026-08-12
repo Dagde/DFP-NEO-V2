@@ -5189,16 +5189,139 @@ interface PersonnelIdentityRef {
     label: string;
     role: PersonnelIdentityRole;
     key: string;
+    identityKey?: string;
+    id?: string;
+    idNumber?: number;
+    source?: 'personnel-id' | 'database-id' | 'name';
+    ambiguousName?: boolean;
 }
 
-const makePersonnelIdentityRef = (label: string | undefined, role: PersonnelIdentityRole): PersonnelIdentityRef | null => {
+interface NeoBuildPersonIdentity {
+    label: string;
+    role: PersonnelIdentityRole;
+    nameKey: string;
+    key: string;
+    identityKey: string;
+    id?: string;
+    idNumber?: number;
+    source: 'personnel-id' | 'database-id' | 'name';
+    ambiguousName: boolean;
+}
+
+type NeoBuildIdentityPersonRecord = Pick<Instructor, 'idNumber' | 'name' | 'rank' | 'unit'> & {
+    id?: string;
+    fullName?: string;
+    course?: string;
+};
+
+const getNeoBuildIdentityValue = (value: unknown): string => String(value ?? '').trim();
+
+const getNeoBuildPersonDisplayLabel = (person: NeoBuildIdentityPersonRecord): string => (
+    String(person.fullName || person.name || '').trim()
+);
+
+const getNeoBuildPersonNameKey = (label?: string): string => normalizePersonnelNameForMatch(label);
+
+const getNeoBuildPersonIdentityKey = (
+    role: PersonnelIdentityRole,
+    person?: Partial<NeoBuildIdentityPersonRecord> | null,
+    fallbackLabel?: string,
+): { key: string; identityKey: string; source: NeoBuildPersonIdentity['source']; id?: string; idNumber?: number } | null => {
+    const rawIdNumber = getNeoBuildIdentityValue(person?.idNumber);
+    const numericIdNumber = Number(rawIdNumber);
+    if (rawIdNumber && Number.isFinite(numericIdNumber)) {
+        const idNumber = numericIdNumber;
+        return {
+            key: `${role}:idNumber:${idNumber}`,
+            identityKey: `${role}:idNumber:${idNumber}`,
+            source: 'personnel-id',
+            idNumber,
+        };
+    }
+
+    const id = getNeoBuildIdentityValue(person?.id);
+    if (id) {
+        return {
+            key: `${role}:id:${id}`,
+            identityKey: `${role}:id:${id}`,
+            source: 'database-id',
+            id,
+        };
+    }
+
+    const nameKey = getNeoBuildPersonNameKey(fallbackLabel || person?.fullName || person?.name);
+    if (!nameKey) return null;
+    return {
+        key: `${role}:${nameKey}`,
+        identityKey: `${role}:name:${nameKey}`,
+        source: 'name',
+    };
+};
+
+const makeNeoBuildPersonIdentity = (
+    person: NeoBuildIdentityPersonRecord,
+    role: PersonnelIdentityRole,
+    allPeople: NeoBuildIdentityPersonRecord[] = [],
+): NeoBuildPersonIdentity | null => {
+    const label = getNeoBuildPersonDisplayLabel(person);
+    if (isPlaceholderPersonnelName(label)) return null;
+    const nameKey = getNeoBuildPersonNameKey(label);
+    if (!nameKey) return null;
+    const identity = getNeoBuildPersonIdentityKey(role, person, label);
+    if (!identity) return null;
+    const ambiguousName = allPeople.filter(candidate => getNeoBuildPersonNameKey(getNeoBuildPersonDisplayLabel(candidate)) === nameKey).length > 1;
+    return {
+        label,
+        role,
+        nameKey,
+        key: identity.key,
+        identityKey: identity.identityKey,
+        source: identity.source,
+        ambiguousName,
+        ...(identity.id ? { id: identity.id } : {}),
+        ...(identity.idNumber !== undefined ? { idNumber: identity.idNumber } : {}),
+    };
+};
+
+const makeNeoBuildSchedulePersonnelRef = (
+    person: NeoBuildIdentityPersonRecord,
+    role: ScheduleEventPersonnelRef['role'],
+    personType: 'staff' | 'trainee',
+): ScheduleEventPersonnelRef | null => {
+    const identity = makeNeoBuildPersonIdentity(person, personType);
+    if (!identity) return null;
+    return {
+        role,
+        personType,
+        name: identity.label,
+        ...(identity.idNumber !== undefined ? { idNumber: identity.idNumber } : {}),
+        ...(identity.id ? { id: identity.id } : {}),
+        rank: person.rank,
+        unit: person.unit,
+        ...(person.course ? { course: person.course } : {}),
+    };
+};
+
+const makePersonnelIdentityRef = (
+    label: string | undefined,
+    role: PersonnelIdentityRole,
+    identity?: Partial<NeoBuildIdentityPersonRecord> | null,
+    allPeople: NeoBuildIdentityPersonRecord[] = [],
+): PersonnelIdentityRef | null => {
     if (isPlaceholderPersonnelName(label)) return null;
     const normalizedName = normalizePersonnelNameForMatch(label);
     if (!normalizedName) return null;
+    const identityKey = getNeoBuildPersonIdentityKey(role, identity, label);
+    const ambiguousName = allPeople.filter(candidate => getNeoBuildPersonNameKey(getNeoBuildPersonDisplayLabel(candidate)) === normalizedName).length > 1;
     return {
         label: label || '',
         role,
-        key: `${role}:${normalizedName}`
+        key: identityKey?.key || `${role}:${normalizedName}`,
+        identityKey: identityKey?.identityKey || `${role}:name:${normalizedName}`,
+        ...(identityKey?.id ? { id: identityKey.id } : {}),
+        ...(identityKey?.idNumber !== undefined ? { idNumber: identityKey.idNumber } : {}),
+        source: identityKey?.source || 'name',
+        ambiguousName,
     };
 };
 

@@ -95757,14 +95757,53 @@ const markNeoBuildTiming = (report, name, details) => {
   report.totalElapsedMs = Math.round(now - report.startedAtMs);
   saveNeoBuildTimingReport(report);
 };
-const makePersonnelIdentityRef = (label, role) => {
+const getNeoBuildIdentityValue = (value) => String("").trim();
+const getNeoBuildPersonDisplayLabel = (person) => String(person.fullName || person.name || "").trim();
+const getNeoBuildPersonNameKey = (label) => normalizePersonnelNameForMatch(label);
+const getNeoBuildPersonIdentityKey = (role, person, fallbackLabel) => {
+  const rawIdNumber = getNeoBuildIdentityValue();
+  const numericIdNumber = Number(rawIdNumber);
+  if (rawIdNumber && Number.isFinite(numericIdNumber)) {
+    const idNumber = numericIdNumber;
+    return {
+      key: `${role}:idNumber:${idNumber}`,
+      identityKey: `${role}:idNumber:${idNumber}`,
+      source: "personnel-id",
+      idNumber
+    };
+  }
+  const id = getNeoBuildIdentityValue();
+  if (id) {
+    return {
+      key: `${role}:id:${id}`,
+      identityKey: `${role}:id:${id}`,
+      source: "database-id",
+      id
+    };
+  }
+  const nameKey = getNeoBuildPersonNameKey(fallbackLabel || person?.fullName || person?.name);
+  if (!nameKey) return null;
+  return {
+    key: `${role}:${nameKey}`,
+    identityKey: `${role}:name:${nameKey}`,
+    source: "name"
+  };
+};
+const makePersonnelIdentityRef = (label, role, identity, allPeople = []) => {
   if (isPlaceholderPersonnelName(label)) return null;
   const normalizedName = normalizePersonnelNameForMatch(label);
   if (!normalizedName) return null;
+  const identityKey = getNeoBuildPersonIdentityKey(role, identity, label);
+  const ambiguousName = allPeople.filter((candidate) => getNeoBuildPersonNameKey(getNeoBuildPersonDisplayLabel(candidate)) === normalizedName).length > 1;
   return {
     label: label || "",
     role,
-    key: `${role}:${normalizedName}`
+    key: identityKey?.key || `${role}:${normalizedName}`,
+    identityKey: identityKey?.identityKey || `${role}:name:${normalizedName}`,
+    ...identityKey?.id ? { id: identityKey.id } : {},
+    ...identityKey?.idNumber !== void 0 ? { idNumber: identityKey.idNumber } : {},
+    source: identityKey?.source || "name",
+    ambiguousName
   };
 };
 const getPersonnelIdentityRefs = (event) => {
