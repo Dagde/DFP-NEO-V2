@@ -46,7 +46,7 @@ import {
     type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
-import { formatPersonOptionLabel } from '../utils/personIdentity';
+import { buildCompactPersonNameResolver, type PersonIdentityRecord } from '../utils/personIdentity';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -797,6 +797,28 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const sctShortLabel = resolvedSctTerminology.shortLabel;
     const sctFormationLabel = `${sctShortLabel} FORM`;
     const instructorDisplayLabel = String(personnelDisplaySettings?.instructorLabel || 'Instructor').trim() || 'Instructor';
+    const staffNameResolver = useMemo(
+        () => buildCompactPersonNameResolver(instructorsData as any),
+        [instructorsData],
+    );
+    const traineeNameResolver = useMemo(
+        () => buildCompactPersonNameResolver(traineesData as any),
+        [traineesData],
+    );
+    const formatFlightDetailPersonLabel = (
+        person: PersonIdentityRecord | null | undefined,
+        resolver: ReturnType<typeof buildCompactPersonNameResolver>,
+        fallbackName = '',
+        fallbackRank = '',
+    ): string => {
+        const rank = String(person?.rank || fallbackRank || '').trim();
+        const name = resolver.formatList({
+            ...(person || {}),
+            name: person?.name || fallbackName,
+            fullName: person?.fullName || fallbackName,
+        });
+        return [rank, name].filter(Boolean).join(' - ');
+    };
     const configuredContinuationEvents = useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
     const getConfiguredContinuationEvent = (value?: string | null) => {
         const normalisedValue = String(value || '').trim().toUpperCase();
@@ -1325,7 +1347,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                                         onClick={() => setActiveCrewConflictName(isSelected ? null : staff.name)}
                                                         className={`min-w-0 truncate text-xs font-semibold ${isClear ? 'cursor-default text-emerald-300' : isSelected ? 'cursor-pointer text-red-200 underline decoration-red-200/70 underline-offset-2' : 'cursor-pointer text-red-300 underline decoration-red-300/40 underline-offset-2'}`}
                                                     >
-                                                        {formatPersonOptionLabel(staff)}
+                                                        {formatFlightDetailPersonLabel(staff as any, staffNameResolver)}
                                                     </button>
                                                     <span className="shrink-0 text-[11px] text-gray-400">{getFixedCrewStaffRoleLabel(staff)}{isPic ? ' / PIC' : ''}</span>
                                                 </div>
@@ -1717,7 +1739,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         <optgroup key={unit} label={`─── ${unit} ───`}>
                             {staffInstructorsByUnit.grouped[unit].map(instructor => {
                                 const stats = personStats[instructor.name] || { rank: '' };
-                                   const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
+                                const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                                 return (
                                     <option key={instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
                                         {displayText}
@@ -1754,7 +1776,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                    // Get trainee details to access just the name without course
                                    const traineeData = traineesData.find(t => t.name === trainee.name || t.fullName === trainee.name);
                                    const stats = personStats[trainee.name] || { rank: '' };
-                                   const displayText = formatPersonOptionLabel({ ...traineeData, ...trainee, name: traineeData?.name || trainee.name, rank: traineeData?.rank || stats.rank });
+                                   const displayText = formatFlightDetailPersonLabel(traineeData || trainee as any, traineeNameResolver, traineeData?.name || trainee.name, traineeData?.rank || stats.rank);
                                 return (
                                     <option key={traineeData?.id || traineeData?.idNumber || trainee.name} value={trainee.name}>
                                         {displayText}
@@ -2956,7 +2978,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                            })
                                                .map(instructor => {
                                                    const stats = personStats[instructor.name] || { rank: '' };
-                                               const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
+                                               const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                                                return (
                                                    <option key={instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
                                                        {displayText}
@@ -3702,7 +3724,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                         )}
                                                         {fixedCrewPicCandidates.map(staff => (
                                                             <option key={staff.id || staff.name} value={staff.name}>
-                                                                {formatPersonOptionLabel(staff)}
+                                                                {formatFlightDetailPersonLabel(staff as any, staffNameResolver)}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -3766,7 +3788,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                             {fixedCrewMembers.map(staff => (
                                                                 <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm">
-                                                                    <span className="min-w-0 truncate text-gray-100">{formatPersonOptionLabel(staff)}</span>
+                                                                    <span className="min-w-0 truncate text-gray-100">{formatFlightDetailPersonLabel(staff as any, staffNameResolver)}</span>
                                                                     <span className="flex-shrink-0 text-xs font-semibold text-emerald-300">{staff.role || 'Staff'}</span>
                                                                 </div>
                                                             ))}
@@ -3785,7 +3807,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                                         key={staff.id || staff.name}
                                                                         className={`rounded px-2 py-1.5 text-sm ${staff.name === fixedCrewPic ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/40' : 'bg-gray-800/70 text-gray-100 border border-transparent'}`}
                                                                     >
-                                                                        {formatPersonOptionLabel(staff)}
+                                                                        {formatFlightDetailPersonLabel(staff as any, staffNameResolver)}
                                                                     </div>
                                                                 ))}
                                                             </div>

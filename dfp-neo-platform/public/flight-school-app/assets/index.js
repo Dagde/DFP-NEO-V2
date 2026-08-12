@@ -29315,6 +29315,23 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const sctShortLabel = resolvedSctTerminology.shortLabel;
   const sctFormationLabel = `${sctShortLabel} FORM`;
   const instructorDisplayLabel = String(personnelDisplaySettings?.instructorLabel || "Instructor").trim() || "Instructor";
+  const staffNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver(instructorsData),
+    [instructorsData]
+  );
+  const traineeNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver(traineesData),
+    [traineesData]
+  );
+  const formatFlightDetailPersonLabel = (person, resolver, fallbackName = "", fallbackRank = "") => {
+    const rank = String(person?.rank || fallbackRank || "").trim();
+    const name = resolver.formatList({
+      ...person || {},
+      name: person?.name || fallbackName,
+      fullName: person?.fullName || fallbackName
+    });
+    return [rank, name].filter(Boolean).join(" - ");
+  };
   const configuredContinuationEvents = reactExports.useMemo(() => normaliseContinuationEventSettings(sctEvents), [sctEvents]);
   const getConfiguredContinuationEvent = (value) => {
     const normalisedValue = String(value || "").trim().toUpperCase();
@@ -29716,7 +29733,7 @@ ${swapNote}` : swapNote
                   disabled: isClear,
                   onClick: () => setActiveCrewConflictName(isSelected ? null : staff.name),
                   className: `min-w-0 truncate text-xs font-semibold ${isClear ? "cursor-default text-emerald-300" : isSelected ? "cursor-pointer text-red-200 underline decoration-red-200/70 underline-offset-2" : "cursor-pointer text-red-300 underline decoration-red-300/40 underline-offset-2"}`,
-                  children: formatPersonOptionLabel(staff)
+                  children: formatFlightDetailPersonLabel(staff, staffNameResolver)
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-[11px] text-gray-400", children: [
@@ -29978,7 +29995,7 @@ ${swapNote}` : swapNote
             ] }),
             staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].map((instructor) => {
               const stats = personStats[instructor.name] || { rank: "" };
-              const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
+              const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor, staffNameResolver, instructor.name, instructor.rank || stats.rank);
               return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.id || instructor.idNumber || instructor.name);
             }) }, unit)),
             includePax && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "─── Other ───", children: /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PAX", children: "PAX" }) })
@@ -30002,7 +30019,7 @@ ${swapNote}` : swapNote
             traineesByCourse.sortedCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${course} ───`, children: traineesByCourse.grouped[course].map((trainee) => {
               const traineeData = traineesData.find((t) => t.name === trainee.name || t.fullName === trainee.name);
               const stats = personStats[trainee.name] || { rank: "" };
-              const displayText = formatPersonOptionLabel({ ...traineeData, ...trainee, name: traineeData?.name || trainee.name, rank: traineeData?.rank || stats.rank });
+              const displayText = formatFlightDetailPersonLabel(traineeData || trainee, traineeNameResolver, traineeData?.name || trainee.name, traineeData?.rank || stats.rank);
               return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: trainee.name, children: displayText }, traineeData?.id || traineeData?.idNumber || trainee.name);
             }) }, course))
           ]
@@ -30907,7 +30924,7 @@ ${swapNote}` : swapNote
                   return true;
                 }).map((instructor) => {
                   const stats = personStats[instructor.name] || { rank: "" };
-                  const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
+                  const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                   return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.id || instructor.idNumber || instructor.name);
                 }) }, unit))
               ]
@@ -31574,7 +31591,7 @@ ${swapNote}` : swapNote
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
                       fixedCrewPic && !fixedCrewPicCandidates.some((staff) => staff.name === fixedCrewPic) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewPic, children: fixedCrewPic }),
-                      fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatPersonOptionLabel(staff) }, staff.id || staff.name))
+                      fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatFlightDetailPersonLabel(staff, staffNameResolver) }, staff.id || staff.name))
                     ]
                   }
                 )
@@ -31635,7 +31652,7 @@ ${swapNote}` : swapNote
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/50 border border-gray-700 rounded-md p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2", children: "Crew Members" }),
                 fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2", children: fixedCrewMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: formatPersonOptionLabel(staff) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: formatFlightDetailPersonLabel(staff, staffNameResolver) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-xs font-semibold text-emerald-300", children: staff.role || "Staff" })
                 ] }, staff.id || staff.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "Select a crew to preview its members." })
               ] }),
@@ -31646,7 +31663,7 @@ ${swapNote}` : swapNote
                     "div",
                     {
                       className: `rounded px-2 py-1.5 text-sm ${staff.name === fixedCrewPic ? "bg-emerald-500/20 text-emerald-100 border border-emerald-400/40" : "bg-gray-800/70 text-gray-100 border border-transparent"}`,
-                      children: formatPersonOptionLabel(staff)
+                      children: formatFlightDetailPersonLabel(staff, staffNameResolver)
                     },
                     staff.id || staff.name
                   )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: fixedCrewGroup ? "No PIC-qualified crew members found for this crew." : "Select a crew to show PIC candidates." })
