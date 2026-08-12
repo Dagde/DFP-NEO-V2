@@ -115747,6 +115747,30 @@ ${"=".repeat(60)}`);
     if (!isSoloFlightNeedingTwrDi(event)) return false;
     return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
   };
+  const getScheduleEventIdentityWarnings = reactExports.useCallback((event) => {
+    const warnings = [];
+    const allStaff = allInstructorsData;
+    const allTrainees = allTraineesData;
+    getPersonnelIdentityRefs(event).forEach((ref) => {
+      const people = ref.role === "staff" ? allStaff : allTrainees;
+      const matches = people.filter((person) => {
+        const personName = "fullName" in person ? person.fullName : person.name;
+        return personnelNamesMatch$1(personName, ref.label) || personnelNamesMatch$1(person.name, ref.label);
+      });
+      if (matches.length <= 1) return;
+      const resolvedRef = event.personnelRefs?.find((personRef) => {
+        if (personRef.personType !== ref.role) return false;
+        if (!personnelNamesMatch$1(personRef.name, ref.label)) return false;
+        const personRefId = String(personRef.id || "").trim();
+        const personRefIdNumber = String(personRef.idNumber || "").trim();
+        return matches.some((person) => personRefId && String(person.id || "").trim() === personRefId || personRefIdNumber && String(person.idNumber || "").trim() === personRefIdNumber);
+      });
+      if (!resolvedRef) {
+        warnings.push(`Personnel identity warning - ${ref.label} matches ${matches.length} active ${ref.role === "staff" ? "staff records" : "trainee records"}, but this event is still name-only. Open the tile, select the correct person, and Save so the event stores the Personnel ID.`);
+      }
+    });
+    return warnings;
+  }, [allInstructorsData, allTraineesData]);
   const logValidationTrace = (context, event, outcome, details = {}) => {
     if (!isNeoBuildVerboseDiagnosticsEnabled()) return;
     if (!isStbyFlightLineEvent(event) && outcome === "clear") return;
@@ -115795,6 +115819,13 @@ ${"=".repeat(60)}`);
       });
     }
     for (const event of eventsForConflictCheck) {
+      const identityWarnings = getScheduleEventIdentityWarnings(event);
+      if (identityWarnings.length > 0) {
+        conflictingEventIds.add(getValidationEventKey2(event));
+        logValidationTrace("Active DFP", event, "personnel-identity-warning", {
+          warnings: identityWarnings
+        });
+      }
       const otherEvents = eventsForConflictCheck.filter((e) => e.id !== event.id);
       const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
       if (result.hasConflict) {
@@ -115826,7 +115857,7 @@ ${"=".repeat(60)}`);
       }
     }
     return conflictingEventIds;
-  }, [configuredTowerDutyInstructorRowEnabled, eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
+  }, [configuredTowerDutyInstructorRowEnabled, eventsForDate, detectConflictsForEventWithDayNightSeparation, getScheduleEventIdentityWarnings, isConfiguredContinuationFormationEvent, syllabusDetails]);
   const nextDayPersonnelAndResourceConflictIds = reactExports.useMemo(() => {
     const conflictingEventIds = /* @__PURE__ */ new Set();
     if (!nextDayBuildEvents || nextDayBuildEvents.length === 0) {
@@ -115837,6 +115868,13 @@ ${"=".repeat(60)}`);
       date: buildDfpDate
     }));
     for (const event of nextDayEventsWithDate) {
+      const identityWarnings = getScheduleEventIdentityWarnings(event);
+      if (identityWarnings.length > 0) {
+        conflictingEventIds.add(getValidationEventKey2(event));
+        logValidationTrace("Next Day Build", event, "personnel-identity-warning", {
+          warnings: identityWarnings
+        });
+      }
       const otherEvents = nextDayEventsWithDate.filter((e) => e.id !== event.id);
       const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
       if (result.hasConflict) {
@@ -115867,7 +115905,7 @@ ${"=".repeat(60)}`);
       }
     }
     return conflictingEventIds;
-  }, [configuredTowerDutyInstructorRowEnabled, nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
+  }, [configuredTowerDutyInstructorRowEnabled, nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, getScheduleEventIdentityWarnings, syllabusDetails]);
   const calculateUnavailabilityConflictsForEvents = reactExports.useCallback((eventsToCheck) => {
     const newConflicts = /* @__PURE__ */ new Map();
     const allPersonnel = [...allInstructorsData, ...allTraineesData];
@@ -125123,6 +125161,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const findHardErrors = (event, allEventsForDate, options = {}) => {
     const errors = [];
+    errors.push(...getScheduleEventIdentityWarnings(event).map((warning) => `⚠️ ${warning}`));
     const conflictResult = detectConflictsForEvent(event, allEventsForDate, event.date);
     if (conflictResult.hasConflict) {
       const conflictingEvent = allEventsForDate.find((e) => e.id === conflictResult.conflictingEventId);

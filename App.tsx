@@ -30442,10 +30442,43 @@ const App: React.FC = () => {
         return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
     };
 
+    const getScheduleEventIdentityWarnings = useCallback((event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): string[] => {
+        const warnings: string[] = [];
+        const allStaff = allInstructorsData as any[];
+        const allTrainees = allTraineesData as any[];
+
+        getPersonnelIdentityRefs(event).forEach(ref => {
+            const people = ref.role === 'staff' ? allStaff : allTrainees;
+            const matches = people.filter(person => {
+                const personName = 'fullName' in person ? person.fullName : person.name;
+                return personnelNamesMatch(personName, ref.label) || personnelNamesMatch(person.name, ref.label);
+            });
+
+            if (matches.length <= 1) return;
+
+            const resolvedRef = event.personnelRefs?.find(personRef => {
+                if (personRef.personType !== ref.role) return false;
+                if (!personnelNamesMatch(personRef.name, ref.label)) return false;
+                const personRefId = String(personRef.id || '').trim();
+                const personRefIdNumber = String(personRef.idNumber || '').trim();
+                return matches.some(person => (
+                    (personRefId && String(person.id || '').trim() === personRefId) ||
+                    (personRefIdNumber && String(person.idNumber || '').trim() === personRefIdNumber)
+                ));
+            });
+
+            if (!resolvedRef) {
+                warnings.push(`Personnel identity warning - ${ref.label} matches ${matches.length} active ${ref.role === 'staff' ? 'staff records' : 'trainee records'}, but this event is still name-only. Open the tile, select the correct person, and Save so the event stores the Personnel ID.`);
+            }
+        });
+
+        return warnings;
+    }, [allInstructorsData, allTraineesData]);
+
     const logValidationTrace = (
         context: 'Active DFP' | 'Next Day Build',
         event: ScheduleEvent | Omit<ScheduleEvent, 'date'>,
-        outcome: 'conflict' | 'clear' | 'twr-di-missing' | 'twr-di-exempt',
+        outcome: 'conflict' | 'clear' | 'twr-di-missing' | 'twr-di-exempt' | 'personnel-identity-warning',
         details: Record<string, any> = {}
     ) => {
         if (!isNeoBuildVerboseDiagnosticsEnabled()) return;
@@ -30519,6 +30552,14 @@ const App: React.FC = () => {
         }
 
         for (const event of eventsForConflictCheck) {
+            const identityWarnings = getScheduleEventIdentityWarnings(event);
+            if (identityWarnings.length > 0) {
+                conflictingEventIds.add(getValidationEventKey(event));
+                logValidationTrace('Active DFP', event, 'personnel-identity-warning', {
+                    warnings: identityWarnings,
+                });
+            }
+
             // Exclude current event from conflict check by filtering it out
             const otherEvents = eventsForConflictCheck.filter(e => e.id !== event.id);
             const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
@@ -30560,7 +30601,7 @@ const App: React.FC = () => {
         }
 
         return conflictingEventIds;
-    }, [configuredTowerDutyInstructorRowEnabled, eventsForDate, detectConflictsForEventWithDayNightSeparation, isConfiguredContinuationFormationEvent, syllabusDetails]);
+    }, [configuredTowerDutyInstructorRowEnabled, eventsForDate, detectConflictsForEventWithDayNightSeparation, getScheduleEventIdentityWarnings, isConfiguredContinuationFormationEvent, syllabusDetails]);
 
     /**
      * Calculate all conflicts for next day build events (used when Validate is checked)
@@ -30578,6 +30619,14 @@ const App: React.FC = () => {
         })) as ScheduleEvent[];
 
         for (const event of nextDayEventsWithDate) {
+            const identityWarnings = getScheduleEventIdentityWarnings(event);
+            if (identityWarnings.length > 0) {
+                conflictingEventIds.add(getValidationEventKey(event));
+                logValidationTrace('Next Day Build', event, 'personnel-identity-warning', {
+                    warnings: identityWarnings,
+                });
+            }
+
             // Exclude current event from conflict check by filtering it out
             const otherEvents = nextDayEventsWithDate.filter(e => e.id !== event.id);
             const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
@@ -30612,7 +30661,7 @@ const App: React.FC = () => {
             }
         }
         return conflictingEventIds;
-    }, [configuredTowerDutyInstructorRowEnabled, nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
+    }, [configuredTowerDutyInstructorRowEnabled, nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, getScheduleEventIdentityWarnings, syllabusDetails]);
 
     /**
      * Unavailability conflicts - personnel assigned during their unavailability periods
@@ -41852,6 +41901,7 @@ appliedUpdates.forEach(update => {
         options: { allowStbySoloWithoutTwrDi?: boolean } = {}
     ): string[] => {
         const errors: string[] = [];
+        errors.push(...getScheduleEventIdentityWarnings(event).map(warning => `⚠️ ${warning}`));
 
         // Use the SAME conflict detection logic as the automatic system
         const conflictResult = detectConflictsForEvent(event, allEventsForDate, event.date);
