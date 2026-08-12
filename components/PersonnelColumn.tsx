@@ -2,8 +2,11 @@ import React from 'react';
 import { InstructorRank } from '../types';
 import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
+import { buildCompactPersonNameResolver, getPersonIdentityDedupeKey } from '../utils/personIdentity';
 
 interface Personnel {
+  id?: string;
+  idNumber?: number;
   name: string;
   rank: InstructorRank;
   unit?: string;
@@ -70,6 +73,11 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
   instructorLabel = 'Instructor',
   simIpDisplayLabel = 'Contractor Staff',
 }) => {
+  const staffNameResolver = React.useMemo(
+    () => buildCompactPersonNameResolver(personnel as any),
+    [personnel],
+  );
+
   // Group personnel by unit if needed, preserving the incoming sorted unit order.
   const groupedPersonnel = React.useMemo(() => {
     if (!showUnits) return personnel;
@@ -91,12 +99,13 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
     return (
       <div className="w-40 bg-gray-800 flex-shrink-0 h-full">
         <ul>
-          {personnel.map(({ name, rank, unit, role }, index) => {
+          {personnel.map(({ id, idNumber, name, rank, unit, role }, index) => {
             const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
             const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : 'text-gray-300';
+            const displayName = staffNameResolver.formatList({ id, idNumber, name, rank, unit, role } as any);
             return (
             <li
-              key={name}
+              key={getPersonIdentityDedupeKey({ id, idNumber, name, rank, unit, role } as any, 'staff')}
               ref={(el) => onRowRef?.(name, el)}
               className={`flex items-center justify-start pl-3 text-xs transition-colors duration-150 border-b border-gray-700/50 ${onPersonClick ? 'cursor-pointer hover:bg-gray-700' : ''}`}
               style={{ height: rowHeight }}
@@ -106,7 +115,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
               title={useRoleColors ? `${name} - ${roleDisplay.label}` : name}
             >
               <span className="font-mono text-gray-500 w-12 flex-shrink-0">{rank}</span>
-              <span className={`truncate font-medium ${nameTextClass}`}>{name}</span>
+              <span className={`truncate font-medium ${nameTextClass}`}>{displayName}</span>
             </li>
           );
           })}
@@ -135,14 +144,15 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
               </li>
 
               {/* Personnel in this unit - NO unit text under name, only colored text */}
-              {people.map(({ name, rank, unit: personUnit, role }) => {
+              {people.map(({ id, idNumber, name, rank, unit: personUnit, role }) => {
                 const rowIndex = visualRowIndex;
                 visualRowIndex += 1;
               const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel, simIpDisplayLabel);
               const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : 'text-gray-300';
+              const displayName = staffNameResolver.formatList({ id, idNumber, name, rank, unit: personUnit, role } as any);
               return (
               <li
-                key={`${unit}-${name}`}
+                key={`${unit}-${getPersonIdentityDedupeKey({ id, idNumber, name, rank, unit: personUnit, role } as any, 'staff')}`}
                 ref={(el) => onRowRef?.(name, el)}
                 className={`flex items-center justify-start pl-3 pr-2 py-1 text-xs transition-colors duration-150 border-b border-gray-700/50 bg-gray-800 ${
                   onPersonClick ? 'cursor-pointer hover:bg-gray-700' : ''
@@ -154,7 +164,7 @@ const PersonnelColumn: React.FC<PersonnelColumnProps> = ({
                 title={useRoleColors ? `${name} - ${roleDisplay.label}` : name}
               >
                 <span className="font-mono text-gray-500 w-10 text-xs">{rank}</span>
-                <span className={`truncate font-medium flex-1 ${nameTextClass}`}>{name}</span>
+                <span className={`truncate font-medium flex-1 ${nameTextClass}`}>{displayName}</span>
               </li>
             );
               })}

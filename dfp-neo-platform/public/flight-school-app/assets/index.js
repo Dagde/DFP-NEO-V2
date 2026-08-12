@@ -18142,6 +18142,10 @@ const PersonnelColumn = ({
   instructorLabel: instructorLabel2 = "Instructor",
   simIpDisplayLabel = "Contractor Staff"
 }) => {
+  const staffNameResolver = React.useMemo(
+    () => buildCompactPersonNameResolver(personnel),
+    [personnel]
+  );
   const groupedPersonnel = React.useMemo(() => {
     if (!showUnits) return personnel;
     const groups = {};
@@ -18155,9 +18159,10 @@ const PersonnelColumn = ({
     return groups;
   }, [personnel, showUnits]);
   if (!showUnits) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ name, rank, unit, role }, index) => {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: personnel.map(({ id, idNumber, name, rank, unit, role }, index) => {
       const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
       const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(unit) : "text-gray-300";
+      const displayName = staffNameResolver.formatList({ id, idNumber, name, rank, unit, role });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "li",
         {
@@ -18170,10 +18175,10 @@ const PersonnelColumn = ({
           title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 flex-shrink-0", children: rank }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium ${nameTextClass}`, children: name })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium ${nameTextClass}`, children: displayName })
           ]
         },
-        name
+        getPersonIdentityDedupeKey({ id, idNumber, name, unit, role }, "staff")
       );
     }) }) });
   }
@@ -18194,11 +18199,12 @@ const PersonnelColumn = ({
           ] })
         }
       ),
-      people.map(({ name, rank, unit: personUnit, role }) => {
+      people.map(({ id, idNumber, name, rank, unit: personUnit, role }) => {
         const rowIndex = visualRowIndex;
         visualRowIndex += 1;
         const roleDisplay = getStaffRoleDisplay(role, crewPositionTerminology, instructorLabel2, simIpDisplayLabel);
         const nameTextClass = useRoleColors ? roleDisplay.textClassName : useUnitColors ? getUnitTextColor(personUnit) : "text-gray-300";
+        const displayName = staffNameResolver.formatList({ id, idNumber, name, rank, unit: personUnit, role });
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "li",
           {
@@ -18211,10 +18217,10 @@ const PersonnelColumn = ({
             title: useRoleColors ? `${name} - ${roleDisplay.label}` : name,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-10 text-xs", children: rank }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${nameTextClass}`, children: name })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `truncate font-medium flex-1 ${nameTextClass}`, children: displayName })
             ]
           },
-          `${unit}-${name}`
+          `${unit}-${getPersonIdentityDedupeKey({ id, idNumber, name, unit: personUnit, role }, "staff")}`
         );
       })
     ] }, unit);
@@ -18949,6 +18955,10 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   ) });
 };
 const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeClick, onRowRef, courseColors = {}, traineesData = [] }) => {
+  const traineeNameResolver = React.useMemo(
+    () => buildCompactPersonNameResolver(traineesData),
+    [traineesData]
+  );
   const parseTraineeName = (fullName) => {
     const parts = fullName.split(" – ");
     return {
@@ -18963,6 +18973,7 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     );
     return traineeObj?.course || "";
   };
+  const getTraineeRecord = (fullName, parsedName) => traineesData.find((t) => t.fullName === fullName || t.name === fullName || t.name === parsedName || t.fullName === parsedName);
   const BASE_COLOR_MAP = {
     "bg-sky-400": "#38BDF8",
     "bg-purple-400": "#C084FC",
@@ -18996,7 +19007,9 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: trainees.map((fullName, index) => {
     const { name, course: parsedCourse } = parseTraineeName(fullName);
+    const traineeObj = getTraineeRecord(fullName, name);
     const course = getCourse(fullName, parsedCourse);
+    const displayName = traineeObj ? traineeNameResolver.formatList(traineeObj) : name;
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "li",
       {
@@ -19007,10 +19020,11 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
         onMouseLeave: () => onRowLeave?.(),
         onClick: () => onTraineeClick?.(fullName),
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-medium leading-tight", children: name }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-medium leading-tight", children: displayName }),
           course && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono leading-tight", style: { color: convertTailwindToHex(courseColors[course] || "bg-gray-400/50") }, children: course })
         ] })
-      }
+      },
+      getPersonIdentityDedupeKey(traineeObj || { name: fullName }, "trainee")
     );
   }) }) });
 };
