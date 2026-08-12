@@ -5,7 +5,7 @@ import AuditButton from './AuditButton';
 import CrewRequirementEditor from './CrewRequirementEditor';
 import { logAudit } from '../utils/auditLogger';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
-import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode, CrewRequirement } from '../types';
+import { ScheduleEvent, ScheduleEventPersonnelRef, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode, CrewRequirement } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import CancelEventFlyout from './CancelEventFlyout';
 import PinEntryFlyout from './PinEntryFlyout';
@@ -512,6 +512,9 @@ interface CrewMember {
     instructor: string;
     student: string;
     pilot: string;
+    instructorRef?: ScheduleEventPersonnelRef | null;
+    studentRef?: ScheduleEventPersonnelRef | null;
+    pilotRef?: ScheduleEventPersonnelRef | null;
     group: string;
     groupTraineeIds: number[]; // Added to track selected IDs
 }
@@ -551,6 +554,21 @@ const inferEventCategory = (event: ScheduleEvent): EventCategory => (
 const getContinuationPilotName = (event: ScheduleEvent): string =>
     stripCrewSuffix(event.pilot || event.instructor || event.student || '');
 
+const findEventPersonnelRef = (
+    sourceEvent: ScheduleEvent,
+    roles: ScheduleEventPersonnelRef['role'][],
+    name?: string | null,
+    personType?: ScheduleEventPersonnelRef['personType'],
+): ScheduleEventPersonnelRef | null => {
+    const cleanName = stripCrewSuffix(name);
+    if (!cleanName) return null;
+    return sourceEvent.personnelRefs?.find(ref => (
+        roles.includes(ref.role) &&
+        (!personType || ref.personType === personType) &&
+        stripCrewSuffix(ref.name).toLowerCase() === cleanName.toLowerCase()
+    )) || null;
+};
+
 const makeInitialCrewMember = (sourceEvent: ScheduleEvent): CrewMember => {
     const inferredCategory = inferEventCategory(sourceEvent);
     const flightType = (sourceEvent.flightType || 'Dual') as 'Dual' | 'Solo';
@@ -561,6 +579,14 @@ const makeInitialCrewMember = (sourceEvent: ScheduleEvent): CrewMember => {
         instructor: isContinuationSolo ? '' : sourceEvent.instructor || '',
         student: isContinuationSolo ? '' : sourceEvent.student || '',
         pilot: isContinuationSolo ? continuationPilot : sourceEvent.pilot || '',
+        instructorRef: isContinuationSolo ? null : findEventPersonnelRef(sourceEvent, ['instructor'], sourceEvent.instructor, 'staff'),
+        studentRef: isContinuationSolo
+            ? null
+            : findEventPersonnelRef(sourceEvent, ['student'], sourceEvent.student, 'trainee')
+                || findEventPersonnelRef(sourceEvent, ['crew'], sourceEvent.student, 'staff'),
+        pilotRef: isContinuationSolo
+            ? findEventPersonnelRef(sourceEvent, ['pilot', 'instructor'], continuationPilot)
+            : findEventPersonnelRef(sourceEvent, ['pilot'], sourceEvent.pilot),
         group: sourceEvent.group || '',
         groupTraineeIds: sourceEvent.groupTraineeIds || [],
     };
@@ -1514,6 +1540,44 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
     }, [fixedCrewEventOptions]);
 
+    const getPersonRefIdNumber = (person: PersonIdentityRecord): number | undefined => {
+        const numericId = Number(person.idNumber);
+        return Number.isFinite(numericId) ? numericId : undefined;
+    };
+
+    const makeSchedulePersonRef = (
+        person: PersonIdentityRecord,
+        personType: 'staff' | 'trainee',
+        role: ScheduleEventPersonnelRef['role'],
+    ): ScheduleEventPersonnelRef => ({
+        role,
+        personType,
+        name: String(person.fullName || person.name || '').trim(),
+        id: String(person.id || '').trim() || undefined,
+        idNumber: getPersonRefIdNumber(person),
+        rank: String(person.rank || '').trim() || undefined,
+        unit: String(person.unit || '').trim() || undefined,
+        course: String(person.course || '').trim() || undefined,
+    });
+
+    const clonePersonRefForRole = (
+        ref: ScheduleEventPersonnelRef | undefined | null,
+        role: ScheduleEventPersonnelRef['role'],
+    ): ScheduleEventPersonnelRef | null => ref ? { ...ref, role } : null;
+
+    const personRefsMatch = (
+        left?: ScheduleEventPersonnelRef | null,
+        right?: ScheduleEventPersonnelRef | null,
+    ): boolean => {
+        if (!left || !right) return false;
+        const leftId = String(left.id || '').trim();
+        const rightId = String(right.id || '').trim();
+        if (leftId && rightId) return leftId === rightId;
+        const leftIdNumber = String(left.idNumber || '').trim();
+        const rightIdNumber = String(right.idNumber || '').trim();
+        return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
+    };
+
     // Get staff-only instructors (exclude trainees) grouped by unit
     const staffInstructorsByUnit = useMemo(() => {
         const traineeNames = new Set(traineesData.map(t => t.fullName));
@@ -1531,6 +1595,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     unit: instructor.unit || 'Unknown',
                     rank: instructor.rank || 'FLGOFF',
                     value: getPersonIdentityDedupeKey(instructor as any, 'staff'),
+                    ref: makeSchedulePersonRef(instructor as any, 'staff', 'instructor'),
                     instructor,
             }));
         const uniqueStaffRecordOptions = staffRecordOptions.filter((option, index, options) =>
@@ -1545,6 +1610,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     unit: 'Unknown',
                     rank: 'FLGOFF',
                     value: String(name || '').trim(),
+                    ref: undefined,
                     instructor: undefined,
                 })),
         ];
@@ -1583,6 +1649,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         return { grouped, sortedUnits };
     }, [instructorList, traineesData, instructorsData, personnelDisplaySettings]);
 
+    const staffSelectOptions = useMemo(
+        () => staffInstructorsByUnit.sortedUnits.flatMap(unit => staffInstructorsByUnit.grouped[unit]),
+        [staffInstructorsByUnit],
+    );
+
     const activeEventUnitCodes = useMemo(() => {
         const rawUnit = String(activeUnitCode || (event as any).unitCode || (event as any).unit || '').trim().toUpperCase();
         return rawUnit.split('+').map(unit => unit.trim()).filter(Boolean);
@@ -1592,7 +1663,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         String(staff?.role || '').trim().toLowerCase() === 'pilot';
 
     const airCombatPilotsByUnit = useMemo(() => {
-        const grouped: Record<string, Array<{ name: string; unit: string; rank: string; value?: string; instructor?: Instructor }>> = {};
+        const grouped: Record<string, Array<{ name: string; unit: string; rank: string; value?: string; ref?: ScheduleEventPersonnelRef; instructor?: Instructor }>> = {};
         if (!isAirCombatModel) return { grouped, sortedUnits: [] as string[] };
 
         const selectedPilotNames = new Set(
@@ -1622,7 +1693,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         ordered.forEach(staff => {
             const unit = staff.unit || 'Unknown';
             if (!grouped[unit]) grouped[unit] = [];
-            grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || 'FLGOFF', value: getPersonIdentityDedupeKey(staff as any, 'staff'), instructor: staff });
+            grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || 'FLGOFF', value: getPersonIdentityDedupeKey(staff as any, 'staff'), ref: makeSchedulePersonRef(staff as any, 'staff', 'pilot'), instructor: staff });
         });
 
         Object.keys(grouped).forEach(unit => {
@@ -1637,13 +1708,31 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     // Group trainees by course for dropdown
     const traineesByCourse = useMemo(() => {
         // Get trainee details with course information
-        const traineesWithCourse = traineeList.map(name => {
-            const trainee = traineesData.find(t => t.name === name || t.fullName === name);
-            return {
-                name,
-                course: trainee?.course || 'Unknown'
-            };
-        });
+        const traineeNameSet = new Set(traineeList.map(name => String(name || '').trim()).filter(Boolean));
+        const traineeRecordOptions = traineesData
+            .filter(trainee => traineeNameSet.has(String(trainee.name || '').trim()) || traineeNameSet.has(String(trainee.fullName || '').trim()))
+            .map(trainee => ({
+                name: trainee.fullName || trainee.name,
+                course: trainee.course || 'Unknown',
+                value: getPersonIdentityDedupeKey(trainee as any, 'trainee'),
+                ref: makeSchedulePersonRef(trainee as any, 'trainee', 'student'),
+                trainee,
+            }));
+        const uniqueTraineeRecordOptions = traineeRecordOptions.filter((option, index, options) =>
+            options.findIndex(candidate => candidate.value === option.value) === index
+        );
+        const traineesWithCourse = [
+            ...uniqueTraineeRecordOptions,
+            ...traineeList
+                .filter(name => !traineesData.some(trainee => trainee.name === name || trainee.fullName === name))
+                .map(name => ({
+                    name,
+                    course: 'Unknown',
+                    value: String(name || '').trim(),
+                    ref: undefined,
+                    trainee: undefined,
+                })),
+        ];
         
         // Group by course
         const grouped = traineesWithCourse.reduce((acc, trainee) => {
@@ -1659,6 +1748,41 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         
         return { grouped, sortedCourses };
     }, [traineeList, traineesData]);
+
+    const traineeSelectOptions = useMemo(
+        () => traineesByCourse.sortedCourses.flatMap(course => traineesByCourse.grouped[course]),
+        [traineesByCourse],
+    );
+
+    const getPersonSelectionValue = (
+        name: string,
+        selectedRef: ScheduleEventPersonnelRef | undefined | null,
+        options: Array<{ name: string; value?: string; ref?: ScheduleEventPersonnelRef }>,
+    ): string => {
+        if (!name) return '';
+        const refMatch = selectedRef
+            ? options.find(option => personRefsMatch(option.ref, selectedRef))
+            : null;
+        if (refMatch?.value) return refMatch.value;
+        return options.find(option => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name).toLowerCase())?.value || name;
+    };
+
+    const handleCrewPersonSelection = (
+        index: number,
+        field: 'instructor' | 'student' | 'pilot',
+        value: string,
+        options: Array<{ name: string; value?: string; ref?: ScheduleEventPersonnelRef }>,
+        role: ScheduleEventPersonnelRef['role'],
+    ) => {
+        const option = options.find(candidate => candidate.value === value);
+        const newCrew = [...crew];
+        const memberToUpdate = { ...newCrew[index] };
+        memberToUpdate[field] = option?.name || value;
+        memberToUpdate[`${field}Ref` as 'instructorRef' | 'studentRef' | 'pilotRef'] = clonePersonRefForRole(option?.ref, role);
+        newCrew[index] = memberToUpdate;
+        setCrew(newCrew);
+        setLocalHighlight(null);
+    };
 
     // Calculate event statistics for each person
     interface PersonStats {
@@ -1741,13 +1865,31 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [eventsForDate, instructorList, traineeList, instructorsData, traineesData, syllabusDetails]);
 
 // Helper to render staff instructor dropdown with unit grouping and statistics
-    const renderStaffInstructorDropdown = (value: string, onChange: (value: string) => void, label: string = 'Instructor', disabled: boolean = false, includePax: boolean = false) => {
+    const resolveSelectedPersonRef = (
+        name: string,
+        selectedRef: ScheduleEventPersonnelRef | undefined | null,
+        options: Array<{ name: string; value?: string; ref?: ScheduleEventPersonnelRef }>,
+        role: ScheduleEventPersonnelRef['role'],
+    ): ScheduleEventPersonnelRef | null => {
+        if (selectedRef) return clonePersonRefForRole(selectedRef, role);
+        const match = options.find(option => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name).toLowerCase());
+        return clonePersonRefForRole(match?.ref, role);
+    };
+
+    const renderStaffInstructorDropdown = (index: number, field: 'instructor' | 'student' | 'pilot', value: string, label: string = 'Instructor', disabled: boolean = false, includePax: boolean = false, role: ScheduleEventPersonnelRef['role'] = 'instructor') => {
+        const selectedRef = crew[index]?.[`${field}Ref` as 'instructorRef' | 'studentRef' | 'pilotRef'];
         return (
             <div>
                 <label className="block text-sm font-medium text-gray-400">{label}</label>
                 <select 
-                    value={value} 
-                    onChange={e => onChange(e.target.value)} 
+                    value={value === 'PAX' ? 'PAX' : getPersonSelectionValue(value, selectedRef, staffSelectOptions)}
+                    onChange={e => {
+                        if (e.target.value === 'PAX') {
+                            handleCrewChange(index, field, 'PAX');
+                            return;
+                        }
+                        handleCrewPersonSelection(index, field, e.target.value, staffSelectOptions, role);
+                    }}
                     disabled={disabled}
                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10 "
                 >
@@ -1758,7 +1900,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                 const stats = personStats[instructor.name] || { rank: '' };
                                 const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                                 return (
-                                    <option key={instructor.value || instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
+                                    <option key={instructor.value || instructor.id || instructor.idNumber || instructor.name} value={instructor.value || instructor.name}>
                                         {displayText}
                                     </option>
                                 );
@@ -1775,13 +1917,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         );
     };
 // Helper to render trainee dropdown with course grouping and statistics
-    const renderTraineeDropdown = (value: string, onChange: (value: string) => void, disabled: boolean = false, highlight: boolean = false) => {
+    const renderTraineeDropdown = (index: number, field: 'student' | 'pilot', value: string, role: ScheduleEventPersonnelRef['role'] = 'student', disabled: boolean = false, highlight: boolean = false) => {
+        const selectedRef = crew[index]?.[`${field}Ref` as 'studentRef' | 'pilotRef'];
         return (
             <div>
                 <label className="block text-sm font-medium text-gray-400">Trainee</label>
                 <select 
-                    value={value} 
-                    onChange={e => onChange(e.target.value)} 
+                    value={getPersonSelectionValue(value, selectedRef, traineeSelectOptions)}
+                    onChange={e => handleCrewPersonSelection(index, field, e.target.value, traineeSelectOptions, role)}
                     disabled={disabled}
                     className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${highlight ? 'ring-2 ring-red-500' : ''}`}
                     
@@ -1791,11 +1934,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         <optgroup key={course} label={`─── ${course} ───`}>
                             {traineesByCourse.grouped[course].map(trainee => {
                                    // Get trainee details to access just the name without course
-                                   const traineeData = traineesData.find(t => t.name === trainee.name || t.fullName === trainee.name);
                                    const stats = personStats[trainee.name] || { rank: '' };
-                                   const displayText = formatFlightDetailPersonLabel(traineeData || trainee as any, traineeNameResolver, traineeData?.name || trainee.name, traineeData?.rank || stats.rank);
+                                   const displayText = formatFlightDetailPersonLabel(trainee.trainee || trainee as any, traineeNameResolver, trainee.trainee?.name || trainee.name, trainee.trainee?.rank || stats.rank);
                                 return (
-                                    <option key={traineeData?.id || traineeData?.idNumber || trainee.name} value={trainee.name}>
+                                    <option key={trainee.value || trainee.name} value={trainee.value || trainee.name}>
                                         {displayText}
                                     </option>
                                 );
@@ -2581,6 +2723,45 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             const savedCrewRequirement = eventType === 'flight'
                 ? (isAirCombatSoloSctSave ? airCombatSoloCrewRequirement : crewRequirement)
                 : event.crewRequirement;
+            const savedInstructorName = isFixedCrewCrewedEvent ? fixedCrewDisplayPic : (isAirCombatSoloSctSave ? '' : c.instructor);
+            const savedStudentName = isFixedCrewCrewedEvent ? '' : (isAirCombatSoloSctSave ? '' : c.student);
+            const savedPilotName = isFixedCrewCrewedEvent ? fixedCrewDisplayPic : (isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot);
+            const savedPersonnelRefs: ScheduleEventPersonnelRef[] = [];
+            const addSavedPersonnelRef = (ref: ScheduleEventPersonnelRef | null) => {
+                if (!ref || !ref.name) return;
+                const key = [
+                    ref.role,
+                    ref.personType,
+                    ref.idNumber || ref.id || stripCrewSuffix(ref.name).toLowerCase(),
+                ].join(':');
+                if (!savedPersonnelRefs.some(existing => [
+                    existing.role,
+                    existing.personType,
+                    existing.idNumber || existing.id || stripCrewSuffix(existing.name).toLowerCase(),
+                ].join(':') === key)) {
+                    savedPersonnelRefs.push(ref);
+                }
+            };
+
+            if (savedInstructorName) {
+                addSavedPersonnelRef(
+                    resolveSelectedPersonRef(savedInstructorName, c.instructorRef, staffSelectOptions, 'instructor')
+                );
+            }
+            if (savedPilotName) {
+                addSavedPersonnelRef(
+                    resolveSelectedPersonRef(savedPilotName, c.pilotRef, staffSelectOptions, 'pilot')
+                    || resolveSelectedPersonRef(savedPilotName, c.pilotRef, traineeSelectOptions, 'pilot')
+                );
+            }
+            if (savedStudentName && savedStudentName !== 'PAX') {
+                const selectedSecondRef = c.studentRef
+                    || resolveSelectedPersonRef(savedStudentName, null, traineeSelectOptions, 'student')
+                    || resolveSelectedPersonRef(savedStudentName, null, staffSelectOptions, 'crew');
+                addSavedPersonnelRef(
+                    clonePersonRefForRole(selectedSecondRef, selectedSecondRef?.personType === 'staff' ? 'crew' : 'student')
+                );
+            }
 
             const savedEvent = {
                 ...event,
@@ -2597,9 +2778,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 crewRequirement: savedCrewRequirement,
                 color: eventColor,
                 flightType: c.flightType,
-                instructor: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : (isAirCombatSoloSctSave ? '' : c.instructor),
-                student: isFixedCrewCrewedEvent ? '' : (isAirCombatSoloSctSave ? '' : c.student),
-                pilot: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : (isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot),
+                instructor: savedInstructorName,
+                student: savedStudentName,
+                pilot: savedPilotName,
+                personnelRefs: savedPersonnelRefs.length > 0 ? savedPersonnelRefs : event.personnelRefs,
                 group: isFixedCrewCrewedEvent ? fixedCrewDisplayGroup : c.group,
                 groupTraineeIds: c.groupTraineeIds,
                 locationType,
@@ -2857,18 +3039,24 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     {/* Instructor/Pilot Field - Staff only for certain categories */}
                     {useStaffOnly ? (
                         renderStaffInstructorDropdown(
+                            index,
                             // For continuation events, use pilot field; for others, use instructor field.
+                            eventCategory === 'sct' ? 'pilot' : 'instructor',
                             eventCategory === 'sct' ? crewMember.pilot : crewMember.instructor,
-                            (value) => handleCrewChange(index, eventCategory === 'sct' ? 'pilot' : 'instructor', value),
                             (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') ? 'Pilot' : 'Instructor',
-                            isDeploy
+                            isDeploy,
+                            false,
+                            eventCategory === 'sct' ? 'pilot' : 'instructor'
                         )
                        ) : (
                            renderStaffInstructorDropdown(
+                               index,
+                               'instructor',
                                crewMember.instructor,
-                               (value) => handleCrewChange(index, 'instructor', value),
                                'Instructor',
-                               isDeploy
+                               isDeploy,
+                               false,
+                               'instructor'
                            )
                        )}
                     
@@ -2876,8 +3064,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     {showTraineeFields && (
                         <>
                             {renderTraineeDropdown(
+                                index,
+                                'student',
                                 crewMember.student,
-                                (value) => handleCrewChange(index, 'student', value),
+                                'student',
                                 isDeploy,
                                 localHighlight === 'student'
                             )}
@@ -2959,11 +3149,13 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     {/* Crew Field - Only for continuation, Staff CAT and TWR DI events when Dual */}
                     {showCrewField && (
                         renderStaffInstructorDropdown(
+                            index,
+                            'student',
                             crewMember.student,
-                            (value) => handleCrewChange(index, 'student', value),
                             'Crew',
                             isDeploy,
-                            eventCategory === 'sct' // Include PAX option for continuation events
+                            eventCategory === 'sct', // Include PAX option for continuation events
+                            'crew'
                         )
                     )}
                 </>
@@ -2973,8 +3165,8 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                        <div>
                            <label className="block text-sm font-medium text-gray-400">Pilot</label>
                            <select 
-                               value={crewMember.pilot} 
-                               onChange={e => handleCrewChange(index, 'pilot', e.target.value)} 
+                               value={getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, soloStaffSource.sortedUnits.flatMap(unit => soloStaffSource.grouped[unit]))}
+                               onChange={e => handleCrewPersonSelection(index, 'pilot', e.target.value, soloStaffSource.sortedUnits.flatMap(unit => soloStaffSource.grouped[unit]), 'pilot')}
                                disabled={isDeploy}
                                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10"
                            >
@@ -2995,9 +3187,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                            })
                                                .map(instructor => {
                                                    const stats = personStats[instructor.name] || { rank: '' };
-                                               const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
+                                                  const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor as any, staffNameResolver, instructor.name, instructor.rank || stats.rank);
                                                return (
-                                                   <option key={instructor.value || instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
+                                                   <option key={instructor.value || instructor.id || instructor.idNumber || instructor.name} value={instructor.value || instructor.name}>
                                                        {displayText}
                                                    </option>
                                                );
@@ -3009,21 +3201,30 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                    ) : (
                        <div>
                            <label className="block text-sm font-medium text-gray-400">Pilot</label>
-                           <select value={crewMember.pilot} onChange={e => handleCrewChange(index, 'pilot', e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                           <select
+                               value={getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, traineeSelectOptions)}
+                               onChange={e => handleCrewPersonSelection(index, 'pilot', e.target.value, traineeSelectOptions, 'pilot')}
+                               disabled={isDeploy}
+                               className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                           >
                                <option value="" disabled>Select pilot</option>
-                               {traineeList
-                                   .filter(name => {
+                               {traineeSelectOptions
+                                   .filter(option => {
                                        // For formations, filter out pilots already assigned to other aircraft
                                        if (crew.length > 1) {
                                            const alreadyAssignedPilots = crew
                                                .filter((c, i) => i !== index) // Exclude current aircraft
                                                .map(c => c.pilot)
                                                .filter(p => p); // Remove empty values
-                                           return !alreadyAssignedPilots.includes(name);
+                                           return !alreadyAssignedPilots.includes(option.name);
                                        }
                                        return true;
                                    })
-                                   .map(name => <option key={name} value={name}>{name}</option>)}
+                                   .map(option => (
+                                       <option key={option.value || option.name} value={option.value || option.name}>
+                                           {formatFlightDetailPersonLabel(option.trainee || option as any, traineeNameResolver, option.trainee?.name || option.name)}
+                                       </option>
+                                   ))}
                            </select>
                        </div>
                    )

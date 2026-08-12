@@ -29125,6 +29125,11 @@ const uniqueOptionValues = (values) => {
 };
 const inferEventCategory = (event) => normaliseEventCategoryValue(event.eventCategory) || (isContinuationScheduleEvent(event) ? "sct" : "lmp_event");
 const getContinuationPilotName = (event) => stripCrewSuffix(event.pilot || event.instructor || event.student || "");
+const findEventPersonnelRef = (sourceEvent, roles, name, personType) => {
+  const cleanName = stripCrewSuffix(name);
+  if (!cleanName) return null;
+  return sourceEvent.personnelRefs?.find((ref) => roles.includes(ref.role) && (!personType || ref.personType === personType) && stripCrewSuffix(ref.name).toLowerCase() === cleanName.toLowerCase()) || null;
+};
 const makeInitialCrewMember = (sourceEvent) => {
   const inferredCategory = inferEventCategory(sourceEvent);
   const flightType = sourceEvent.flightType || "Dual";
@@ -29135,6 +29140,9 @@ const makeInitialCrewMember = (sourceEvent) => {
     instructor: isContinuationSolo ? "" : sourceEvent.instructor || "",
     student: isContinuationSolo ? "" : sourceEvent.student || "",
     pilot: isContinuationSolo ? continuationPilot : sourceEvent.pilot || "",
+    instructorRef: isContinuationSolo ? null : findEventPersonnelRef(sourceEvent, ["instructor"], sourceEvent.instructor, "staff"),
+    studentRef: isContinuationSolo ? null : findEventPersonnelRef(sourceEvent, ["student"], sourceEvent.student, "trainee") || findEventPersonnelRef(sourceEvent, ["crew"], sourceEvent.student, "staff"),
+    pilotRef: isContinuationSolo ? findEventPersonnelRef(sourceEvent, ["pilot", "instructor"], continuationPilot) : findEventPersonnelRef(sourceEvent, ["pilot"], sourceEvent.pilot),
     group: sourceEvent.group || "",
     groupTraineeIds: sourceEvent.groupTraineeIds || []
   };
@@ -29851,6 +29859,30 @@ ${swapNote}` : swapNote
     });
     return Array.from(grouped.entries()).sort(([a], [b]) => a.localeCompare(b, void 0, { numeric: true }));
   }, [fixedCrewEventOptions]);
+  const getPersonRefIdNumber = (person) => {
+    const numericId = Number(person.idNumber);
+    return Number.isFinite(numericId) ? numericId : void 0;
+  };
+  const makeSchedulePersonRef = (person, personType, role) => ({
+    role,
+    personType,
+    name: String(person.fullName || person.name || "").trim(),
+    id: String(person.id || "").trim() || void 0,
+    idNumber: getPersonRefIdNumber(person),
+    rank: String(person.rank || "").trim() || void 0,
+    unit: String(person.unit || "").trim() || void 0,
+    course: String(person.course || "").trim() || void 0
+  });
+  const clonePersonRefForRole = (ref, role) => ref ? { ...ref, role } : null;
+  const personRefsMatch = (left, right) => {
+    if (!left || !right) return false;
+    const leftId = String(left.id || "").trim();
+    const rightId = String(right.id || "").trim();
+    if (leftId && rightId) return leftId === rightId;
+    const leftIdNumber = String(left.idNumber || "").trim();
+    const rightIdNumber = String(right.idNumber || "").trim();
+    return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
+  };
   const staffInstructorsByUnit = reactExports.useMemo(() => {
     const traineeNames = new Set(traineesData.map((t) => t.fullName));
     const staffOnly = instructorList.filter((name) => !traineeNames.has(name));
@@ -29860,6 +29892,7 @@ ${swapNote}` : swapNote
       unit: instructor.unit || "Unknown",
       rank: instructor.rank || "FLGOFF",
       value: getPersonIdentityDedupeKey(instructor, "staff"),
+      ref: makeSchedulePersonRef(instructor, "staff", "instructor"),
       instructor
     }));
     const uniqueStaffRecordOptions = staffRecordOptions.filter(
@@ -29872,6 +29905,7 @@ ${swapNote}` : swapNote
         unit: "Unknown",
         rank: "FLGOFF",
         value: String(name || "").trim(),
+        ref: void 0,
         instructor: void 0
       }))
     ];
@@ -29903,6 +29937,10 @@ ${swapNote}` : swapNote
     });
     return { grouped, sortedUnits };
   }, [instructorList, traineesData, instructorsData, personnelDisplaySettings]);
+  const staffSelectOptions = reactExports.useMemo(
+    () => staffInstructorsByUnit.sortedUnits.flatMap((unit) => staffInstructorsByUnit.grouped[unit]),
+    [staffInstructorsByUnit]
+  );
   const activeEventUnitCodes = reactExports.useMemo(() => {
     const rawUnit = String(activeUnitCode || event.unitCode || event.unit || "").trim().toUpperCase();
     return rawUnit.split("+").map((unit) => unit.trim()).filter(Boolean);
@@ -29925,7 +29963,7 @@ ${swapNote}` : swapNote
     ordered.forEach((staff) => {
       const unit = staff.unit || "Unknown";
       if (!grouped[unit]) grouped[unit] = [];
-      grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || "FLGOFF", value: getPersonIdentityDedupeKey(staff, "staff"), instructor: staff });
+      grouped[unit].push({ name: stripCrewSuffix(staff.name), unit, rank: staff.rank || "FLGOFF", value: getPersonIdentityDedupeKey(staff, "staff"), ref: makeSchedulePersonRef(staff, "staff", "pilot"), instructor: staff });
     });
     Object.keys(grouped).forEach((unit) => {
       grouped[unit].sort(
@@ -29935,13 +29973,27 @@ ${swapNote}` : swapNote
     return { grouped, sortedUnits: Object.keys(grouped).sort() };
   }, [activeEventUnitCodes, crew, event.instructor, event.pilot, event.student, instructorsData, isAirCombatModel, personnelDisplaySettings]);
   const traineesByCourse = reactExports.useMemo(() => {
-    const traineesWithCourse = traineeList.map((name) => {
-      const trainee = traineesData.find((t) => t.name === name || t.fullName === name);
-      return {
+    const traineeNameSet = new Set(traineeList.map((name) => String(name || "").trim()).filter(Boolean));
+    const traineeRecordOptions = traineesData.filter((trainee) => traineeNameSet.has(String(trainee.name || "").trim()) || traineeNameSet.has(String(trainee.fullName || "").trim())).map((trainee) => ({
+      name: trainee.fullName || trainee.name,
+      course: trainee.course || "Unknown",
+      value: getPersonIdentityDedupeKey(trainee, "trainee"),
+      ref: makeSchedulePersonRef(trainee, "trainee", "student"),
+      trainee
+    }));
+    const uniqueTraineeRecordOptions = traineeRecordOptions.filter(
+      (option, index, options) => options.findIndex((candidate) => candidate.value === option.value) === index
+    );
+    const traineesWithCourse = [
+      ...uniqueTraineeRecordOptions,
+      ...traineeList.filter((name) => !traineesData.some((trainee) => trainee.name === name || trainee.fullName === name)).map((name) => ({
         name,
-        course: trainee?.course || "Unknown"
-      };
-    });
+        course: "Unknown",
+        value: String(name || "").trim(),
+        ref: void 0,
+        trainee: void 0
+      }))
+    ];
     const grouped = traineesWithCourse.reduce((acc, trainee) => {
       if (!acc[trainee.course]) {
         acc[trainee.course] = [];
@@ -29952,6 +30004,26 @@ ${swapNote}` : swapNote
     const sortedCourses = Object.keys(grouped).sort();
     return { grouped, sortedCourses };
   }, [traineeList, traineesData]);
+  const traineeSelectOptions = reactExports.useMemo(
+    () => traineesByCourse.sortedCourses.flatMap((course) => traineesByCourse.grouped[course]),
+    [traineesByCourse]
+  );
+  const getPersonSelectionValue = (name, selectedRef, options) => {
+    if (!name) return "";
+    const refMatch = selectedRef ? options.find((option) => personRefsMatch(option.ref, selectedRef)) : null;
+    if (refMatch?.value) return refMatch.value;
+    return options.find((option) => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name).toLowerCase())?.value || name;
+  };
+  const handleCrewPersonSelection = (index, field, value, options, role) => {
+    const option = options.find((candidate) => candidate.value === value);
+    const newCrew = [...crew];
+    const memberToUpdate = { ...newCrew[index] };
+    memberToUpdate[field] = option?.name || value;
+    memberToUpdate[`${field}Ref`] = clonePersonRefForRole(option?.ref, role);
+    newCrew[index] = memberToUpdate;
+    setCrew(newCrew);
+    setLocalHighlight(null);
+  };
   const personStats = reactExports.useMemo(() => {
     const stats = {};
     [...instructorList, ...traineeList].forEach((name) => {
@@ -29999,14 +30071,26 @@ ${swapNote}` : swapNote
     });
     return stats;
   }, [eventsForDate, instructorList, traineeList, instructorsData, traineesData, syllabusDetails]);
-  const renderStaffInstructorDropdown = (value, onChange, label = "Instructor", disabled = false, includePax = false) => {
+  const resolveSelectedPersonRef = (name, selectedRef, options, role) => {
+    if (selectedRef) return clonePersonRefForRole(selectedRef, role);
+    const match = options.find((option) => stripCrewSuffix(option.name).toLowerCase() === stripCrewSuffix(name).toLowerCase());
+    return clonePersonRefForRole(match?.ref, role);
+  };
+  const renderStaffInstructorDropdown = (index, field, value, label = "Instructor", disabled = false, includePax = false, role = "instructor") => {
+    const selectedRef = crew[index]?.[`${field}Ref`];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
-          value,
-          onChange: (e) => onChange(e.target.value),
+          value: value === "PAX" ? "PAX" : getPersonSelectionValue(value, selectedRef, staffSelectOptions),
+          onChange: (e) => {
+            if (e.target.value === "PAX") {
+              handleCrewChange(index, field, "PAX");
+              return;
+            }
+            handleCrewPersonSelection(index, field, e.target.value, staffSelectOptions, role);
+          },
           disabled,
           className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10 ",
           children: [
@@ -30017,7 +30101,7 @@ ${swapNote}` : swapNote
             staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].map((instructor) => {
               const stats = personStats[instructor.name] || { rank: "" };
               const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor, staffNameResolver, instructor.name, instructor.rank || stats.rank);
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.value || instructor.id || instructor.idNumber || instructor.name);
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.value || instructor.name, children: displayText }, instructor.value || instructor.id || instructor.idNumber || instructor.name);
             }) }, unit)),
             includePax && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "─── Other ───", children: /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PAX", children: "PAX" }) })
           ]
@@ -30025,23 +30109,23 @@ ${swapNote}` : swapNote
       )
     ] });
   };
-  const renderTraineeDropdown = (value, onChange, disabled = false, highlight = false) => {
+  const renderTraineeDropdown = (index, field, value, role = "student", disabled = false, highlight = false) => {
+    const selectedRef = crew[index]?.[`${field}Ref`];
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Trainee" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
-          value,
-          onChange: (e) => onChange(e.target.value),
+          value: getPersonSelectionValue(value, selectedRef, traineeSelectOptions),
+          onChange: (e) => handleCrewPersonSelection(index, field, e.target.value, traineeSelectOptions, role),
           disabled,
           className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${highlight ? "ring-2 ring-red-500" : ""}`,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select a trainee" }),
             traineesByCourse.sortedCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${course} ───`, children: traineesByCourse.grouped[course].map((trainee) => {
-              const traineeData = traineesData.find((t) => t.name === trainee.name || t.fullName === trainee.name);
               const stats = personStats[trainee.name] || { rank: "" };
-              const displayText = formatFlightDetailPersonLabel(traineeData || trainee, traineeNameResolver, traineeData?.name || trainee.name, traineeData?.rank || stats.rank);
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: trainee.name, children: displayText }, traineeData?.id || traineeData?.idNumber || trainee.name);
+              const displayText = formatFlightDetailPersonLabel(trainee.trainee || trainee, traineeNameResolver, trainee.trainee?.name || trainee.name, trainee.trainee?.rank || stats.rank);
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: trainee.value || trainee.name, children: displayText }, trainee.value || trainee.name);
             }) }, course))
           ]
         }
@@ -30618,6 +30702,41 @@ ${swapNote}` : swapNote
       const isAirCombatSoloSctSave = isAirCombatModel && eventCategory === "sct" && c.flightType === "Solo";
       const primaryContinuationPilot = stripCrewSuffix(c.pilot || c.instructor || c.student);
       const savedCrewRequirement = eventType === "flight" ? isAirCombatSoloSctSave ? airCombatSoloCrewRequirement : crewRequirement : event.crewRequirement;
+      const savedInstructorName = isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? "" : c.instructor;
+      const savedStudentName = isFixedCrewCrewedEvent ? "" : isAirCombatSoloSctSave ? "" : c.student;
+      const savedPilotName = isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot;
+      const savedPersonnelRefs = [];
+      const addSavedPersonnelRef = (ref) => {
+        if (!ref || !ref.name) return;
+        const key = [
+          ref.role,
+          ref.personType,
+          ref.idNumber || ref.id || stripCrewSuffix(ref.name).toLowerCase()
+        ].join(":");
+        if (!savedPersonnelRefs.some((existing) => [
+          existing.role,
+          existing.personType,
+          existing.idNumber || existing.id || stripCrewSuffix(existing.name).toLowerCase()
+        ].join(":") === key)) {
+          savedPersonnelRefs.push(ref);
+        }
+      };
+      if (savedInstructorName) {
+        addSavedPersonnelRef(
+          resolveSelectedPersonRef(savedInstructorName, c.instructorRef, staffSelectOptions, "instructor")
+        );
+      }
+      if (savedPilotName) {
+        addSavedPersonnelRef(
+          resolveSelectedPersonRef(savedPilotName, c.pilotRef, staffSelectOptions, "pilot") || resolveSelectedPersonRef(savedPilotName, c.pilotRef, traineeSelectOptions, "pilot")
+        );
+      }
+      if (savedStudentName && savedStudentName !== "PAX") {
+        const selectedSecondRef = c.studentRef || resolveSelectedPersonRef(savedStudentName, null, traineeSelectOptions, "student") || resolveSelectedPersonRef(savedStudentName, null, staffSelectOptions, "crew");
+        addSavedPersonnelRef(
+          clonePersonRefForRole(selectedSecondRef, selectedSecondRef?.personType === "staff" ? "crew" : "student")
+        );
+      }
       const savedEvent = {
         ...event,
         id: eventId,
@@ -30634,9 +30753,10 @@ ${swapNote}` : swapNote
         crewRequirement: savedCrewRequirement,
         color: eventColor,
         flightType: c.flightType,
-        instructor: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? "" : c.instructor,
-        student: isFixedCrewCrewedEvent ? "" : isAirCombatSoloSctSave ? "" : c.student,
-        pilot: isFixedCrewCrewedEvent ? fixedCrewDisplayPic : isAirCombatSoloSctSave ? primaryContinuationPilot : c.pilot,
+        instructor: savedInstructorName,
+        student: savedStudentName,
+        pilot: savedPilotName,
+        personnelRefs: savedPersonnelRefs.length > 0 ? savedPersonnelRefs : event.personnelRefs,
         group: isFixedCrewCrewedEvent ? fixedCrewDisplayGroup : c.group,
         groupTraineeIds: c.groupTraineeIds,
         locationType,
@@ -30832,21 +30952,29 @@ ${swapNote}` : swapNote
       ] }),
       crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         useStaffOnly ? renderStaffInstructorDropdown(
+          index,
           // For continuation events, use pilot field; for others, use instructor field.
+          eventCategory === "sct" ? "pilot" : "instructor",
           eventCategory === "sct" ? crewMember.pilot : crewMember.instructor,
-          (value) => handleCrewChange(index, eventCategory === "sct" ? "pilot" : "instructor", value),
           eventCategory === "sct" || eventCategory === "staff_cat" || eventCategory === "twr_di" ? "Pilot" : "Instructor",
-          isDeploy
+          isDeploy,
+          false,
+          eventCategory === "sct" ? "pilot" : "instructor"
         ) : renderStaffInstructorDropdown(
+          index,
+          "instructor",
           crewMember.instructor,
-          (value) => handleCrewChange(index, "instructor", value),
           "Instructor",
-          isDeploy
+          isDeploy,
+          false,
+          "instructor"
         ),
         showTraineeFields && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           renderTraineeDropdown(
+            index,
+            "student",
             crewMember.student,
-            (value) => handleCrewChange(index, "student", value),
+            "student",
             isDeploy,
             localHighlight === "student"
           ),
@@ -30917,12 +31045,14 @@ ${swapNote}` : swapNote
           ] })
         ] }),
         showCrewField && renderStaffInstructorDropdown(
+          index,
+          "student",
           crewMember.student,
-          (value) => handleCrewChange(index, "student", value),
           "Crew",
           isDeploy,
-          eventCategory === "sct"
+          eventCategory === "sct",
           // Include PAX option for continuation events
+          "crew"
         )
       ] }) : (
         // Solo - use staff dropdown for continuation, Staff CAT and TWR DI events.
@@ -30931,8 +31061,8 @@ ${swapNote}` : swapNote
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
-              value: crewMember.pilot,
-              onChange: (e) => handleCrewChange(index, "pilot", e.target.value),
+              value: getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, soloStaffSource.sortedUnits.flatMap((unit) => soloStaffSource.grouped[unit])),
+              onChange: (e) => handleCrewPersonSelection(index, "pilot", e.target.value, soloStaffSource.sortedUnits.flatMap((unit) => soloStaffSource.grouped[unit]), "pilot"),
               disabled: isDeploy,
               className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed appearance-none cursor-pointer z-10",
               children: [
@@ -30946,23 +31076,32 @@ ${swapNote}` : swapNote
                 }).map((instructor) => {
                   const stats = personStats[instructor.name] || { rank: "" };
                   const displayText = formatFlightDetailPersonLabel(instructor.instructor || instructor, staffNameResolver, instructor.name, instructor.rank || stats.rank);
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.value || instructor.id || instructor.idNumber || instructor.name);
+                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.value || instructor.name, children: displayText }, instructor.value || instructor.id || instructor.idNumber || instructor.name);
                 }) }, unit))
               ]
             }
           )
         ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Pilot" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: crewMember.pilot, onChange: (e) => handleCrewChange(index, "pilot", e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select pilot" }),
-            traineeList.filter((name) => {
-              if (crew.length > 1) {
-                const alreadyAssignedPilots = crew.filter((c, i) => i !== index).map((c) => c.pilot).filter((p) => p);
-                return !alreadyAssignedPilots.includes(name);
-              }
-              return true;
-            }).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name))
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: getPersonSelectionValue(crewMember.pilot, crewMember.pilotRef, traineeSelectOptions),
+              onChange: (e) => handleCrewPersonSelection(index, "pilot", e.target.value, traineeSelectOptions, "pilot"),
+              disabled: isDeploy,
+              className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select pilot" }),
+                traineeSelectOptions.filter((option) => {
+                  if (crew.length > 1) {
+                    const alreadyAssignedPilots = crew.filter((c, i) => i !== index).map((c) => c.pilot).filter((p) => p);
+                    return !alreadyAssignedPilots.includes(option.name);
+                  }
+                  return true;
+                }).map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value || option.name, children: formatFlightDetailPersonLabel(option.trainee || option, traineeNameResolver, option.trainee?.name || option.name) }, option.value || option.name))
+              ]
+            }
+          )
         ] })
       )
     ] }, index);
