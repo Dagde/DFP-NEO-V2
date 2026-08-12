@@ -864,6 +864,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     isCreating={isAddingNew}
                     locations={locations}
                     units={units}
+                    instructorsData={instructorsData}
                     traineesData={traineesData}
                     events={events}
                     scheduleHistoryEvents={scheduleHistoryEvents}

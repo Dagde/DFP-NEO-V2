@@ -4841,6 +4841,33 @@ const getSctTerminology = (config, unitCode) => {
   const fallbackOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   return normaliseSctTerminology((activeOrganisation || fallbackOrganisation)?.settings?.sctTerminology || null);
 };
+const normalisePersonName = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+const getPersonDisplayName = (person) => String(person.fullName || person.name || "").trim();
+const samePersonRecord = (left, right) => {
+  const leftId = String(left.id || "").trim();
+  const rightId = String(right.id || "").trim();
+  if (leftId && rightId) return leftId === rightId;
+  const leftIdNumber = String(left.idNumber || "").trim();
+  const rightIdNumber = String(right.idNumber || "").trim();
+  return Boolean(leftIdNumber && rightIdNumber && leftIdNumber === rightIdNumber);
+};
+const formatPersonOptionLabel = (person) => {
+  const name = getPersonDisplayName(person) || "Unnamed person";
+  const parts = [
+    person.rank,
+    name,
+    person.role || person.course,
+    person.unit,
+    person.idNumber ? `ID ${person.idNumber}` : ""
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  return parts.join(" - ");
+};
+const describeDuplicateNamePerson = (person) => {
+  const parts = [
+    formatPersonOptionLabel(person)
+  ].filter(Boolean);
+  return parts.join("");
+};
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$4 = (value, fallback) => {
   const token = String(value || "").trim().toUpperCase().replace(/[^A-Z]+/g, "").slice(0, 3);
@@ -23211,11 +23238,7 @@ This action cannot be undone.`;
                     className: "text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-[calc(100%+20px)] focus:ring-1 focus:ring-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
-                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
-                        instructor.rank,
-                        " ",
-                        instructor.name
-                      ] }, instructor.idNumber))
+                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: formatPersonOptionLabel(instructor) }, instructor.idNumber))
                     ]
                   }
                 ) })
@@ -23558,11 +23581,7 @@ This action cannot be undone.`;
                     className: "w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
-                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: instructor.name, children: [
-                        instructor.rank,
-                        " ",
-                        instructor.name
-                      ] }, instructor.idNumber))
+                      unitInstructors.map((instructor) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: formatPersonOptionLabel(instructor) }, instructor.idNumber))
                     ]
                   }
                 ) })
@@ -24747,6 +24766,20 @@ const TraineeProfileFlyout = ({
     if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
       await showDarkAlert("Personnel ID is required before this trainee record can be saved.", "Missing Personnel ID", "warning");
       return;
+    }
+    const proposedRecord = { ...trainee, idNumber };
+    const duplicateNameMatches = [...traineesData, ...instructorsData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name)).filter((person) => !samePersonRecord(person, proposedRecord));
+    if (duplicateNameMatches.length > 0) {
+      const confirmed = await showDarkConfirm(
+        `Another active person already has the name "${name}".
+
+${duplicateNameMatches.map(describeDuplicateNamePerson).join("\n")}
+
+Confirm the Personnel ID, unit and course are correct before saving this separate person.`,
+        "Duplicate Name Check",
+        "warning"
+      );
+      if (!confirmed) return;
     }
     const fullName = `${name} – ${course}`;
     const updatedTrainee = {
@@ -26784,10 +26817,7 @@ const CourseEditFlyout = ({
                         className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not assigned" }),
-                          staffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
-                            staff.rank ? `${staff.rank} ` : "",
-                            staff.name
-                          ] }, `${staff.id || staff.idNumber || staff.name}-commander`)) }, `${unit}-commander-group`))
+                          staffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatPersonOptionLabel(staff) }, `${staff.id || staff.idNumber || staff.name}-commander`)) }, `${unit}-commander-group`))
                         ]
                       }
                     )
@@ -26803,10 +26833,7 @@ const CourseEditFlyout = ({
                         className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50",
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Not assigned" }),
-                          staffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: staff.name, children: [
-                            staff.rank ? `${staff.rank} ` : "",
-                            staff.name
-                          ] }, `${staff.id || staff.idNumber || staff.name}-deputy`)) }, `${unit}-deputy-group`))
+                          staffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatPersonOptionLabel(staff) }, `${staff.id || staff.idNumber || staff.name}-deputy`)) }, `${unit}-deputy-group`))
                         ]
                       }
                     )
@@ -29507,7 +29534,7 @@ ${swapNote}` : swapNote
                   disabled: isClear,
                   onClick: () => setActiveCrewConflictName(isSelected ? null : staff.name),
                   className: `min-w-0 truncate text-xs font-semibold ${isClear ? "cursor-default text-emerald-300" : isSelected ? "cursor-pointer text-red-200 underline decoration-red-200/70 underline-offset-2" : "cursor-pointer text-red-300 underline decoration-red-300/40 underline-offset-2"}`,
-                  children: [staff.rank, staff.name].filter(Boolean).join(" ")
+                  children: formatPersonOptionLabel(staff)
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "shrink-0 text-[11px] text-gray-400", children: [
@@ -29769,8 +29796,8 @@ ${swapNote}` : swapNote
             ] }),
             staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].map((instructor) => {
               const stats = personStats[instructor.name] || { rank: "" };
-              const displayText = `${stats.rank} ${instructor.name}`;
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.name);
+              const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.id || instructor.idNumber || instructor.name);
             }) }, unit)),
             includePax && /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: "─── Other ───", children: /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PAX", children: "PAX" }) })
           ]
@@ -29793,8 +29820,8 @@ ${swapNote}` : swapNote
             traineesByCourse.sortedCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: `─── ${course} ───`, children: traineesByCourse.grouped[course].map((trainee) => {
               const traineeData = traineesData.find((t) => t.name === trainee.name || t.fullName === trainee.name);
               const stats = personStats[trainee.name] || { rank: "" };
-              const displayText = `${stats.rank} ${traineeData?.name || trainee.name}`;
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: trainee.name, children: displayText }, trainee.name);
+              const displayText = formatPersonOptionLabel({ ...traineeData, ...trainee, name: traineeData?.name || trainee.name, rank: traineeData?.rank || stats.rank });
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: trainee.name, children: displayText }, traineeData?.id || traineeData?.idNumber || trainee.name);
             }) }, course))
           ]
         }
@@ -30698,8 +30725,8 @@ ${swapNote}` : swapNote
                   return true;
                 }).map((instructor) => {
                   const stats = personStats[instructor.name] || { rank: "" };
-                  const displayText = `${stats.rank} ${instructor.name}`;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.name);
+                  const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
+                  return /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: instructor.name, children: displayText }, instructor.id || instructor.idNumber || instructor.name);
                 }) }, unit))
               ]
             }
@@ -31365,7 +31392,7 @@ ${swapNote}` : swapNote
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: fixedCrewGroup ? "Select PIC" : "Select crew first" }),
                       fixedCrewPic && !fixedCrewPicCandidates.some((staff) => staff.name === fixedCrewPic) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: fixedCrewPic, children: fixedCrewPic }),
-                      fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
+                      fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatPersonOptionLabel(staff) }, staff.id || staff.name))
                     ]
                   }
                 )
@@ -31426,7 +31453,7 @@ ${swapNote}` : swapNote
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/50 border border-gray-700 rounded-md p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2", children: "Crew Members" }),
                 fixedCrewMembers.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2", children: fixedCrewMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-gray-100", children: formatPersonOptionLabel(staff) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-xs font-semibold text-emerald-300", children: staff.role || "Staff" })
                 ] }, staff.id || staff.name)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: "Select a crew to preview its members." })
               ] }),
@@ -31437,7 +31464,7 @@ ${swapNote}` : swapNote
                     "div",
                     {
                       className: `rounded px-2 py-1.5 text-sm ${staff.name === fixedCrewPic ? "bg-emerald-500/20 text-emerald-100 border border-emerald-400/40" : "bg-gray-800/70 text-gray-100 border border-transparent"}`,
-                      children: [staff.rank, staff.name].filter(Boolean).join(" ")
+                      children: formatPersonOptionLabel(staff)
                     },
                     staff.id || staff.name
                   )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-gray-500 italic", children: fixedCrewGroup ? "No PIC-qualified crew members found for this crew." : "Select a crew to show PIC candidates." })
@@ -52958,6 +52985,7 @@ const InstructorProfileFlyout = ({
   isCreating = false,
   locations,
   units,
+  instructorsData = [],
   traineesData,
   events = [],
   scheduleHistoryEvents = [],
@@ -53441,6 +53469,20 @@ const InstructorProfileFlyout = ({
     if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
       await showDarkAlert("Personnel ID is required before this staff record can be saved.", "Missing Personnel ID", "warning");
       return;
+    }
+    const proposedRecord = { ...instructor, idNumber };
+    const duplicateNameMatches = [...instructorsData, ...traineesData].filter((person) => person.isActive !== false).filter((person) => normalisePersonName(person.name || person.fullName) === normalisePersonName(name)).filter((person) => !samePersonRecord(person, proposedRecord));
+    if (duplicateNameMatches.length > 0) {
+      const confirmed = await showDarkConfirm(
+        `Another active person already has the name "${name}".
+
+${duplicateNameMatches.map(describeDuplicateNamePerson).join("\n")}
+
+Confirm the Personnel ID, unit and role are correct before saving this separate person.`,
+        "Duplicate Name Check",
+        "warning"
+      );
+      if (!confirmed) return;
     }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
@@ -56080,6 +56122,7 @@ const InstructorListView = ({
         isCreating: isAddingNew,
         locations,
         units,
+        instructorsData,
         traineesData,
         events,
         scheduleHistoryEvents,
@@ -77557,7 +77600,7 @@ This removes them from DFP Resource Rows. Press Save in this section to apply th
                   },
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Add staff member..." }),
-                    availableTrainingReportAutoNotifyStaffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: `${staff.rank ? `${staff.rank} ` : ""}${staff.name}` }, `${staff.unit || "unit"}-${staff.name}`)) }, `${unit}-auto-notify-staff-group`))
+                    availableTrainingReportAutoNotifyStaffByUnit.map(([unit, staffMembers]) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: unit, children: staffMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatPersonOptionLabel(staff) }, `${staff.id || staff.idNumber || staff.unit || "unit"}-${staff.name}`)) }, `${unit}-auto-notify-staff-group`))
                   ]
                 }
               ) }),
@@ -94318,7 +94361,7 @@ const DfpSidePanelTimeline = ({
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: selectedFixedCrewGroup ? "Select PIC" : "Select crew first" }),
                   selectedFixedCrewPic && !fixedCrewPicCandidates.some((staff) => staff.name === selectedFixedCrewPic) && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: selectedFixedCrewPic, children: selectedFixedCrewPic }),
-                  fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: [staff.rank, staff.name].filter(Boolean).join(" ") }, staff.id || staff.name))
+                  fixedCrewPicCandidates.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatPersonOptionLabel(staff) }, staff.id || staff.name))
                 ]
               }
             )
@@ -94326,7 +94369,7 @@ const DfpSidePanelTimeline = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-emerald-400/25 bg-emerald-500/10 p-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 font-semibold text-emerald-100", children: "Crew Members" }),
             fixedCrewAssistMembers.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-500", children: "Select a crew to preview its members." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-1", children: fixedCrewAssistMembers.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-slate-100", children: [staff.rank, staff.name].filter(Boolean).join(" ") }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "min-w-0 truncate text-slate-100", children: formatPersonOptionLabel(staff) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 text-[9px] font-semibold text-emerald-200", children: staff.role || "Staff" })
             ] }, staff.id || staff.name)) })
           ] }),

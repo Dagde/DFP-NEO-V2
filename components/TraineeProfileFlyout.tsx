@@ -53,7 +53,8 @@ import {
   type StaffQualificationCatalogue,
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
-import { showDarkAlert } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
+import { describeDuplicateNamePerson, normalisePersonName, samePersonRecord } from '../utils/personIdentity';
 import type { OperationalModelCode } from '../utils/platformConfigService';
 import {
   getCrewPositionDisplayLabel,
@@ -1470,6 +1471,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
             await showDarkAlert('Personnel ID is required before this trainee record can be saved.', 'Missing Personnel ID', 'warning');
             return;
+        }
+        const proposedRecord = { ...trainee, idNumber, name, fullName: name, rank, course, unit };
+        const duplicateNameMatches = [...traineesData, ...instructorsData]
+            .filter(person => (person as any).isActive !== false)
+            .filter(person => normalisePersonName(person.name || person.fullName) === normalisePersonName(name))
+            .filter(person => !samePersonRecord(person, proposedRecord));
+        if (duplicateNameMatches.length > 0) {
+            const confirmed = await showDarkConfirm(
+                `Another active person already has the name "${name}".\n\n${duplicateNameMatches.map(describeDuplicateNamePerson).join('\n')}\n\nConfirm the Personnel ID, unit and course are correct before saving this separate person.`,
+                'Duplicate Name Check',
+                'warning'
+            );
+            if (!confirmed) return;
         }
         const fullName = `${name} – ${course}`;
         const updatedTrainee: Trainee = {

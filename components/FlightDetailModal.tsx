@@ -46,6 +46,7 @@ import {
     type UnitCallsignSettings,
 } from '../utils/unitCallsigns';
 import { handleEditableTextBeforeInput, handleEditableTextKeyDownCapture, stopEditableKeyPropagation } from '../utils/editableKeyEvents';
+import { formatPersonOptionLabel } from '../utils/personIdentity';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -1324,7 +1325,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                                         onClick={() => setActiveCrewConflictName(isSelected ? null : staff.name)}
                                                         className={`min-w-0 truncate text-xs font-semibold ${isClear ? 'cursor-default text-emerald-300' : isSelected ? 'cursor-pointer text-red-200 underline decoration-red-200/70 underline-offset-2' : 'cursor-pointer text-red-300 underline decoration-red-300/40 underline-offset-2'}`}
                                                     >
-                                                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                                        {formatPersonOptionLabel(staff)}
                                                     </button>
                                                     <span className="shrink-0 text-[11px] text-gray-400">{getFixedCrewStaffRoleLabel(staff)}{isPic ? ' / PIC' : ''}</span>
                                                 </div>
@@ -1716,9 +1717,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                         <optgroup key={unit} label={`─── ${unit} ───`}>
                             {staffInstructorsByUnit.grouped[unit].map(instructor => {
                                 const stats = personStats[instructor.name] || { rank: '' };
-                                   const displayText = `${stats.rank} ${instructor.name}`;
+                                   const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
                                 return (
-                                    <option key={instructor.name} value={instructor.name}>
+                                    <option key={instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
                                         {displayText}
                                     </option>
                                 );
@@ -1753,9 +1754,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                                    // Get trainee details to access just the name without course
                                    const traineeData = traineesData.find(t => t.name === trainee.name || t.fullName === trainee.name);
                                    const stats = personStats[trainee.name] || { rank: '' };
-                                   const displayText = `${stats.rank} ${traineeData?.name || trainee.name}`;
+                                   const displayText = formatPersonOptionLabel({ ...traineeData, ...trainee, name: traineeData?.name || trainee.name, rank: traineeData?.rank || stats.rank });
                                 return (
-                                    <option key={trainee.name} value={trainee.name}>
+                                    <option key={traineeData?.id || traineeData?.idNumber || trainee.name} value={trainee.name}>
                                         {displayText}
                                     </option>
                                 );
@@ -2953,11 +2954,11 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                }
                                                return true;
                                            })
-                                           .map(instructor => {
-                                               const stats = personStats[instructor.name] || { rank: '' };
-                                               const displayText = `${stats.rank} ${instructor.name}`;
+                                               .map(instructor => {
+                                                   const stats = personStats[instructor.name] || { rank: '' };
+                                               const displayText = formatPersonOptionLabel({ ...instructor, rank: instructor.rank || stats.rank });
                                                return (
-                                                   <option key={instructor.name} value={instructor.name}>
+                                                   <option key={instructor.id || instructor.idNumber || instructor.name} value={instructor.name}>
                                                        {displayText}
                                                    </option>
                                                );
@@ -3701,7 +3702,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                         )}
                                                         {fixedCrewPicCandidates.map(staff => (
                                                             <option key={staff.id || staff.name} value={staff.name}>
-                                                                {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                                                {formatPersonOptionLabel(staff)}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -3765,7 +3766,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                             {fixedCrewMembers.map(staff => (
                                                                 <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded bg-gray-800/70 px-2 py-1.5 text-sm">
-                                                                    <span className="min-w-0 truncate text-gray-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
+                                                                    <span className="min-w-0 truncate text-gray-100">{formatPersonOptionLabel(staff)}</span>
                                                                     <span className="flex-shrink-0 text-xs font-semibold text-emerald-300">{staff.role || 'Staff'}</span>
                                                                 </div>
                                                             ))}
@@ -3784,7 +3785,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                                         key={staff.id || staff.name}
                                                                         className={`rounded px-2 py-1.5 text-sm ${staff.name === fixedCrewPic ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-400/40' : 'bg-gray-800/70 text-gray-100 border border-transparent'}`}
                                                                     >
-                                                                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                                                        {formatPersonOptionLabel(staff)}
                                                                     </div>
                                                                 ))}
                                                             </div>

@@ -2,6 +2,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useMemo, useState, useEffect } from 'react';
 import { Course, Instructor, Trainee } from '../types';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import { formatPersonOptionLabel } from '../utils/personIdentity';
 
 interface CourseEditFlyoutProps {
     courseName: string;
@@ -233,7 +234,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                                 <optgroup key={`${unit}-commander-group`} label={unit}>
                                                     {staffMembers.map((staff) => (
                                                         <option key={`${staff.id || staff.idNumber || staff.name}-commander`} value={staff.name}>
-                                                            {staff.rank ? `${staff.rank} ` : ''}{staff.name}
+                                                            {formatPersonOptionLabel(staff)}
                                                         </option>
                                                     ))}
                                                 </optgroup>
@@ -253,7 +254,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                                 <optgroup key={`${unit}-deputy-group`} label={unit}>
                                                     {staffMembers.map((staff) => (
                                                         <option key={`${staff.id || staff.idNumber || staff.name}-deputy`} value={staff.name}>
-                                                            {staff.rank ? `${staff.rank} ` : ''}{staff.name}
+                                                            {formatPersonOptionLabel(staff)}
                                                         </option>
                                                     ))}
                                                 </optgroup>

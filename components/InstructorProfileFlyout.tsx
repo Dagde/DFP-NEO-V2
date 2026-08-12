@@ -10,7 +10,7 @@ import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
-import { showDarkAlert, showDarkPrompt } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -40,6 +40,7 @@ import {
 } from '../utils/staffQualifications';
 import { getStaffRoleDisplay } from '../utils/staffRoleColours';
 import { DEFAULT_SCT_TERMINOLOGY, normaliseSctTerminology, type SctTerminology } from '../utils/sctTerminology';
+import { describeDuplicateNamePerson, normalisePersonName, samePersonRecord } from '../utils/personIdentity';
 
 type LegacyQualificationField = 'isCommandingOfficer' | 'isCFI' | 'isExecutive' | 'isFlyingSupervisor' | 'isTestingOfficer' | 'isIRE' | 'isQFI' | 'isOFI' | 'isDeputyFlightCommander' | 'isContractor' | 'isAdminStaff';
 
@@ -87,6 +88,7 @@ interface InstructorProfileFlyoutProps {
   isCreating?: boolean;
   locations: string[];
   units: string[];
+  instructorsData?: Instructor[];
   traineesData: Trainee[];
   events?: ScheduleEvent[];
   scheduleHistoryEvents?: ScheduleEvent[];
@@ -325,7 +327,7 @@ const getLogbookEntryRoleLabel = (personRole?: string): string => {
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
+  locations, units, instructorsData = [], traineesData, events = [], scheduleHistoryEvents = [], syllabusDetails = [],
   insertEventTypes = [], aircraftConfigurations = [],
   onInsertAirCombatTrainingEvent, onUpdateAirCombatTrainingEvent, onGenerateAirCombatTrainingReport, onAddTrainingReport,
   onViewLogbook, onRequestSct, onNavigateToTrainee,
@@ -871,6 +873,19 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
       await showDarkAlert('Personnel ID is required before this staff record can be saved.', 'Missing Personnel ID', 'warning');
       return;
+    }
+    const proposedRecord = { ...instructor, idNumber, name, rank, role, unit };
+    const duplicateNameMatches = [...instructorsData, ...traineesData]
+      .filter(person => (person as any).isActive !== false)
+      .filter(person => normalisePersonName(person.name || person.fullName) === normalisePersonName(name))
+      .filter(person => !samePersonRecord(person, proposedRecord));
+    if (duplicateNameMatches.length > 0) {
+      const confirmed = await showDarkConfirm(
+        `Another active person already has the name "${name}".\n\n${duplicateNameMatches.map(describeDuplicateNamePerson).join('\n')}\n\nConfirm the Personnel ID, unit and role are correct before saving this separate person.`,
+        'Duplicate Name Check',
+        'warning'
+      );
+      if (!confirmed) return;
     }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));

@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
+import { formatPersonOptionLabel } from '../utils/personIdentity';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 import {
     DEFAULT_TRAINING_REPORT_TEMPLATE,
@@ -1635,7 +1636,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                      <option value="">Select instructor...</option>
                                      {unitInstructors.map(instructor => (
                                          <option key={instructor.idNumber} value={instructor.name}>
-                                             {instructor.rank} {instructor.name}
+                                             {formatPersonOptionLabel(instructor)}
                                          </option>
                                      ))}
                                  </select>
@@ -1976,7 +1977,7 @@ const TrainingReportView: React.FC<TrainingReportViewProps> = ({ trainee, event,
                                     <option value="">Select instructor...</option>
                                     {unitInstructors.map(instructor => (
                                         <option key={instructor.idNumber} value={instructor.name}>
-                                            {instructor.rank} {instructor.name}
+                                            {formatPersonOptionLabel(instructor)}
                                         </option>
                                     ))}
                                 </select>

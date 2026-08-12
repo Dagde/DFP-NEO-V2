@@ -65,6 +65,7 @@ import {
     type TrainingReportTemplate,
 } from './utils/trainingReportTerminology';
 import { getSctTerminology } from './utils/sctTerminology';
+import { formatPersonOptionLabel } from './utils/personIdentity';
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
@@ -4340,7 +4341,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 )}
                                 {fixedCrewPicCandidates.map(staff => (
                                     <option key={staff.id || staff.name} value={staff.name}>
-                                        {[staff.rank, staff.name].filter(Boolean).join(' ')}
+                                        {formatPersonOptionLabel(staff)}
                                     </option>
                                 ))}
                             </select>
@@ -4353,7 +4354,7 @@ const DfpSidePanelTimeline: React.FC<{
                                 <div className="grid grid-cols-1 gap-1">
                                     {fixedCrewAssistMembers.map(staff => (
                                         <div key={staff.id || staff.name} className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-950/55 px-2 py-1">
-                                            <span className="min-w-0 truncate text-slate-100">{[staff.rank, staff.name].filter(Boolean).join(' ')}</span>
+                                            <span className="min-w-0 truncate text-slate-100">{formatPersonOptionLabel(staff)}</span>
                                             <span className="flex-shrink-0 text-[9px] font-semibold text-emerald-200">{staff.role || 'Staff'}</span>
                                         </div>
                                     ))}

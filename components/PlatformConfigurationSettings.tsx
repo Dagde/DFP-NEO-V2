@@ -36,6 +36,7 @@ import {
   type RankEquivalencyConfig,
   type RankEquivalencyPresetKey,
 } from '../utils/personnelDisplaySettings';
+import { formatPersonOptionLabel } from '../utils/personIdentity';
 import {
   SCT_LONG_LABEL_MAX_LENGTH,
   SCT_SHORT_LABEL_MAX_LENGTH,
@@ -11257,8 +11258,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     {availableTrainingReportAutoNotifyStaffByUnit.map(([unit, staffMembers]) => (
                       <optgroup key={`${unit}-auto-notify-staff-group`} label={unit}>
                         {staffMembers.map((staff) => (
-                          <option key={`${staff.unit || 'unit'}-${staff.name}`} value={staff.name}>
-                            {`${staff.rank ? `${staff.rank} ` : ''}${staff.name}`}
+                          <option key={`${staff.id || staff.idNumber || staff.unit || 'unit'}-${staff.name}`} value={staff.name}>
+                            {formatPersonOptionLabel(staff)}
                           </option>
                         ))}
                       </optgroup>
