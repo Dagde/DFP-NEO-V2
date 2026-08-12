@@ -43263,6 +43263,7 @@ appliedUpdates.forEach(update => {
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
                            traineesData={traineesData}
+                           instructorsData={instructorsData}
                            timezoneOffset={timezoneOffset}
                            airframeCount={configuredAirframeCount}
                            standbyCount={configuredStandbyCount}
@@ -43421,6 +43422,7 @@ appliedUpdates.forEach(update => {
                                 .map(t => t.fullName)
                             }
                             traineesData={traineesData}
+                            instructorsData={instructorsData}
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             zoomLevel={zoomLevel}
@@ -43461,7 +43463,7 @@ appliedUpdates.forEach(update => {
                       onDateSelect={handleDateSelect}
                       snapshotDates={snapshotDates}
                       events={eventSegmentsForDate}
-                      instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
+                      instructors={locationFilteredInstructorsForSchedule.map(i => ({ id: (i as any).id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
                       instructorsData={locationFilteredInstructorsForSchedule}
                       traineesData={traineesData}
                       onSelectEvent={handleOpenModal}
@@ -43500,7 +43502,8 @@ appliedUpdates.forEach(update => {
 
                 return <NextDayInstructorScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    instructors={sortedNextDayInstructors.map(i => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
+                    instructors={sortedNextDayInstructors.map(i => ({ id: (i as any).id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
+                    instructorsData={sortedNextDayInstructors}
                     traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
@@ -43535,6 +43538,7 @@ appliedUpdates.forEach(update => {
                         .map(t => t.fullName)
                     }
                     traineesData={traineesData}
+                    instructorsData={instructorsData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}

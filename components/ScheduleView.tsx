@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, FlyingWindowExclusionPeriod, FormationCallsign, EventLimits } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee, Instructor, FlyingWindowExclusionPeriod, FormationCallsign, EventLimits } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
@@ -51,6 +51,7 @@ interface ScheduleViewProps {
   resources: string[];
   instructors: string[];
   traineesData: Trainee[];
+  instructorsData?: Instructor[];
   timezoneOffset?: number;
   airframeCount: number;
   standbyCount: number;
@@ -7194,7 +7195,7 @@ const OrganisationSlideoutDiagram: React.FC<{
 };
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
-    date, onDateChange, onDateSelect, snapshotDates = [], events, resources, instructors, traineesData, airframeCount, standbyCount, ftdCount, cptCount,
+    date, onDateChange, onDateSelect, snapshotDates = [], events, resources, instructors, traineesData, instructorsData = [], airframeCount, standbyCount, ftdCount, cptCount,
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds, unavailabilityConflicts,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, baselineEvents,
@@ -8514,6 +8515,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         key={event.id}
                         event={event}
                         traineesData={traineesData}
+                        instructorsData={instructorsData}
                         onSelectEvent={() => { 
                                if (!didDragRef.current) {
                                    if (isPauseSelectMode && onPauseToggleCompleted) {
@@ -9042,6 +9044,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 row={resources.indexOf(oraclePreviewEvent.resourceId)}
                                 isDragging={false}
                                 traineesData={traineesData}
+                                instructorsData={instructorsData}
                                 personnelData={personnelData}
                                 seatConfigs={new Map()}
                                 currentTime={currentTime}

@@ -32,7 +32,7 @@ import {
 } from '../utils/staffQualifications';
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
-import { getPersonDomIdSuffix, getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
+import { buildCompactPersonNameResolver, getPersonDomIdSuffix, getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
 
 const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
@@ -255,6 +255,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const canManageArchive = normalisedCurrentUserRole === 'ADMIN' || normalisedCurrentUserRole === 'SUPER_ADMIN';
   const [showArchivedFlyout, setShowArchivedFlyout] = useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = useState('ALL');
+  const staffNameResolver = useMemo(() => buildCompactPersonNameResolver(instructorsData as any), [instructorsData]);
 
   useEffect(() => {
     if (selectedPersonForProfile) {
@@ -643,7 +644,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             <div className="flex items-center space-x-3 flex-grow min-w-0">
                <span className={`font-mono w-6 flex-shrink-0 text-right text-xs ${muted ? 'text-gray-600' : 'text-gray-500'}`}>{index + 1}.</span>
               <span className={`font-mono w-12 flex-shrink-0 text-right text-xs ${muted ? 'text-gray-600' : 'text-gray-500'}`}>{instructor.rank}</span>
-              <span className={`flex-grow truncate font-medium ${roleTextClass}`}>{instructor.name}</span>
+              <span className={`flex-grow truncate font-medium ${roleTextClass}`}>{staffNameResolver.formatList(instructor as any)}</span>
             </div>
             {useRoleColours && (
                 <span className={`max-w-[6rem] flex-shrink-0 truncate text-[10px] font-semibold ${roleTextClass}`}>

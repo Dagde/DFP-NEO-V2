@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Trainee } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor } from '../types';
 import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
@@ -15,6 +15,7 @@ interface TraineeScheduleViewProps {
   events: ScheduleEvent[];
   trainees: string[];
   traineesData: Trainee[];
+  instructorsData?: Instructor[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdateEvent: (updates: { eventId: string, newStartTime: number }[]) => void;
   zoomLevel: number;
@@ -135,7 +136,7 @@ const createUnavailabilityEvents = (date: string, personnelData: Trainee[]): Sch
     return unavailabilityEvents;
 };
 
-const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
+const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, instructorsData = [], courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem('timezoneOffset') || '0');
@@ -653,6 +654,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                     key={`${event.id}-${trainee}`}
                     event={event}
                     traineesData={traineesData}
+                    instructorsData={instructorsData}
                     onSelectEvent={() => { if (!didDragRef.current) onSelectEvent(event); }}
                     onSelectAcademicTile={(tile) => {
                         if (didDragRef.current) return;

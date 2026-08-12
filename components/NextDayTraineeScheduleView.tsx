@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Trainee } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor } from '../types';
 import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
@@ -9,6 +9,7 @@ interface NextDayTraineeScheduleViewProps {
   events: ScheduleEvent[];
   trainees: string[];
   traineesData: Trainee[];
+  instructorsData?: Instructor[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdateEvent: (updates: { eventId: string, newStartTime: number }[]) => void;
   zoomLevel: number;
@@ -74,6 +75,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
     showValidation,
     onSelectTrainee,
     traineesData,
+    instructorsData = [],
     buildDfpDate,
     onDateChange,
     courseColors,
@@ -598,6 +600,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
                     key={`${event.id}-${trainee}`}
                     event={event}
                     traineesData={traineesData}
+                    instructorsData={instructorsData}
                     onSelectEvent={() => { if (!didDragRef.current) onSelectEvent(event); }}
                     onSelectAcademicTile={(tile) => {
                         if (didDragRef.current) return;

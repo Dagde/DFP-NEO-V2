@@ -1,7 +1,7 @@
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, InstructorRank, Trainee } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, InstructorRank, Trainee, Instructor } from '../types';
 import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import PersonnelColumn from './PersonnelColumn';
@@ -12,7 +12,8 @@ import { type CrewPositionTerminology } from '../utils/crewPositionTerminology';
 
 interface NextDayInstructorScheduleViewProps {
   events: ScheduleEvent[];
-  instructors: { name: string; rank: InstructorRank; unit?: string; role?: string }[];
+  instructors: { id?: string; idNumber?: number; name: string; rank: InstructorRank; unit?: string; role?: string }[];
+  instructorsData?: Instructor[];
   traineesData: Trainee[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdateEvent: (updates: { eventId: string, newStartTime: number }[]) => void;
@@ -109,6 +110,7 @@ const getValidationEventKey = (event: ScheduleEvent): string =>
 const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps> = ({ 
     events, 
     instructors, 
+    instructorsData = instructors as any,
     onSelectEvent, 
     onUpdateEvent,
     zoomLevel, 
@@ -666,6 +668,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
                     key={`${event.id}-${instructor.name}`}
                     event={event}
                     traineesData={traineesData}
+                    instructorsData={instructorsData}
                     onSelectEvent={() => { if (!didDragRef.current) onSelectEvent(event); }}
                     onSelectAcademicTile={(tile) => {
                         if (didDragRef.current) return;

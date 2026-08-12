@@ -23,7 +23,7 @@ import type { OperationalModelCode, PlatformConfig } from '../utils/platformConf
 import type { StaffQualificationCatalogue } from '../utils/staffQualifications';
 import type { CrewPositionTerminology } from '../utils/crewPositionTerminology';
 import { getTraineeStatusLabel, isTraineeSuspended } from '../utils/traineeStatus';
-import { getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
+import { buildCompactPersonNameResolver, getPersonStableKey, samePersonRecord } from '../utils/personIdentity';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -249,6 +249,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
         return groups;
     }, [traineesData, personnelDisplaySettings]);
+    const traineeNameResolver = useMemo(() => buildCompactPersonNameResolver(traineesData as any), [traineesData]);
 
     // This effect ensures that if the underlying trainee data (like pause status or unavailabilities) changes
     // while the profile flyout is open, the flyout will re-render with the latest data.
@@ -580,7 +581,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                                     title={canViewTraineeProfile(trainee) ? statusLabel : 'Your permission profile does not allow this trainee profile'}
                                                                     className={`truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? 'opacity-50 cursor-not-allowed hover:no-underline' : ''}`}
                                                                 >
-                                                                    {trainee.name}
+                                                                    {traineeNameResolver.formatList(trainee as any)}
                                                                 </button>
                                                             </li>
                                                         );

@@ -4843,6 +4843,27 @@ const getSctTerminology = (config, unitCode) => {
 };
 const normalisePersonName = (value) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 const getPersonDisplayName = (person) => String(person.fullName || person.name || "").trim();
+const stripPersonContext = (value) => String(value || "").split(" – ")[0].split(" - ")[0].trim();
+const getNameParts = (value) => {
+  const displayName = stripPersonContext(value);
+  if (!displayName) return { surname: "", firstInitial: "", displayName: "" };
+  if (displayName.includes(",")) {
+    const [surnamePart, givenPart = ""] = displayName.split(",");
+    return {
+      surname: surnamePart.trim(),
+      firstInitial: givenPart.trim().charAt(0).toUpperCase(),
+      displayName
+    };
+  }
+  const parts = displayName.split(/\s+/).filter(Boolean);
+  const surname = parts.length > 1 ? parts[parts.length - 1] : displayName;
+  const firstInitial = parts.length > 1 ? parts[0].charAt(0).toUpperCase() : "";
+  return { surname, firstInitial, displayName };
+};
+const getLastThreeIdDigits = (person) => {
+  const digits = String(person?.idNumber || "").replace(/\D/g, "");
+  return digits ? digits.slice(-3).padStart(Math.min(3, digits.length), "0") : "";
+};
 const samePersonRecord = (left, right) => {
   const leftId = String(left.id || "").trim();
   const rightId = String(right.id || "").trim();
@@ -4877,6 +4898,49 @@ const describeDuplicateNamePerson = (person) => {
     formatPersonOptionLabel(person)
   ].filter(Boolean);
   return parts.join("");
+};
+const buildCompactPersonNameResolver = (people = []) => {
+  const personByName = /* @__PURE__ */ new Map();
+  const surnameCounts = /* @__PURE__ */ new Map();
+  const surnameInitialCounts = /* @__PURE__ */ new Map();
+  people.forEach((person) => {
+    const displayName = getPersonDisplayName(person);
+    const { surname, firstInitial } = getNameParts(displayName);
+    const nameKey = normalisePersonName(displayName);
+    const surnameKey = normalisePersonName(surname);
+    const initialKey = `${surnameKey}|${firstInitial}`;
+    if (nameKey) personByName.set(nameKey, [...personByName.get(nameKey) || [], person]);
+    if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
+    if (surnameKey && firstInitial) surnameInitialCounts.set(initialKey, (surnameInitialCounts.get(initialKey) || 0) + 1);
+  });
+  const findPerson = (name) => {
+    const key = normalisePersonName(stripPersonContext(name));
+    const matches = key ? personByName.get(key) || [] : [];
+    return matches[0];
+  };
+  const formatCompact = (name) => {
+    const cleaned = stripPersonContext(name);
+    if (!cleaned) return "";
+    const person = findPerson(cleaned);
+    const { surname, firstInitial } = getNameParts(cleaned);
+    const surnameKey = normalisePersonName(surname);
+    const initialKey = `${surnameKey}|${firstInitial}`;
+    if (!surnameKey || (surnameCounts.get(surnameKey) || 0) <= 1) return surname || cleaned;
+    const base = [surname, firstInitial].filter(Boolean).join(" ");
+    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return base || surname || cleaned;
+    const suffix = getLastThreeIdDigits(person);
+    return suffix ? `${base} · ${suffix}` : base || surname || cleaned;
+  };
+  const formatList = (person) => {
+    const displayName = getPersonDisplayName(person) || "Unnamed person";
+    const { surname, firstInitial } = getNameParts(displayName);
+    const surnameKey = normalisePersonName(surname);
+    const initialKey = `${surnameKey}|${firstInitial}`;
+    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return displayName;
+    const suffix = getLastThreeIdDigits(person);
+    return suffix ? `${displayName} · ${suffix}` : displayName;
+  };
+  return { formatCompact, formatList };
 };
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$4 = (value, fallback) => {
@@ -8756,7 +8820,7 @@ const getAuthorizationTextColorClass = (event, currentTime, settings) => {
   }
   return "";
 };
-const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor" }) => {
+const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel: instructorLabel2 = "Instructor" }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -8767,6 +8831,10 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
   const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
   const isDutySup = event.resourceId === "Duty Sup";
   const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
+  const compactNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver([...instructorsData, ...traineesData]),
+    [instructorsData, traineesData]
+  );
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
@@ -8954,10 +9022,10 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
     }
     if (isSctEvent && event.flightType === "Dual" && event.student) {
-      return event.student.split(" – ")[0];
+      return compactNameResolver.formatCompact(event.student);
     }
     if ((isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === "Dual" && event.crew) {
-      return event.crew.split(" – ")[0];
+      return compactNameResolver.formatCompact(event.crew);
     }
     if (!isPooledCrewEvent && event.pilot && event.student && event.pilot === event.student) {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
@@ -8966,14 +9034,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
       return "Group";
     }
     if (event.student && event.student !== "Multiple") {
-      return event.student.split(" – ")[0];
+      return compactNameResolver.formatCompact(event.student);
     }
     if (event.attendees && event.attendees.length === 1) {
-      return event.attendees[0].split(" – ")[0];
+      return compactNameResolver.formatCompact(event.attendees[0]);
     }
     if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
       const trainee = traineesData.find((t) => t.idNumber === event.groupTraineeIds[0]);
-      return trainee ? trainee.name.split(",")[0] : "Group";
+      return trainee ? compactNameResolver.formatCompact(trainee.name) : "Group";
     }
     return "";
   };
@@ -9180,7 +9248,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
                   instructorLabel2,
                   ":"
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#e2e8f0", fontWeight: 600 }, children: instructor })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#e2e8f0", fontWeight: 600 }, children: compactNameResolver.formatCompact(instructor) })
               ] }),
               lessonTiles.map((t, i) => {
                 const endTime = t.startTime + t.duration;
@@ -9232,7 +9300,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
       if (isDutySup) {
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses, children: [
-            picName?.split(" – ")[0],
+            compactNameResolver.formatCompact(picName),
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-mono text-white/80 truncate", children: [
@@ -9249,11 +9317,11 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center h-full w-full px-2", style: textStyle, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden pr-1", style: { paddingLeft: "10%", minWidth: 0 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: [
-            displayPicName?.split(" – ")[0],
+            compactNameResolver.formatCompact(displayPicName),
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: isTwrDiEvent ? "TWR DI" : typeof studentDisplay === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            displayStudentName?.split(" – ")[0],
+            displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : "",
             studentSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig })
           ] }) : studentDisplay })
         ] }),
@@ -9275,11 +9343,11 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full w-full px-2", style: textStyle, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)", minWidth: 0 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: [
-            displayPicName?.split(" – ")[0],
+            compactNameResolver.formatCompact(displayPicName),
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: isTwrDiEvent ? "TWR DI" : typeof studentDisplay === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            displayStudentName?.split(" – ")[0],
+            displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : "",
             studentSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig })
           ] }) : studentDisplay })
         ] }),
@@ -9347,7 +9415,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, 
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: flyoutStyle, className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded px-2 py-1 shadow-lg flex items-center space-x-3 text-xs", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `font-bold ${picClasses.replace("truncate", "")}`, children: [
-          picName?.split(" – ")[0],
+          compactNameResolver.formatCompact(picName),
           picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: studentClasses.replace("truncate", ""), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -16202,6 +16270,7 @@ const ScheduleView = ({
   resources,
   instructors,
   traineesData,
+  instructorsData = [],
   airframeCount,
   standbyCount,
   ftdCount,
@@ -17376,6 +17445,7 @@ const ScheduleView = ({
           {
             event,
             traineesData,
+            instructorsData,
             onSelectEvent: () => {
               if (!didDragRef.current) {
                 if (isPauseSelectMode && onPauseToggleCompleted) {
@@ -17915,6 +17985,7 @@ const ScheduleView = ({
                       row: resources.indexOf(oraclePreviewEvent.resourceId),
                       isDragging: false,
                       traineesData,
+                      instructorsData,
                       personnelData,
                       seatConfigs: /* @__PURE__ */ new Map(),
                       currentTime,
@@ -18744,6 +18815,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                     {
                       event,
                       traineesData,
+                      instructorsData,
                       onSelectEvent: () => {
                         if (!didDragRef.current) onSelectEvent(event);
                       },
@@ -18931,7 +19003,7 @@ const createUnavailabilityEvents = (date, personnelData) => {
   });
   return unavailabilityEvents;
 };
-const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
+const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, instructorsData = [], courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
@@ -19372,6 +19444,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                     {
                       event,
                       traineesData,
+                      instructorsData,
                       onSelectEvent: () => {
                         if (!didDragRef.current) onSelectEvent(event);
                       },
@@ -27665,6 +27738,7 @@ const CourseRosterView = ({
     }
     return groups;
   }, [traineesData, personnelDisplaySettings]);
+  const traineeNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver(traineesData), [traineesData]);
   reactExports.useEffect(() => {
     if (selectedTrainee && !isCreatingNew) {
       const updatedTrainee = traineesData.find((t) => samePersonRecord(t, selectedTrainee));
@@ -27924,7 +27998,7 @@ const CourseRosterView = ({
                       disabled: !canViewTraineeProfile(trainee),
                       title: canViewTraineeProfile(trainee) ? statusLabel : "Your permission profile does not allow this trainee profile",
                       className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? "opacity-50 cursor-not-allowed hover:no-underline" : ""}`,
-                      children: trainee.name
+                      children: traineeNameResolver.formatList(trainee)
                     }
                   )
                 ]
@@ -55662,6 +55736,7 @@ const InstructorListView = ({
   const canManageArchive = normalisedCurrentUserRole === "ADMIN" || normalisedCurrentUserRole === "SUPER_ADMIN";
   const [showArchivedFlyout, setShowArchivedFlyout] = reactExports.useState(false);
   const [selectedStaffRoleFilter, setSelectedStaffRoleFilter] = reactExports.useState("ALL");
+  const staffNameResolver = reactExports.useMemo(() => buildCompactPersonNameResolver(instructorsData), [instructorsData]);
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
       const matchingElement = document.getElementById(`instructor-row-${getPersonDomIdSuffix(selectedPersonForProfile, "staff")}`);
@@ -55988,7 +56063,7 @@ const InstructorListView = ({
               "."
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `font-mono w-12 flex-shrink-0 text-right text-xs ${muted ? "text-gray-600" : "text-gray-500"}`, children: instructor.rank }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex-grow truncate font-medium ${roleTextClass}`, children: instructor.name })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `flex-grow truncate font-medium ${roleTextClass}`, children: staffNameResolver.formatList(instructor) })
           ] }),
           useRoleColours && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `max-w-[6rem] flex-shrink-0 truncate text-[10px] font-semibold ${roleTextClass}`, children: roleDisplay.label }),
           isArchiveMode && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-1 rounded-full text-red-400", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z", clipRule: "evenodd" }) }) })
@@ -56677,7 +56752,7 @@ const StaffView = (props) => {
           date: props.date,
           onDateChange: props.onDateChange,
           events: props.eventSegmentsForDate,
-          instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
+          instructors: locationFilteredInstructorsForSchedule.map((i) => ({ id: i.id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
           instructorsData: locationFilteredInstructorsForSchedule,
           traineesData: props.traineesData,
           onSelectEvent: props.onSelectEvent,
@@ -56821,6 +56896,7 @@ const TraineeView = (props) => {
           events: props.eventsForStaffTraineeSchedule,
           trainees: sortedTrainees,
           traineesData: props.traineesData,
+          instructorsData: props.instructorsData,
           onSelectEvent: props.onSelectEvent,
           onUpdateEvent: props.onUpdateEvent,
           zoomLevel: props.zoomLevel,
@@ -88918,6 +88994,7 @@ const getValidationEventKey$1 = (event) => [
 const NextDayInstructorScheduleView = ({
   events,
   instructors,
+  instructorsData = instructors,
   onSelectEvent,
   onUpdateEvent,
   zoomLevel,
@@ -89400,6 +89477,7 @@ const NextDayInstructorScheduleView = ({
                       {
                         event,
                         traineesData,
+                        instructorsData,
                         onSelectEvent: () => {
                           if (!didDragRef.current) onSelectEvent(event);
                         },
@@ -89490,6 +89568,7 @@ const NextDayTraineeScheduleView = ({
   showValidation,
   onSelectTrainee,
   traineesData,
+  instructorsData = [],
   buildDfpDate,
   onDateChange,
   courseColors,
@@ -89911,6 +89990,7 @@ const NextDayTraineeScheduleView = ({
                       {
                         event,
                         traineesData,
+                        instructorsData,
                         onSelectEvent: () => {
                           if (!didDragRef.current) onSelectEvent(event);
                         },
@@ -126031,6 +126111,7 @@ ${error instanceof Error ? error.message : String(error)}`,
             resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
             traineesData,
+            instructorsData,
             timezoneOffset,
             airframeCount: configuredAirframeCount,
             standbyCount: configuredStandbyCount,
@@ -126178,6 +126259,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               return a.name.localeCompare(b.name);
             }).map((t) => t.fullName),
             traineesData,
+            instructorsData,
             onSelectEvent: handleOpenModal,
             onUpdateEvent: handleScheduleUpdate,
             zoomLevel,
@@ -126216,7 +126298,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               onDateSelect: handleDateSelect,
               snapshotDates,
               events: eventSegmentsForDate,
-              instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
+              instructors: locationFilteredInstructorsForSchedule.map((i) => ({ id: i.id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
               instructorsData: locationFilteredInstructorsForSchedule,
               traineesData,
               onSelectEvent: handleOpenModal,
@@ -126255,7 +126337,8 @@ ${error instanceof Error ? error.message : String(error)}`,
           NextDayInstructorScheduleView,
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
-            instructors: sortedNextDayInstructors.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
+            instructors: sortedNextDayInstructors.map((i) => ({ id: i.id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role })),
+            instructorsData: sortedNextDayInstructors,
             traineesData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
@@ -126288,6 +126371,7 @@ ${error instanceof Error ? error.message : String(error)}`,
               return a.name.localeCompare(b.name);
             }).map((t) => t.fullName),
             traineesData,
+            instructorsData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,

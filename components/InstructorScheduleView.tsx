@@ -768,6 +768,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                     key={`${event.id}-${instructor.name}`}
                     event={event}
                     traineesData={traineesData}
+                    instructorsData={instructorsData as any}
                     onSelectEvent={() => { if (!didDragRef.current) onSelectEvent(event); }}
                     onSelectAcademicTile={(tile) => {
                         if (didDragRef.current) return;

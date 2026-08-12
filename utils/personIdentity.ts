@@ -15,6 +15,31 @@ export const normalisePersonName = (value: unknown): string =>
 export const getPersonDisplayName = (person: PersonIdentityRecord): string =>
   String(person.fullName || person.name || '').trim();
 
+const stripPersonContext = (value: unknown): string =>
+  String(value || '').split(' – ')[0].split(' - ')[0].trim();
+
+const getNameParts = (value: unknown): { surname: string; firstInitial: string; displayName: string } => {
+  const displayName = stripPersonContext(value);
+  if (!displayName) return { surname: '', firstInitial: '', displayName: '' };
+  if (displayName.includes(',')) {
+    const [surnamePart, givenPart = ''] = displayName.split(',');
+    return {
+      surname: surnamePart.trim(),
+      firstInitial: givenPart.trim().charAt(0).toUpperCase(),
+      displayName,
+    };
+  }
+  const parts = displayName.split(/\s+/).filter(Boolean);
+  const surname = parts.length > 1 ? parts[parts.length - 1] : displayName;
+  const firstInitial = parts.length > 1 ? parts[0].charAt(0).toUpperCase() : '';
+  return { surname, firstInitial, displayName };
+};
+
+const getLastThreeIdDigits = (person?: PersonIdentityRecord): string => {
+  const digits = String(person?.idNumber || '').replace(/\D/g, '');
+  return digits ? digits.slice(-3).padStart(Math.min(3, digits.length), '0') : '';
+};
+
 export const samePersonRecord = (left: PersonIdentityRecord, right: PersonIdentityRecord): boolean => {
   const leftId = String(left.id || '').trim();
   const rightId = String(right.id || '').trim();
@@ -54,4 +79,53 @@ export const describeDuplicateNamePerson = (person: PersonIdentityRecord): strin
     formatPersonOptionLabel(person),
   ].filter(Boolean);
   return parts.join('');
+};
+
+export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = []) => {
+  const personByName = new Map<string, PersonIdentityRecord[]>();
+  const surnameCounts = new Map<string, number>();
+  const surnameInitialCounts = new Map<string, number>();
+
+  people.forEach(person => {
+    const displayName = getPersonDisplayName(person);
+    const { surname, firstInitial } = getNameParts(displayName);
+    const nameKey = normalisePersonName(displayName);
+    const surnameKey = normalisePersonName(surname);
+    const initialKey = `${surnameKey}|${firstInitial}`;
+    if (nameKey) personByName.set(nameKey, [...(personByName.get(nameKey) || []), person]);
+    if (surnameKey) surnameCounts.set(surnameKey, (surnameCounts.get(surnameKey) || 0) + 1);
+    if (surnameKey && firstInitial) surnameInitialCounts.set(initialKey, (surnameInitialCounts.get(initialKey) || 0) + 1);
+  });
+
+  const findPerson = (name: unknown): PersonIdentityRecord | undefined => {
+    const key = normalisePersonName(stripPersonContext(name));
+    const matches = key ? personByName.get(key) || [] : [];
+    return matches[0];
+  };
+
+  const formatCompact = (name: unknown): string => {
+    const cleaned = stripPersonContext(name);
+    if (!cleaned) return '';
+    const person = findPerson(cleaned);
+    const { surname, firstInitial } = getNameParts(cleaned);
+    const surnameKey = normalisePersonName(surname);
+    const initialKey = `${surnameKey}|${firstInitial}`;
+    if (!surnameKey || (surnameCounts.get(surnameKey) || 0) <= 1) return surname || cleaned;
+    const base = [surname, firstInitial].filter(Boolean).join(' ');
+    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return base || surname || cleaned;
+    const suffix = getLastThreeIdDigits(person);
+    return suffix ? `${base} · ${suffix}` : base || surname || cleaned;
+  };
+
+  const formatList = (person: PersonIdentityRecord): string => {
+    const displayName = getPersonDisplayName(person) || 'Unnamed person';
+    const { surname, firstInitial } = getNameParts(displayName);
+    const surnameKey = normalisePersonName(surname);
+    const initialKey = `${surnameKey}|${firstInitial}`;
+    if ((surnameInitialCounts.get(initialKey) || 0) <= 1) return displayName;
+    const suffix = getLastThreeIdDigits(person);
+    return suffix ? `${displayName} · ${suffix}` : displayName;
+  };
+
+  return { formatCompact, formatList };
 };

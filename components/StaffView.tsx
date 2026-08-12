@@ -243,7 +243,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             date={props.date}
             onDateChange={props.onDateChange}
             events={props.eventSegmentsForDate}
-            instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
+            instructors={locationFilteredInstructorsForSchedule.map(i => ({ id: (i as any).id, idNumber: i.idNumber, name: i.name, rank: i.rank, unit: i.unit, role: i.role }))}
             instructorsData={locationFilteredInstructorsForSchedule}
             traineesData={props.traineesData}
             onSelectEvent={props.onSelectEvent}

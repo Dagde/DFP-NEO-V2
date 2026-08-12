@@ -1,7 +1,7 @@
 
-import React, { MouseEvent, useEffect, useRef, useState } from 'react';
+import React, { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ScheduleEvent, Trainee, EventSegment } from '../types';
+import { ScheduleEvent, Trainee, Instructor, EventSegment } from '../types';
 import {
   AircraftNumberSettings,
   DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
@@ -14,10 +14,12 @@ import {
 } from '../utils/tileStatusSettings';
 import { resolveScheduleTileBackgroundColor } from '../utils/tileColorResolver';
 import { isContinuationScheduleEvent } from '../utils/continuationEvents';
+import { buildCompactPersonNameResolver } from '../utils/personIdentity';
 
 interface FlightTileProps {
   event: ScheduleEvent | EventSegment;
   traineesData: Trainee[];
+  instructorsData?: Instructor[];
   onSelectEvent: () => void;
   onSelectAcademicTile?: (tile: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }) => void;
   onMouseDown: (e: MouseEvent<HTMLDivElement>) => void;
@@ -229,7 +231,7 @@ const getAuthorizationTextColorClass = (
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor' }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructorsData = [], onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, isDiagnosticHighlighted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, disableLayoutTransition = false, suppressAuthorisationWarnings = false, instructorLabel = 'Instructor' }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -247,6 +249,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
   const isDutySup = event.resourceId === 'Duty Sup';
   const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
+  const compactNameResolver = useMemo(
+      () => buildCompactPersonNameResolver([...(instructorsData as any), ...(traineesData as any)]),
+      [instructorsData, traineesData]
+  );
   
   // Check if tile is too small for content (threshold e.g. 60px ~ 18 mins)
   const isSmallTile = tileWidth < 60;
@@ -533,11 +539,11 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
       // For dual continuation events, show crew name from student field.
       if (isSctEvent && event.flightType === 'Dual' && event.student) {
-          return event.student.split(' – ')[0];
+          return compactNameResolver.formatCompact(event.student);
       }
 
       if ((isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === 'Dual' && event.crew) {
-          return event.crew.split(' – ')[0];
+          return compactNameResolver.formatCompact(event.crew);
       }
 
         // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
@@ -556,16 +562,16 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       }
       
       if (event.student && event.student !== 'Multiple') {
-          return event.student.split(' – ')[0];
+          return compactNameResolver.formatCompact(event.student);
       }
 
       if (event.attendees && event.attendees.length === 1) {
-          return event.attendees[0].split(' – ')[0];
+          return compactNameResolver.formatCompact(event.attendees[0]);
       }
       
       if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
           const trainee = traineesData.find(t => t.idNumber === event.groupTraineeIds![0]);
-          return trainee ? trainee.name.split(',')[0] : 'Group';
+          return trainee ? compactNameResolver.formatCompact(trainee.name) : 'Group';
       }
       
       return '';
@@ -801,7 +807,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                         <div style={{ fontSize: 10, color: '#cbd5e1', marginBottom: 5 }}>
                             <span style={{ color: '#64748b', marginRight: 4 }}>▶</span>
                             <span style={{ color: '#94a3b8', marginRight: 4 }}>{instructorLabel}:</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{instructor}</span>
+                            <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{compactNameResolver.formatCompact(instructor)}</span>
                         </div>
                     )}
                     {/* Event rows — lesson tiles only (skip standard breaks) */}
@@ -860,7 +866,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
              return (
                 <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
                     <div className="overflow-hidden text-center">
-                        <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                        <div className={picClasses}>{compactNameResolver.formatCompact(picName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                         <div className="font-mono text-white/80 truncate">
                             <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : displayFlightNumber}
                         </div>
@@ -872,8 +878,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return (
             <div className="flex justify-between items-center h-full w-full px-2" style={textStyle}>
                 <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
-                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{compactNameResolver.formatCompact(displayPicName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : ''}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
@@ -891,8 +897,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         <>
             <div className="flex items-center justify-between h-full w-full px-2" style={textStyle}>
                 <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: 'calc(10% + 2px)', minWidth: 0 }}>
-                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{compactNameResolver.formatCompact(displayPicName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : ''}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
 
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
@@ -995,7 +1001,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 {/* Connector Line/Arrow could go here */}
                <div className="bg-gray-800 border border-gray-600 rounded px-2 py-1 shadow-lg flex items-center space-x-3 text-xs">
                     <div>
-                        <div className={`font-bold ${picClasses.replace('truncate', '')}`}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                        <div className={`font-bold ${picClasses.replace('truncate', '')}`}>{compactNameResolver.formatCompact(picName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                         <div className={studentClasses.replace('truncate', '')}>{typeof studentDisplay === 'string' ? <>{studentDisplay}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                     </div>
                     <div className="h-6 w-px bg-gray-600"></div>

@@ -215,6 +215,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             events={props.eventsForStaffTraineeSchedule}
             trainees={sortedTrainees}
             traineesData={props.traineesData}
+            instructorsData={props.instructorsData}
             onSelectEvent={props.onSelectEvent}
             onUpdateEvent={props.onUpdateEvent}
             zoomLevel={props.zoomLevel}
