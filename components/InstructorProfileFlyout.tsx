@@ -1012,7 +1012,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       await Promise.resolve(onUpdateInstructor(updatedInstructor));
     } catch (error) {
       console.error('Failed to save staff profile:', error);
-      await showDarkAlert('The staff record could not be saved. Please check the Personnel ID and try again.', 'Save Failed', 'error');
+      const reason = error instanceof Error ? error.message : String(error || '').trim();
+      await showDarkAlert(
+        reason || 'The staff record could not be saved because the app did not receive a specific failure reason from the server.',
+        'Save Failed',
+        'error'
+      );
       return;
     }
     setIsEditing(false);

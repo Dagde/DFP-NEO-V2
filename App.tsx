@@ -4923,6 +4923,42 @@ const normalisePersonnelRecord = (person: any): any => {
     };
 };
 
+const formatApiErrorMessage = (fallback: string, status?: number, data?: any): string => {
+    const source = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+    const primary = String(source.error || source.details || source.message || '').trim();
+    const conflict = source.conflict && typeof source.conflict === 'object' ? source.conflict : null;
+    const conflictParts = conflict
+        ? [
+            conflict.name,
+            conflict.rank,
+            conflict.role || conflict.course,
+            conflict.unit,
+        ].map(value => String(value || '').trim()).filter(Boolean)
+        : [];
+    const conflictText = conflictParts.length > 0
+        ? `\n\nExisting record: ${conflictParts.join(' - ')}.`
+        : '';
+    const statusText = status ? ` (HTTP ${status})` : '';
+    return `${primary || fallback}${conflictText}${primary ? '' : statusText}`;
+};
+
+const readApiErrorMessage = async (response: Response, fallback: string): Promise<string> => {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        const data = await response.json().catch(() => ({}));
+        return formatApiErrorMessage(fallback, response.status, data);
+    }
+    const text = (await response.text().catch(() => '')).trim();
+    if (text) {
+        try {
+            return formatApiErrorMessage(fallback, response.status, JSON.parse(text));
+        } catch {
+            return text;
+        }
+    }
+    return formatApiErrorMessage(fallback, response.status);
+};
+
 const isRecordActive = (record: any): boolean => record?.isActive !== false;
 
 const normalisePersonnelUnitCode = (value: unknown): string => (
@@ -31926,8 +31962,8 @@ const App: React.FC = () => {
                 body: JSON.stringify(traineeToCreate),
             });
             if (!response.ok) {
-                const message = await response.text();
-                throw new Error(message || `Save failed (${response.status})`);
+                const message = await readApiErrorMessage(response, `Could not save ${newTrainee.fullName || newTrainee.name || 'new trainee'} to the database.`);
+                throw new Error(message);
             }
             const json = await response.json();
             savedTrainee = {
@@ -31936,7 +31972,7 @@ const App: React.FC = () => {
             };
         } catch (error) {
             console.error('❌ Failed to create trainee:', error);
-            setErrorMessage(`Could not save ${newTrainee.fullName || newTrainee.name || 'new trainee'} to the database.`);
+            setErrorMessage(error instanceof Error ? error.message : `Could not save ${newTrainee.fullName || newTrainee.name || 'new trainee'} to the database.`);
             throw error;
         }
 
@@ -32078,10 +32114,10 @@ const App: React.FC = () => {
                             : t
                     )));
                 } else {
-                    const err = await response.text();
+                    const err = await readApiErrorMessage(response, `Could not save ${data.fullName || data.name || 'trainee'} to the database.`);
                     console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
                     console.error('❌ Response status:', response.status);
-                    throw new Error(err || `Failed to update trainee (${response.status})`);
+                    throw new Error(err);
                 }
             } catch (err) {
                 console.error(`❌ Error updating DB trainee ${data.name}:`, err);
@@ -39970,7 +40006,7 @@ appliedUpdates.forEach(update => {
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(data.error || data.details || `Failed to save staff ${importedInstructor.name || importedInstructor.idNumber}`);
+                throw new Error(formatApiErrorMessage(`Failed to save staff ${importedInstructor.name || importedInstructor.idNumber}`, response.status, data));
             }
             const savedPersonnel = data.personnel || data.updatedPersonnel || data.newPersonnel;
             if (savedPersonnel) {
@@ -44608,8 +44644,7 @@ appliedUpdates.forEach(update => {
                                         }
 
                                         if (!response.ok) {
-                                            const errorData = await response.json().catch(() => ({}));
-                                            throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
+                                            throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name || data.idNumber}`));
                                         }
                                     } else {
                                         // New record — use POST to create
@@ -44620,8 +44655,7 @@ appliedUpdates.forEach(update => {
                                             body: JSON.stringify(data),
                                         });
                                         if (!response.ok) {
-                                            const errorData = await response.json().catch(() => ({}));
-                                            throw new Error(`Failed to create: ${response.status} ${errorData.error || 'Unknown error'}`);
+                                            throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                                         }
                                         const responseData = await response.json().catch(() => ({}));
                                         savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
@@ -44739,8 +44773,7 @@ appliedUpdates.forEach(update => {
                                         }
 
                                         if (!response.ok) {
-                                            const errorData = await response.json().catch(() => ({}));
-                                            throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
+                                            throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name || data.idNumber}`));
                                         }
                                     } else {
                                         // New record — use POST to create
@@ -44751,8 +44784,7 @@ appliedUpdates.forEach(update => {
                                             body: JSON.stringify(data),
                                         });
                                         if (!response.ok) {
-                                            const errorData = await response.json().catch(() => ({}));
-                                            throw new Error(`Failed to create: ${response.status} ${errorData.error || 'Unknown error'}`);
+                                            throw new Error(await readApiErrorMessage(response, `Failed to create staff ${data.name || data.idNumber}`));
                                         }
                                         const responseData = await response.json().catch(() => ({}));
                                         savedInstructor = normalisePersonnelRecord(responseData.personnel || responseData.newPersonnel || data);
@@ -44884,8 +44916,7 @@ appliedUpdates.forEach(update => {
                                        body: JSON.stringify(normalisedData),
                                    });
                                    if (!response.ok) {
-                                       const errorData = await response.json().catch(() => ({}));
-                                       throw new Error(errorData.error || errorData.details || `Failed to save staff ${data.name}`);
+                                       throw new Error(await readApiErrorMessage(response, `Failed to save staff ${data.name}`));
                                    }
                                    const responseData = await response.json().catch(() => ({}));
                                    const saved = responseData.personnel || data;

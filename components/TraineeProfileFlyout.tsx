@@ -1548,7 +1548,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             await Promise.resolve(onUpdateTrainee(updatedTrainee));
         } catch (error) {
             console.error('Failed to save trainee profile:', error);
-            await showDarkAlert('The trainee could not be saved. Please check the details and try again.', 'Save Failed', 'error');
+            const reason = error instanceof Error ? error.message : String(error || '').trim();
+            await showDarkAlert(
+                reason || 'The trainee could not be saved because the app did not receive a specific failure reason from the server.',
+                'Save Failed',
+                'error'
+            );
             return;
         }
 
