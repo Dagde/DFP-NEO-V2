@@ -624,24 +624,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       lineHeight: '1.3',
     };
 
-    // Smart name truncation for flights <= 1.1 hour
-    const isShortFlight = effectiveDuration <= 1.1;
-    
-    const abbreviateName = (fullName: string) => {
-      if (!fullName) return fullName;
-      const parts = fullName.split(', ');
-      if (parts.length !== 2) return fullName;
-      
-      const surname = parts[0];
-      const firstName = parts[1];
-      const firstInitial = firstName.charAt(0);
-      
-      return `${surname}, ${firstInitial}`;
-    };
-
-    // Apply name abbreviation for short flights
-    const displayPicName = isShortFlight ? abbreviateName(displayPicNameForRender || '') : displayPicNameForRender;
-    const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || '') : displayStudentNameForRender;
+    const displayPicName = displayPicNameForRender;
+    const displayStudentName = displayStudentNameForRender;
     
     const isUuidLikeFlightNumber = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(String(event.flightNumber || '').trim());
     const displayFlightNumber = isUuidLikeFlightNumber && (event as any).eventCode

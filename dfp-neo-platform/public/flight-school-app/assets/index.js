@@ -9097,18 +9097,8 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       fontSize: `${scaledFontSize}px`,
       lineHeight: "1.3"
     };
-    const isShortFlight = effectiveDuration <= 1.1;
-    const abbreviateName = (fullName) => {
-      if (!fullName) return fullName;
-      const parts = fullName.split(", ");
-      if (parts.length !== 2) return fullName;
-      const surname = parts[0];
-      const firstName = parts[1];
-      const firstInitial = firstName.charAt(0);
-      return `${surname}, ${firstInitial}`;
-    };
-    const displayPicName = isShortFlight ? abbreviateName(displayPicNameForRender || "") : displayPicNameForRender;
-    const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || "") : displayStudentNameForRender;
+    const displayPicName = displayPicNameForRender;
+    const displayStudentName = displayStudentNameForRender;
     const isUuidLikeFlightNumber = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(String(event.flightNumber || "").trim());
     const displayFlightNumber2 = isUuidLikeFlightNumber && event.eventCode ? String(event.eventCode) : event.flightNumber;
     const isGroundEventFromName = displayFlightNumber2.includes("CPT") || displayFlightNumber2.includes("MB") || displayFlightNumber2.includes("TUT") || displayFlightNumber2.includes("QUIZ");
