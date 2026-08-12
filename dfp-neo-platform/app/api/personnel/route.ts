@@ -44,6 +44,11 @@ const normalisePersonnelPayload = (body: any = {}): any => {
   return body;
 };
 
+const isUsablePersonnelIdNumber = (value: any): boolean => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0;
+};
+
 // Handle OPTIONS preflight
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(request) });
@@ -116,25 +121,28 @@ export async function POST(request: NextRequest) {
     
     const body = normalisePersonnelPayload(await request.json());
     console.log('🔍 [API POST] Request body:', JSON.stringify(body, null, 2));
+    if (!isUsablePersonnelIdNumber(body.idNumber)) {
+      return NextResponse.json(
+        { error: 'Personnel ID is required' },
+        { status: 400, headers: getCorsHeaders(request) }
+      );
+    }
+    const idNumber = Number(body.idNumber);
     console.log('🔗 [AUTO-LINK] Checking for existing User record with matching Personnel ID...');
     
     // Auto-link to existing User by Personnel ID/userId
     let linkedUserId = null;
-    if (body.idNumber) {
-      const existingUser = await prisma.user.findFirst({
-        where: { 
-          userId: body.idNumber.toString()
-        }
-      });
-
-      if (existingUser) {
-        console.log('✅ [AUTO-LINK] Found User record:', existingUser.username);
-        linkedUserId = existingUser.id;
-      } else {
-        console.log('ℹ️  [AUTO-LINK] No existing User record found for Personnel ID:', body.idNumber);
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        userId: idNumber.toString()
       }
+    });
+
+    if (existingUser) {
+      console.log('✅ [AUTO-LINK] Found User record:', existingUser.username);
+      linkedUserId = existingUser.id;
     } else {
-      console.log('⚠️  [AUTO-LINK] No idNumber provided, cannot link to User');
+      console.log('ℹ️  [AUTO-LINK] No existing User record found for Personnel ID:', idNumber);
     }
 
     const preferences = {
@@ -154,7 +162,7 @@ export async function POST(request: NextRequest) {
         unit: body.unit || null,
         flight: body.flight || null,
         location: body.location || null,
-        idNumber: body.idNumber || null,
+        idNumber,
         callsignNumber: body.callsignNumber || null,
         service: body.service || null,
         email: body.email || null,

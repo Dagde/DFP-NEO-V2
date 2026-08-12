@@ -391,7 +391,7 @@ const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({
                         </div>
                     ) : (
                         <>
-                            <p className="text-gray-400 text-sm">Upload a spreadsheet to create or update staff. The system will match by ID Number.</p>
+                            <p className="text-gray-400 text-sm">Upload a spreadsheet to create or update staff. The system will match by Personnel ID.</p>
                             <input
                                 ref={fileInputRef}
                                 type="file"

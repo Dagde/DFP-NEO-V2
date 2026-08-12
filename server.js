@@ -518,7 +518,6 @@ async function runPrismaRuntimeMaintenance(db) {
     await ensureCommercialConfigTables(db);
     await migrateLegacyQfiPersonnelRoles(db);
     await migrateLegacyContractorPersonnelRoles(db);
-    await migrateMissingPersonnelIdNumbers(db);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(db);
     // Ensure Course.lmpType column exists (migration for existing DBs)
@@ -630,69 +629,9 @@ async function migrateLegacyContractorPersonnelRoles(db) {
   console.log(`✅ migrateLegacyContractorPersonnelRoles: updated ${updatedCount} personnel record(s)`);
 }
 
-const GENERATED_PERSONNEL_ID_MIN = 4000000;
-const GENERATED_PERSONNEL_ID_MAX = 4999999;
-
 function isUsablePersonnelIdNumber(value) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0;
-}
-
-function makeGeneratedPersonnelIdNumber(usedNumbers) {
-  const range = GENERATED_PERSONNEL_ID_MAX - GENERATED_PERSONNEL_ID_MIN + 1;
-  for (let attempt = 0; attempt < range * 2; attempt++) {
-    const candidate = GENERATED_PERSONNEL_ID_MIN + Math.floor(Math.random() * range);
-    if (!usedNumbers.has(candidate)) {
-      usedNumbers.add(candidate);
-      return candidate;
-    }
-  }
-  throw new Error('No available generated personnel ID numbers remain');
-}
-
-async function getUsedPersonnelIdNumbers(db) {
-  const [personnel, trainees] = await Promise.all([
-    db.personnel.findMany({ select: { idNumber: true } }),
-    db.trainee.findMany({ select: { idNumber: true } }),
-  ]);
-  const usedNumbers = new Set();
-  [...personnel, ...trainees].forEach((record) => {
-    if (isUsablePersonnelIdNumber(record.idNumber)) {
-      usedNumbers.add(Number(record.idNumber));
-    }
-  });
-  return usedNumbers;
-}
-
-async function generateUniquePersonnelIdNumber(db, usedNumbers = null) {
-  const numbers = usedNumbers || await getUsedPersonnelIdNumbers(db);
-  return makeGeneratedPersonnelIdNumber(numbers);
-}
-
-async function migrateMissingPersonnelIdNumbers(db) {
-  const usedNumbers = await getUsedPersonnelIdNumbers(db);
-  const [personnel, trainees] = await Promise.all([
-    db.personnel.findMany({ select: { id: true, name: true, idNumber: true } }),
-    db.trainee.findMany({ select: { id: true, name: true, idNumber: true } }),
-  ]);
-
-  let staffUpdated = 0;
-  for (const person of personnel) {
-    if (isUsablePersonnelIdNumber(person.idNumber)) continue;
-    const idNumber = makeGeneratedPersonnelIdNumber(usedNumbers);
-    await db.personnel.update({ where: { id: person.id }, data: { idNumber } });
-    staffUpdated++;
-  }
-
-  let traineesUpdated = 0;
-  for (const trainee of trainees) {
-    if (isUsablePersonnelIdNumber(trainee.idNumber)) continue;
-    const idNumber = makeGeneratedPersonnelIdNumber(usedNumbers);
-    await db.trainee.update({ where: { id: trainee.id }, data: { idNumber } });
-    traineesUpdated++;
-  }
-
-  console.log(`✅ migrateMissingPersonnelIdNumbers: assigned ${staffUpdated} staff and ${traineesUpdated} trainee ID number(s)`);
 }
 
 function logApiTiming(label, startedAt, details = {}) {
@@ -4202,9 +4141,10 @@ app.post('/api/personnel', async (req, res) => {
   try {
     const db = await getPrisma();
     const body = normalisePersonnelPayloadForUnit(req.body);
-    const idNumber = isUsablePersonnelIdNumber(body.idNumber)
-      ? Number(body.idNumber)
-      : await generateUniquePersonnelIdNumber(db);
+    if (!isUsablePersonnelIdNumber(body.idNumber)) {
+      return res.status(400).json({ error: 'Personnel ID is required' });
+    }
+    const idNumber = Number(body.idNumber);
 
     // Auto-link to existing User by Personnel ID
     let linkedUserId = null;
@@ -4306,9 +4246,10 @@ app.patch('/api/personnel/:id', async (req, res) => {
       }
     }
     if ('idNumber' in sanitizedUpdates) {
-      sanitizedUpdates.idNumber = isUsablePersonnelIdNumber(sanitizedUpdates.idNumber)
-        ? Number(sanitizedUpdates.idNumber)
-        : await generateUniquePersonnelIdNumber(db);
+      if (!isUsablePersonnelIdNumber(sanitizedUpdates.idNumber)) {
+        return res.status(400).json({ error: 'Personnel ID is required' });
+      }
+      sanitizedUpdates.idNumber = Number(sanitizedUpdates.idNumber);
     }
 
     if ('crew' in updates) {
@@ -6149,9 +6090,10 @@ app.post('/api/trainees', async (req, res) => {
     if (!name) {
       return res.status(400).json({ error: 'name is required' });
     }
-    const traineeIdNumber = isUsablePersonnelIdNumber(idNumber)
-      ? Number(idNumber)
-      : await generateUniquePersonnelIdNumber(db);
+    if (!isUsablePersonnelIdNumber(idNumber)) {
+      return res.status(400).json({ error: 'Personnel ID is required' });
+    }
+    const traineeIdNumber = Number(idNumber);
 
     // Check if trainee with this idNumber already exists
     const existing = await db.trainee.findFirst({ where: { idNumber: traineeIdNumber } });
@@ -6259,17 +6201,20 @@ app.post('/api/trainees/bulk', async (req, res) => {
       console.log(`🔵 Marked all existing ${course} trainees as inactive for replacement`);
     }
 
-    const usedPersonnelIdNumbers = await getUsedPersonnelIdNumbers(db);
     for (const t of trainees) {
       try {
-        if (!t.name) {
+        if (!t.name || !isUsablePersonnelIdNumber(t.idNumber)) {
           skippedCount++;
+          results.push({
+            idNumber: t.idNumber,
+            name: t.name,
+            action: 'skipped',
+            error: !t.name ? 'Name is required' : 'Personnel ID is required',
+          });
           continue;
         }
 
-        const idNum = isUsablePersonnelIdNumber(t.idNumber)
-          ? Number(t.idNumber)
-          : makeGeneratedPersonnelIdNumber(usedPersonnelIdNumbers);
+        const idNum = Number(t.idNumber);
 
         // Look for existing trainee by idNumber in this course (or any course if no course filter)
         const whereClause = course 
@@ -6373,9 +6318,10 @@ app.patch('/api/trainees/:id', async (req, res) => {
       }
     }
     if ('idNumber' in sanitizedUpdates) {
-      sanitizedUpdates.idNumber = isUsablePersonnelIdNumber(sanitizedUpdates.idNumber)
-        ? Number(sanitizedUpdates.idNumber)
-        : await generateUniquePersonnelIdNumber(db);
+      if (!isUsablePersonnelIdNumber(sanitizedUpdates.idNumber)) {
+        return res.status(400).json({ error: 'Personnel ID is required' });
+      }
+      sanitizedUpdates.idNumber = Number(sanitizedUpdates.idNumber);
     }
 
     // Update the trainee record

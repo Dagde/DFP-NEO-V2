@@ -33,11 +33,6 @@ import {
 import type { SctTerminology } from '../utils/sctTerminology';
 import type { InsertLmpEventRequest } from './TraineeLmpView';
 
-// Helper to generate a unique random ID for new instructors
-const generateRandomIdNumber = (): number => {
-    return 4000000 + Math.floor(Math.random() * 1000000);
-};
-
 const isPilotRole = (instructor: Instructor): boolean =>
     String(instructor.role || '').trim().toLowerCase() === 'pilot';
 const isActiveStaffRecord = (instructor: Instructor): boolean =>
@@ -112,7 +107,7 @@ const getDefaultNewStaffRole = (
 };
 
 const generateNewInstructorTemplate = (defaultLocation = '', defaultUnit = '', defaultRole = 'Pilot', defaultIsQfi = false): Instructor => ({
-    idNumber: generateRandomIdNumber(),
+    idNumber: 0,
     name: '',
     rank: '',
     role: defaultRole,

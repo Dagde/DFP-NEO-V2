@@ -1467,6 +1467,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             await showDarkAlert('Name and Course are required.', 'Missing Trainee Details', 'warning');
             return;
         }
+        if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
+            await showDarkAlert('Personnel ID is required before this trainee record can be saved.', 'Missing Personnel ID', 'warning');
+            return;
+        }
         const fullName = `${name} – ${course}`;
         const updatedTrainee: Trainee = {
             ...trainee,
@@ -2733,7 +2737,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div className="lg:col-span-2">
                                 <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
                               </div>
-                              <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
+                              <InputField label="Personnel ID" value={idNumber || ''} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
                               <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
                                 {traineeRankOptionGroups.map(group => (
                                   <optgroup key={group.label} label={group.label}>
@@ -2892,7 +2896,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                             <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                               {/* Row 1 */}
-                              <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{trainee.idNumber}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Personnel ID</span><span className="text-white font-medium">{trainee.idNumber || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Course</span><span
                                 data-course-color="true"
                                 className={`font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}

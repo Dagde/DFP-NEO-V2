@@ -42,6 +42,11 @@ const normalisePersonnelPayload = (body: any = {}): any => {
   return body;
 };
 
+const isUsablePersonnelIdNumber = (value: any): boolean => {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0;
+};
+
 const PERSONNEL_UPDATE_FIELDS = [
   'name',
   'rank',
@@ -231,6 +236,15 @@ export async function PATCH(
     PERSONNEL_UPDATE_FIELDS.forEach((field) => {
       if (body[field] !== undefined) data[field] = body[field];
     });
+    if ('idNumber' in data) {
+      if (!isUsablePersonnelIdNumber(data.idNumber)) {
+        return NextResponse.json(
+          { error: 'Personnel ID is required' },
+          { status: 400 }
+        );
+      }
+      data.idNumber = Number(data.idNumber);
+    }
 
     if (body.callsign !== undefined || body.secondaryCallsign !== undefined || body.crew !== undefined || body.preferences !== undefined) {
       data.preferences = {

@@ -131,7 +131,7 @@ model Personnel {
   category                String?
   email                   String?
   flight                  String?
-  idNumber                Int?
+  idNumber                Int
   isAdminStaff            Boolean  @default(false)
   isCFI                   Boolean  @default(false)
   isCommandingOfficer     Boolean  @default(false)

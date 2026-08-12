@@ -5426,7 +5426,7 @@ const InitialSetupWizard: React.FC<{
             const flags = qualificationsToFlags(row.qualifications);
             return {
                 id: `setup-staff-${index + 1}`,
-                idNumber: Number(row.personnelId) || 4000000 + index + 1,
+                idNumber: Number(row.personnelId) || 0,
                 name: fullName,
                 rank: row.rank || 'Rank',
                 role: row.position || 'Instructor',

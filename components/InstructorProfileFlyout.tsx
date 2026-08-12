@@ -868,6 +868,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const handleSave = async () => {
     if (!name) { await showDarkAlert('Name is required.', 'Missing Staff Name', 'warning'); return; }
+    if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
+      await showDarkAlert('Personnel ID is required before this staff record can be saved.', 'Missing Personnel ID', 'warning');
+      return;
+    }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
     const savedQualifications = savedAsContractorStaff
@@ -1890,7 +1894,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <InputField label="Name (Surname, Firstname)" value={name} onChange={e => setName(e.target.value)} />
-                      <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
+                      <InputField label="Personnel ID" value={idNumber || ''} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
                       <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as InstructorRank)}>
                         {staffRankOptionGroups.map(group => (
                           <optgroup key={group.label} label={group.label}>
@@ -2032,7 +2036,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                         {/* Row 1 */}
-                        <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Personnel ID</span><span className="text-white font-medium">{instructor.idNumber || '-'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{profileRoleDisplay.label}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{isContractorStaffRoleValue(instructor.role) ? simIpDisplayLabel : instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>

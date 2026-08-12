@@ -14477,7 +14477,7 @@ const InitialSetupWizard = ({ platformConfig, unitCode, locationCode, onUpdatePl
       const flags = qualificationsToFlags(row.qualifications);
       return {
         id: `setup-staff-${index + 1}`,
-        idNumber: Number(row.personnelId) || 4e6 + index + 1,
+        idNumber: Number(row.personnelId) || 0,
         name: fullName,
         rank: row.rank || "Rank",
         role: row.position || "Instructor",
@@ -24744,6 +24744,10 @@ const TraineeProfileFlyout = ({
       await showDarkAlert("Name and Course are required.", "Missing Trainee Details", "warning");
       return;
     }
+    if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
+      await showDarkAlert("Personnel ID is required before this trainee record can be saved.", "Missing Personnel ID", "warning");
+      return;
+    }
     const fullName = `${name} – ${course}`;
     const updatedTrainee = {
       ...trainee,
@@ -25883,7 +25887,7 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Training" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-6 gap-2.5", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Personnel ID", value: idNumber || "", onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: roleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
@@ -25998,8 +26002,8 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       ] }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "ID Number" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.idNumber })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Personnel ID" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: trainee.idNumber || "-" })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Course" }),
@@ -27466,7 +27470,7 @@ const TraineeBulkUploadFlyout = ({
   ] });
 };
 const generateNewTraineeTemplate = (defaults = {}) => ({
-  idNumber: 4e6 + Math.floor(Math.random() * 1e6),
+  idNumber: 0,
   fullName: "",
   // Will be constructed on save
   name: "",
@@ -53429,6 +53433,10 @@ const InstructorProfileFlyout = ({
       await showDarkAlert("Name is required.", "Missing Staff Name", "warning");
       return;
     }
+    if (!Number.isInteger(Number(idNumber)) || Number(idNumber) <= 0) {
+      await showDarkAlert("Personnel ID is required before this staff record can be saved.", "Missing Personnel ID", "warning");
+      return;
+    }
     const savedRole = role;
     const savedAsContractorStaff = isContractorStaffRoleValue(String(savedRole));
     const savedQualifications = savedAsContractorStaff ? normaliseContractorStaffQualifications(assignedQualifications) : assignedQualifications;
@@ -54431,7 +54439,7 @@ const InstructorProfileFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Personnel ID", value: idNumber || "", onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.label, children: group.options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, `${group.label}-${option}`)) }, group.label)) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Role", value: role, onChange: (e) => handleRoleChange(e.target.value), children: staffRoleOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.value, children: option.label }, option.value)) })
               ] }),
@@ -54541,8 +54549,8 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "ID Number" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.idNumber })
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Personnel ID" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: instructor.idNumber || "-" })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Role" }),
@@ -55265,7 +55273,7 @@ const BulkUpdateFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 space-y-4", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center p-8", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sky-400 font-semibold", children: statusMessage }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Upload a spreadsheet to create or update staff. The system will match by ID Number." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Upload a spreadsheet to create or update staff. The system will match by Personnel ID." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "input",
         {
@@ -55459,9 +55467,6 @@ const ArchivedInstructorsFlyout = ({
     )
   ] });
 };
-const generateRandomIdNumber = () => {
-  return 4e6 + Math.floor(Math.random() * 1e6);
-};
 const isPilotRole = (instructor) => String(instructor.role || "").trim().toLowerCase() === "pilot";
 const isActiveStaffRecord = (instructor) => instructor?.isActive !== false;
 const getStaffArchiveIdentifier = (instructor) => {
@@ -55497,7 +55502,7 @@ const getDefaultNewStaffRole = (operationalModel, terminology) => {
   return getCrewPositionOptions(terminology, [], operationalModel)[0] || "Pilot";
 };
 const generateNewInstructorTemplate = (defaultLocation = "", defaultUnit = "", defaultRole = "Pilot", defaultIsQfi = false) => ({
-  idNumber: generateRandomIdNumber(),
+  idNumber: 0,
   name: "",
   rank: "",
   role: defaultRole,
