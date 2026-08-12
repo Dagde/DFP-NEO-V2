@@ -116714,7 +116714,6 @@ ${error instanceof Error ? error.message : String(error)}`,
       };
     } catch (error) {
       console.error("❌ Failed to create trainee:", error);
-      setErrorMessage(error instanceof Error ? error.message : `Could not save ${newTrainee.fullName || newTrainee.name || "new trainee"} to the database.`);
       throw error;
     }
     setTraineesData((prev) => {
@@ -116723,13 +116722,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     });
     const lmpType = getConfiguredLmpTypeForTrainee(savedTrainee);
     if (!lmpType) {
-      setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} because no Master LMP is assigned to the trainee or course.`);
-      return;
+      throw new Error(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} because no Master LMP is assigned to the trainee or course.`);
     }
     const traineeUnitCode = savedTrainee.unit || activeUnitCode;
     if (!hasMasterLmpUnitAccess(lmpType, traineeUnitCode, "Assign")) {
-      setErrorMessage(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
-      return;
+      throw new Error(`Cannot initialise ${savedTrainee.fullName || savedTrainee.name || "new trainee"} with Master LMP "${lmpType}" for ${traineeUnitCode || "this unit"}.`);
     }
     const masterLMP = getAssignableMasterLmpItemsForType(syllabusDetails, lmpType, traineeUnitCode, filterSyllabusForMasterLmpAccess);
     if (masterLMP.length > 0) {
@@ -116757,12 +116754,10 @@ ${error instanceof Error ? error.message : String(error)}`,
     const requestedAcademicLmpType = data.academicLmpType || "";
     const lmpAccessContext = getMasterLmpAccessContextForUnit(traineeUnitCode);
     if (requestedLmpType && !hasMasterLmpAccess(platformConfig, requestedLmpType, lmpAccessContext, "Assign")) {
-      setErrorMessage(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
-      return;
+      throw new Error(`Cannot assign Master LMP "${requestedLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
     }
     if (requestedAcademicLmpType && !hasMasterLmpAccess(platformConfig, requestedAcademicLmpType, lmpAccessContext, "Assign")) {
-      setErrorMessage(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
-      return;
+      throw new Error(`Cannot assign Academic LMP "${requestedAcademicLmpType}" to ${traineeUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
     }
     const dbId = data.id;
     logRoutineAppDebug("📝 [APP] DB ID:", dbId);
@@ -117549,22 +117544,22 @@ ${error instanceof Error ? error.message : String(error)}`,
         setSuccessMessage(`Course ${courseName} dates updated successfully!`);
       } else {
         console.error("Failed to update course dates in DB:", result.error);
-        setErrorMessage("Failed to save changes to database");
+        setSuccessMessage(`Save failed: ${result.error || "Failed to save changes to database"}`);
       }
     } catch (error) {
       console.error("Error updating course dates in DB:", error);
-      setErrorMessage("Failed to save changes to database");
+      setSuccessMessage(`Save failed: ${error instanceof Error ? error.message : "Failed to save changes to database"}`);
     }
   };
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
     const courseUnitCode = data.unit || activeUnitCode;
     const lmpAccessContext = getMasterLmpAccessContextForUnit(courseUnitCode);
     if (data.lmpType && !hasMasterLmpAccess(platformConfig, data.lmpType, lmpAccessContext, "Assign")) {
-      setErrorMessage(`Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+      setSuccessMessage(`Save failed: Cannot assign Master LMP "${data.lmpType}" to ${courseUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
       return;
     }
     if (data.academicLmpType && !hasMasterLmpAccess(platformConfig, data.academicLmpType, lmpAccessContext, "Assign")) {
-      setErrorMessage(`Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings → Platform & Deployment → Master LMP Access.`);
+      setSuccessMessage(`Save failed: Cannot assign Academic LMP "${data.academicLmpType}" to ${courseUnitCode || "this unit"}. Check Settings -> Platform & Deployment -> Master LMP Access.`);
       return;
     }
     setCourses(
@@ -117597,11 +117592,11 @@ ${error instanceof Error ? error.message : String(error)}`,
         setSuccessMessage(`Course ${courseName} updated successfully!`);
       } else {
         console.error("[EditCourse] Failed to update course in DB:", result.error);
-        setErrorMessage("Failed to save changes to database");
+        setSuccessMessage(`Save failed: ${result.error || "Failed to save changes to database"}`);
       }
     } catch (error) {
       console.error("[EditCourse] Error updating course in DB:", error);
-      setErrorMessage("Failed to save changes to database");
+      setSuccessMessage(`Save failed: ${error instanceof Error ? error.message : "Failed to save changes to database"}`);
     }
   };
   const handleUpdateCourseLeadership = async (courseName, leadership) => {
@@ -117643,12 +117638,10 @@ ${error instanceof Error ? error.message : String(error)}`,
         setSuccessMessage(`Course leadership updated for ${courseName}.`);
       } else {
         console.error("[CourseEdit] Failed to update course leadership in DB:", result.error);
-        setErrorMessage("Failed to save course leadership to database");
         throw new Error(result.error || "Failed to save course leadership to database");
       }
     } catch (error) {
       console.error("[CourseEdit] Error updating course leadership:", error);
-      setErrorMessage("Failed to save course leadership to database");
       throw error;
     }
   };
@@ -123472,7 +123465,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       });
     } catch (error) {
       console.error("[Staff Archive] Failed:", error);
-      setErrorMessage(`Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}`);
+      setSuccessMessage(`Archive failed: Could not archive ${instructorToArchive.name}. ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);
   const handleRestoreInstructor = reactExports.useCallback(async (identifier) => {
@@ -123527,7 +123520,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       });
     } catch (error) {
       console.error("[Staff Restore] Failed:", error);
-      setErrorMessage(`Could not restore ${instructorToRestore.name}. ${error instanceof Error ? error.message : String(error)}`);
+      setSuccessMessage(`Restore failed: Could not restore ${instructorToRestore.name}. ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [archivedInstructorsData, scopedApiPath]);
   reactExports.useCallback((newInstructors) => {
@@ -125885,7 +125878,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       setSuccessMessage(`${traineeName} deleted.`);
     } catch (error) {
       console.error("[Trainee Delete] Failed:", error);
-      setErrorMessage(`Could not delete ${traineeName}. ${error instanceof Error ? error.message : String(error)}`);
+      setSuccessMessage(`Delete failed: Could not delete ${traineeName}. ${error instanceof Error ? error.message : String(error)}`);
     }
   }, [scopedApiPath]);
   const resolveCourseMovementDirection = reactExports.useCallback((fromCourse, toCourse) => {
