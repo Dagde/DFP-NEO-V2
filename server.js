@@ -8450,6 +8450,238 @@ async function getDirectPersonAccountPayload(db, personType, personId) {
   };
 }
 
+async function ensureDirectPersonLoginAccount(db, adminId, personType, record, role = 'USER') {
+  const type = normalisePersonAccountType(personType);
+  if (!type || !record?.id) {
+    const error = new Error('Staff or trainee record not found');
+    error.status = 404;
+    error.code = 'PERSON_NOT_FOUND';
+    throw error;
+  }
+  const personnelId = normalisePersonnelId(record.idNumber);
+  if (!personnelId) {
+    const error = new Error('A Personnel ID is required before a login can be created');
+    error.status = 400;
+    error.code = 'PERSONNEL_ID_REQUIRED';
+    throw error;
+  }
+  const email = String(record.email || '').trim();
+  if (!email) {
+    const error = new Error('A registered email address is required before a login can be created');
+    error.status = 400;
+    error.code = 'EMAIL_REQUIRED';
+    throw error;
+  }
+  const safeRole = ['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR', 'PILOT', 'USER'].includes(String(role).toUpperCase())
+    ? String(role).toUpperCase()
+    : 'USER';
+  const displayName = record.fullName || record.name || '';
+  const nameParts = splitDisplayNameForAccount(displayName);
+  const existingUsers = await db.$queryRawUnsafe(
+    `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+            "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+            "lastLogin", "createdAt"
+     FROM "User"
+     WHERE id = $1 OR "userId" = $2 OR username = $2 OR email = $3
+     ORDER BY CASE WHEN id = $1 THEN 0 WHEN "userId" = $2 OR username = $2 THEN 1 ELSE 2 END
+     LIMIT 2`,
+    record.userId || '',
+    personnelId,
+    email
+  );
+  const uniqueUsers = Array.from(new Map((existingUsers || []).map((user) => [user.id, user])).values());
+  if (uniqueUsers.length > 1) {
+    const error = new Error('The Personnel ID and email match different login accounts. Resolve the duplicate account before linking this profile.');
+    error.status = 409;
+    error.code = 'ACCOUNT_CONFLICT';
+    throw error;
+  }
+  let user = uniqueUsers[0] || null;
+  if (user) {
+    const linkedElsewhere = await db.$queryRawUnsafe(
+      `SELECT 'staff' AS type, id, name, "idNumber" FROM "Personnel" WHERE "userId" = $1 AND id <> $2
+       UNION ALL
+       SELECT 'trainee' AS type, id, "fullName" AS name, "idNumber" FROM "Trainee" WHERE "userId" = $1 AND id <> $3
+       LIMIT 1`,
+      user.id,
+      type === 'staff' ? record.id : '',
+      type === 'trainee' ? record.id : ''
+    );
+    if (linkedElsewhere?.length) {
+      const error = new Error(`This login is already linked to ${linkedElsewhere[0].name || 'another person'}.`);
+      error.status = 409;
+      error.code = 'ACCOUNT_ALREADY_LINKED';
+      throw error;
+    }
+    const updatedUsers = await db.$queryRawUnsafe(
+      `UPDATE "User"
+       SET "userId" = $1,
+           username = $1,
+           email = $2,
+           "firstName" = COALESCE(NULLIF("firstName", ''), $3),
+           "lastName" = COALESCE(NULLIF("lastName", ''), $4),
+           role = $5::"Role",
+           "updatedAt" = NOW()
+       WHERE id = $6
+       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+                 "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+                 "lastLogin", "createdAt"`,
+      personnelId,
+      email,
+      nameParts.firstName || null,
+      nameParts.lastName || null,
+      safeRole,
+      user.id
+    );
+    user = updatedUsers[0];
+  } else {
+    const bcrypt = require('bcryptjs');
+    const blockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+    const createdUsers = await db.$queryRawUnsafe(
+      `INSERT INTO "User" ("id", "userId", username, email, password, role, "firstName", "lastName", "isActive", "createdById", "createdAt", "updatedAt")
+       VALUES (gen_random_uuid()::text, $1, $1, $2, $3, $4::"Role", $5, $6, true, $7, NOW(), NOW())
+       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+                 "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+                 "lastLogin", "createdAt"`,
+      personnelId,
+      email,
+      blockedPassword,
+      safeRole,
+      nameParts.firstName || null,
+      nameParts.lastName || null,
+      adminId
+    );
+    user = createdUsers[0];
+  }
+  if (type === 'staff') {
+    await db.personnel.update({ where: { id: record.id }, data: { userId: user.id } });
+  } else {
+    await db.trainee.update({ where: { id: record.id }, data: { userId: user.id } });
+  }
+  return { user, personnelId, email };
+}
+
+async function issueActivationEmailForDirectUser(db, req, targetUserId, personnelIdOverride = '') {
+  const cleanTargetUserId = String(targetUserId || '').trim();
+  if (!cleanTargetUserId) {
+    const error = new Error('Target user is required');
+    error.status = 400;
+    error.code = 'TARGET_USER_REQUIRED';
+    throw error;
+  }
+  const users = await db.$queryRawUnsafe(
+    `SELECT id, "userId", username, email, password, "firstName", "lastName", role, "isActive", "mustChangePassword",
+            "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+            "activationAttemptCount", "activationLockedUntil", "lastLogin", "createdAt"
+     FROM "User"
+     WHERE "userId" = $1 OR username = $1 OR id = $1
+     LIMIT 1`,
+    cleanTargetUserId
+  );
+  const target = users?.[0];
+  if (!target) {
+    const error = new Error('User not found');
+    error.status = 404;
+    error.code = 'USER_NOT_FOUND';
+    throw error;
+  }
+  if (!target.isActive) {
+    const error = new Error('Account must be active before activation can be issued');
+    error.status = 403;
+    error.code = 'ACCOUNT_INACTIVE';
+    throw error;
+  }
+  if (!String(target.email || '').trim()) {
+    const error = new Error('A registered email address is required before activation can be issued');
+    error.status = 400;
+    error.code = 'EMAIL_REQUIRED';
+    throw error;
+  }
+  const linkedPersonnelId = await findLinkedPersonnelId(db, target.id);
+  const cleanPersonnelId = normalisePersonnelId(personnelIdOverride) || linkedPersonnelId;
+  if (!cleanPersonnelId) {
+    const error = new Error('A linked Personnel ID is required before activation can be issued');
+    error.status = 400;
+    error.code = 'PERSONNEL_ID_REQUIRED';
+    throw error;
+  }
+  const bcrypt = require('bcryptjs');
+  const suffix = generateActivationSuffix(12);
+  const activationCredential = `${cleanPersonnelId}${suffix}`;
+  const activationCodeHash = await bcrypt.hash(activationCredential, 12);
+  const activationExpiresAt = getActivationExpiryDate();
+  const randomBlockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+  const updated = await db.$queryRawUnsafe(
+    `UPDATE "User"
+     SET password = $1,
+         "mustChangePassword" = true,
+         "activationCodeHash" = $2,
+         "activationCodeExpiresAt" = $3::timestamp,
+         "activationCodeSentAt" = NOW(),
+         "activationCodeUsedAt" = NULL,
+         "activationAttemptCount" = 0,
+         "activationLockedUntil" = NULL,
+         "updatedAt" = NOW()
+     WHERE id = $4
+     RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+               "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+               "lastLogin", "createdAt"`,
+    randomBlockedPassword,
+    activationCodeHash,
+    activationExpiresAt.toISOString(),
+    target.id
+  );
+  try {
+    const delivery = await sendActivationEmail({ target, suffix, expiresAt: activationExpiresAt });
+    await writeSecurityAuditEvent(db, req, 'ACCOUNT_ACTIVATION_ISSUED', 'info', 'Account activation issued', {
+      targetUserId: target.userId || target.username || target.id,
+      email: target.email,
+      expiresAt: activationExpiresAt.toISOString(),
+      messageId: delivery.messageId,
+    });
+    return {
+      user: toDirectAdminUser(updated[0]),
+      delivery: {
+        ...delivery,
+        activationSuffix: process.env.DFP_EXPOSE_ACTIVATION_SUFFIX_FOR_TESTING === 'true' ? suffix : undefined,
+        expiresAt: activationExpiresAt.toISOString(),
+      },
+    };
+  } catch (emailError) {
+    await db.$executeRawUnsafe(
+      `UPDATE "User"
+       SET password = $1,
+           "mustChangePassword" = $2,
+           "activationCodeHash" = $3,
+           "activationCodeExpiresAt" = $4::timestamp,
+           "activationCodeSentAt" = $5::timestamp,
+           "activationCodeUsedAt" = $6::timestamp,
+           "activationAttemptCount" = $7,
+           "activationLockedUntil" = $8::timestamp,
+           "updatedAt" = NOW()
+       WHERE id = $9`,
+      target.password,
+      Boolean(target.mustChangePassword),
+      target.activationCodeHash || null,
+      target.activationCodeExpiresAt ? new Date(target.activationCodeExpiresAt).toISOString() : null,
+      target.activationCodeSentAt ? new Date(target.activationCodeSentAt).toISOString() : null,
+      target.activationCodeUsedAt ? new Date(target.activationCodeUsedAt).toISOString() : null,
+      Number(target.activationAttemptCount || 0),
+      target.activationLockedUntil ? new Date(target.activationLockedUntil).toISOString() : null,
+      target.id
+    );
+    await writeSecurityAuditEvent(db, req, 'ACCOUNT_ACTIVATION_EMAIL_FAILED', 'warning', 'Account activation email failed', {
+      targetUserId: target.userId || target.username || target.id,
+      email: target.email,
+      reason: emailError.message || 'Email delivery failed',
+      code: emailError.code || '',
+      missing: emailError.missing || [],
+    });
+    emailError.status = emailError.code === 'SMTP_NOT_CONFIGURED' ? 503 : 502;
+    throw emailError;
+  }
+}
+
 app.get('/api/admin/direct-users', async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
@@ -8493,100 +8725,7 @@ app.post('/api/admin/direct-person-account', adminSensitiveRateLimit, async (req
       return res.status(404).json({ error: 'Not found', message: 'Staff or trainee record not found' });
     }
     const record = person.record;
-    const personnelId = normalisePersonnelId(record.idNumber);
-    if (!personnelId) {
-      return res.status(400).json({ error: 'Personnel ID required', message: 'A Personnel ID is required before a login can be created' });
-    }
-    const email = String(record.email || '').trim();
-    if (!email) {
-      return res.status(400).json({ error: 'Email required', message: 'A registered email address is required before a login can be created' });
-    }
-    const safeRole = ['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR', 'PILOT', 'USER'].includes(String(role).toUpperCase())
-      ? String(role).toUpperCase()
-      : 'USER';
-    const displayName = record.fullName || record.name || '';
-    const nameParts = splitDisplayNameForAccount(displayName);
-    const existingUsers = await context.db.$queryRawUnsafe(
-      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
-              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
-              "lastLogin", "createdAt"
-       FROM "User"
-       WHERE id = $1 OR "userId" = $2 OR username = $2 OR email = $3
-       ORDER BY CASE WHEN id = $1 THEN 0 WHEN "userId" = $2 OR username = $2 THEN 1 ELSE 2 END
-       LIMIT 2`,
-      record.userId || '',
-      personnelId,
-      email
-    );
-    const uniqueUsers = Array.from(new Map((existingUsers || []).map((user) => [user.id, user])).values());
-    if (uniqueUsers.length > 1) {
-      return res.status(409).json({
-        error: 'Account conflict',
-        message: 'The Personnel ID and email match different login accounts. Resolve the duplicate account before linking this profile.',
-      });
-    }
-    let user = uniqueUsers[0] || null;
-    if (user) {
-      const linkedElsewhere = await context.db.$queryRawUnsafe(
-        `SELECT 'staff' AS type, id, name, "idNumber" FROM "Personnel" WHERE "userId" = $1 AND id <> $2
-         UNION ALL
-         SELECT 'trainee' AS type, id, "fullName" AS name, "idNumber" FROM "Trainee" WHERE "userId" = $1 AND id <> $3
-         LIMIT 1`,
-        user.id,
-        person.type === 'staff' ? record.id : '',
-        person.type === 'trainee' ? record.id : ''
-      );
-      if (linkedElsewhere?.length) {
-        return res.status(409).json({
-          error: 'Account already linked',
-          message: `This login is already linked to ${linkedElsewhere[0].name || 'another person'}.`,
-        });
-      }
-      const updatedUsers = await context.db.$queryRawUnsafe(
-        `UPDATE "User"
-         SET "userId" = $1,
-             username = $1,
-             email = $2,
-             "firstName" = COALESCE(NULLIF("firstName", ''), $3),
-             "lastName" = COALESCE(NULLIF("lastName", ''), $4),
-             role = $5::"Role",
-             "updatedAt" = NOW()
-         WHERE id = $6
-         RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
-                   "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
-                   "lastLogin", "createdAt"`,
-        personnelId,
-        email,
-        nameParts.firstName || null,
-        nameParts.lastName || null,
-        safeRole,
-        user.id
-      );
-      user = updatedUsers[0];
-    } else {
-      const bcrypt = require('bcryptjs');
-      const blockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
-      const createdUsers = await context.db.$queryRawUnsafe(
-        `INSERT INTO "User" ("id", "userId", username, email, password, role, "firstName", "lastName", "isActive", "createdById", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid()::text, $1, $1, $2, $3, $4::"Role", $5, $6, true, $7, NOW(), NOW())
-         RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
-                   "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
-                   "lastLogin", "createdAt"`,
-        personnelId,
-        email,
-        blockedPassword,
-        safeRole,
-        nameParts.firstName || null,
-        nameParts.lastName || null,
-        context.admin.id
-      );
-      user = createdUsers[0];
-    }
-    if (person.type === 'staff') {
-      await context.db.personnel.update({ where: { id: record.id }, data: { userId: user.id } });
-    } else {
-      await context.db.trainee.update({ where: { id: record.id }, data: { userId: user.id } });
-    }
+    const { user, personnelId, email } = await ensureDirectPersonLoginAccount(context.db, context.admin.id, person.type, record, role);
     await writeSecurityAuditEvent(context.db, req, 'PERSON_ACCOUNT_LINKED', 'info', 'Person profile linked to login account', {
       personType: person.type,
       personId: record.id,
@@ -8599,11 +8738,12 @@ app.post('/api/admin/direct-person-account', adminSensitiveRateLimit, async (req
   } catch (error) {
     const message = String(error?.message || error);
     console.error('❌ POST /api/admin/direct-person-account error:', error);
-    res.status(message.includes('unique') || message.includes('duplicate') ? 409 : 500).json({
-      error: message.includes('unique') || message.includes('duplicate') ? 'Account conflict' : 'Account link failed',
-      message: message.includes('unique') || message.includes('duplicate')
+    const status = error.status || (message.includes('unique') || message.includes('duplicate') ? 409 : 500);
+    res.status(status).json({
+      error: status === 409 ? 'Account conflict' : status === 400 ? 'Account details required' : 'Account link failed',
+      message: status === 409 && (message.includes('unique') || message.includes('duplicate'))
         ? 'A login with that Personnel ID or email already exists'
-        : 'Failed to create or link the login account',
+        : message || 'Failed to create or link the login account',
     });
   }
 });
@@ -8652,122 +8792,126 @@ app.post('/api/admin/direct-issue-activation', adminSensitiveRateLimit, async (r
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const { targetUserId, personnelId } = req.body || {};
-    const cleanTargetUserId = String(targetUserId || '').trim();
-    if (!cleanTargetUserId) {
-      return res.status(400).json({ error: 'Invalid request', message: 'Target user is required' });
-    }
-    const users = await context.db.$queryRawUnsafe(
-      `SELECT id, "userId", username, email, password, "firstName", "lastName", role, "isActive", "mustChangePassword",
-              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
-              "activationAttemptCount", "activationLockedUntil"
-       FROM "User"
-       WHERE "userId" = $1 OR username = $1 OR id = $1
-       LIMIT 1`,
-      cleanTargetUserId
-    );
-    const target = users?.[0];
-    if (!target) {
-      return res.status(404).json({ error: 'Not found', message: 'User not found' });
-    }
-    if (!target.isActive) {
-      return res.status(403).json({ error: 'Account inactive', message: 'Account must be active before activation can be issued' });
-    }
-    if (!String(target.email || '').trim()) {
-      return res.status(400).json({ error: 'Email required', message: 'A registered email address is required before activation can be issued' });
-    }
-    const linkedPersonnelId = await findLinkedPersonnelId(context.db, target.id);
-    const cleanPersonnelId = normalisePersonnelId(personnelId) || linkedPersonnelId;
-    if (!cleanPersonnelId) {
-      return res.status(400).json({ error: 'Personnel ID required', message: 'A linked Personnel ID is required before activation can be issued' });
-    }
-    const bcrypt = require('bcryptjs');
-    const suffix = generateActivationSuffix(12);
-    const activationCredential = `${cleanPersonnelId}${suffix}`;
-    const activationCodeHash = await bcrypt.hash(activationCredential, 12);
-    const activationExpiresAt = getActivationExpiryDate();
-    const randomBlockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
-    let updated = null;
-    updated = await context.db.$queryRawUnsafe(
-      `UPDATE "User"
-       SET password = $1,
-           "mustChangePassword" = true,
-           "activationCodeHash" = $2,
-           "activationCodeExpiresAt" = $3::timestamp,
-           "activationCodeSentAt" = NOW(),
-           "activationCodeUsedAt" = NULL,
-           "activationAttemptCount" = 0,
-           "activationLockedUntil" = NULL,
-           "updatedAt" = NOW()
-       WHERE id = $4
-       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
-                 "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
-                 "lastLogin", "createdAt"`,
-      randomBlockedPassword,
-      activationCodeHash,
-      activationExpiresAt.toISOString(),
-      target.id
-    );
-    let delivery = null;
-    try {
-      delivery = await sendActivationEmail({ target, suffix, expiresAt: activationExpiresAt });
-    } catch (emailError) {
-      await context.db.$executeRawUnsafe(
-        `UPDATE "User"
-         SET password = $1,
-             "mustChangePassword" = $2,
-             "activationCodeHash" = $3,
-             "activationCodeExpiresAt" = $4::timestamp,
-             "activationCodeSentAt" = $5::timestamp,
-             "activationCodeUsedAt" = $6::timestamp,
-             "activationAttemptCount" = $7,
-             "activationLockedUntil" = $8::timestamp,
-             "updatedAt" = NOW()
-         WHERE id = $9`,
-        target.password,
-        Boolean(target.mustChangePassword),
-        target.activationCodeHash || null,
-        target.activationCodeExpiresAt ? new Date(target.activationCodeExpiresAt).toISOString() : null,
-        target.activationCodeSentAt ? new Date(target.activationCodeSentAt).toISOString() : null,
-        target.activationCodeUsedAt ? new Date(target.activationCodeUsedAt).toISOString() : null,
-        Number(target.activationAttemptCount || 0),
-        target.activationLockedUntil ? new Date(target.activationLockedUntil).toISOString() : null,
-        target.id
-      );
-      await writeSecurityAuditEvent(context.db, req, 'ACCOUNT_ACTIVATION_EMAIL_FAILED', 'warning', 'Account activation email failed', {
-        targetUserId: target.userId || target.username || target.id,
-        email: target.email,
-        reason: emailError.message || 'Email delivery failed',
-        code: emailError.code || '',
-        missing: emailError.missing || [],
-      });
-      const status = emailError.code === 'SMTP_NOT_CONFIGURED' ? 503 : 502;
-      return res.status(status).json({
-        error: emailError.code === 'SMTP_NOT_CONFIGURED' ? 'Email not configured' : 'Email delivery failed',
-        message: emailError.code === 'SMTP_NOT_CONFIGURED'
-          ? `Activation email could not be sent because SMTP is not configured: ${(emailError.missing || []).join(', ')}`
-          : 'Activation email could not be sent. No activation code was left active for this user.',
-        missing: emailError.missing || undefined,
-      });
-    }
-    await writeSecurityAuditEvent(context.db, req, 'ACCOUNT_ACTIVATION_ISSUED', 'info', 'Account activation issued', {
-      targetUserId: target.userId || target.username || target.id,
-      email: target.email,
-      expiresAt: activationExpiresAt.toISOString(),
-      messageId: delivery.messageId,
-    });
+    const { user, delivery } = await issueActivationEmailForDirectUser(context.db, req, targetUserId, personnelId);
     res.json({
       success: true,
-      user: toDirectAdminUser(updated[0]),
+      user,
       delivery: {
         ...delivery,
-        activationSuffix: process.env.DFP_EXPOSE_ACTIVATION_SUFFIX_FOR_TESTING === 'true' ? suffix : undefined,
-        expiresAt: activationExpiresAt.toISOString(),
         instruction: 'Activation email sent. The user signs in with their Personnel ID followed immediately by the emailed activation code.',
       },
     });
   } catch (error) {
+    const status = error.status || 500;
+    const code = error.code || '';
     console.error('❌ POST /api/admin/direct-issue-activation error:', error);
-    res.status(500).json({ error: 'Activation failed', message: 'Failed to issue account activation' });
+    res.status(status).json({
+      error: code === 'SMTP_NOT_CONFIGURED'
+        ? 'Email not configured'
+        : status === 400
+          ? 'Activation details required'
+          : status === 404
+            ? 'Not found'
+            : status === 403
+              ? 'Account inactive'
+              : status === 502
+                ? 'Email delivery failed'
+                : 'Activation failed',
+      message: code === 'SMTP_NOT_CONFIGURED'
+        ? `Activation email could not be sent because SMTP is not configured: ${(error.missing || []).join(', ')}`
+        : error.message || 'Failed to issue account activation',
+      missing: error.missing || undefined,
+    });
+  }
+});
+
+app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const course = String(req.body?.course || '').trim();
+    if (!course) {
+      return res.status(400).json({ error: 'Course required', message: 'Select a course before issuing account activations' });
+    }
+    const smtpConfig = getSmtpConfig();
+    if (!smtpConfig.configured) {
+      return res.status(503).json({
+        error: 'Email not configured',
+        message: `Activation emails cannot be sent until SMTP is configured: ${smtpConfig.missing.join(', ')}`,
+        missing: smtpConfig.missing,
+      });
+    }
+    const trainees = await context.db.trainee.findMany({
+      where: { course, isActive: true },
+      orderBy: [{ rank: 'asc' }, { name: 'asc' }],
+    });
+    if (trainees.length === 0) {
+      return res.status(404).json({ error: 'No active trainees', message: `No active trainees were found in ${course}` });
+    }
+
+    const results = [];
+    let linked = 0;
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const trainee of trainees) {
+      const row = {
+        personType: 'trainee',
+        personId: trainee.id,
+        name: trainee.fullName || trainee.name || '',
+        personnelId: normalisePersonnelId(trainee.idNumber),
+        email: String(trainee.email || '').trim(),
+        userId: trainee.userId || null,
+      };
+      try {
+        const account = await ensureDirectPersonLoginAccount(context.db, context.admin.id, 'trainee', trainee, 'USER');
+        linked += 1;
+        const activation = await issueActivationEmailForDirectUser(context.db, req, account.user.userId || account.user.username || account.user.id, account.personnelId);
+        sent += 1;
+        results.push({
+          ...row,
+          status: 'sent',
+          userId: activation.user.userId || activation.user.username || activation.user.id,
+          activationStatus: activation.user.activationStatus,
+          expiresAt: activation.delivery?.expiresAt || null,
+        });
+      } catch (error) {
+        const status = error.status || 500;
+        const resultStatus = status === 400 || status === 404 || status === 409 ? 'skipped' : 'failed';
+        if (resultStatus === 'skipped') skipped += 1;
+        else failed += 1;
+        results.push({
+          ...row,
+          status: resultStatus,
+          error: error.code || '',
+          message: error.message || 'Activation could not be issued',
+        });
+      }
+    }
+
+    await writeSecurityAuditEvent(context.db, req, 'COURSE_ACCOUNT_ACTIVATION_BATCH', failed > 0 ? 'warning' : 'info', 'Course account activation batch processed', {
+      course,
+      total: trainees.length,
+      linked,
+      sent,
+      skipped,
+      failed,
+    });
+
+    res.json({
+      success: failed === 0,
+      course,
+      total: trainees.length,
+      linked,
+      sent,
+      skipped,
+      failed,
+      results,
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/direct-course-activations error:', error);
+    res.status(500).json({ error: 'Course activation failed', message: 'Failed to process course account activations' });
   }
 });
 

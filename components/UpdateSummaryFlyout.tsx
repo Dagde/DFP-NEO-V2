@@ -8,6 +8,13 @@ interface UpdateSummaryFlyoutProps {
     replaced: number;
     skipped: number;
     unaltered?: number;
+    activation?: {
+      requested: boolean;
+      total: number;
+      sent: number;
+      skipped: number;
+      failed: number;
+    };
   };
   onClose: () => void;
 }
@@ -53,6 +60,29 @@ const UpdateSummaryFlyout: React.FC<UpdateSummaryFlyoutProps> = ({ summary, onCl
                             <span className="font-bold text-amber-400 float-right">{summary.skipped}</span>
                         </div>
                     </div>
+                    {summary.activation?.requested && (
+                        <div className="bg-gray-700/50 p-3 rounded-md text-sm">
+                            <p className="font-semibold text-white">Account Activation</p>
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                <div>
+                                    <span className="text-gray-400">Emails Sent:</span>
+                                    <span className="font-bold text-green-400 float-right">{summary.activation.sent}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Skipped:</span>
+                                    <span className="font-bold text-amber-400 float-right">{summary.activation.skipped}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Failed:</span>
+                                    <span className="font-bold text-red-400 float-right">{summary.activation.failed}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Course Total:</span>
+                                    <span className="font-bold text-white float-right">{summary.activation.total}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end">
                     <button onClick={onClose} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">

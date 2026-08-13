@@ -5,6 +5,7 @@ import CourseSelectionFlyout from './CourseSelectionFlyout';
 import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
+import { getAppApiBase } from '../utils/externalDataControls';
 
 declare var XLSX: any;
 
@@ -13,10 +14,19 @@ interface TraineeBulkUploadFlyoutProps {
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
     courseColors: { [key: string]: string };
-    onBulkUpdateTrainees: (trainees: Trainee[]) => void;
-    onReplaceTrainees: (trainees: Trainee[]) => void;
+    onBulkUpdateTrainees: (trainees: Trainee[]) => void | Promise<void>;
+    onReplaceTrainees: (trainees: Trainee[]) => void | Promise<void>;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
+    currentUserRole?: string;
 }
+
+type UploadActivationSummary = {
+    requested: boolean;
+    total: number;
+    sent: number;
+    skipped: number;
+    failed: number;
+};
 
 const getValueFromRow = (row: any, possibleKeys: string[]): any => {
     for (const key of possibleKeys) {
@@ -145,6 +155,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     onBulkUpdateTrainees,
     onReplaceTrainees,
     onUpdateTraineeLMPs,
+    currentUserRole,
 }) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [file, setFile] = useState<File | null>(null);
@@ -155,9 +166,11 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     const [updateType, setUpdateType] = useState<'bulk' | 'minor'>('minor');
     const [rows, setRows] = useState<any[]>([]);
     const [coursesFromFile, setCoursesFromFile] = useState<string[]>([]);
-    const [summary, setSummary] = useState<{ added: number; updated: number; replaced: number; skipped: number; type: string } | null>(null);
+    const [summary, setSummary] = useState<{ added: number; updated: number; replaced: number; skipped: number; type: string; activation?: UploadActivationSummary } | null>(null);
+    const [issueAccountActivations, setIssueAccountActivations] = useState(false);
 
     const activeCourses = useMemo(() => Object.keys(courseColors).sort((a, b) => a.localeCompare(b)), [courseColors]);
+    const canIssueAccountActivations = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));
 
     const handleFile = (selectedFile?: File | null) => {
         if (!selectedFile) return;
@@ -219,24 +232,67 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         });
     };
 
-    const processRows = (course: string) => {
+    const issueCourseActivations = async (course: string): Promise<UploadActivationSummary> => {
+        const sessionToken = localStorage.getItem('dfp_session_token') || '';
+        const response = await fetch(`${getAppApiBase()}/admin/direct-course-activations`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+            },
+            body: JSON.stringify({ course }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.message || 'Account activation emails could not be sent.');
+        }
+        return {
+            requested: true,
+            total: Number(payload.total || 0),
+            sent: Number(payload.sent || 0),
+            skipped: Number(payload.skipped || 0),
+            failed: Number(payload.failed || 0),
+        };
+    };
+
+    const processRows = async (course: string) => {
         const parsedRows = rows.map(parseTraineeRow);
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
         const skipped = rows.length - validRows.length;
         const newTrainees = validRows.map(trainee => ({ ...trainee, course, fullName: `${trainee.name} – ${course}` } as Trainee));
+        const activationRequested = issueAccountActivations && canIssueAccountActivations;
+
+        if (activationRequested) {
+            const missingEmail = newTrainees.filter(trainee => !String(trainee.email || '').trim());
+            if (missingEmail.length > 0) {
+                const names = missingEmail.slice(0, 5).map(trainee => trainee.name || trainee.fullName || String(trainee.idNumber)).join(', ');
+                setShowCourseSelection(false);
+                setStatus(`Account activation requires an Email for every uploaded trainee. Missing Email: ${names}${missingEmail.length > 5 ? ` and ${missingEmail.length - 5} more` : ''}.`);
+                return;
+            }
+        }
+
+        let activation: UploadActivationSummary | undefined;
 
         if (updateType === 'bulk') {
             const otherCourseTrainees = traineesData.filter(trainee => trainee.course !== course);
-            onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
+            await onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
             initialiseLmpForNewTrainees(newTrainees.filter(trainee => !traineesData.some(existing => existing.idNumber === trainee.idNumber)));
-            setSummary({ type: 'Bulk', replaced: newTrainees.length, added: 0, updated: 0, skipped });
+            if (activationRequested) {
+                activation = await issueCourseActivations(course);
+            }
+            setSummary({ type: 'Bulk', replaced: newTrainees.length, added: 0, updated: 0, skipped, activation });
         } else {
             const existingIds = new Set(traineesData.map(trainee => trainee.idNumber));
             const added = newTrainees.filter(trainee => !existingIds.has(trainee.idNumber));
             const updated = newTrainees.filter(trainee => existingIds.has(trainee.idNumber));
-            onBulkUpdateTrainees(newTrainees);
+            await onBulkUpdateTrainees(newTrainees);
             initialiseLmpForNewTrainees(added);
-            setSummary({ type: 'Minor', replaced: 0, added: added.length, updated: updated.length, skipped });
+            if (activationRequested) {
+                activation = await issueCourseActivations(course);
+            }
+            setSummary({ type: 'Minor', replaced: 0, added: added.length, updated: updated.length, skipped, activation });
         }
 
         logAudit({
@@ -246,6 +302,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             changes: `Processed ${newTrainees.length} trainees from ${file?.name || 'local file'}`,
         });
         setShowCourseSelection(false);
+        setStatus('');
     };
 
     return (
@@ -297,6 +354,24 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                                 Select File
                             </button>
                         </div>
+                        <label className={`flex items-start gap-3 rounded-md border p-3 text-sm ${canIssueAccountActivations ? 'border-sky-500/40 bg-sky-950/20 text-gray-200' : 'border-gray-700 bg-gray-900/40 text-gray-500'}`}>
+                            <input
+                                type="checkbox"
+                                checked={issueAccountActivations && canIssueAccountActivations}
+                                disabled={!canIssueAccountActivations}
+                                onChange={event => setIssueAccountActivations(event.target.checked)}
+                                className="mt-1 h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                            />
+                            <span>
+                                <span className="block font-semibold text-white">Create/link login accounts and email activation codes for this course</span>
+                                <span className="mt-1 block text-xs text-gray-400">
+                                    Requires Personnel ID and Email for every uploaded trainee. The email sends only the activation code; the user signs in with Personnel ID plus that code.
+                                </span>
+                                {!canIssueAccountActivations && (
+                                    <span className="mt-1 block text-xs text-amber-300">Admin or Super Admin access is required.</span>
+                                )}
+                            </span>
+                        </label>
                         {status && <p className="text-sm text-amber-300">{status}</p>}
                     </div>
                     <div className="flex justify-end gap-3 border-t border-gray-700 bg-gray-800/50 px-6 py-4">

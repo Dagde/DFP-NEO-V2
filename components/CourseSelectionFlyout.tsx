@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface CourseSelectionFlyoutProps {
   courses: string[];
-  onConfirm: (selectedCourse: string) => void;
+  onConfirm: (selectedCourse: string) => void | Promise<void>;
   onClose: () => void;
   updateType: 'bulk' | 'minor';
 }
@@ -15,14 +15,23 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
 }) => {
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCourse) {
             setError('Please select a course.');
             return;
         }
-        onConfirm(selectedCourse);
+        setIsSubmitting(true);
+        setError('');
+        try {
+            await onConfirm(selectedCourse);
+        } catch (submitError) {
+            setError((submitError as Error).message || 'The course update could not be completed.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -88,13 +97,14 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
                     </button>
                     <button 
                         type="submit" 
+                        disabled={isSubmitting}
                         className={`px-4 py-2 rounded-md transition-colors text-sm font-semibold ${
                             updateType === 'bulk' 
                                 ? 'bg-red-600 hover:bg-red-700 text-white' 
                                 : 'bg-sky-600 hover:bg-sky-700 text-white'
-                        }`}
+                        } disabled:cursor-not-allowed disabled:bg-gray-600`}
                     >
-                        {updateType === 'bulk' ? 'Replace Course Data' : 'Update Course'}
+                        {isSubmitting ? 'Processing...' : updateType === 'bulk' ? 'Replace Course Data' : 'Update Course'}
                     </button>
                 </div>
             </form>

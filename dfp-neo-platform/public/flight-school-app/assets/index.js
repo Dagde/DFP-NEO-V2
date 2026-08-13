@@ -27856,13 +27856,22 @@ const CourseSelectionFlyout = ({
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCourse) {
       setError("Please select a course.");
       return;
     }
-    onConfirm(selectedCourse);
+    setIsSubmitting(true);
+    setError("");
+    try {
+      await onConfirm(selectedCourse);
+    } catch (submitError) {
+      setError(submitError.message || "The course update could not be completed.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Select Course" }) }),
@@ -27915,8 +27924,9 @@ const CourseSelectionFlyout = ({
         "button",
         {
           type: "submit",
-          className: `px-4 py-2 rounded-md transition-colors text-sm font-semibold ${updateType === "bulk" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white"}`,
-          children: updateType === "bulk" ? "Replace Course Data" : "Update Course"
+          disabled: isSubmitting,
+          className: `px-4 py-2 rounded-md transition-colors text-sm font-semibold ${updateType === "bulk" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white"} disabled:cursor-not-allowed disabled:bg-gray-600`,
+          children: isSubmitting ? "Processing..." : updateType === "bulk" ? "Replace Course Data" : "Update Course"
         }
       )
     ] })
@@ -27958,6 +27968,27 @@ const UpdateSummaryFlyout = ({ summary, onClose }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Rows Skipped:" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-amber-400 float-right", children: summary.skipped })
+        ] })
+      ] }),
+      summary.activation?.requested && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-md text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: "Account Activation" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Emails Sent:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-green-400 float-right", children: summary.activation.sent })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Skipped:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-amber-400 float-right", children: summary.activation.skipped })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Failed:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-red-400 float-right", children: summary.activation.failed })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Course Total:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white float-right", children: summary.activation.total })
+          ] })
         ] })
       ] })
     ] }),
@@ -28079,7 +28110,8 @@ const TraineeBulkUploadFlyout = ({
   courseColors,
   onBulkUpdateTrainees,
   onReplaceTrainees,
-  onUpdateTraineeLMPs
+  onUpdateTraineeLMPs,
+  currentUserRole
 }) => {
   const inputRef = reactExports.useRef(null);
   const [file, setFile] = reactExports.useState(null);
@@ -28091,7 +28123,9 @@ const TraineeBulkUploadFlyout = ({
   const [rows, setRows] = reactExports.useState([]);
   const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
   const [summary, setSummary] = reactExports.useState(null);
+  const [issueAccountActivations, setIssueAccountActivations] = reactExports.useState(false);
   const activeCourses = reactExports.useMemo(() => Object.keys(courseColors).sort((a, b) => a.localeCompare(b)), [courseColors]);
+  const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
     if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
@@ -28148,23 +28182,63 @@ const TraineeBulkUploadFlyout = ({
       return nextLMPs;
     });
   };
-  const processRows = (course) => {
+  const issueCourseActivations = async (course) => {
+    const sessionToken = localStorage.getItem("dfp_session_token") || "";
+    const response = await fetch(`${getAppApiBase()}/admin/direct-course-activations`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+      },
+      body: JSON.stringify({ course })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || "Account activation emails could not be sent.");
+    }
+    return {
+      requested: true,
+      total: Number(payload.total || 0),
+      sent: Number(payload.sent || 0),
+      skipped: Number(payload.skipped || 0),
+      failed: Number(payload.failed || 0)
+    };
+  };
+  const processRows = async (course) => {
     const parsedRows = rows.map(parseTraineeRow);
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
     const skipped = rows.length - validRows.length;
     const newTrainees = validRows.map((trainee) => ({ ...trainee, course, fullName: `${trainee.name} – ${course}` }));
+    const activationRequested = issueAccountActivations && canIssueAccountActivations;
+    if (activationRequested) {
+      const missingEmail = newTrainees.filter((trainee) => !String(trainee.email || "").trim());
+      if (missingEmail.length > 0) {
+        const names = missingEmail.slice(0, 5).map((trainee) => trainee.name || trainee.fullName || String(trainee.idNumber)).join(", ");
+        setShowCourseSelection(false);
+        setStatus(`Account activation requires an Email for every uploaded trainee. Missing Email: ${names}${missingEmail.length > 5 ? ` and ${missingEmail.length - 5} more` : ""}.`);
+        return;
+      }
+    }
+    let activation;
     if (updateType === "bulk") {
       const otherCourseTrainees = traineesData.filter((trainee) => trainee.course !== course);
-      onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
+      await onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
       initialiseLmpForNewTrainees(newTrainees.filter((trainee) => !traineesData.some((existing) => existing.idNumber === trainee.idNumber)));
-      setSummary({ type: "Bulk", replaced: newTrainees.length, added: 0, updated: 0, skipped });
+      if (activationRequested) {
+        activation = await issueCourseActivations(course);
+      }
+      setSummary({ type: "Bulk", replaced: newTrainees.length, added: 0, updated: 0, skipped, activation });
     } else {
       const existingIds = new Set(traineesData.map((trainee) => trainee.idNumber));
       const added = newTrainees.filter((trainee) => !existingIds.has(trainee.idNumber));
       const updated = newTrainees.filter((trainee) => existingIds.has(trainee.idNumber));
-      onBulkUpdateTrainees(newTrainees);
+      await onBulkUpdateTrainees(newTrainees);
       initialiseLmpForNewTrainees(added);
-      setSummary({ type: "Minor", replaced: 0, added: added.length, updated: updated.length, skipped });
+      if (activationRequested) {
+        activation = await issueCourseActivations(course);
+      }
+      setSummary({ type: "Minor", replaced: 0, added: added.length, updated: updated.length, skipped, activation });
     }
     logAudit({
       page: "Trainee Roster",
@@ -28173,6 +28247,7 @@ const TraineeBulkUploadFlyout = ({
       changes: `Processed ${newTrainees.length} trainees from ${file?.name || "local file"}`
     });
     setShowCourseSelection(false);
+    setStatus("");
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[70] flex items-center justify-center bg-black/60 animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-lg rounded-lg border border-gray-700 bg-gray-800 shadow-xl", onClick: (event) => event.stopPropagation(), children: [
@@ -28226,6 +28301,23 @@ const TraineeBulkUploadFlyout = ({
             ]
           }
         ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: `flex items-start gap-3 rounded-md border p-3 text-sm ${canIssueAccountActivations ? "border-sky-500/40 bg-sky-950/20 text-gray-200" : "border-gray-700 bg-gray-900/40 text-gray-500"}`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "checkbox",
+              checked: issueAccountActivations && canIssueAccountActivations,
+              disabled: !canIssueAccountActivations,
+              onChange: (event) => setIssueAccountActivations(event.target.checked),
+              className: "mt-1 h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold text-white", children: "Create/link login accounts and email activation codes for this course" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-400", children: "Requires Personnel ID and Email for every uploaded trainee. The email sends only the activation code; the user signs in with Personnel ID plus that code." }),
+            !canIssueAccountActivations && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-amber-300", children: "Admin or Super Admin access is required." })
+          ] })
+        ] }),
         status && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-amber-300", children: status })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-3 border-t border-gray-700 bg-gray-800/50 px-6 py-4", children: [
@@ -28837,7 +28929,8 @@ const CourseRosterView = ({
         courseColors,
         onBulkUpdateTrainees,
         onReplaceTrainees,
-        onUpdateTraineeLMPs
+        onUpdateTraineeLMPs,
+        currentUserRole
       }
     )
   ] });

@@ -755,6 +755,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onBulkUpdateTrainees={onBulkUpdateTrainees}
                     onReplaceTrainees={onReplaceTrainees}
                     onUpdateTraineeLMPs={onUpdateTraineeLMPs}
+                    currentUserRole={currentUserRole}
                 />
             )}
         </>
