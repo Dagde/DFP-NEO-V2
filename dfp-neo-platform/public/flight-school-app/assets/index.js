@@ -95881,6 +95881,23 @@ const eventHasPersonWithRole = (event, personName, role) => {
   return getPersonnelIdentityRefs(event).some((eventRef) => eventRef.key === ref.key);
 };
 const eventHasPerson = (event, personName) => getPersonnel(event).some((p) => personnelNamesMatch(p, personName));
+const eventHasNeoBuildPersonIdentity = (event, person, role) => {
+  const personName = getNeoBuildPersonDisplayLabel(person);
+  if (!personName) return false;
+  const matchingRefs = (event.personnelRefs || []).filter((ref) => ref.personType === role && personnelNamesMatch(ref.name, personName));
+  const matchingRefsWithIdentity = matchingRefs.filter((ref) => getNeoBuildIdentityValue(ref.idNumber) || getNeoBuildIdentityValue(ref.id));
+  if (matchingRefsWithIdentity.length > 0) {
+    return matchingRefsWithIdentity.some((ref) => {
+      const refIdNumber = getNeoBuildIdentityValue(ref.idNumber);
+      const personIdNumber = getNeoBuildIdentityValue(person.idNumber);
+      if (refIdNumber && personIdNumber && refIdNumber === personIdNumber) return true;
+      const refId = getNeoBuildIdentityValue(ref.id);
+      const personId = getNeoBuildIdentityValue(person.id);
+      return Boolean(refId && personId && refId === personId);
+    });
+  }
+  return eventHasPersonWithRole(event, personName, role);
+};
 const getCommonPersonnel = (eventA, eventB) => {
   const eventBPersonnelKeys = new Set(getPersonnelIdentityRefs(eventB).map((person) => person.key));
   return getPersonnelIdentityRefs(eventA).filter((person) => eventBPersonnelKeys.has(person.key)).map((person) => person.label);
@@ -97317,6 +97334,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
   };
+  const isStaffScheduledForDayEvents = (staff) => getGeneratedEventsForPersonRecord(staff, "staff").some((e) => eventHasNeoBuildPersonIdentity(e, staff, "staff") && getGeneratedEventDayNightClassification(e) === "Day");
+  const isStaffScheduledForNightEvents = (staff) => getGeneratedEventsForPersonRecord(staff, "staff").some((e) => eventHasNeoBuildPersonIdentity(e, staff, "staff") && getGeneratedEventDayNightClassification(e) === "Night") || intendedNightStaff.has(normalizeBuildPersonnelName(staff.name));
   const getScheduledDayNightForStart = (startTime) => isStartWithinNightWindow(startTime) ? "Night" : "Day";
   const normaliseTimelineClockForBuild = (time) => {
     const numericTime = Number(time);
@@ -97361,6 +97380,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (proposedDayNight === "Day" && isPersonScheduledForNightEvents(personName)) return false;
     return true;
   };
+  const canAssignStaffForScheduledWindow = (staff, startTime) => {
+    const proposedDayNight = getScheduledDayNightForStart(startTime);
+    if (proposedDayNight === "Night" && isStaffScheduledForDayEvents(staff)) return false;
+    if (proposedDayNight === "Day" && isStaffScheduledForNightEvents(staff)) return false;
+    return true;
+  };
   recordProgress({ message: "Initializing DFP build...", percentage: 0 });
   buildDebugLog("[SEQ-DIAG] generateDfpInternal entered");
   if (windowNormalisationWarnings.length > 0) {
@@ -97399,6 +97424,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }));
   const generatedEventsByPerson = /* @__PURE__ */ new Map();
   const getBuildPersonKey = (personName) => normalizeBuildPersonnelName(personName);
+  const getBuildRefIdentityKey = (ref) => {
+    const role = ref.personType;
+    const idNumber = getNeoBuildIdentityValue(ref.idNumber);
+    if (idNumber) return `${role}:idNumber:${idNumber}`;
+    const id = getNeoBuildIdentityValue(ref.id);
+    if (id) return `${role}:id:${id}`;
+    const nameKey = getBuildPersonKey(ref.name);
+    return nameKey ? `${role}:name:${nameKey}` : "";
+  };
+  const getBuildPersonIdentityKey = (person, role) => getNeoBuildPersonIdentityKey(role, person, getNeoBuildPersonDisplayLabel(person))?.identityKey || "";
+  const addGeneratedEventIndexKey = (key, event) => {
+    if (!key) return;
+    let bucket = generatedEventsByPerson.get(key);
+    if (!bucket) {
+      bucket = /* @__PURE__ */ new Set();
+      generatedEventsByPerson.set(key, bucket);
+    }
+    bucket.add(event);
+  };
   const indexGeneratedEvent = (event) => {
     const names = /* @__PURE__ */ new Set([
       ...getPersonnel(event),
@@ -97406,14 +97450,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     ]);
     names.forEach((name) => {
       const key = getBuildPersonKey(name);
-      if (!key) return;
-      let bucket = generatedEventsByPerson.get(key);
-      if (!bucket) {
-        bucket = /* @__PURE__ */ new Set();
-        generatedEventsByPerson.set(key, bucket);
-      }
-      bucket.add(event);
+      addGeneratedEventIndexKey(key, event);
     });
+    (event.personnelRefs || []).forEach((ref) => addGeneratedEventIndexKey(getBuildRefIdentityKey(ref), event));
   };
   const rebuildGeneratedEventIndexes = () => {
     generatedEventsByPerson.clear();
@@ -97442,6 +97481,35 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const key = getBuildPersonKey(personName);
     if (!key) return [];
     return Array.from(generatedEventsByPerson.get(key) || []);
+  };
+  const getGeneratedEventsForPersonRecord = (person, role) => {
+    const identityKey = getBuildPersonIdentityKey(person, role);
+    const nameKey = getBuildPersonKey(getNeoBuildPersonDisplayLabel(person));
+    const candidates = /* @__PURE__ */ new Set([
+      ...Array.from(identityKey ? generatedEventsByPerson.get(identityKey) || [] : []),
+      ...Array.from(nameKey ? generatedEventsByPerson.get(nameKey) || [] : [])
+    ]);
+    return Array.from(candidates).filter((event) => eventHasNeoBuildPersonIdentity(event, person, role));
+  };
+  const calculateStaffDutyHours = (staff, includeProposedEvent) => {
+    const instructorEvents = includeProposedEvent ? [...getGeneratedEventsForPersonRecord(staff, "staff"), includeProposedEvent] : getGeneratedEventsForPersonRecord(staff, "staff");
+    if (instructorEvents.length === 0) return 0;
+    const bookingWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
+    let totalHours = 0;
+    let currentStart = bookingWindows[0].start;
+    let currentEnd = bookingWindows[0].end;
+    for (let i = 1; i < bookingWindows.length; i++) {
+      const window2 = bookingWindows[i];
+      if (window2.start <= currentEnd) {
+        currentEnd = Math.max(currentEnd, window2.end);
+      } else {
+        totalHours += currentEnd - currentStart;
+        currentStart = window2.start;
+        currentEnd = window2.end;
+      }
+    }
+    totalHours += currentEnd - currentStart;
+    return totalHours;
   };
   getGeneratedEventsForPersonForBuild = getGeneratedEventsForPerson;
   rebuildGeneratedEventIndexes();
@@ -102554,7 +102622,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (!pairedInstructorName) return null;
         const instructor2 = instructors.find((i) => i.name === pairedInstructorName);
         if (!instructor2) return null;
-        if (!canAssignPersonForScheduledWindow(instructor2.name, startTime)) return null;
+        if (!canAssignStaffForScheduledWindow(instructor2, startTime)) return null;
         if (isPersonStaticallyUnavailable(instructor2, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, "flight")) return null;
         const ipCounts = eventCounts.get(instructor2.name);
         const execLimit = eventLimits.exec.maxFlightFtd;
@@ -102566,7 +102634,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           flightNumber: syllabusItemForCheck.code,
           type: syllabusItemForCheck.type
         };
-        const currentDutyHours = calculateInstructorDutyHours(instructor2.name, proposedEvent);
+        const currentDutyHours = calculateStaffDutyHours(instructor2, proposedEvent);
         if (currentDutyHours > preferredDutyPeriod) {
           buildDebugLog(`SOFT LIMIT VIOLATION: ${instructor2.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
           return null;
@@ -102581,9 +102649,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (ipCounts.flightFtd >= flightFtdLimit) return null;
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventLimit) return null;
         }
-        const hasOverlap = getGeneratedEventsForPerson(instructor2.name).some((e) => {
+        const hasOverlap = getGeneratedEventsForPersonRecord(instructor2, "staff").some((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
-          if (!eventHasPerson(e, instructor2.name)) return false;
+          if (!eventHasNeoBuildPersonIdentity(e, instructor2, "staff")) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
@@ -102620,7 +102688,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (isNightPass && isPlusOneCheck) {
           const { next } = traineeNextEventMap.get(traineeForCheck.fullName);
           const firstNightEvent = getGeneratedEventsForPerson(traineeForCheck.fullName).find(
-            (e) => e.flightNumber === next?.id && getPersonnel(e).includes(traineeForCheck.fullName) && getPersonnel(e).includes(instructor2.name)
+            (e) => e.flightNumber === next?.id && getPersonnel(e).includes(traineeForCheck.fullName) && eventHasNeoBuildPersonIdentity(e, instructor2, "staff")
           );
           if (firstNightEvent) {
             const firstSyllabus = syllabusDetails.find((s) => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
@@ -102641,9 +102709,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         candidates = instructors.filter((ip) => ip.name === remedialInstructorOverride);
       } else {
         candidates = [...getBaseInstructorPoolForEventType(type)];
-        candidates = candidates.filter((ip) => {
-          return canAssignPersonForScheduledWindow(ip.name, startTime);
-        });
+        candidates = candidates.filter((ip) => canAssignStaffForScheduledWindow(ip, startTime));
         if (requiredRemedialInstructor) {
           candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
         }
@@ -102806,7 +102872,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           flightNumber: syllabusItemForCheck.code,
           type: syllabusItemForCheck.type
         };
-        const currentDutyHours = calculateInstructorDutyHours(ip.name, proposedEvent);
+        const currentDutyHours = calculateStaffDutyHours(ip, proposedEvent);
         if (!remedialInstructorOverride && currentDutyHours > preferredDutyPeriod) {
           buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
           _dRej.softDutyLimit++;
@@ -102867,9 +102933,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
         }
-        const overlappingEvents = getGeneratedEventsForPerson(ip.name).filter((e) => {
+        const overlappingEvents = getGeneratedEventsForPersonRecord(ip, "staff").filter((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
-          if (!eventHasPerson(e, ip.name)) return false;
+          if (!eventHasNeoBuildPersonIdentity(e, ip, "staff")) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
@@ -102942,9 +103008,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         }
         const ipEvents = [
-          ...getGeneratedEventsForPerson(ip.name),
+          ...getGeneratedEventsForPersonRecord(ip, "staff"),
           { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type }
-        ].filter((e) => getPersonnel(e).includes(ip.name) && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
+        ].filter((e) => eventHasNeoBuildPersonIdentity(e, ip, "staff") && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
         if (!remedialInstructorOverride && ipEvents.length > 0) {
           const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
           const firstEvent = sortedIpEvents[0];
@@ -103088,7 +103154,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
       const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
       const firstNightEvent = generatedEvents.find(
-        (e) => nextEventCodes.has(e.flightNumber) && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY") && getPersonnel(e).includes(trainee.fullName) && (!instructor?.name || getPersonnel(e).includes(instructor.name))
+        (e) => nextEventCodes.has(e.flightNumber) && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY") && getPersonnel(e).includes(trainee.fullName) && (!instructor || eventHasNeoBuildPersonIdentity(e, instructor, "staff"))
       );
       return firstNightEvent?.resourceId || null;
     };
@@ -107839,13 +107905,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return false;
     };
-    const isInstructorAvailableForStby = (instructorName, startTime, duration, syllabusItem, events) => {
+    const isInstructorAvailableForStby = (instructor, startTime, duration, syllabusItem, events) => {
       const preTime = syllabusItem.preFlightTime || 0;
       const postTime = syllabusItem.postFlightTime || 0;
       const stbyStart = startTime - preTime;
       const stbyEnd = startTime + duration + postTime;
       return !events.some((e) => {
-        if (!getPersonnel(e).includes(instructorName)) return false;
+        if (!eventHasNeoBuildPersonIdentity(e, instructor, "staff")) return false;
         const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
         return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
       });
@@ -107863,12 +107929,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const afterUnitFilter = candidates.filter((ip) => isInstructorEligibleByUnit(ip, trainee));
       candidates = afterUnitFilter;
       const available = candidates.filter(
-        (ip) => canAssignPersonForScheduledWindow(ip.name, startTime) && isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
+        (ip) => canAssignStaffForScheduledWindow(ip, startTime) && isInstructorAvailableForStby(ip, startTime, duration, syllabusItem, events)
       );
       if (available.length === 0) return null;
       const instructorEventCounts = available.map((ip) => ({
         instructor: ip,
-        count: events.filter((e) => e.instructor === ip.name).length
+        count: events.filter((e) => eventHasNeoBuildPersonIdentity(e, ip, "staff")).length
       }));
       const minCount = Math.min(...instructorEventCounts.map((ic) => ic.count));
       const withMinCount = instructorEventCounts.filter((ic) => ic.count === minCount);

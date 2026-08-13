@@ -5383,6 +5383,35 @@ const eventHasPerson = (
     personName?: string
 ): boolean => getPersonnel(event).some(p => personnelNamesMatch(p, personName));
 
+const eventHasNeoBuildPersonIdentity = (
+    event: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
+    person: NeoBuildIdentityPersonRecord,
+    role: PersonnelIdentityRole,
+): boolean => {
+    const personName = getNeoBuildPersonDisplayLabel(person);
+    if (!personName) return false;
+
+    const matchingRefs = (event.personnelRefs || []).filter(ref => (
+        ref.personType === role && personnelNamesMatch(ref.name, personName)
+    ));
+    const matchingRefsWithIdentity = matchingRefs.filter(ref => (
+        getNeoBuildIdentityValue(ref.idNumber) || getNeoBuildIdentityValue(ref.id)
+    ));
+    if (matchingRefsWithIdentity.length > 0) {
+        return matchingRefsWithIdentity.some(ref => {
+            const refIdNumber = getNeoBuildIdentityValue(ref.idNumber);
+            const personIdNumber = getNeoBuildIdentityValue(person.idNumber);
+            if (refIdNumber && personIdNumber && refIdNumber === personIdNumber) return true;
+
+            const refId = getNeoBuildIdentityValue(ref.id);
+            const personId = getNeoBuildIdentityValue(person.id);
+            return Boolean(refId && personId && refId === personId);
+        });
+    }
+
+    return eventHasPersonWithRole(event, personName, role);
+};
+
 const getCommonPersonnel = (
     eventA: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
     eventB: Omit<ScheduleEvent, 'date'> | ScheduleEvent
@@ -7706,6 +7735,20 @@ function generateDfpInternal(
         return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
     };
 
+    const isStaffScheduledForDayEvents = (staff: Instructor): boolean => (
+        getGeneratedEventsForPersonRecord(staff, 'staff').some(e => (
+            eventHasNeoBuildPersonIdentity(e, staff, 'staff') &&
+            getGeneratedEventDayNightClassification(e) === 'Day'
+        ))
+    );
+
+    const isStaffScheduledForNightEvents = (staff: Instructor): boolean => (
+        getGeneratedEventsForPersonRecord(staff, 'staff').some(e => (
+            eventHasNeoBuildPersonIdentity(e, staff, 'staff') &&
+            getGeneratedEventDayNightClassification(e) === 'Night'
+        )) || intendedNightStaff.has(normalizeBuildPersonnelName(staff.name))
+    );
+
     const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' =>
         isStartWithinNightWindow(startTime) ? 'Night' : 'Day';
 
@@ -7759,6 +7802,13 @@ function generateDfpInternal(
         const proposedDayNight = getScheduledDayNightForStart(startTime);
         if (proposedDayNight === 'Night' && isPersonScheduledForDayEvents(personName)) return false;
         if (proposedDayNight === 'Day' && isPersonScheduledForNightEvents(personName)) return false;
+        return true;
+    };
+
+    const canAssignStaffForScheduledWindow = (staff: Instructor, startTime: number): boolean => {
+        const proposedDayNight = getScheduledDayNightForStart(startTime);
+        if (proposedDayNight === 'Night' && isStaffScheduledForDayEvents(staff)) return false;
+        if (proposedDayNight === 'Day' && isStaffScheduledForNightEvents(staff)) return false;
         return true;
     };
 
@@ -7818,6 +7868,27 @@ function generateDfpInternal(
     type GeneratedBuildEvent = typeof generatedEvents[number];
     const generatedEventsByPerson = new Map<string, Set<GeneratedBuildEvent>>();
     const getBuildPersonKey = (personName?: string): string => normalizeBuildPersonnelName(personName);
+    const getBuildRefIdentityKey = (ref: ScheduleEventPersonnelRef): string => {
+        const role = ref.personType;
+        const idNumber = getNeoBuildIdentityValue(ref.idNumber);
+        if (idNumber) return `${role}:idNumber:${idNumber}`;
+        const id = getNeoBuildIdentityValue(ref.id);
+        if (id) return `${role}:id:${id}`;
+        const nameKey = getBuildPersonKey(ref.name);
+        return nameKey ? `${role}:name:${nameKey}` : '';
+    };
+    const getBuildPersonIdentityKey = (person: NeoBuildIdentityPersonRecord, role: PersonnelIdentityRole): string => (
+        getNeoBuildPersonIdentityKey(role, person, getNeoBuildPersonDisplayLabel(person))?.identityKey || ''
+    );
+    const addGeneratedEventIndexKey = (key: string, event: GeneratedBuildEvent) => {
+        if (!key) return;
+        let bucket = generatedEventsByPerson.get(key);
+        if (!bucket) {
+            bucket = new Set<GeneratedBuildEvent>();
+            generatedEventsByPerson.set(key, bucket);
+        }
+        bucket.add(event);
+    };
     const indexGeneratedEvent = (event: GeneratedBuildEvent) => {
         const names = new Set<string>([
             ...getPersonnel(event),
@@ -7825,14 +7896,9 @@ function generateDfpInternal(
         ]);
         names.forEach(name => {
             const key = getBuildPersonKey(name);
-            if (!key) return;
-            let bucket = generatedEventsByPerson.get(key);
-            if (!bucket) {
-                bucket = new Set<GeneratedBuildEvent>();
-                generatedEventsByPerson.set(key, bucket);
-            }
-            bucket.add(event);
+            addGeneratedEventIndexKey(key, event);
         });
+        (event.personnelRefs || []).forEach(ref => addGeneratedEventIndexKey(getBuildRefIdentityKey(ref), event));
     };
     const rebuildGeneratedEventIndexes = () => {
         generatedEventsByPerson.clear();
@@ -7865,6 +7931,45 @@ function generateDfpInternal(
         const key = getBuildPersonKey(personName);
         if (!key) return [];
         return Array.from(generatedEventsByPerson.get(key) || []);
+    };
+    const getGeneratedEventsForPersonRecord = (
+        person: NeoBuildIdentityPersonRecord,
+        role: PersonnelIdentityRole,
+    ): GeneratedBuildEvent[] => {
+        const identityKey = getBuildPersonIdentityKey(person, role);
+        const nameKey = getBuildPersonKey(getNeoBuildPersonDisplayLabel(person));
+        const candidates = new Set<GeneratedBuildEvent>([
+            ...Array.from(identityKey ? generatedEventsByPerson.get(identityKey) || [] : []),
+            ...Array.from(nameKey ? generatedEventsByPerson.get(nameKey) || [] : []),
+        ]);
+        return Array.from(candidates).filter(event => eventHasNeoBuildPersonIdentity(event, person, role));
+    };
+    const calculateStaffDutyHours = (staff: Instructor, includeProposedEvent?: any): number => {
+        const instructorEvents = includeProposedEvent
+            ? [...getGeneratedEventsForPersonRecord(staff, 'staff'), includeProposedEvent]
+            : getGeneratedEventsForPersonRecord(staff, 'staff');
+
+        if (instructorEvents.length === 0) return 0;
+
+        const bookingWindows = instructorEvents
+            .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+            .sort((a, b) => a.start - b.start);
+
+        let totalHours = 0;
+        let currentStart = bookingWindows[0].start;
+        let currentEnd = bookingWindows[0].end;
+        for (let i = 1; i < bookingWindows.length; i++) {
+            const window = bookingWindows[i];
+            if (window.start <= currentEnd) {
+                currentEnd = Math.max(currentEnd, window.end);
+            } else {
+                totalHours += currentEnd - currentStart;
+                currentStart = window.start;
+                currentEnd = window.end;
+            }
+        }
+        totalHours += currentEnd - currentStart;
+        return totalHours;
     };
     getGeneratedEventsForPersonForBuild = getGeneratedEventsForPerson;
     rebuildGeneratedEventIndexes();
@@ -13914,7 +14019,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 const instructor = instructors.find(i => i.name === pairedInstructorName);
                 if (!instructor) return null;
 
-                if (!canAssignPersonForScheduledWindow(instructor.name, startTime)) return null;
+                if (!canAssignStaffForScheduledWindow(instructor, startTime)) return null;
 
                 if (isPersonStaticallyUnavailable(instructor, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'flight')) return null;
 
@@ -13930,7 +14035,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     flightNumber: syllabusItemForCheck.code,
                     type: syllabusItemForCheck.type
                 };
-                const currentDutyHours = calculateInstructorDutyHours(instructor.name, proposedEvent);
+                const currentDutyHours = calculateStaffDutyHours(instructor, proposedEvent);
 
                 if (currentDutyHours > preferredDutyPeriod) {
                     buildDebugLog(`SOFT LIMIT VIOLATION: ${instructor.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
@@ -13954,9 +14059,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
                 // Any instructor booking-window overlap blocks assignment, regardless of event type.
-                const hasOverlap = getGeneratedEventsForPerson(instructor.name).some(e => {
+                const hasOverlap = getGeneratedEventsForPersonRecord(instructor, 'staff').some(e => {
                          if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
-                         if (!eventHasPerson(e, instructor.name)) return false;
+                         if (!eventHasNeoBuildPersonIdentity(e, instructor, 'staff')) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
                          if (overlaps) {
@@ -13999,7 +14104,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     const firstNightEvent = getGeneratedEventsForPerson(traineeForCheck.fullName).find(e =>
                         e.flightNumber === next?.id &&
                         getPersonnel(e).includes(traineeForCheck.fullName) &&
-                        getPersonnel(e).includes(instructor.name)
+                        eventHasNeoBuildPersonIdentity(e, instructor, 'staff')
                     );
 
                     if (firstNightEvent) {
@@ -14041,9 +14146,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             } else {
                 candidates = [...getBaseInstructorPoolForEventType(type)];
 
-                candidates = candidates.filter(ip => {
-                    return canAssignPersonForScheduledWindow(ip.name, startTime);
-                });
+                candidates = candidates.filter(ip => canAssignStaffForScheduledWindow(ip, startTime));
 
                 if (requiredRemedialInstructor) {
                     candidates = candidates.filter(ip => ip.name === requiredRemedialInstructor);
@@ -14274,7 +14377,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     flightNumber: syllabusItemForCheck.code,
                     type: syllabusItemForCheck.type
                 };
-                const currentDutyHours = calculateInstructorDutyHours(ip.name, proposedEvent);
+                const currentDutyHours = calculateStaffDutyHours(ip, proposedEvent);
 
                 if (!remedialInstructorOverride && currentDutyHours > preferredDutyPeriod) {
                     buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
@@ -14320,9 +14423,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
                 // Any instructor booking-window overlap blocks assignment, regardless of event type.
-                const overlappingEvents = getGeneratedEventsForPerson(ip.name).filter(e => {
+                const overlappingEvents = getGeneratedEventsForPersonRecord(ip, 'staff').filter(e => {
                          if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
-                         if (!eventHasPerson(e, ip.name)) return false;
+                         if (!eventHasNeoBuildPersonIdentity(e, ip, 'staff')) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
                          if (overlaps) {
@@ -14400,9 +14503,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 // ─────────────────────────────────────────────────────────────────────
 
                 const ipEvents = [
-                    ...getGeneratedEventsForPerson(ip.name),
+                    ...getGeneratedEventsForPersonRecord(ip, 'staff'),
                     { startTime, duration: scheduledDuration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>,
-                ].filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
+                ].filter(e => eventHasNeoBuildPersonIdentity(e, ip, 'staff') && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
                 if (!remedialInstructorOverride && ipEvents.length > 0) {
                     const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
                     const firstEvent = sortedIpEvents[0];
@@ -14638,7 +14741,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 !e.resourceId.startsWith('STBY') &&
                 !e.resourceId.startsWith('BNF-STBY') &&
                 getPersonnel(e).includes(trainee.fullName) &&
-                (!instructor?.name || getPersonnel(e).includes(instructor.name))
+                (!instructor || eventHasNeoBuildPersonIdentity(e, instructor, 'staff'))
             );
             return firstNightEvent?.resourceId || null;
         };
@@ -20038,7 +20141,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
     // so e.g. an instructor finishing a flight with 45min post-flight cannot be assigned to a
     // STBY event with 60min pre-flight unless there is at least 105 minutes between them.
     const isInstructorAvailableForStby = (
-        instructorName: string,
+        instructor: Instructor,
         startTime: number,
         duration: number,
         syllabusItem: SyllabusItemDetail,
@@ -20050,7 +20153,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         const stbyEnd = startTime + duration + postTime;
 
         return !events.some(e => {
-            if (!getPersonnel(e).includes(instructorName)) return false;
+            if (!eventHasNeoBuildPersonIdentity(e, instructor, 'staff')) return false;
             // Use full booking window (pre+post) of the existing event
             const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
             return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
@@ -20086,8 +20189,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // Filter to only available instructors using STBY-specific availability check.
         // Respects pre/post flight times of both the STBY event and all existing events.
         const available = candidates.filter(ip =>
-            canAssignPersonForScheduledWindow(ip.name, startTime) &&
-            isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
+            canAssignStaffForScheduledWindow(ip, startTime) &&
+            isInstructorAvailableForStby(ip, startTime, duration, syllabusItem, events)
         );
 
         if (available.length === 0) return null;
@@ -20095,7 +20198,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         // Count events for each instructor
         const instructorEventCounts = available.map(ip => ({
             instructor: ip,
-            count: events.filter(e => e.instructor === ip.name).length
+            count: events.filter(e => eventHasNeoBuildPersonIdentity(e, ip, 'staff')).length
         }));
 
         // Find minimum count
