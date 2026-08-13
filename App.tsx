@@ -24640,7 +24640,11 @@ const App: React.FC = () => {
             ...instructorsData.map(person => ({ ...(person as any), personType: 'staff' })),
             ...traineesData.map(person => ({ ...(person as any), personType: 'trainee' })),
         ];
-        const resolver = buildCompactPersonNameResolver(contextPeople);
+        const staffPeople = contextPeople.filter(person => person.personType === 'staff');
+        const traineePeople = contextPeople.filter(person => person.personType === 'trainee');
+        const staffResolver = buildCompactPersonNameResolver(staffPeople);
+        const traineeResolver = buildCompactPersonNameResolver(traineePeople);
+        const mixedResolver = buildCompactPersonNameResolver(contextPeople);
         const cleanNameKey = (value: unknown) => normalisePersonName(String(value || '')
             .split(' – ')[0]
             .split(' - ')[0]
@@ -24663,7 +24667,7 @@ const App: React.FC = () => {
                 personType: person.personType ?? null,
             };
         };
-        const exactDuplicateGroups = Array.from(contextPeople.reduce((groups, person) => {
+        const buildExactDuplicateGroups = (people: PersonIdentityRecord[]) => Array.from(people.reduce((groups, person) => {
             const displayName = getPersonDisplayName(person);
             const key = cleanNameKey(displayName);
             if (!key) return groups;
@@ -24677,6 +24681,9 @@ const App: React.FC = () => {
                 count: people.length,
                 people: people.map(serialisePerson),
             }));
+        const exactDuplicateGroups = buildExactDuplicateGroups(contextPeople);
+        const exactStaffDuplicateGroups = buildExactDuplicateGroups(staffPeople);
+        const exactTraineeDuplicateGroups = buildExactDuplicateGroups(traineePeople);
         const surnameGroups = Array.from(contextPeople.reduce((groups, person) => {
             const displayName = getPersonDisplayName(person);
             const surname = String(displayName || '').split(',')[0]?.trim() ||
@@ -24695,9 +24702,16 @@ const App: React.FC = () => {
             }));
         const explainValue = (role: string, value: unknown) => {
             if (value === undefined || value === null || value === '') return null;
+            const resolver = role.endsWith(':staff') || ['instructor', 'pilot', 'fixedCrewPic'].includes(role)
+                ? staffResolver
+                : (role.endsWith(':trainee') || role === 'student' || role === '_traineeName' || role.startsWith('attendees['))
+                    ? traineeResolver
+                    : mixedResolver;
+            const resolverScope = resolver === staffResolver ? 'staff' : resolver === traineeResolver ? 'trainee' : 'mixed';
             const explanation = resolver.explainCompact(value);
             return {
                 role,
+                resolverScope,
                 rawValue: value,
                 rawHasVisualSuffix: compactSuffixPattern.test(String(value || '')),
                 outputHasVisualSuffix: compactSuffixPattern.test(explanation.output),
@@ -24737,7 +24751,12 @@ const App: React.FC = () => {
             if (Array.isArray((event as any).personnelRefs)) {
                 (event as any).personnelRefs.forEach((person: any, index: number) => {
                     const displayName = getPersonDisplayName(person || {}) || person?.name || person?.fullName;
-                    const explained = explainValue(`personnelRefs[${index}]`, displayName);
+                    const refType = person?.personType === 'staff'
+                        ? 'staff'
+                        : person?.personType === 'trainee'
+                            ? 'trainee'
+                            : person?.role || 'mixed';
+                    const explained = explainValue(`personnelRefs[${index}]:${refType}`, displayName);
                     if (explained) {
                         roles.push({
                             ...explained,
@@ -24808,7 +24827,7 @@ const App: React.FC = () => {
 
         return {
             reportType: 'DFP tile name display diagnostics',
-            diagnosticVersion: 'CCH 8.137',
+            diagnosticVersion: 'CCH 8.138',
             generatedAt: new Date().toISOString(),
             url: window.location.href,
             userAgent: navigator.userAgent,
@@ -24829,12 +24848,16 @@ const App: React.FC = () => {
                 surnameGroupCount: surnameGroups.length,
                 eventCount: events.length,
                 eventsWithSuffixAnalyses: events.filter(event => event.suffixAnalyses.length > 0).length,
+                exactStaffDuplicateGroupCount: exactStaffDuplicateGroups.length,
+                exactTraineeDuplicateGroupCount: exactTraineeDuplicateGroups.length,
                 suspiciousSuffixCount: suspiciousSuffixes.length,
                 justifiedSuffixCount: justifiedSuffixes.length,
                 suspiciousSuffixes,
                 justifiedSuffixes,
             },
             exactDuplicateGroups,
+            exactStaffDuplicateGroups,
+            exactTraineeDuplicateGroups,
             surnameGroups,
             events,
         };

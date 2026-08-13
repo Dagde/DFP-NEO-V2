@@ -8957,10 +8957,29 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
   const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
   const isDutySup = event.resourceId === "Duty Sup";
   const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
-  const compactNameResolver = reactExports.useMemo(
+  const staffPersonnelRefs = reactExports.useMemo(
+    () => (event.personnelRefs || []).filter((ref) => ref.personType === "staff" || ["instructor", "pilot", "fixedCrewPic"].includes(ref.role)),
+    [event.personnelRefs]
+  );
+  const traineePersonnelRefs = reactExports.useMemo(
+    () => (event.personnelRefs || []).filter((ref) => ref.personType === "trainee" || ["student", "attendee"].includes(ref.role)),
+    [event.personnelRefs]
+  );
+  const staffNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver([...staffPersonnelRefs, ...instructorsData]),
+    [staffPersonnelRefs, instructorsData]
+  );
+  const traineeNameResolver = reactExports.useMemo(
+    () => buildCompactPersonNameResolver([...traineePersonnelRefs, ...traineesData]),
+    [traineePersonnelRefs, traineesData]
+  );
+  const mixedNameResolver = reactExports.useMemo(
     () => buildCompactPersonNameResolver([...event.personnelRefs || [], ...instructorsData, ...traineesData]),
     [event.personnelRefs, instructorsData, traineesData]
   );
+  const formatStaffTileName = (name) => staffNameResolver.formatCompact(name);
+  const formatTraineeTileName = (name) => traineeNameResolver.formatCompact(name);
+  const formatMixedTileName = (name) => mixedNameResolver.formatCompact(name);
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
@@ -9148,10 +9167,10 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
     }
     if (isSctEvent && event.flightType === "Dual" && event.student) {
-      return compactNameResolver.formatCompact(event.student);
+      return formatMixedTileName(event.student);
     }
     if ((isTaskingEvent2 || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === "Dual" && event.crew) {
-      return compactNameResolver.formatCompact(event.crew);
+      return formatMixedTileName(event.crew);
     }
     if (!isPooledCrewEvent && event.pilot && event.student && event.pilot === event.student) {
       return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" });
@@ -9160,14 +9179,14 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       return "Group";
     }
     if (event.student && event.student !== "Multiple") {
-      return compactNameResolver.formatCompact(event.student);
+      return formatTraineeTileName(event.student);
     }
     if (event.attendees && event.attendees.length === 1) {
-      return compactNameResolver.formatCompact(event.attendees[0]);
+      return formatTraineeTileName(event.attendees[0]);
     }
     if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
       const trainee = traineesData.find((t) => t.idNumber === event.groupTraineeIds[0]);
-      return trainee ? compactNameResolver.formatCompact(trainee.name) : "Group";
+      return trainee ? formatTraineeTileName(trainee.name) : "Group";
     }
     return "";
   };
@@ -9364,7 +9383,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
                   instructorLabel2,
                   ":"
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#e2e8f0", fontWeight: 600 }, children: compactNameResolver.formatCompact(instructor) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: "#e2e8f0", fontWeight: 600 }, children: formatStaffTileName(instructor) })
               ] }),
               lessonTiles.map((t, i) => {
                 const endTime = t.startTime + t.duration;
@@ -9416,7 +9435,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       if (isDutySup) {
         return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses, children: [
-            compactNameResolver.formatCompact(picName),
+            formatStaffTileName(picName),
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "font-mono text-white/80 truncate", children: [
@@ -9433,11 +9452,11 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center h-full w-full px-2", style: textStyle, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden pr-1", style: { paddingLeft: "10%", minWidth: 0 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: [
-            compactNameResolver.formatCompact(displayPicName),
+            formatStaffTileName(displayPicName),
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: isTwrDiEvent ? "TWR DI" : typeof studentDisplay === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : "",
+            displayStudentName ? formatTraineeTileName(displayStudentName) : "",
             studentSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig })
           ] }) : studentDisplay })
         ] }),
@@ -9459,11 +9478,11 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full w-full px-2", style: textStyle, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)", minWidth: 0 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: [
-            compactNameResolver.formatCompact(displayPicName),
+            formatStaffTileName(displayPicName),
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: isTwrDiEvent ? "TWR DI" : typeof studentDisplay === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : "",
+            displayStudentName ? formatTraineeTileName(displayStudentName) : "",
             studentSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig })
           ] }) : studentDisplay })
         ] }),
@@ -9531,7 +9550,7 @@ const FlightTile = ({ event, traineesData, instructorsData = [], onSelectEvent, 
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: flyoutStyle, className: "flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded px-2 py-1 shadow-lg flex items-center space-x-3 text-xs", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `font-bold ${picClasses.replace("truncate", "")}`, children: [
-          compactNameResolver.formatCompact(picName),
+          formatStaffTileName(picName),
           picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: studentClasses.replace("truncate", ""), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -111582,7 +111601,11 @@ const App = () => {
       ...instructorsData.map((person) => ({ ...person, personType: "staff" })),
       ...traineesData.map((person) => ({ ...person, personType: "trainee" }))
     ];
-    const resolver = buildCompactPersonNameResolver(contextPeople);
+    const staffPeople = contextPeople.filter((person) => person.personType === "staff");
+    const traineePeople = contextPeople.filter((person) => person.personType === "trainee");
+    const staffResolver = buildCompactPersonNameResolver(staffPeople);
+    const traineeResolver = buildCompactPersonNameResolver(traineePeople);
+    const mixedResolver = buildCompactPersonNameResolver(contextPeople);
     const cleanNameKey = (value) => normalisePersonName(String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, "").replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, "").trim());
     const compactSuffixPattern = /\s·\s*\d{1,3}(?=\s*(?:\(|$))/;
     const serialisePerson = (person) => {
@@ -111600,18 +111623,21 @@ const App = () => {
         personType: person.personType ?? null
       };
     };
-    const exactDuplicateGroups = Array.from(contextPeople.reduce((groups, person) => {
+    const buildExactDuplicateGroups = (people) => Array.from(people.reduce((groups, person) => {
       const displayName = getPersonDisplayName(person);
       const key = cleanNameKey(displayName);
       if (!key) return groups;
       const current = groups.get(key) || [];
       groups.set(key, [...current, person]);
       return groups;
-    }, /* @__PURE__ */ new Map()).entries()).filter(([, people]) => people.length > 1).map(([key, people]) => ({
+    }, /* @__PURE__ */ new Map()).entries()).filter(([, people2]) => people2.length > 1).map(([key, people2]) => ({
       key,
-      count: people.length,
-      people: people.map(serialisePerson)
+      count: people2.length,
+      people: people2.map(serialisePerson)
     }));
+    const exactDuplicateGroups = buildExactDuplicateGroups(contextPeople);
+    const exactStaffDuplicateGroups = buildExactDuplicateGroups(staffPeople);
+    const exactTraineeDuplicateGroups = buildExactDuplicateGroups(traineePeople);
     const surnameGroups = Array.from(contextPeople.reduce((groups, person) => {
       const displayName = getPersonDisplayName(person);
       const surname = String(displayName || "").split(",")[0]?.trim() || String(displayName || "").trim().split(/\s+/).filter(Boolean).at(-1) || "";
@@ -111627,9 +111653,12 @@ const App = () => {
     }));
     const explainValue = (role, value) => {
       if (value === void 0 || value === null || value === "") return null;
+      const resolver = role.endsWith(":staff") || ["instructor", "pilot", "fixedCrewPic"].includes(role) ? staffResolver : role.endsWith(":trainee") || role === "student" || role === "_traineeName" || role.startsWith("attendees[") ? traineeResolver : mixedResolver;
+      const resolverScope = resolver === staffResolver ? "staff" : resolver === traineeResolver ? "trainee" : "mixed";
       const explanation = resolver.explainCompact(value);
       return {
         role,
+        resolverScope,
         rawValue: value,
         rawHasVisualSuffix: compactSuffixPattern.test(String(value || "")),
         outputHasVisualSuffix: compactSuffixPattern.test(explanation.output),
@@ -111665,7 +111694,8 @@ const App = () => {
       if (Array.isArray(event.personnelRefs)) {
         event.personnelRefs.forEach((person, index) => {
           const displayName = getPersonDisplayName(person || {}) || person?.name || person?.fullName;
-          const explained = explainValue(`personnelRefs[${index}]`, displayName);
+          const refType = person?.personType === "staff" ? "staff" : person?.personType === "trainee" ? "trainee" : person?.role || "mixed";
+          const explained = explainValue(`personnelRefs[${index}]:${refType}`, displayName);
           if (explained) {
             roles.push({
               ...explained,
@@ -111725,7 +111755,7 @@ const App = () => {
     })));
     return {
       reportType: "DFP tile name display diagnostics",
-      diagnosticVersion: "CCH 8.137",
+      diagnosticVersion: "CCH 8.138",
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       url: window.location.href,
       userAgent: navigator.userAgent,
@@ -111746,12 +111776,16 @@ const App = () => {
         surnameGroupCount: surnameGroups.length,
         eventCount: events2.length,
         eventsWithSuffixAnalyses: events2.filter((event) => event.suffixAnalyses.length > 0).length,
+        exactStaffDuplicateGroupCount: exactStaffDuplicateGroups.length,
+        exactTraineeDuplicateGroupCount: exactTraineeDuplicateGroups.length,
         suspiciousSuffixCount: suspiciousSuffixes.length,
         justifiedSuffixCount: justifiedSuffixes.length,
         suspiciousSuffixes,
         justifiedSuffixes
       },
       exactDuplicateGroups,
+      exactStaffDuplicateGroups,
+      exactTraineeDuplicateGroups,
       surnameGroups,
       events: events2
     };

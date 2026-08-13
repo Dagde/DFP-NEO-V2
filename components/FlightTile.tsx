@@ -249,10 +249,29 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
   const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
   const isDutySup = event.resourceId === 'Duty Sup';
   const tileStatusSettings = readTileStatusSettingsFromLocalStorage();
-  const compactNameResolver = useMemo(
+  const staffPersonnelRefs = useMemo(
+      () => (event.personnelRefs || []).filter(ref => ref.personType === 'staff' || ['instructor', 'pilot', 'fixedCrewPic'].includes(ref.role)),
+      [event.personnelRefs]
+  );
+  const traineePersonnelRefs = useMemo(
+      () => (event.personnelRefs || []).filter(ref => ref.personType === 'trainee' || ['student', 'attendee'].includes(ref.role)),
+      [event.personnelRefs]
+  );
+  const staffNameResolver = useMemo(
+      () => buildCompactPersonNameResolver([...(staffPersonnelRefs as any), ...(instructorsData as any)]),
+      [staffPersonnelRefs, instructorsData]
+  );
+  const traineeNameResolver = useMemo(
+      () => buildCompactPersonNameResolver([...(traineePersonnelRefs as any), ...(traineesData as any)]),
+      [traineePersonnelRefs, traineesData]
+  );
+  const mixedNameResolver = useMemo(
       () => buildCompactPersonNameResolver([...(event.personnelRefs || []), ...(instructorsData as any), ...(traineesData as any)]),
       [event.personnelRefs, instructorsData, traineesData]
   );
+  const formatStaffTileName = (name: unknown) => staffNameResolver.formatCompact(name);
+  const formatTraineeTileName = (name: unknown) => traineeNameResolver.formatCompact(name);
+  const formatMixedTileName = (name: unknown) => mixedNameResolver.formatCompact(name);
   
   // Check if tile is too small for content (threshold e.g. 60px ~ 18 mins)
   const isSmallTile = tileWidth < 60;
@@ -539,11 +558,11 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
 
       // For dual continuation events, show crew name from student field.
       if (isSctEvent && event.flightType === 'Dual' && event.student) {
-          return compactNameResolver.formatCompact(event.student);
+          return formatMixedTileName(event.student);
       }
 
       if ((isTaskingEvent || isAirCombatCrewEvent || isFixedCrewCrewEvent) && event.flightType === 'Dual' && event.crew) {
-          return compactNameResolver.formatCompact(event.crew);
+          return formatMixedTileName(event.crew);
       }
 
         // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
@@ -562,16 +581,16 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
       }
       
       if (event.student && event.student !== 'Multiple') {
-          return compactNameResolver.formatCompact(event.student);
+          return formatTraineeTileName(event.student);
       }
 
       if (event.attendees && event.attendees.length === 1) {
-          return compactNameResolver.formatCompact(event.attendees[0]);
+          return formatTraineeTileName(event.attendees[0]);
       }
       
       if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
           const trainee = traineesData.find(t => t.idNumber === event.groupTraineeIds![0]);
-          return trainee ? compactNameResolver.formatCompact(trainee.name) : 'Group';
+          return trainee ? formatTraineeTileName(trainee.name) : 'Group';
       }
       
       return '';
@@ -791,7 +810,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
                         <div style={{ fontSize: 10, color: '#cbd5e1', marginBottom: 5 }}>
                             <span style={{ color: '#64748b', marginRight: 4 }}>▶</span>
                             <span style={{ color: '#94a3b8', marginRight: 4 }}>{instructorLabel}:</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{compactNameResolver.formatCompact(instructor)}</span>
+                            <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{formatStaffTileName(instructor)}</span>
                         </div>
                     )}
                     {/* Event rows — lesson tiles only (skip standard breaks) */}
@@ -850,7 +869,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
              return (
                 <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
                     <div className="overflow-hidden text-center">
-                        <div className={picClasses}>{compactNameResolver.formatCompact(picName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                        <div className={picClasses}>{formatStaffTileName(picName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                         <div className="font-mono text-white/80 truncate">
                             <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : displayFlightNumber}
                         </div>
@@ -862,8 +881,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
         return (
             <div className="flex justify-between items-center h-full w-full px-2" style={textStyle}>
                 <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
-                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{compactNameResolver.formatCompact(displayPicName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : ''}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{formatStaffTileName(displayPicName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName ? formatTraineeTileName(displayStudentName) : ''}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
@@ -881,8 +900,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
         <>
             <div className="flex items-center justify-between h-full w-full px-2" style={textStyle}>
                 <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: 'calc(10% + 2px)', minWidth: 0 }}>
-                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{compactNameResolver.formatCompact(displayPicName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName ? compactNameResolver.formatCompact(displayStudentName) : ''}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{formatStaffTileName(displayPicName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName ? formatTraineeTileName(displayStudentName) : ''}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
 
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
@@ -985,7 +1004,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, instructor
                 {/* Connector Line/Arrow could go here */}
                <div className="bg-gray-800 border border-gray-600 rounded px-2 py-1 shadow-lg flex items-center space-x-3 text-xs">
                     <div>
-                        <div className={`font-bold ${picClasses.replace('truncate', '')}`}>{compactNameResolver.formatCompact(picName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                        <div className={`font-bold ${picClasses.replace('truncate', '')}`}>{formatStaffTileName(picName)}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                         <div className={studentClasses.replace('truncate', '')}>{typeof studentDisplay === 'string' ? <>{studentDisplay}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                     </div>
                     <div className="h-6 w-px bg-gray-600"></div>
