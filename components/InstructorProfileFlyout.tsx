@@ -2112,6 +2112,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 )}
               </div>
 
+              {!isEditing && !isCreating && (
+                <AccountAccessPanel
+                  personType="staff"
+                  personId={(instructor as any).id || instructor.idNumber}
+                  idNumber={instructor.idNumber}
+                  name={instructor.name}
+                  email={instructor.email}
+                  canManage={canManageAccountAccess}
+                />
+              )}
+
               {/* ── SECTION 2: ASSIGNED TRAINING / TRAINEES (always visible, not editing) ── */}
               {!isEditing && !isCreating && isAirCombatModel && (
                 <div className={card3d + " p-3"} style={card3dStyle}>

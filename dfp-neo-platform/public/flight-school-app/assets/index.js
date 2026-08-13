@@ -26904,6 +26904,17 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                   ] })
                 )
               ] }),
+              activeTab !== "lmp" && activeTab !== "pt051" && !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AccountAccessPanel,
+                {
+                  personType: "trainee",
+                  personId: trainee.id || trainee.idNumber,
+                  idNumber: trainee.idNumber,
+                  name: trainee.name || trainee.fullName,
+                  email: trainee.email,
+                  canManage: canManageAccountAccess
+                }
+              ),
               activeTab !== "lmp" && activeTab !== "pt051" && !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Instructors" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
@@ -55776,6 +55787,17 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
               ] })
             )
           ] }),
+          !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            AccountAccessPanel,
+            {
+              personType: "staff",
+              personId: instructor.id || instructor.idNumber,
+              idNumber: instructor.idNumber,
+              name: instructor.name,
+              email: instructor.email,
+              canManage: canManageAccountAccess
+            }
+          ),
           !isEditing && !isCreating && isAirCombatModel && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Training" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-3", children: [

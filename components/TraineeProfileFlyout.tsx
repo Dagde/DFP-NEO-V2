@@ -2990,6 +2990,17 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                     </div>
 
+                      {activeTab !== 'lmp' && activeTab !== 'pt051' && !isEditing && !isCreating && (
+                        <AccountAccessPanel
+                          personType="trainee"
+                          personId={(trainee as any).id || trainee.idNumber}
+                          idNumber={trainee.idNumber}
+                          name={trainee.name || trainee.fullName}
+                          email={trainee.email}
+                          canManage={canManageAccountAccess}
+                        />
+                      )}
+
 
                       {/* ─── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ─── */}
                       {activeTab !== 'lmp' && activeTab !== 'pt051' && !isEditing && !isCreating && (
