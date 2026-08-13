@@ -904,7 +904,7 @@ const DetailView: React.FC<{
             isEditing={isEditing}
             onChange={(elements) => handleFieldChange('assessedElements', elements)}
             onAddElement={onAddScoringMatrixElement}
-            showAssessmentRequired={isAirCombatModel || isFixedCrewModel}
+            showAssessmentRequired={operationalModel === 'flight_school' || isAirCombatModel || isFixedCrewModel}
             assessmentRequired={currentItem.assessmentRequired === true}
             onAssessmentRequiredChange={(required) => handleFieldChange('assessmentRequired', required)}
         />

@@ -32311,7 +32311,7 @@ const App: React.FC = () => {
         dcoResult: 'DCO',
     ) => {
         const operationalModel = normaliseOperationalModel(activeOperationalModel);
-        if (operationalModel !== 'air_combat' && !isFixedCrewLikeOperationalModel(operationalModel)) return;
+        if (operationalModel !== 'flight_school' && operationalModel !== 'air_combat' && !isFixedCrewLikeOperationalModel(operationalModel)) return;
 
         const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || '';
         const eventCode = String(sourceEvent.flightNumber || sourceEvent.eventCode || '').trim();

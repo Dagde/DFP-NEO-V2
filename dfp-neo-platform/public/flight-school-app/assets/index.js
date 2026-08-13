@@ -59413,7 +59413,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
         isEditing,
         onChange: (elements) => handleFieldChange("assessedElements", elements),
         onAddElement: onAddScoringMatrixElement,
-        showAssessmentRequired: isAirCombatModel || isFixedCrewModel,
+        showAssessmentRequired: operationalModel === "flight_school" || isAirCombatModel || isFixedCrewModel,
         assessmentRequired: currentItem.assessmentRequired === true,
         onAssessmentRequiredChange: (required) => handleFieldChange("assessmentRequired", required)
       }
@@ -118888,7 +118888,7 @@ ${error instanceof Error ? error.message : String(error)}`,
   };
   const generateAssessmentRequiredDraftTrainingReport = async (sourceEvent, dcoResult) => {
     const operationalModel = normaliseOperationalModel(activeOperationalModel);
-    if (operationalModel !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel)) return;
+    if (operationalModel !== "flight_school" && operationalModel !== "air_combat" && !isFixedCrewLikeOperationalModel(operationalModel)) return;
     const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || "";
     const eventCode2 = String(sourceEvent.flightNumber || sourceEvent.eventCode || "").trim();
     if (!staffName || !eventCode2) return;
