@@ -8,6 +8,7 @@ import AuditButton from './AuditButton';
 import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
+import EmailActivationSettings from './EmailActivationSettings';
 import PeopleProfilePage from './PeopleProfilePage';
 import CurrencyBuilderView from './CurrencyBuilderView';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, CurrencyDefinition, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
@@ -224,6 +225,7 @@ type SettingsSection =
     | 'standard-missions'
     | 'currency-profiles'
     | 'appearance'
+    | 'email-activation'
     | 'emergency';
 
 const platformConfigurationSections = [
@@ -307,6 +309,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-user-access': 'User Access Scopes',
     'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
     'appearance': 'App Appearance',
+    'email-activation': 'Email & Account Activation',
     'emergency': 'Emergency',
 };
 
@@ -436,6 +439,7 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
   'crew-composition': platformConfigurationIcon,
   'standard-missions': platformConfigurationIcon,
   'currency-profiles': platformConfigurationIcon,
+  'email-activation': platformConfigurationIcon,
   'platform-configuration-health': platformConfigurationIcon,
   'platform-organisation-locations': platformConfigurationIcon,
   'platform-units': platformConfigurationIcon,
@@ -509,6 +513,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-user-access': 'Control where each user can work',
   'platform-scheduling-rule-sets': 'Scheduling rules for selected units, aircraft and operating areas',
   'appearance': 'Choose dark or light display theme',
+  'email-activation': 'Customer SMTP and activation email delivery settings',
   'emergency': 'System freeze and emergency controls',
 };
 
@@ -640,6 +645,11 @@ const sectionSearchKeywords: Partial<Record<SettingsMenuSection, string[]>> = {
   'platform-licensing': [
     'licensing', 'licence', 'license', 'deployment', 'entitlements', 'signed licence',
     'validation status', 'subscription', 'activation',
+  ],
+  'email-activation': [
+    'email', 'mail', 'smtp', 'activation email', 'account activation', 'login activation',
+    'temporary password', 'two part password', 'from address', 'no reply', 'mail server',
+    'customer smtp', 'test email', 'activation expiry',
   ],
   'platform-permission-profiles': [
     'permission profiles', 'permissions', 'permission', 'roles', 'access role', 'admin rights',
@@ -773,6 +783,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'platform-user-access': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-scheduling-rule-sets': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
+  'email-activation':  'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   // EMERGENCY - red icons
   'emergency':         'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
 };
@@ -804,6 +815,7 @@ const sectionGroups: {
         'platform-unit-modules',
         'platform-settings-visibility',
         'platform-deployment-readiness',
+        'email-activation',
         'platform-licensing',
         'platform-rank-terminology',
         'organisation',
@@ -1199,6 +1211,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             'platform-rank-terminology': rankTerminologyTerms,
             'platform-user-access': collectSelectedSearchDataTerms(permissionTerms, peopleTerms, unitContextTerms),
             'platform-scheduling-rule-sets': collectSelectedSearchDataTerms(schedulingRuleSetTerms, unitContextTerms, aircraftTerms, locationTerms),
+            'email-activation': collectSelectedSearchDataTerms('smtp', 'email', 'activation', 'login', 'mail server'),
             'scoring-matrix': collectSelectedSearchDataTerms(props.syllabusDetails, props.phraseBank),
             'training-report-template': trainingReportTerms,
             'currencies': currencyTerms,
@@ -1879,6 +1892,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'organisation' &&
                      !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
+                     activeSection !== 'email-activation' &&
                      activeSection !== 'people-profile' && (
                         activeSection === 'currencies' && embeddedCurrencyBuilderOpen ? (
                             <div className="h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
@@ -1987,6 +2001,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 onUpdateFixedCrewTileColourMode={props.onUpdateFixedCrewTileColourMode}
                             />
                         </div>
+                    )}
+                    {activeSection === 'email-activation' && (
+                        <EmailActivationSettings
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                        />
                     )}
                     {activeSection === 'people-profile' && (
                         <PeopleProfilePage

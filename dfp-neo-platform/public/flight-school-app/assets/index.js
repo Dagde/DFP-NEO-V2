@@ -81196,6 +81196,243 @@ const UserSearchSelect = ({
     )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." }) })
   ] });
 };
+const defaultSettings = {
+  mode: "customer_smtp",
+  smtpHost: "",
+  smtpPort: 587,
+  smtpSecure: false,
+  smtpRequireTls: false,
+  smtpRejectUnauthorized: true,
+  smtpUsername: "",
+  smtpPassword: "",
+  smtpFrom: "",
+  appUrl: "https://app.dfp-neo.com",
+  activationExpiryHours: 24,
+  passwordConfigured: false
+};
+const normaliseSettings = (settings) => ({
+  ...defaultSettings,
+  ...settings,
+  smtpPassword: "",
+  smtpPort: Number(settings?.smtpPort || defaultSettings.smtpPort),
+  activationExpiryHours: Number(settings?.activationExpiryHours || defaultSettings.activationExpiryHours),
+  passwordConfigured: Boolean(settings?.passwordConfigured)
+});
+const authHeaders = () => {
+  const sessionToken = localStorage.getItem("dfp_session_token") || "";
+  return {
+    "Content-Type": "application/json",
+    ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+  };
+};
+const EmailActivationSettings = ({ currentUserPermission, onShowSuccess }) => {
+  const [settings, setSettings] = reactExports.useState(defaultSettings);
+  const [runtime, setRuntime] = reactExports.useState({});
+  const [loading, setLoading] = reactExports.useState(true);
+  const [saving, setSaving] = reactExports.useState(false);
+  const [testing, setTesting] = reactExports.useState(false);
+  const [status, setStatus] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const [testRecipient, setTestRecipient] = reactExports.useState("");
+  const [clearPassword, setClearPassword] = reactExports.useState(false);
+  const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
+  const updateSetting = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    setStatus("");
+    setError("");
+  };
+  const loadSettings = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`${getAppApiBase()}/admin/email-activation-settings`, {
+        credentials: "include",
+        headers: authHeaders()
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "Email settings could not be loaded.");
+      setSettings(normaliseSettings(payload.settings || {}));
+      setRuntime(payload.runtime || {});
+      if (!testRecipient && payload.settings?.smtpFrom) {
+        const match = String(payload.settings.smtpFrom).match(/<([^>]+)>/);
+        setTestRecipient(match?.[1] || String(payload.settings.smtpFrom));
+      }
+    } catch (loadError) {
+      setError(loadError.message || "Email settings could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  reactExports.useEffect(() => {
+    loadSettings();
+  }, []);
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    setStatus("");
+    try {
+      const response = await fetch(`${getAppApiBase()}/admin/email-activation-settings`, {
+        method: "POST",
+        credentials: "include",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          ...settings,
+          smtpPassword: settings.smtpPassword,
+          clearSmtpPassword: clearPassword
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "Email settings could not be saved.");
+      setSettings(normaliseSettings(payload.settings || settings));
+      setRuntime(payload.runtime || {});
+      setClearPassword(false);
+      setStatus("Email and activation settings saved.");
+      onShowSuccess?.("Email and activation settings saved.");
+    } catch (saveError) {
+      setError(saveError.message || "Email settings could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handleTest = async () => {
+    setTesting(true);
+    setError("");
+    setStatus("");
+    try {
+      const response = await fetch(`${getAppApiBase()}/admin/email-activation-settings/test`, {
+        method: "POST",
+        credentials: "include",
+        headers: authHeaders(),
+        body: JSON.stringify({ recipient: testRecipient })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || "The test email could not be sent.");
+      setStatus(`Test email sent to ${payload.recipient}.`);
+      onShowSuccess?.(`Test email sent to ${payload.recipient}.`);
+    } catch (testError) {
+      setError(testError.message || "The test email could not be sent.");
+    } finally {
+      setTesting(false);
+    }
+  };
+  if (loading) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-5 text-sm text-gray-300", children: "Loading email settings..." });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-gray-800 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-white", children: "Email & Account Activation" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: "Connect DFP NEO to the customer-approved mail server used for account activation emails." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-md border px-3 py-2 text-sm font-semibold ${runtime.configured ? "border-emerald-500/50 bg-emerald-950/30 text-emerald-200" : "border-amber-500/50 bg-amber-950/30 text-amber-200"}`, children: runtime.configured ? "Email Ready" : "Email Not Ready" })
+      ] }),
+      !runtime.configured && runtime.missing && runtime.missing.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-3 rounded-md border border-amber-500/40 bg-amber-950/20 px-3 py-2 text-sm text-amber-100", children: [
+        "Missing: ",
+        runtime.missing.join(", ")
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 lg:grid-cols-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "Activation Mode" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: settings.mode,
+            disabled: !canEdit,
+            onChange: (event) => updateSetting("mode", event.target.value),
+            className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "customer_smtp", children: "Customer SMTP" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "no_email", children: "No Email" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "environment", children: "Railway Environment Variables" })
+            ]
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "Activation Expiry" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "number",
+            min: 1,
+            max: 168,
+            value: settings.activationExpiryHours,
+            disabled: !canEdit,
+            onChange: (event) => updateSetting("activationExpiryHours", Number(event.target.value)),
+            className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "Hours before an activation code expires." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "App Sign-in URL" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            value: settings.appUrl,
+            disabled: !canEdit,
+            onChange: (event) => updateSetting("appUrl", event.target.value),
+            className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white"
+          }
+        )
+      ] })
+    ] }),
+    settings.mode === "customer_smtp" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase text-cyan-200", children: "Customer SMTP Server" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-1 gap-4 md:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "SMTP Host" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: settings.smtpHost, disabled: !canEdit, onChange: (event) => updateSetting("smtpHost", event.target.value), className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "From Address" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: settings.smtpFrom, disabled: !canEdit, onChange: (event) => updateSetting("smtpFrom", event.target.value), placeholder: "DFP NEO <no-reply@example.mil>", className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "Port" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: settings.smtpPort, disabled: !canEdit, onChange: (event) => updateSetting("smtpPort", Number(event.target.value)), className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "Username" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: settings.smtpUsername, disabled: !canEdit, onChange: (event) => updateSetting("smtpUsername", event.target.value), className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-300", children: "Password" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "password", value: settings.smtpPassword, disabled: !canEdit, onChange: (event) => updateSetting("smtpPassword", event.target.value), placeholder: settings.passwordConfigured ? "Saved password is configured" : "SMTP password", className: "mt-2 w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-3 rounded-md border border-gray-700 bg-gray-900 p-3 text-sm text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: settings.smtpSecure, disabled: !canEdit, onChange: (event) => updateSetting("smtpSecure", event.target.checked) }),
+            " Use SSL/TLS"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: settings.smtpRequireTls, disabled: !canEdit, onChange: (event) => updateSetting("smtpRequireTls", event.target.checked) }),
+            " Require TLS"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: settings.smtpRejectUnauthorized, disabled: !canEdit, onChange: (event) => updateSetting("smtpRejectUnauthorized", event.target.checked) }),
+            " Verify server certificate"
+          ] }),
+          settings.passwordConfigured && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-amber-200", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: clearPassword, disabled: !canEdit, onChange: (event) => setClearPassword(event.target.checked) }),
+            " Clear saved password on Save"
+          ] })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-bold uppercase text-cyan-200", children: "Test Email" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex flex-wrap gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { value: testRecipient, disabled: !canEdit, onChange: (event) => setTestRecipient(event.target.value), placeholder: "test.recipient@example.mil", className: "min-w-[260px] flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-white" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled: !canEdit || testing || !testRecipient.trim(), onClick: handleTest, className: "rounded-md bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-gray-600", children: testing ? "Sending..." : "Send Test Email" })
+      ] })
+    ] }),
+    (status || error) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-md border px-4 py-3 text-sm ${error ? "border-red-500/50 bg-red-950/30 text-red-100" : "border-emerald-500/50 bg-emerald-950/30 text-emerald-100"}`, children: error || status }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", disabled: !canEdit || saving, onClick: handleSave, className: "rounded-md bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-600", children: saving ? "Saving..." : "Save Email Settings" }) })
+  ] });
+};
 const PeopleProfilePage = ({
   traineesData,
   excludedCourses,
@@ -81412,6 +81649,7 @@ const sectionLabels = {
   "platform-user-access": "User Access Scopes",
   "platform-scheduling-rule-sets": "Scheduling Rule Sets",
   "appearance": "App Appearance",
+  "email-activation": "Email & Account Activation",
   "emergency": "Emergency"
 };
 const platformConfigurationIcon = /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
@@ -81500,6 +81738,7 @@ const sectionIcons = {
   "crew-composition": platformConfigurationIcon,
   "standard-missions": platformConfigurationIcon,
   "currency-profiles": platformConfigurationIcon,
+  "email-activation": platformConfigurationIcon,
   "platform-configuration-health": platformConfigurationIcon,
   "platform-organisation-locations": platformConfigurationIcon,
   "platform-units": platformConfigurationIcon,
@@ -81559,6 +81798,7 @@ const sectionDescriptions = {
   "platform-user-access": "Control where each user can work",
   "platform-scheduling-rule-sets": "Scheduling rules for selected units, aircraft and operating areas",
   "appearance": "Choose dark or light display theme",
+  "email-activation": "Customer SMTP and activation email delivery settings",
   "emergency": "System freeze and emergency controls"
 };
 const sectionSearchKeywords = {
@@ -81986,6 +82226,22 @@ const sectionSearchKeywords = {
     "subscription",
     "activation"
   ],
+  "email-activation": [
+    "email",
+    "mail",
+    "smtp",
+    "activation email",
+    "account activation",
+    "login activation",
+    "temporary password",
+    "two part password",
+    "from address",
+    "no reply",
+    "mail server",
+    "customer smtp",
+    "test email",
+    "activation expiry"
+  ],
   "platform-permission-profiles": [
     "permission profiles",
     "permissions",
@@ -82185,6 +82441,7 @@ const sectionColors = {
   "platform-user-access": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "platform-scheduling-rule-sets": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "appearance": "from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400",
+  "email-activation": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   // EMERGENCY - red icons
   "emergency": "from-red-500/20 to-red-600/10 border-red-500/30 text-red-400"
 };
@@ -82207,6 +82464,7 @@ const sectionGroups = [
       "platform-unit-modules",
       "platform-settings-visibility",
       "platform-deployment-readiness",
+      "email-activation",
       "platform-licensing",
       "platform-rank-terminology",
       "organisation",
@@ -82549,6 +82807,7 @@ const SettingsViewWithMenu = (props) => {
       "platform-rank-terminology": rankTerminologyTerms,
       "platform-user-access": collectSelectedSearchDataTerms(permissionTerms, peopleTerms, unitContextTerms),
       "platform-scheduling-rule-sets": collectSelectedSearchDataTerms(schedulingRuleSetTerms, unitContextTerms, aircraftTerms, locationTerms),
+      "email-activation": collectSelectedSearchDataTerms("smtp", "email", "activation", "login", "mail server"),
       "scoring-matrix": collectSelectedSearchDataTerms(props.syllabusDetails, props.phraseBank),
       "training-report-template": trainingReportTerms,
       "currencies": currencyTerms,
@@ -83074,7 +83333,7 @@ const SettingsViewWithMenu = (props) => {
             activeSection: "sct-events"
           }
         ),
-        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        activeSection !== "scoring-matrix" && activeSection !== "scheduling-rules" && activeSection !== "training-report-template" && activeSection !== "crew-composition" && activeSection !== "standard-missions" && activeSection !== "currency-profiles" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "trainee-database" && activeSection !== "trainee-reallocation" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "email-activation" && activeSection !== "people-profile" && (activeSection === "currencies" && embeddedCurrencyBuilderOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-[calc(100vh-220px)] min-h-[620px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           CurrencyBuilderView,
           {
             onBack: () => setEmbeddedCurrencyBuilderOpen(false),
@@ -83183,6 +83442,13 @@ const SettingsViewWithMenu = (props) => {
             onUpdateFixedCrewTileColourMode: props.onUpdateFixedCrewTileColourMode
           }
         ) }),
+        activeSection === "email-activation" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          EmailActivationSettings,
+          {
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess
+          }
+        ),
         activeSection === "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           PeopleProfilePage,
           {

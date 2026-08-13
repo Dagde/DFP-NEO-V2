@@ -330,6 +330,7 @@ function validateSeedEndpointSecret(req, res) {
 
 // JWT Configuration
 const JWT_SECRET = requireConfiguredSecret('JWT_SECRET', 'dfp-neo-development-jwt-secret', ['NEXTAUTH_SECRET', 'AUTH_SECRET']);
+const EMAIL_ACTIVATION_SETTINGS_ORG_ID = '__email_activation__';
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
 const AVWX_API_TOKEN = (process.env.AVWX_API_TOKEN || process.env.VITE_AVWX_API_TOKEN || '').trim();
@@ -501,8 +502,8 @@ function generateActivationSuffix(length = 12) {
   return Array.from(bytes, byte => ACTIVATION_SUFFIX_CHARS[byte % ACTIVATION_SUFFIX_CHARS.length]).join('');
 }
 
-function getActivationExpiryDate() {
-  const hours = Math.max(1, Math.min(168, Number(process.env.DFP_ACTIVATION_EXPIRY_HOURS || 24) || 24));
+function getActivationExpiryDate(configuredHours = null) {
+  const hours = Math.max(1, Math.min(168, Number(process.env.DFP_ACTIVATION_EXPIRY_HOURS || configuredHours || 24) || 24));
   return new Date(Date.now() + hours * 60 * 60 * 1000);
 }
 
@@ -531,6 +532,92 @@ function getBooleanEnv(value, fallback = false) {
   return fallback;
 }
 
+function deriveSettingsSecretKey() {
+  return crypto.createHash('sha256').update(String(JWT_SECRET || 'dfp-neo-development-jwt-secret')).digest();
+}
+
+function encryptSettingsSecret(value) {
+  const clean = String(value || '');
+  if (!clean) return '';
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', deriveSettingsSecretKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(clean, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `v1:${iv.toString('base64')}:${tag.toString('base64')}:${encrypted.toString('base64')}`;
+}
+
+function decryptSettingsSecret(value) {
+  const clean = String(value || '');
+  if (!clean) return '';
+  const parts = clean.split(':');
+  if (parts.length !== 4 || parts[0] !== 'v1') return '';
+  try {
+    const [, ivText, tagText, encryptedText] = parts;
+    const decipher = crypto.createDecipheriv('aes-256-gcm', deriveSettingsSecretKey(), Buffer.from(ivText, 'base64'));
+    decipher.setAuthTag(Buffer.from(tagText, 'base64'));
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedText, 'base64')),
+      decipher.final(),
+    ]).toString('utf8');
+  } catch (error) {
+    console.warn('[Email Activation] Stored SMTP password could not be decrypted.');
+    return '';
+  }
+}
+
+function normaliseEmailActivationMode(value) {
+  const clean = String(value || '').trim().toLowerCase();
+  if (clean === 'no_email') return 'no_email';
+  if (clean === 'environment') return 'environment';
+  return 'customer_smtp';
+}
+
+function sanitiseEmailActivationSettings(settings = {}) {
+  const mode = normaliseEmailActivationMode(settings.mode);
+  const port = Number(settings.smtpPort || (settings.smtpSecure ? 465 : 587));
+  return {
+    mode,
+    smtpHost: String(settings.smtpHost || '').trim(),
+    smtpPort: Number.isFinite(port) && port > 0 ? port : (settings.smtpSecure ? 465 : 587),
+    smtpSecure: Boolean(settings.smtpSecure),
+    smtpRequireTls: Boolean(settings.smtpRequireTls),
+    smtpRejectUnauthorized: settings.smtpRejectUnauthorized !== false,
+    smtpUsername: String(settings.smtpUsername || '').trim(),
+    smtpFrom: String(settings.smtpFrom || '').trim(),
+    appUrl: String(settings.appUrl || '').trim(),
+    activationExpiryHours: Math.max(1, Math.min(168, Number(settings.activationExpiryHours || 24) || 24)),
+    updatedAt: settings.updatedAt || null,
+    updatedBy: settings.updatedBy || null,
+    passwordConfigured: Boolean(settings.smtpPasswordEncrypted || settings.passwordConfigured),
+  };
+}
+
+async function loadEmailActivationSettings(db) {
+  const rows = await db.$queryRawUnsafe(
+    `SELECT data, "updatedBy", "updatedAt" FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+    EMAIL_ACTIVATION_SETTINGS_ORG_ID
+  );
+  const row = rows?.[0];
+  const data = row?.data && typeof row.data === 'object' ? row.data : {};
+  return {
+    ...data,
+    updatedBy: row?.updatedBy || data.updatedBy || null,
+    updatedAt: row?.updatedAt || data.updatedAt || null,
+  };
+}
+
+async function saveEmailActivationSettings(db, settings, updatedBy) {
+  const now = new Date().toISOString();
+  await db.$executeRawUnsafe(`
+    INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
+    VALUES (gen_random_uuid()::text, $1, $2::jsonb, $3, $4::timestamp, $4::timestamp)
+    ON CONFLICT ("orgId") DO UPDATE SET
+      "data" = $2::jsonb,
+      "updatedBy" = $3,
+      "updatedAt" = $4::timestamp
+  `, EMAIL_ACTIVATION_SETTINGS_ORG_ID, JSON.stringify(settings), updatedBy || null, now);
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -540,29 +627,42 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function getSmtpConfig() {
-  const host = getConfiguredSecret('DFP_SMTP_HOST', ['SMTP_HOST']);
-  const secureEnv = process.env.DFP_SMTP_SECURE ?? process.env.SMTP_SECURE;
-  const secure = getBooleanEnv(secureEnv, false);
-  const rawPort = String(process.env.DFP_SMTP_PORT || process.env.SMTP_PORT || '').trim();
+async function getSmtpConfig(db = null) {
+  const settingsDb = db || await getPrisma();
+  const settings = await loadEmailActivationSettings(settingsDb);
+  const mode = normaliseEmailActivationMode(settings.mode);
+  const envHost = getConfiguredSecret('DFP_SMTP_HOST', ['SMTP_HOST']);
+  const envUser = getConfiguredSecret('DFP_SMTP_USER', ['SMTP_USER']);
+  const envPass = getConfiguredSecret('DFP_SMTP_PASS', ['SMTP_PASS']);
+  const envFrom = getConfiguredSecret('DFP_SMTP_FROM', ['SMTP_FROM', 'MAIL_FROM']);
+  const hasCustomerSettings = Boolean(settings.smtpHost || settings.smtpFrom || settings.smtpUsername || settings.smtpPasswordEncrypted);
+  const useEnvironment = mode === 'environment' || (mode === 'customer_smtp' && !hasCustomerSettings && Boolean(envHost || envFrom || envUser || envPass));
+  const host = useEnvironment ? envHost : String(settings.smtpHost || '').trim();
+  const secureEnv = useEnvironment ? (process.env.DFP_SMTP_SECURE ?? process.env.SMTP_SECURE) : settings.smtpSecure;
+  const secure = useEnvironment ? getBooleanEnv(secureEnv, false) : Boolean(settings.smtpSecure);
+  const rawPort = useEnvironment ? String(process.env.DFP_SMTP_PORT || process.env.SMTP_PORT || '').trim() : String(settings.smtpPort || '').trim();
   const port = Number(rawPort || (secure ? 465 : 587));
-  const user = getConfiguredSecret('DFP_SMTP_USER', ['SMTP_USER']);
-  const pass = getConfiguredSecret('DFP_SMTP_PASS', ['SMTP_PASS']);
-  const from = getConfiguredSecret('DFP_SMTP_FROM', ['SMTP_FROM', 'MAIL_FROM']);
+  const user = useEnvironment ? envUser : String(settings.smtpUsername || '').trim();
+  const pass = useEnvironment ? envPass : decryptSettingsSecret(settings.smtpPasswordEncrypted);
+  const from = useEnvironment ? envFrom : String(settings.smtpFrom || '').trim();
   const appUrl = (
     process.env.DFP_APP_URL
     || process.env.PUBLIC_APP_URL
     || process.env.APP_URL
+    || settings.appUrl
     || 'https://app.dfp-neo.com'
   ).trim().replace(/\/+$/, '');
   const missing = [];
-  if (!host) missing.push('DFP_SMTP_HOST');
-  if (!Number.isFinite(port) || port <= 0) missing.push('DFP_SMTP_PORT');
-  if (!from) missing.push('DFP_SMTP_FROM');
-  if ((user && !pass) || (!user && pass)) missing.push('DFP_SMTP_USER and DFP_SMTP_PASS');
+  if (mode === 'no_email') missing.push('Email mode is No Email');
+  if (!host) missing.push(useEnvironment ? 'DFP_SMTP_HOST' : 'SMTP host');
+  if (!Number.isFinite(port) || port <= 0) missing.push(useEnvironment ? 'DFP_SMTP_PORT' : 'SMTP port');
+  if (!from) missing.push(useEnvironment ? 'DFP_SMTP_FROM' : 'From address');
+  if ((user && !pass) || (!user && pass)) missing.push(useEnvironment ? 'DFP_SMTP_USER and DFP_SMTP_PASS' : 'SMTP username and password');
   return {
     configured: missing.length === 0,
     missing,
+    mode,
+    source: useEnvironment ? 'environment' : 'settings',
     host,
     port,
     secure,
@@ -570,6 +670,8 @@ function getSmtpConfig() {
     pass,
     from,
     appUrl,
+    requireTLS: useEnvironment ? getBooleanEnv(process.env.DFP_SMTP_REQUIRE_TLS, false) : Boolean(settings.smtpRequireTls),
+    rejectUnauthorized: useEnvironment ? getBooleanEnv(process.env.DFP_SMTP_REJECT_UNAUTHORIZED, true) : settings.smtpRejectUnauthorized !== false,
   };
 }
 
@@ -579,9 +681,9 @@ function createActivationMailTransport(config) {
     port: config.port,
     secure: config.secure,
     auth: config.user ? { user: config.user, pass: config.pass } : undefined,
-    requireTLS: getBooleanEnv(process.env.DFP_SMTP_REQUIRE_TLS, false),
+    requireTLS: Boolean(config.requireTLS),
     tls: {
-      rejectUnauthorized: getBooleanEnv(process.env.DFP_SMTP_REJECT_UNAUTHORIZED, true),
+      rejectUnauthorized: config.rejectUnauthorized !== false,
     },
   });
 }
@@ -648,8 +750,8 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
   };
 }
 
-async function sendActivationEmail({ target, suffix, expiresAt }) {
-  const config = getSmtpConfig();
+async function sendActivationEmail({ db, target, suffix, expiresAt }) {
+  const config = await getSmtpConfig(db);
   if (!config.configured) {
     const error = new Error(`SMTP is not configured: ${config.missing.join(', ')}`);
     error.code = 'SMTP_NOT_CONFIGURED';
@@ -8609,7 +8711,8 @@ async function issueActivationEmailForDirectUser(db, req, targetUserId, personne
   const suffix = generateActivationSuffix(12);
   const activationCredential = `${cleanPersonnelId}${suffix}`;
   const activationCodeHash = await bcrypt.hash(activationCredential, 12);
-  const activationExpiresAt = getActivationExpiryDate();
+  const emailActivationSettings = await loadEmailActivationSettings(db);
+  const activationExpiresAt = getActivationExpiryDate(emailActivationSettings.activationExpiryHours);
   const randomBlockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
   const updated = await db.$queryRawUnsafe(
     `UPDATE "User"
@@ -8632,7 +8735,7 @@ async function issueActivationEmailForDirectUser(db, req, targetUserId, personne
     target.id
   );
   try {
-    const delivery = await sendActivationEmail({ target, suffix, expiresAt: activationExpiresAt });
+    const delivery = await sendActivationEmail({ db, target, suffix, expiresAt: activationExpiresAt });
     await writeSecurityAuditEvent(db, req, 'ACCOUNT_ACTIVATION_ISSUED', 'info', 'Account activation issued', {
       targetUserId: target.userId || target.username || target.id,
       email: target.email,
@@ -8825,6 +8928,114 @@ app.post('/api/admin/direct-issue-activation', adminSensitiveRateLimit, async (r
   }
 });
 
+app.get('/api/admin/email-activation-settings', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const settings = await loadEmailActivationSettings(context.db);
+    const smtpConfig = await getSmtpConfig(context.db);
+    res.json({
+      settings: sanitiseEmailActivationSettings(settings),
+      runtime: {
+        configured: smtpConfig.configured,
+        missing: smtpConfig.missing,
+        source: smtpConfig.source,
+        mode: smtpConfig.mode,
+      },
+    });
+  } catch (error) {
+    console.error('❌ GET /api/admin/email-activation-settings error:', error);
+    res.status(500).json({ error: 'Email activation settings failed', message: 'Failed to load email activation settings' });
+  }
+});
+
+app.post('/api/admin/email-activation-settings', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const existing = await loadEmailActivationSettings(context.db);
+    const body = req.body || {};
+    const settings = {
+      mode: normaliseEmailActivationMode(body.mode),
+      smtpHost: String(body.smtpHost || '').trim(),
+      smtpPort: Number(body.smtpPort || (body.smtpSecure ? 465 : 587)),
+      smtpSecure: Boolean(body.smtpSecure),
+      smtpRequireTls: Boolean(body.smtpRequireTls),
+      smtpRejectUnauthorized: body.smtpRejectUnauthorized !== false,
+      smtpUsername: String(body.smtpUsername || '').trim(),
+      smtpFrom: String(body.smtpFrom || '').trim(),
+      appUrl: String(body.appUrl || '').trim(),
+      activationExpiryHours: Math.max(1, Math.min(168, Number(body.activationExpiryHours || 24) || 24)),
+      smtpPasswordEncrypted: existing.smtpPasswordEncrypted || '',
+      updatedAt: new Date().toISOString(),
+      updatedBy: context.admin.userId || context.admin.username || context.admin.id,
+    };
+    if (Object.prototype.hasOwnProperty.call(body, 'smtpPassword') && String(body.smtpPassword || '').trim()) {
+      settings.smtpPasswordEncrypted = encryptSettingsSecret(String(body.smtpPassword));
+    }
+    if (body.clearSmtpPassword === true) {
+      settings.smtpPasswordEncrypted = '';
+    }
+    await saveEmailActivationSettings(context.db, settings, settings.updatedBy);
+    await writeSecurityAuditEvent(context.db, req, 'EMAIL_ACTIVATION_SETTINGS_UPDATED', 'info', 'Email activation settings updated', {
+      mode: settings.mode,
+      smtpHost: settings.smtpHost ? 'configured' : 'blank',
+      smtpFrom: settings.smtpFrom || '',
+      smtpUsername: settings.smtpUsername ? 'configured' : 'blank',
+      smtpPasswordConfigured: Boolean(settings.smtpPasswordEncrypted),
+    });
+    const smtpConfig = await getSmtpConfig(context.db);
+    res.json({
+      success: true,
+      settings: sanitiseEmailActivationSettings(settings),
+      runtime: {
+        configured: smtpConfig.configured,
+        missing: smtpConfig.missing,
+        source: smtpConfig.source,
+        mode: smtpConfig.mode,
+      },
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/email-activation-settings error:', error);
+    res.status(500).json({ error: 'Email activation settings failed', message: 'Failed to save email activation settings' });
+  }
+});
+
+app.post('/api/admin/email-activation-settings/test', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const recipient = String(req.body?.recipient || context.admin.email || '').trim();
+    if (!recipient) {
+      return res.status(400).json({ error: 'Recipient required', message: 'Enter a recipient email address before sending a test email' });
+    }
+    const smtpConfig = await getSmtpConfig(context.db);
+    if (!smtpConfig.configured) {
+      return res.status(503).json({
+        error: 'Email not configured',
+        message: `Activation emails cannot be sent until email delivery is configured: ${smtpConfig.missing.join(', ')}`,
+        missing: smtpConfig.missing,
+      });
+    }
+    const transporter = createActivationMailTransport(smtpConfig);
+    const info = await transporter.sendMail({
+      from: smtpConfig.from,
+      to: recipient,
+      subject: 'DFP NEO email test',
+      text: 'DFP NEO email delivery is configured and able to send from this deployment.',
+      html: '<p>DFP NEO email delivery is configured and able to send from this deployment.</p>',
+    });
+    await writeSecurityAuditEvent(context.db, req, 'EMAIL_ACTIVATION_TEST_SENT', 'info', 'Email activation test sent', {
+      recipient,
+      messageId: info.messageId || null,
+    });
+    res.json({ success: true, recipient, messageId: info.messageId || null });
+  } catch (error) {
+    console.error('❌ POST /api/admin/email-activation-settings/test error:', error);
+    res.status(502).json({ error: 'Email test failed', message: error.message || 'The test email could not be sent' });
+  }
+});
+
 app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
@@ -8833,7 +9044,7 @@ app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async 
     if (!course) {
       return res.status(400).json({ error: 'Course required', message: 'Select a course before issuing account activations' });
     }
-    const smtpConfig = getSmtpConfig();
+    const smtpConfig = await getSmtpConfig(context.db);
     if (!smtpConfig.configured) {
       return res.status(503).json({
         error: 'Email not configured',
