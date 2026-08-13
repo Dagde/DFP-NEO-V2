@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Trainee, TraineeRank, SeatConfig, SyllabusItemDetail } from '../types';
 import UpdateConfirmationFlyout from './UpdateConfirmationFlyout';
-import CourseSelectionFlyout from './CourseSelectionFlyout';
+import CourseSelectionFlyout, { CourseUploadPreview } from './CourseSelectionFlyout';
 import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import { logAudit } from '../utils/auditLogger';
 import { verifyCurrentUserPassword } from '../utils/passwordVerification';
@@ -196,6 +196,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     const [updateType, setUpdateType] = useState<'bulk' | 'minor'>('minor');
     const [rows, setRows] = useState<any[]>([]);
     const [coursesFromFile, setCoursesFromFile] = useState<string[]>([]);
+    const [uploadPreview, setUploadPreview] = useState<CourseUploadPreview | null>(null);
     const [summary, setSummary] = useState<{ added: number; updated: number; replaced: number; skipped: number; type: string; activation?: UploadActivationSummary } | null>(null);
     const [issueAccountActivations, setIssueAccountActivations] = useState(false);
 
@@ -317,6 +318,12 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
 
     const handleFile = (selectedFile?: File | null) => {
         if (!selectedFile) return;
+        setRows([]);
+        setCoursesFromFile([]);
+        setUploadPreview(null);
+        setSummary(null);
+        setShowConfirm(false);
+        setShowCourseSelection(false);
         if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
             setStatus('Please select an .xlsx, .xls or .csv file.');
             setFile(null);
@@ -340,6 +347,25 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         return Array.from(courses);
     };
 
+    const buildUploadPreview = (selectedFile: File, jsonRows: any[]): CourseUploadPreview => {
+        const parsedRows = jsonRows.map(parseTraineeRow);
+        const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
+        const courses = extractCourses(jsonRows).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        return {
+            fileName: selectedFile.name,
+            rowCount: jsonRows.length,
+            validRowCount: validRows.length,
+            skippedRowCount: jsonRows.length - validRows.length,
+            courses,
+            sampleRows: validRows.slice(0, 10).map(trainee => ({
+                name: String(trainee.name || ''),
+                idNumber: trainee.idNumber,
+                course: trainee.course,
+                email: trainee.email,
+            })),
+        };
+    };
+
     const handleConfirm = async (password: string, selectedUpdateType: 'bulk' | 'minor'): Promise<string | void> => {
         try {
             const isValidPassword = await verifyCurrentUserPassword(password);
@@ -352,8 +378,10 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         if (!file) return;
         try {
             const jsonRows = await readWorkbookRows(file);
+            const preview = buildUploadPreview(file, jsonRows);
             setRows(jsonRows);
-            setCoursesFromFile(extractCourses(jsonRows));
+            setCoursesFromFile(preview.courses);
+            setUploadPreview(preview);
             setUpdateType(selectedUpdateType);
             setShowConfirm(false);
             setShowCourseSelection(true);
@@ -568,6 +596,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                     onConfirm={processRows}
                     onClose={() => setShowCourseSelection(false)}
                     onDownloadDiagnostics={handleDownloadCoursePickerDiagnostics}
+                    uploadPreview={uploadPreview}
                 />
             )}
             {summary && (

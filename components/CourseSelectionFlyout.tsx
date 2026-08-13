@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 
+export type CourseUploadPreview = {
+  fileName?: string;
+  rowCount: number;
+  validRowCount: number;
+  skippedRowCount: number;
+  courses: string[];
+  sampleRows: Array<{
+    name: string;
+    idNumber?: string | number;
+    course?: string;
+    email?: string;
+  }>;
+};
+
 interface CourseSelectionFlyoutProps {
   courses: string[];
   onConfirm: (selectedCourse: string) => void | Promise<void>;
   onClose: () => void;
   updateType: 'bulk' | 'minor';
   onDownloadDiagnostics?: () => void;
+  uploadPreview?: CourseUploadPreview | null;
 }
 
 const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({ 
@@ -14,15 +29,28 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
   onClose,
   updateType,
   onDownloadDiagnostics,
+  uploadPreview,
 }) => {
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const uploadedCourses = uploadPreview?.courses?.filter(Boolean) || [];
+    const hasCourseMismatch = Boolean(
+        selectedCourse &&
+        uploadedCourses.length > 0 &&
+        !uploadedCourses.includes(selectedCourse)
+    );
+    const hasNoValidRows = Boolean(uploadPreview && uploadPreview.validRowCount === 0);
+    const disableSubmit = isSubmitting || hasCourseMismatch || hasNoValidRows;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedCourse) {
             setError('Please select a course.');
+            return;
+        }
+        if (hasCourseMismatch) {
+            setError(`This file contains ${uploadedCourses.join(', ')}, but ${selectedCourse} is selected.`);
             return;
         }
         setIsSubmitting(true);
@@ -73,6 +101,37 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
                         {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
                     </div>
 
+                    {uploadPreview && (
+                        <div className="rounded-md border border-sky-700/60 bg-sky-950/20 p-3 text-sm">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <p className="font-semibold text-sky-200">Uploaded File Preview</p>
+                                    {uploadPreview.fileName && <p className="mt-0.5 text-xs text-gray-400">{uploadPreview.fileName}</p>}
+                                </div>
+                                <div className="text-right text-xs text-gray-300">
+                                    <p>{uploadPreview.validRowCount} valid rows</p>
+                                    {uploadPreview.skippedRowCount > 0 && <p className="text-amber-300">{uploadPreview.skippedRowCount} skipped</p>}
+                                </div>
+                            </div>
+                            <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-300">
+                                <div>
+                                    <span className="text-gray-500">Course values in file: </span>
+                                    <span className="font-semibold text-white">{uploadedCourses.length > 0 ? uploadedCourses.join(', ') : 'None found'}</span>
+                                </div>
+                                {uploadPreview.sampleRows.length > 0 && (
+                                    <div className="max-h-32 overflow-y-auto rounded border border-gray-700 bg-gray-900/40 p-2">
+                                        {uploadPreview.sampleRows.map((row, index) => (
+                                            <div key={`${row.idNumber || row.name}-${index}`} className="flex justify-between gap-3 py-0.5">
+                                                <span className="truncate text-white">{row.name}</span>
+                                                <span className="shrink-0 text-gray-400">{row.idNumber ? `ID ${row.idNumber}` : 'No ID'}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {updateType === 'bulk' && selectedCourse && (
                         <div className="bg-red-900/20 border border-red-700 rounded-md p-3">
                             <div className="flex items-start space-x-2">
@@ -86,6 +145,16 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
                                     </p>
                                 </div>
                             </div>
+                        </div>
+                    )}
+                    {hasCourseMismatch && (
+                        <div className="rounded-md border border-amber-600 bg-amber-950/30 p-3 text-xs text-amber-200">
+                            The selected course does not match the course values parsed from this file. Select {uploadedCourses.join(', ')} or choose a corrected spreadsheet.
+                        </div>
+                    )}
+                    {hasNoValidRows && (
+                        <div className="rounded-md border border-red-700 bg-red-950/30 p-3 text-xs text-red-200">
+                            No valid trainee rows were found. Each uploaded trainee must have a Personnel ID and name before the course can be updated.
                         </div>
                     )}
                 </div>
@@ -108,7 +177,7 @@ const CourseSelectionFlyout: React.FC<CourseSelectionFlyoutProps> = ({
                     </button>
                     <button 
                         type="submit" 
-                        disabled={isSubmitting}
+                        disabled={disableSubmit}
                         className={`px-4 py-2 rounded-md transition-colors text-sm font-semibold ${
                             updateType === 'bulk' 
                                 ? 'bg-red-600 hover:bg-red-700 text-white' 

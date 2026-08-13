@@ -27853,15 +27853,26 @@ const CourseSelectionFlyout = ({
   onConfirm,
   onClose,
   updateType,
-  onDownloadDiagnostics
+  onDownloadDiagnostics,
+  uploadPreview
 }) => {
   const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const [isSubmitting, setIsSubmitting] = reactExports.useState(false);
+  const uploadedCourses = uploadPreview?.courses?.filter(Boolean) || [];
+  const hasCourseMismatch = Boolean(
+    selectedCourse && uploadedCourses.length > 0 && !uploadedCourses.includes(selectedCourse)
+  );
+  const hasNoValidRows = Boolean(uploadPreview && uploadPreview.validRowCount === 0);
+  const disableSubmit = isSubmitting || hasCourseMismatch || hasNoValidRows;
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCourse) {
       setError("Please select a course.");
+      return;
+    }
+    if (hasCourseMismatch) {
+      setError(`This file contains ${uploadedCourses.join(", ")}, but ${selectedCourse} is selected.`);
       return;
     }
     setIsSubmitting(true);
@@ -27899,6 +27910,34 @@ const CourseSelectionFlyout = ({
         ),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm mt-1", children: error })
       ] }),
+      uploadPreview && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-sky-700/60 bg-sky-950/20 p-3 text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-sky-200", children: "Uploaded File Preview" }),
+            uploadPreview.fileName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-gray-400", children: uploadPreview.fileName })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right text-xs text-gray-300", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+              uploadPreview.validRowCount,
+              " valid rows"
+            ] }),
+            uploadPreview.skippedRowCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-amber-300", children: [
+              uploadPreview.skippedRowCount,
+              " skipped"
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid grid-cols-1 gap-2 text-xs text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Course values in file: " }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: uploadedCourses.length > 0 ? uploadedCourses.join(", ") : "None found" })
+          ] }),
+          uploadPreview.sampleRows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-32 overflow-y-auto rounded border border-gray-700 bg-gray-900/40 p-2", children: uploadPreview.sampleRows.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between gap-3 py-0.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-white", children: row.name }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-gray-400", children: row.idNumber ? `ID ${row.idNumber}` : "No ID" })
+          ] }, `${row.idNumber || row.name}-${index}`)) })
+        ] })
+      ] }),
       updateType === "bulk" && selectedCourse && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/20 border border-red-700 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400 mt-0.5 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -27909,7 +27948,13 @@ const CourseSelectionFlyout = ({
             " and replace them with the uploaded data."
           ] })
         ] })
-      ] }) })
+      ] }) }),
+      hasCourseMismatch && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-amber-600 bg-amber-950/30 p-3 text-xs text-amber-200", children: [
+        "The selected course does not match the course values parsed from this file. Select ",
+        uploadedCourses.join(", "),
+        " or choose a corrected spreadsheet."
+      ] }),
+      hasNoValidRows && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-red-700 bg-red-950/30 p-3 text-xs text-red-200", children: "No valid trainee rows were found. Each uploaded trainee must have a Personnel ID and name before the course can be updated." })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex flex-wrap justify-end gap-3", children: [
       onDownloadDiagnostics && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27934,7 +27979,7 @@ const CourseSelectionFlyout = ({
         "button",
         {
           type: "submit",
-          disabled: isSubmitting,
+          disabled: disableSubmit,
           className: `px-4 py-2 rounded-md transition-colors text-sm font-semibold ${updateType === "bulk" ? "bg-red-600 hover:bg-red-700 text-white" : "bg-sky-600 hover:bg-sky-700 text-white"} disabled:cursor-not-allowed disabled:bg-gray-600`,
           children: isSubmitting ? "Processing..." : updateType === "bulk" ? "Replace Course Data" : "Update Course"
         }
@@ -28160,6 +28205,7 @@ const TraineeBulkUploadFlyout = ({
   const [updateType, setUpdateType] = reactExports.useState("minor");
   const [rows, setRows] = reactExports.useState([]);
   const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
+  const [uploadPreview, setUploadPreview] = reactExports.useState(null);
   const [summary, setSummary] = reactExports.useState(null);
   const [issueAccountActivations, setIssueAccountActivations] = reactExports.useState(false);
   const activeCourses = reactExports.useMemo(() => {
@@ -28268,6 +28314,12 @@ const TraineeBulkUploadFlyout = ({
   };
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
+    setRows([]);
+    setCoursesFromFile([]);
+    setUploadPreview(null);
+    setSummary(null);
+    setShowConfirm(false);
+    setShowCourseSelection(false);
     if (!/\.(xlsx|xls|csv)$/i.test(selectedFile.name)) {
       setStatus("Please select an .xlsx, .xls or .csv file.");
       setFile(null);
@@ -28289,6 +28341,24 @@ const TraineeBulkUploadFlyout = ({
     });
     return Array.from(courses2);
   };
+  const buildUploadPreview = (selectedFile, jsonRows) => {
+    const parsedRows = jsonRows.map(parseTraineeRow);
+    const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
+    const courses2 = extractCourses(jsonRows).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+    return {
+      fileName: selectedFile.name,
+      rowCount: jsonRows.length,
+      validRowCount: validRows.length,
+      skippedRowCount: jsonRows.length - validRows.length,
+      courses: courses2,
+      sampleRows: validRows.slice(0, 10).map((trainee) => ({
+        name: String(trainee.name || ""),
+        idNumber: trainee.idNumber,
+        course: trainee.course,
+        email: trainee.email
+      }))
+    };
+  };
   const handleConfirm = async (password, selectedUpdateType) => {
     try {
       const isValidPassword = await verifyCurrentUserPassword(password);
@@ -28301,8 +28371,10 @@ const TraineeBulkUploadFlyout = ({
     if (!file) return;
     try {
       const jsonRows = await readWorkbookRows(file);
+      const preview = buildUploadPreview(file, jsonRows);
       setRows(jsonRows);
-      setCoursesFromFile(extractCourses(jsonRows));
+      setCoursesFromFile(preview.courses);
+      setUploadPreview(preview);
       setUpdateType(selectedUpdateType);
       setShowConfirm(false);
       setShowCourseSelection(true);
@@ -28507,7 +28579,8 @@ const TraineeBulkUploadFlyout = ({
         updateType,
         onConfirm: processRows,
         onClose: () => setShowCourseSelection(false),
-        onDownloadDiagnostics: handleDownloadCoursePickerDiagnostics
+        onDownloadDiagnostics: handleDownloadCoursePickerDiagnostics,
+        uploadPreview
       }
     ),
     summary && /* @__PURE__ */ jsxRuntimeExports.jsx(
