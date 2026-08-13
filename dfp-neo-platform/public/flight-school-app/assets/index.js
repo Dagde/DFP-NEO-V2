@@ -38451,7 +38451,8 @@ const MyDashboard = ({
     return "text-gray-300 border-gray-600";
   };
   const formatStaffRole = (staff) => normaliseFixedCrewStaffRole(staff.role, staff.unit) || "Staff";
-  const dashboardUserKey = normaliseDashboardContactName(dashboardSelectedName);
+  const dashboardMessageUserName = userName;
+  const dashboardUserKey = normaliseDashboardContactName(dashboardMessageUserName);
   const dashboardUserStaff = reactExports.useMemo(() => messageContactStaffOptions.find((staff) => normaliseDashboardContactName(staff.name) === dashboardUserKey), [dashboardUserKey, messageContactStaffOptions]);
   const dashboardUserUnitCodes = reactExports.useMemo(() => {
     const scopedUnits = messageContactUnitCodes.flatMap((unitCode) => String(unitCode || "").split(/[+/]/)).map((unitCode) => unitCode.trim().toUpperCase()).filter(Boolean);
@@ -38576,10 +38577,10 @@ const MyDashboard = ({
     });
   };
   const refreshDashboardMessages = async () => {
-    if (!dashboardSelectedName) return;
+    if (!dashboardMessageUserName) return;
     try {
-      const apiMessages = await fetchDashboardMessagesFromApi(dashboardSelectedName);
-      const selectedKey = normaliseDashboardContactName(dashboardSelectedName);
+      const apiMessages = await fetchDashboardMessagesFromApi(dashboardMessageUserName);
+      const selectedKey = normaliseDashboardContactName(dashboardMessageUserName);
       setDashboardMessages((prev) => {
         const messagesForOtherUsers = prev.filter((message) => normaliseDashboardContactName(message.from) !== selectedKey && normaliseDashboardContactName(message.to) !== selectedKey);
         const next = mergeDashboardMessages(messagesForOtherUsers, apiMessages);
@@ -38648,7 +38649,7 @@ const MyDashboard = ({
       setMessageView("inbox");
     }
     try {
-      await deleteDashboardConversationFromApi(dashboardSelectedName, contact.name);
+      await deleteDashboardConversationFromApi(dashboardMessageUserName, contact.name);
       await refreshDashboardMessages();
     } catch (error) {
       console.error("[Dashboard Messages] Delete conversation failed:", error);
@@ -38659,7 +38660,7 @@ const MyDashboard = ({
     if (!selectedMessageContact || !messageDraft.trim()) return;
     const nextMessage = {
       id: `dashboard-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      from: dashboardSelectedName,
+      from: dashboardMessageUserName,
       to: selectedMessageContact.name,
       body: messageDraft.trim(),
       sentAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -38680,7 +38681,7 @@ const MyDashboard = ({
     if (messageIdsToMarkRead.length === 0) return;
     const now = (/* @__PURE__ */ new Date()).toISOString();
     persistDashboardMessages((messages) => messages.map((message) => normaliseDashboardContactName(message.to) === dashboardUserKey && normaliseDashboardContactName(message.from) === selectedKey && !message.readAt ? { ...message, readAt: now } : message));
-    markDashboardConversationReadInApi(dashboardSelectedName, selectedMessageContact.name, messageIdsToMarkRead).then(() => refreshDashboardMessages()).catch((error) => console.warn("[Dashboard Messages] Could not mark shared messages read:", error));
+    markDashboardConversationReadInApi(dashboardMessageUserName, selectedMessageContact.name, messageIdsToMarkRead).then(() => refreshDashboardMessages()).catch((error) => console.warn("[Dashboard Messages] Could not mark shared messages read:", error));
   }, [dashboardUserKey, isMessagesOpen, messageView, selectedMessageContact?.name, unreadMessages.length]);
   const newestUnreadMessage = unreadMessages[unreadMessages.length - 1] || null;
   reactExports.useEffect(() => {
