@@ -24882,6 +24882,248 @@ const App: React.FC = () => {
         }
     }
 
+    function buildDashboardReportDiagnosticReport(): Record<string, any> {
+        const normaliseName = (value?: string | null) => String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, ' ');
+        const normaliseCode = (value?: string | null) => String(value || '')
+            .trim()
+            .toUpperCase();
+        const sessionDashboardUserName = signedInDisplayName || currentUserName;
+        const sessionDashboardNameKeys = [
+            sessionDashboardUserName,
+            authUser ? formatAuthLoginName(authUser) : '',
+            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
+            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
+            currentUserName,
+        ].map(normaliseName).filter(Boolean);
+        const sessionDashboardIdKeys = [
+            sessionUser?.userId,
+            authUser?.userId,
+            authUser?.id,
+        ].map(value => String(value || '').trim().toLowerCase()).filter(Boolean);
+        const dashboardStaff = allInstructorsData.find(staff => {
+            const staffName = normaliseName(staff.name);
+            const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
+            return sessionDashboardNameKeys.includes(staffName) || (staffId && sessionDashboardIdKeys.includes(staffId));
+        });
+        const dashboardUserName = sessionDashboardUserName || dashboardStaff?.name || currentUserName;
+        const dashboardNameKeys = Array.from(new Set([
+            ...sessionDashboardNameKeys,
+            normaliseName(dashboardUserName),
+            normaliseName(dashboardStaff?.name),
+        ].filter(Boolean)));
+        const activeEvents: ScheduleEvent[] = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+        const dashboardActiveUnitCodes = (
+            activeContextUnitCodes.length > 0
+                ? activeContextUnitCodes
+                : String(activeUnitCode || '').split('+')
+        ).map(normaliseCode).filter(Boolean);
+        const dashboardActiveUnitSet = new Set(dashboardActiveUnitCodes);
+        const dashboardActiveLocationSet = new Set([
+            ...getDailySnapshotLocationAliases(school),
+            activeLocationSolarProfile.code,
+            school,
+        ].map(normaliseCode).filter(Boolean));
+        const reportContextDecision = (report: any, staff: Instructor) => {
+            const reportUnitCodes = String(report?.unitCode || '').split('+').map(normaliseCode).filter(Boolean);
+            const staffUnitCode = normaliseCode(staff.unit);
+            const reportLocationCode = normaliseCode(report?.locationCode);
+            const unitAccepted = dashboardActiveUnitSet.size === 0
+                ? true
+                : reportUnitCodes.length > 0
+                    ? reportUnitCodes.some(unitCode => dashboardActiveUnitSet.has(unitCode))
+                    : !!staffUnitCode && dashboardActiveUnitSet.has(staffUnitCode);
+            const locationAccepted = !reportLocationCode || dashboardActiveLocationSet.size === 0 || dashboardActiveLocationSet.has(reportLocationCode);
+            return {
+                accepted: unitAccepted && locationAccepted,
+                unitAccepted,
+                locationAccepted,
+                reportUnitCodes,
+                staffUnitCode,
+                reportLocationCode,
+                dashboardActiveUnitCodes,
+                dashboardActiveLocationCodes: Array.from(dashboardActiveLocationSet),
+            };
+        };
+        const reportUserDecision = (report: any, staff: Instructor) => {
+            const explicitAssignee = normaliseName(report?.dashboardAssigneeName);
+            const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
+            const nameCandidates = [
+                report?.dashboardAssigneeName,
+                report?.staffName,
+                staff.name,
+                report?.instructorName,
+            ].map(normaliseName).filter(Boolean);
+            const accepted = explicitAssignee
+                ? dashboardNameKeys.includes(explicitAssignee)
+                : nameCandidates.some(name => dashboardNameKeys.includes(name)) ||
+                    (staffId && sessionDashboardIdKeys.includes(staffId));
+            return {
+                accepted,
+                explicitAssignee: report?.dashboardAssigneeName || null,
+                nameCandidates,
+                dashboardNameKeys,
+                staffId,
+                sessionDashboardIdKeys,
+            };
+        };
+        const serialiseStaff = (staff: Instructor) => ({
+            id: (staff as any).id ?? null,
+            idNumber: staff.idNumber ?? null,
+            name: staff.name ?? null,
+            rank: staff.rank ?? null,
+            unit: staff.unit ?? null,
+            callsign: staff.callsign ?? null,
+        });
+        const serialiseEvent = (event: ScheduleEvent) => ({
+            id: event.id,
+            date: event.date,
+            type: event.type,
+            flightNumber: event.flightNumber,
+            eventCode: (event as any).eventCode ?? null,
+            eventCategory: event.eventCategory ?? null,
+            startTime: event.startTime,
+            duration: event.duration,
+            resourceId: event.resourceId,
+            instructor: event.instructor ?? null,
+            pilot: event.pilot ?? null,
+            student: event.student ?? null,
+            crew: event.crew ?? null,
+            fixedCrewPic: event.fixedCrewPic ?? null,
+            unit: event.unit ?? null,
+            unitCode: event.unitCode ?? null,
+            personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs : [],
+        });
+        const reportEvaluations = allInstructorsData.flatMap(staff => (
+            normaliseAirCombatTrainingReports(staff.preferences).map(report => {
+                const contextDecision = reportContextDecision(report, staff);
+                const userDecision = reportUserDecision(report, staff);
+                const accepted = report.status !== 'Complete' &&
+                    !report.dashboardAcknowledgedAt &&
+                    contextDecision.accepted &&
+                    userDecision.accepted;
+                return {
+                    accepted,
+                    rejectReasons: [
+                        report.status === 'Complete' ? 'status-complete' : '',
+                        report.dashboardAcknowledgedAt ? 'dashboard-acknowledged' : '',
+                        !contextDecision.accepted ? 'context-filter' : '',
+                        !userDecision.accepted ? 'user-filter' : '',
+                    ].filter(Boolean),
+                    staff: serialiseStaff(staff),
+                    report: {
+                        id: report.id,
+                        reportName: report.reportName,
+                        status: report.status,
+                        dashboardAcknowledgedAt: report.dashboardAcknowledgedAt || null,
+                        dashboardAssigneeName: report.dashboardAssigneeName || null,
+                        staffIdNumber: report.staffIdNumber || null,
+                        staffName: report.staffName || null,
+                        instructorName: report.instructorName || null,
+                        eventId: report.eventId || null,
+                        eventCode: report.eventCode || null,
+                        date: report.date || null,
+                        callsign: report.callsign || null,
+                        unitCode: report.unitCode || null,
+                        locationCode: report.locationCode || null,
+                        trainingCode: report.trainingCode || null,
+                        trainingTitle: report.trainingTitle || null,
+                        dcoResult: report.dcoResult || null,
+                    },
+                    contextDecision,
+                    userDecision,
+                };
+            })
+        ));
+        const assessmentRequiredItems = syllabusDetails
+            .filter(item => item.assessmentRequired === true || ['BGF5', 'BPC+IPC', 'FIC'].includes(normaliseCode(item.code || item.module || item.lmpType)))
+            .map(item => ({
+                id: item.id,
+                code: item.code,
+                type: item.type,
+                lmpType: item.lmpType,
+                module: item.module,
+                phase: item.phase,
+                courses: item.courses || [],
+                isActive: item.isActive,
+                assessmentRequired: item.assessmentRequired,
+            }));
+        const bfgOrBgfEvents = activeEvents.filter(event => (
+            normaliseCode(event.flightNumber || (event as any).eventCode).includes('BGF5') ||
+            normaliseCode(event.flightNumber || (event as any).eventCode).includes('BGF')
+        ));
+        const matchingBgf5Syllabus = syllabusDetails.filter(item => (
+            normaliseCode(item.code) === 'BGF5'
+        )).map(item => ({
+            id: item.id,
+            code: item.code,
+            type: item.type,
+            lmpType: item.lmpType,
+            module: item.module,
+            phase: item.phase,
+            courses: item.courses || [],
+            isActive: item.isActive,
+            assessmentRequired: item.assessmentRequired,
+        }));
+        return {
+            reportType: 'DFP My Home reports-to-complete diagnostics',
+            diagnosticVersion: 'CCH 8.180',
+            generatedAt: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            activeContext: {
+                date,
+                school,
+                activeUnitCode,
+                activeContextUnitCodes,
+                activeOperationalModel,
+                activeView,
+                signedInDisplayName,
+                currentUserName,
+                sessionDashboardUserName,
+                dashboardUserName,
+                dashboardStaff: dashboardStaff ? serialiseStaff(dashboardStaff) : null,
+                dashboardNameKeys,
+                sessionDashboardIdKeys,
+            },
+            summary: {
+                activeEventCount: activeEvents.length,
+                bgfEventCount: bfgOrBgfEvents.length,
+                bgf5EventCount: bfgOrBgfEvents.filter(event => normaliseCode(event.flightNumber || (event as any).eventCode) === 'BGF5').length,
+                bgf5SyllabusMatches: matchingBgf5Syllabus.length,
+                assessmentRequiredItemCount: assessmentRequiredItems.length,
+                totalTrainingReportDrafts: reportEvaluations.length,
+                acceptedTrainingReportDrafts: reportEvaluations.filter(item => item.accepted).length,
+                bgf5TrainingReportDrafts: reportEvaluations.filter(item => normaliseCode(item.report.eventCode) === 'BGF5').length,
+                acceptedBgf5TrainingReportDrafts: reportEvaluations.filter(item => item.accepted && normaliseCode(item.report.eventCode) === 'BGF5').length,
+                bgf5RejectReasons: reportEvaluations
+                    .filter(item => normaliseCode(item.report.eventCode) === 'BGF5')
+                    .map(item => ({
+                        reportId: item.report.id,
+                        staffName: item.staff.name,
+                        accepted: item.accepted,
+                        rejectReasons: item.rejectReasons,
+                    })),
+            },
+            bgfEvents: bfgOrBgfEvents.map(serialiseEvent),
+            matchingBgf5Syllabus,
+            assessmentRequiredItems,
+            reportEvaluations,
+        };
+    }
+
+    function downloadDashboardReportDiagnosticReport(): void {
+        const report = buildDashboardReportDiagnosticReport();
+        const generatedStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
+        const filename = `dfp-dashboard-report-diagnostics_${contextStamp || 'app'}_${generatedStamp}.json`;
+        if (!downloadJsonDiagnosticFile(filename, report)) {
+            console.error('[DFP-DASHBOARD-REPORT-DIAG] Could not download dashboard report diagnostic report:', report);
+        }
+    }
+
     useEffect(() => {
         pushDfpDataDiag('context:resolved', {
             platformLocations: (platformConfig?.locations || []).map((location: any) => ({
@@ -48276,6 +48518,14 @@ appliedUpdates.forEach(update => {
                     title="Download DFP tile name display diagnostic JSON report"
                 >
                     Names
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadDashboardReportDiagnosticReport}
+                    className="rounded border border-rose-500/30 px-1.5 py-0.5 text-rose-200 transition-colors hover:border-rose-400/60 hover:text-rose-100"
+                    title="Download My Home reports-to-complete diagnostic JSON report"
+                >
+                    Reports
                 </button>
             </div>
         )}
