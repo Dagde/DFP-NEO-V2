@@ -87496,13 +87496,13 @@ const CoursesManagementView = ({
             }
           ),
           deletePasswordError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 mb-4 text-sm text-red-300", children: deletePasswordError }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 justify-end", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${deletePasswordError ? "" : "mt-5"} flex flex-wrap gap-3 justify-end`, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 onClick: handleCancelPassword,
-                className: "px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors",
+                className: "min-w-[88px] px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors",
                 disabled: isVerifyingDeletePassword,
                 children: "Cancel"
               }
@@ -87511,7 +87511,7 @@ const CoursesManagementView = ({
               "button",
               {
                 type: "submit",
-                className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors",
+                className: "min-w-[108px] px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors",
                 disabled: isVerifyingDeletePassword,
                 children: isVerifyingDeletePassword ? "Checking..." : "Continue"
               }
