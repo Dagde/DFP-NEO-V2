@@ -28432,7 +28432,8 @@ const TraineeBulkUploadFlyout = ({
       sent: Number(payload.sent || 0),
       skipped: Number(payload.skipped || 0),
       failed: Number(payload.failed || 0),
-      details: Array.isArray(payload.details) ? payload.details.map((detail) => String(detail)) : []
+      error: Number(payload.failed || 0) > 0 || Number(payload.skipped || 0) > 0 ? `Only ${Number(payload.sent || 0)} of ${Number(payload.total || 0)} activation emails were sent.` : void 0,
+      details: Array.isArray(payload.details) ? payload.details.map((detail) => String(detail)) : Array.isArray(payload.results) ? payload.results.filter((result) => result?.status && result.status !== "sent").slice(0, 25).map((result) => `${result.name || result.personnelId || "Trainee"}: ${result.message || "Activation email was not sent"}`) : []
     };
   };
   const issueCourseActivationsSafely = async (course, totalTrainees) => {

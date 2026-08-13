@@ -443,7 +443,17 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             sent: Number(payload.sent || 0),
             skipped: Number(payload.skipped || 0),
             failed: Number(payload.failed || 0),
-            details: Array.isArray(payload.details) ? payload.details.map((detail: unknown) => String(detail)) : [],
+            error: Number(payload.failed || 0) > 0 || Number(payload.skipped || 0) > 0
+                ? `Only ${Number(payload.sent || 0)} of ${Number(payload.total || 0)} activation emails were sent.`
+                : undefined,
+            details: Array.isArray(payload.details)
+                ? payload.details.map((detail: unknown) => String(detail))
+                : Array.isArray(payload.results)
+                    ? payload.results
+                        .filter((result: any) => result?.status && result.status !== 'sent')
+                        .slice(0, 25)
+                        .map((result: any) => `${result.name || result.personnelId || 'Trainee'}: ${result.message || 'Activation email was not sent'}`)
+                    : [],
         };
     };
 

@@ -705,7 +705,6 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
     || target.userId
     || target.username
     || 'DFP NEO user';
-  const userId = target.userId || target.username;
   const expiryLabel = formatActivationExpiry(expiresAt);
   const signInUrl = appUrl || 'https://app.dfp-neo.com';
   const examplePersonnelId = '1234567';
@@ -716,15 +715,14 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
     '',
     'Your DFP NEO account has been created.',
     '',
-    `User ID: ${userId}`,
     `Activation code: ${suffix}`,
     '',
-    'To sign in for the first time, enter your User ID, then enter your activation credential in the password field.',
+    'To sign in for the first time, enter your Personnel ID in the User ID field, then enter your activation credential in the password field.',
     'Your activation credential is your Personnel ID followed immediately by the activation code above.',
     '',
-    `Example only: if your Personnel ID was ${examplePersonnelId} and your activation code was ${exampleSuffix}, you would enter ${exampleCredential}.`,
+    `Example only: if a Personnel ID was ${examplePersonnelId} and an activation code was ${exampleSuffix}, the password field would be ${exampleCredential}.`,
     '',
-    'For security, this email does not state your Personnel ID.',
+    'For security, this email does not state your Personnel ID. Use the Personnel ID already issued by your organisation.',
     `This activation code expires at ${expiryLabel}.`,
     '',
     `Sign in: ${signInUrl}`,
@@ -733,12 +731,11 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
     <div style="font-family:Arial,sans-serif;line-height:1.45;color:#172033;max-width:640px">
       <p>Hello ${escapeHtml(displayName)},</p>
       <p>Your DFP NEO account has been created.</p>
-      <p><strong>User ID:</strong> ${escapeHtml(userId)}</p>
       <p><strong>Activation code:</strong> <code style="font-size:16px">${escapeHtml(suffix)}</code></p>
-      <p>To sign in for the first time, enter your User ID, then enter your activation credential in the password field.</p>
+      <p>To sign in for the first time, enter your Personnel ID in the User ID field, then enter your activation credential in the password field.</p>
       <p>Your activation credential is your Personnel ID followed immediately by the activation code above.</p>
-      <p><strong>Example only:</strong> if your Personnel ID was ${escapeHtml(examplePersonnelId)} and your activation code was ${escapeHtml(exampleSuffix)}, you would enter <code>${escapeHtml(exampleCredential)}</code>.</p>
-      <p>For security, this email does not state your Personnel ID.</p>
+      <p><strong>Example only:</strong> if a Personnel ID was ${escapeHtml(examplePersonnelId)} and an activation code was ${escapeHtml(exampleSuffix)}, the password field would be <code>${escapeHtml(exampleCredential)}</code>.</p>
+      <p>For security, this email does not state your Personnel ID. Use the Personnel ID already issued by your organisation.</p>
       <p>This activation code expires at ${escapeHtml(expiryLabel)}.</p>
       <p><a href="${escapeHtml(signInUrl)}">Sign in to DFP NEO</a></p>
     </div>
@@ -9121,6 +9118,15 @@ app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async 
     let sent = 0;
     let skipped = 0;
     let failed = 0;
+    const activeEmailCounts = trainees.reduce((acc, trainee) => {
+      const email = String(trainee.email || '').trim().toLowerCase();
+      if (!email) return acc;
+      acc[email] = (acc[email] || 0) + 1;
+      return acc;
+    }, {});
+    const duplicateCourseEmails = new Set(Object.entries(activeEmailCounts)
+      .filter(([, count]) => count > 1)
+      .map(([email]) => email));
 
     for (const trainee of trainees) {
       const row = {
@@ -9132,6 +9138,12 @@ app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async 
         userId: trainee.userId || null,
       };
       try {
+        if (row.email && duplicateCourseEmails.has(row.email.toLowerCase())) {
+          const error = new Error(`Email ${row.email} is used by ${activeEmailCounts[row.email.toLowerCase()]} active trainees in ${course}. Each login account must have a unique email address before activation emails can be sent.`);
+          error.status = 409;
+          error.code = 'DUPLICATE_COURSE_EMAIL';
+          throw error;
+        }
         const account = await ensureDirectPersonLoginAccount(context.db, context.admin.id, 'trainee', trainee, 'USER');
         linked += 1;
         const activation = await issueActivationEmailForDirectUser(context.db, req, account.user.userId || account.user.username || account.user.id, account.personnelId);
@@ -9174,6 +9186,10 @@ app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async 
       sent,
       skipped,
       failed,
+      details: results
+        .filter(result => result.status !== 'sent')
+        .slice(0, 25)
+        .map(result => `${result.name || result.personnelId || 'Trainee'}: ${result.message || 'Activation email was not sent'}`),
       results,
     });
   } catch (error) {
