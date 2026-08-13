@@ -154,6 +154,7 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
     try {
       const account = payload?.user ? payload : await createOrLinkAccount();
       const targetUserId = account.user?.userId;
+      const personnelId = account.person?.idNumber || idNumber || '';
       if (!targetUserId) throw new Error('No linked login account is available for activation.');
       const response = await fetch('/api/admin/direct-issue-activation', {
         method: 'POST',
@@ -161,7 +162,7 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({ targetUserId }),
+        body: JSON.stringify({ targetUserId, personnelId }),
       });
       if (!response.ok) throw new Error(await readErrorMessage(response, 'Failed to send activation email'));
       const data = await response.json();

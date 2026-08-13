@@ -8618,21 +8618,41 @@ async function ensureDirectPersonLoginAccount(db, adminId, personType, record, r
             "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
             "lastLogin", "createdAt"
      FROM "User"
-     WHERE id = $1 OR "userId" = $2 OR username = $2 OR email = $3
+     WHERE id = $1 OR "userId" = $2 OR username = $2
      ORDER BY CASE WHEN id = $1 THEN 0 WHEN "userId" = $2 OR username = $2 THEN 1 ELSE 2 END
      LIMIT 2`,
     record.userId || '',
-    personnelId,
-    email
+    personnelId
   );
   const uniqueUsers = Array.from(new Map((existingUsers || []).map((user) => [user.id, user])).values());
   if (uniqueUsers.length > 1) {
-    const error = new Error('The Personnel ID and email match different login accounts. Resolve the duplicate account before linking this profile.');
+    const error = new Error('The linked login account and Personnel ID match different users. Resolve the duplicate account before linking this profile.');
     error.status = 409;
     error.code = 'ACCOUNT_CONFLICT';
     throw error;
   }
   let user = uniqueUsers[0] || null;
+  if (user && normalisePersonnelId(user.userId || user.username) !== personnelId) {
+    const error = new Error(`The linked login User ID ${user.userId || user.username || 'unknown'} does not match this profile Personnel ID ${personnelId}. Resolve the account link before issuing activation.`);
+    error.status = 409;
+    error.code = 'ACCOUNT_ID_MISMATCH';
+    throw error;
+  }
+  const emailConflicts = await db.$queryRawUnsafe(
+    `SELECT id, "userId", username, email
+     FROM "User"
+     WHERE LOWER(email) = LOWER($1)
+       AND id <> $2
+     LIMIT 1`,
+    email,
+    user?.id || ''
+  );
+  if (emailConflicts?.length) {
+    const error = new Error(`Email ${email} is already used by login account ${emailConflicts[0].userId || emailConflicts[0].username}. Use a unique email address before creating activation.`);
+    error.status = 409;
+    error.code = 'EMAIL_ACCOUNT_CONFLICT';
+    throw error;
+  }
   if (user) {
     const linkedElsewhere = await db.$queryRawUnsafe(
       `SELECT 'staff' AS type, id, name, "idNumber" FROM "Personnel" WHERE "userId" = $1 AND id <> $2
