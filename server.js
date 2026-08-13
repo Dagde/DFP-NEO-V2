@@ -8674,8 +8674,8 @@ async function ensureDirectPersonLoginAccount(db, adminId, personType, record, r
        SET "userId" = $1,
            username = $1,
            email = $2,
-           "firstName" = COALESCE(NULLIF("firstName", ''), $3),
-           "lastName" = COALESCE(NULLIF("lastName", ''), $4),
+           "firstName" = $3,
+           "lastName" = $4,
            role = $5::"Role",
            "updatedAt" = NOW()
        WHERE id = $6

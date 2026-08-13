@@ -152,7 +152,7 @@ const AccountAccessPanel: React.FC<AccountAccessPanelProps> = ({
     setMessage('');
     setError('');
     try {
-      const account = payload?.user ? payload : await createOrLinkAccount();
+      const account = await createOrLinkAccount();
       const targetUserId = account.user?.userId;
       const personnelId = account.person?.idNumber || idNumber || '';
       if (!targetUserId) throw new Error('No linked login account is available for activation.');
