@@ -58461,8 +58461,9 @@ const API_BASE$1 = "/api";
 const CACHE_KEY = "dfp-syllabus-cache";
 const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
 const CACHE_TTL_MS = 30 * 60 * 1e3;
-const CACHE_VERSION = "13";
+const CACHE_VERSION = "14";
 const CACHE_VERSION_KEY = "dfp-syllabus-cache-version";
+const FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS = /* @__PURE__ */ new Set(["BPC+IPC", "FIC"]);
 function getSessionAuthHeaders() {
   if (typeof window === "undefined") return {};
   const sessionToken = window.localStorage.getItem("dfp_session_token") || "";
@@ -58475,6 +58476,18 @@ async function getApiErrorMessage(response, fallback) {
   } catch {
     return fallback;
   }
+}
+function normaliseCourseKey(value) {
+  return String(value || "").trim().toUpperCase();
+}
+function shouldDefaultAssessmentRequired(item) {
+  const courses = Array.isArray(item.courses) ? item.courses : typeof item.courses === "string" ? String(item.courses).split(",").map((course) => course.trim()).filter(Boolean) : [];
+  const keys = [
+    item.lmpType,
+    item.module,
+    ...courses
+  ].map(normaliseCourseKey).filter(Boolean);
+  return keys.some((key) => FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS.has(key));
 }
 function getCachedSyllabus() {
   try {
@@ -58523,7 +58536,7 @@ function populatePrerequisites(items) {
       ...item,
       acceptableAircraftConfigs: Array.isArray(item.acceptableAircraftConfigs) && item.acceptableAircraftConfigs.length > 0 ? item.acceptableAircraftConfigs : ["ANY"],
       assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0 ? item.assessedElements : ["Airmanship", "Preparation", "Technique"],
-      assessmentRequired: item.assessmentRequired === true
+      assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item)
     };
     const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
     if (hasExplicitPrereqs || item.lmpType === "Master LMP") {

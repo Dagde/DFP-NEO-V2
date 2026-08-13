@@ -70,6 +70,7 @@ const INTEGRATED_COMBAT_OPERATIONS_PACKAGE_CODE = 'ICO';
 const INTEGRATED_COMBAT_OPERATIONS_DEFAULT_FLIGHT_OR_SIM_HOURS = 1.2;
 const INTEGRATED_COMBAT_OPERATIONS_PREFLIGHT_HOURS = 1.5;
 const INTEGRATED_COMBAT_OPERATIONS_POSTFLIGHT_HOURS = 1.0;
+const FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS = new Set(['BPC+IPC', 'FIC']);
 
 function normaliseSyllabusCourses(courses) {
   if (Array.isArray(courses)) return courses;
@@ -91,6 +92,15 @@ function syllabusItemMatchesConfiguredCourse(item, courseOrLmpType) {
   const requestedKey = normaliseCourseKey(courseOrLmpType);
   if (!requestedKey) return false;
   return normaliseSyllabusCourses(item?.courses).some(course => normaliseCourseKey(course) === requestedKey);
+}
+
+function isFlightSchoolAssessmentRequiredDefaultItem(item) {
+  const keys = [
+    item?.lmpType,
+    item?.module,
+    ...normaliseSyllabusCourses(item?.courses),
+  ].map(normaliseCourseKey).filter(Boolean);
+  return keys.some(key => FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS.has(key));
 }
 
 function groupSyllabusByConfiguredCourses(items) {
@@ -168,6 +178,7 @@ function normaliseSyllabusItemForRuntime(item) {
     ...item,
     courses,
     acceptableAircraftConfigs,
+    assessmentRequired: item.assessmentRequired === true || isFlightSchoolAssessmentRequiredDefaultItem({ ...item, courses }),
     duration,
   };
 }
@@ -1534,7 +1545,7 @@ async function migrateAcademicsCoursesField(db) {
 }
 
 async function migrateFlightSchoolAssessmentRequiredDefaults(db) {
-  const markerKey = 'flightSchoolBpcIpcFicAssessmentRequiredEnabledAt';
+  const markerKey = 'flightSchoolBpcIpcFicAssessmentRequiredEnabledAtV2';
   try {
     const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
     const existingSettings = settingsRows?.[0]?.data && typeof settingsRows[0].data === 'object'
@@ -1559,6 +1570,13 @@ async function migrateFlightSchoolAssessmentRequiredDefaults(db) {
         AND (
           $1 = ANY("courses")
           OR $2 = ANY("courses")
+          OR UPPER(TRIM(COALESCE("lmpType", ''))) IN ($1, $2)
+          OR UPPER(TRIM(COALESCE("module", ''))) IN ($1, $2)
+          OR EXISTS (
+            SELECT 1
+            FROM unnest("courses") AS course
+            WHERE UPPER(TRIM(course)) IN ($1, $2)
+          )
         )
     `, 'BPC+IPC', 'FIC');
 
@@ -7883,7 +7901,8 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
               "preFlightTime" = $21, "postFlightTime" = $22,
               "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
               "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
-              "isActive" = $29::boolean, "notes" = $30, "version" = "version" + 1, "updatedAt" = NOW()
+              "isActive" = $29::boolean, "notes" = $30, "assessmentRequired" = $31::boolean,
+              "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           existing.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -7892,7 +7911,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
           itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive,
-          isUploadCourseShellRow(existing) ? null : existing.notes
+          isUploadCourseShellRow(existing) ? null : existing.notes, itemData.assessmentRequired === true
         );
         updated.push({ code });
         continue;
@@ -7911,7 +7930,8 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
               "preFlightTime" = $21, "postFlightTime" = $22,
               "prerequisites" = $23::text[], "prerequisitesGround" = $24::text[],
               "prerequisitesFlying" = $25::text[], "location" = $26, "unit" = $27, "lmpType" = $28,
-              "isActive" = $29::boolean, "notes" = $30, "version" = "version" + 1, "updatedAt" = NOW()
+              "isActive" = $29::boolean, "notes" = $30, "assessmentRequired" = $31::boolean,
+              "version" = "version" + 1, "updatedAt" = NOW()
           WHERE "id" = $1
         `,
           reusablePackagePlaceholder.id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -7920,7 +7940,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           itemData.eventDetailsCommon, itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
           itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
           itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, itemData.lmpType, itemData.isActive,
-          isUploadCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes
+          isUploadCourseShellRow(reusablePackagePlaceholder) ? null : reusablePackagePlaceholder.notes, itemData.assessmentRequired === true
         );
         generatedPlaceholderUsed = true;
         updated.push({ code });
@@ -7935,14 +7955,14 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
           "acceptableAircraftConfigs","resourcesHuman","eventDetailsCommon","eventDetailsSortie",
           "flightOrSimHours","totalEventHours","duration","preFlightTime","postFlightTime",
           "prerequisites","prerequisitesGround","prerequisitesFlying","location","unit","sortOrder","lmpType",
-          "isActive","version","createdBy","createdAt","updatedAt"
+          "assessmentRequired","isActive","version","createdBy","createdAt","updatedAt"
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,
           $9,$10,$11,$12,$13,
           $14,$15,$16,$17,
           $18,$19,$20,$21,$22,
           $23,$24,$25,$26,$27,$28,$29,
-          $30,$31,$32,NOW(),NOW()
+          $30,$31,$32,$33,NOW(),NOW()
         )
       `,
         id, itemData.code, itemData.eventDescription, itemData.phase, itemData.module, itemData.type,
@@ -7952,7 +7972,7 @@ app.post('/api/syllabus/bulk-upload', uploadRateLimit, handleSingleSpreadsheetUp
         itemData.eventDetailsSortie, itemData.flightOrSimHours, itemData.totalEventHours,
         itemData.duration, itemData.preFlightTime, itemData.postFlightTime, itemData.prerequisites,
         itemData.prerequisitesGround, itemData.prerequisitesFlying, itemData.location, itemData.unit, nextSortOrder++,
-        itemData.lmpType, itemData.isActive, 1, 'bulk-upload'
+        itemData.lmpType, itemData.assessmentRequired === true, itemData.isActive, 1, 'bulk-upload'
       );
       created.push({ code });
     }

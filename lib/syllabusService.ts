@@ -13,8 +13,9 @@ const CACHE_TIMESTAMP_KEY = 'dfp-syllabus-cache-timestamp';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 // Increment this version when DB schema/data migrations change the syllabus structure.
 // Old caches with a different version are automatically invalidated on next load.
-const CACHE_VERSION = '13'; // v13: Assessment-required flag for report prompts
+const CACHE_VERSION = '14'; // v14: Flight School BPC+IPC/FIC assessment-required defaults
 const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
+const FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS = new Set(['BPC+IPC', 'FIC']);
 
 function getSessionAuthHeaders(): Record<string, string> {
   if (typeof window === 'undefined') return {};
@@ -29,6 +30,24 @@ async function getApiErrorMessage(response: Response, fallback: string): Promise
   } catch {
     return fallback;
   }
+}
+
+function normaliseCourseKey(value: unknown): string {
+  return String(value || '').trim().toUpperCase();
+}
+
+function shouldDefaultAssessmentRequired(item: Partial<SyllabusItemDetail>): boolean {
+  const courses = Array.isArray(item.courses)
+    ? item.courses
+    : typeof item.courses === 'string'
+      ? String(item.courses).split(',').map(course => course.trim()).filter(Boolean)
+      : [];
+  const keys = [
+    item.lmpType,
+    item.module,
+    ...courses,
+  ].map(normaliseCourseKey).filter(Boolean);
+  return keys.some(key => FLIGHT_SCHOOL_ASSESSMENT_REQUIRED_LMP_KEYS.has(key));
 }
 
 // ============================================================================
@@ -96,7 +115,7 @@ function populatePrerequisites(items: SyllabusItemDetail[]): SyllabusItemDetail[
       assessedElements: Array.isArray(item.assessedElements) && item.assessedElements.length > 0
         ? item.assessedElements
         : ['Airmanship', 'Preparation', 'Technique'],
-      assessmentRequired: item.assessmentRequired === true,
+      assessmentRequired: item.assessmentRequired === true || shouldDefaultAssessmentRequired(item),
     };
     const hasExplicitPrereqs =
       (item.prerequisitesGround && item.prerequisitesGround.length > 0) ||
