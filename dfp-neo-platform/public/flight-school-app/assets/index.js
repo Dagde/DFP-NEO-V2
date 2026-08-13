@@ -109574,13 +109574,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   const finalEventsWithStoredPersonnelId = finalPersonnelIdentityEvents.filter((event) => event.personnelIdentityStatus === "stored-personnel-id");
   const finalNameOnlyEvents = finalPersonnelIdentityEvents.filter((event) => event.personnelIdentityStatus === "name-only");
+  const activeStaffNamesByKey = instructors.reduce((acc, instructor) => {
+    const nameKey = normalizeBuildPersonnelName(instructor.name);
+    if (!nameKey) return acc;
+    acc[nameKey] = (acc[nameKey] || 0) + 1;
+    return acc;
+  }, {});
+  const activeDuplicateStaffNameKeys = new Set(
+    Object.entries(activeStaffNamesByKey).filter(([, count]) => count > 1).map(([nameKey]) => nameKey)
+  );
   const duplicateNamedStaffFinalEvents = finalPersonnelIdentityEvents.filter((event) => {
-    const staffNames = event.staffIdentityRefs.map((ref) => normalizeBuildPersonnelName(ref.name)).filter(Boolean);
-    return staffNames.some((staffName, index) => staffNames.indexOf(staffName) !== index) || event.staffIdentityRefs.some((ref) => {
-      const displayName = normalizeBuildPersonnelName(ref.name);
-      if (!displayName) return false;
-      return instructors.filter((instructor) => normalizeBuildPersonnelName(instructor.name) === displayName).length > 1;
-    });
+    const staffNames = new Set(event.staffIdentityRefs.map((ref) => normalizeBuildPersonnelName(ref.name)).filter(Boolean));
+    return Array.from(staffNames).some((staffName) => activeDuplicateStaffNameKeys.has(staffName));
   });
   neoBuildDiag.final = {
     totalEvents: sortedEvents.length,
@@ -109606,6 +109611,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       eventsWithStoredPersonnelId: finalEventsWithStoredPersonnelId.length,
       nameOnlyEvents: finalNameOnlyEvents.length,
       duplicateNamedStaffEvents: duplicateNamedStaffFinalEvents.length,
+      duplicateNamedStaffNames: Array.from(activeDuplicateStaffNameKeys),
       duplicateNamedStaffSample: duplicateNamedStaffFinalEvents.slice(0, 40),
       nameOnlySample: finalNameOnlyEvents.slice(0, 40)
     },
