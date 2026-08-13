@@ -7801,7 +7801,15 @@ function generateDfpInternal(
         return eventWithoutDate;
     });
 
-    let generatedEvents: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] = activeDfpEventsWithoutDate.map(e => ({
+    let generatedEvents: (Omit<ScheduleEvent, 'date'> & {
+        _source?: string;
+        _isNext?: boolean;
+        _traineeName?: string;
+        _neoBuildInstructorIdentity?: NeoBuildPersonIdentity;
+        _neoBuildPilotIdentity?: NeoBuildPersonIdentity;
+        _neoBuildInstructorPersonnelRef?: ScheduleEventPersonnelRef;
+        _neoBuildPilotPersonnelRef?: ScheduleEventPersonnelRef;
+    })[] = activeDfpEventsWithoutDate.map(e => ({
         ...e,
         _source: 'active-dfp',
         _isNext: undefined,
@@ -7830,9 +7838,28 @@ function generateDfpInternal(
         generatedEventsByPerson.clear();
         generatedEvents.forEach(indexGeneratedEvent);
     };
+    const mergeNeoBuildPersonnelRefs = (event: GeneratedBuildEvent): GeneratedBuildEvent => {
+        const refsByKey = new Map<string, ScheduleEventPersonnelRef>();
+        const refKey = (ref: ScheduleEventPersonnelRef): string => [
+            ref.role,
+            ref.personType,
+            ref.idNumber || ref.id || normalizeBuildPersonnelName(ref.name),
+        ].join(':');
+        (event.personnelRefs || []).forEach(ref => refsByKey.set(refKey(ref), ref));
+        [event._neoBuildInstructorPersonnelRef, event._neoBuildPilotPersonnelRef]
+            .filter(Boolean)
+            .forEach(ref => {
+                const scheduleRef = ref as ScheduleEventPersonnelRef;
+                refsByKey.set(refKey(scheduleRef), scheduleRef);
+            });
+        return refsByKey.size > 0
+            ? { ...event, personnelRefs: Array.from(refsByKey.values()) }
+            : event;
+    };
     const pushGeneratedEvent = (event: GeneratedBuildEvent) => {
-        generatedEvents.push(event);
-        indexGeneratedEvent(event);
+        const eventWithPersonnelRefs = mergeNeoBuildPersonnelRefs(event);
+        generatedEvents.push(eventWithPersonnelRefs);
+        indexGeneratedEvent(eventWithPersonnelRefs);
     };
     const getGeneratedEventsForPerson = (personName?: string): GeneratedBuildEvent[] => {
         const key = getBuildPersonKey(personName);
@@ -20185,6 +20212,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         if (instructor) {
             stbyEvent.instructor = instructor.name;
             Object.assign(stbyEvent, makeNeoBuildStaffIdentityPayload(instructor, instructors));
+            Object.assign(stbyEvent, mergeNeoBuildPersonnelRefs(stbyEvent));
+            rebuildGeneratedEventIndexes();
             stbyWithInstructor++;
         } else {
             stbyEvent.instructor = 'TBA';

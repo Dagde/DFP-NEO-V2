@@ -97419,9 +97419,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     generatedEventsByPerson.clear();
     generatedEvents.forEach(indexGeneratedEvent);
   };
+  const mergeNeoBuildPersonnelRefs = (event) => {
+    const refsByKey = /* @__PURE__ */ new Map();
+    const refKey = (ref) => [
+      ref.role,
+      ref.personType,
+      ref.idNumber || ref.id || normalizeBuildPersonnelName(ref.name)
+    ].join(":");
+    (event.personnelRefs || []).forEach((ref) => refsByKey.set(refKey(ref), ref));
+    [event._neoBuildInstructorPersonnelRef, event._neoBuildPilotPersonnelRef].filter(Boolean).forEach((ref) => {
+      const scheduleRef = ref;
+      refsByKey.set(refKey(scheduleRef), scheduleRef);
+    });
+    return refsByKey.size > 0 ? { ...event, personnelRefs: Array.from(refsByKey.values()) } : event;
+  };
   const pushGeneratedEvent = (event) => {
-    generatedEvents.push(event);
-    indexGeneratedEvent(event);
+    const eventWithPersonnelRefs = mergeNeoBuildPersonnelRefs(event);
+    generatedEvents.push(eventWithPersonnelRefs);
+    indexGeneratedEvent(eventWithPersonnelRefs);
   };
   const getGeneratedEventsForPerson = (personName) => {
     const key = getBuildPersonKey(personName);
@@ -107922,6 +107937,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (instructor) {
         stbyEvent.instructor = instructor.name;
         Object.assign(stbyEvent, makeNeoBuildStaffIdentityPayload(instructor, instructors));
+        Object.assign(stbyEvent, mergeNeoBuildPersonnelRefs(stbyEvent));
+        rebuildGeneratedEventIndexes();
       } else {
         stbyEvent.instructor = "TBA";
       }
