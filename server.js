@@ -495,11 +495,15 @@ async function ensureUserActivationColumns(db) {
   userActivationColumnsEnsured = true;
 }
 
-const ACTIVATION_SUFFIX_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%?';
+const ACTIVATION_SUFFIX_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
 
 function generateActivationSuffix(length = 12) {
   const bytes = crypto.randomBytes(length);
   return Array.from(bytes, byte => ACTIVATION_SUFFIX_CHARS[byte % ACTIVATION_SUFFIX_CHARS.length]).join('');
+}
+
+function normaliseActivationCredentialAttempt(value) {
+  return String(value || '').replace(/\s+/g, '').trim();
 }
 
 function getActivationExpiryDate(configuredHours = null) {
@@ -708,7 +712,7 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
   const expiryLabel = formatActivationExpiry(expiresAt);
   const signInUrl = appUrl || 'https://app.dfp-neo.com';
   const examplePersonnelId = '1234567';
-  const exampleSuffix = 'mnlkpo$q';
+  const exampleSuffix = 'M7qK9rT4zP2x';
   const exampleCredential = `${examplePersonnelId}${exampleSuffix}`;
   const text = [
     `Hello ${displayName},`,
@@ -719,6 +723,7 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
     '',
     'To sign in for the first time, enter your Personnel ID in the User ID field, then enter your activation credential in the password field.',
     'Your activation credential is your Personnel ID followed immediately by the activation code above.',
+    `The activation code is ${suffix.length} characters. Copy it exactly and do not add spaces.`,
     '',
     `Example only: if a Personnel ID was ${examplePersonnelId} and an activation code was ${exampleSuffix}, the password field would be ${exampleCredential}.`,
     '',
@@ -734,6 +739,7 @@ function buildActivationEmail({ target, suffix, expiresAt, appUrl }) {
       <p><strong>Activation code:</strong> <code style="font-size:16px">${escapeHtml(suffix)}</code></p>
       <p>To sign in for the first time, enter your Personnel ID in the User ID field, then enter your activation credential in the password field.</p>
       <p>Your activation credential is your Personnel ID followed immediately by the activation code above.</p>
+      <p>The activation code is ${suffix.length} characters. Copy it exactly and do not add spaces.</p>
       <p><strong>Example only:</strong> if a Personnel ID was ${escapeHtml(examplePersonnelId)} and an activation code was ${escapeHtml(exampleSuffix)}, the password field would be <code>${escapeHtml(exampleCredential)}</code>.</p>
       <p>For security, this email does not state your Personnel ID. Use the Personnel ID already issued by your organisation.</p>
       <p>This activation code expires at ${escapeHtml(expiryLabel)}.</p>
@@ -8242,7 +8248,10 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     const bcrypt = require('bcryptjs');
     let validPassword = false;
     let usedActivationCredential = false;
+    let activationCredentialExpectedLength = null;
     if (user.mustChangePassword && user.activationCodeHash) {
+      const cleanLoginUserId = normalisePersonnelId(loginUserId);
+      activationCredentialExpectedLength = cleanLoginUserId ? cleanLoginUserId.length + 12 : null;
       if (user.activationCodeUsedAt) {
         await writeSecurityAuditEvent(db, req, 'LOGIN_BLOCKED', 'warning', 'Activation login blocked after code use', {
           reason: 'activation_code_already_used',
@@ -8269,7 +8278,12 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
           message: 'This activation code has expired. Ask an administrator to reissue account activation.',
         });
       }
-      validPassword = await bcrypt.compare(password, user.activationCodeHash);
+      const rawActivationAttempt = String(password || '');
+      const normalisedActivationAttempt = normaliseActivationCredentialAttempt(rawActivationAttempt);
+      validPassword = await bcrypt.compare(rawActivationAttempt, user.activationCodeHash);
+      if (!validPassword && normalisedActivationAttempt !== rawActivationAttempt) {
+        validPassword = await bcrypt.compare(normalisedActivationAttempt, user.activationCodeHash);
+      }
       usedActivationCredential = validPassword;
       if (!validPassword) {
         const attempts = Number(user.activationAttemptCount || 0) + 1;
@@ -8293,7 +8307,9 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
       });
       return res.status(401).json({
         error: 'Invalid credentials',
-        message: 'Invalid User ID or password',
+        message: user.mustChangePassword && user.activationCodeHash
+          ? `Activation login failed. Enter your Personnel ID in the User ID field, then enter your Personnel ID immediately followed by the full activation code from the email in the password field. Do not add spaces.${activationCredentialExpectedLength ? ` The password field should be ${activationCredentialExpectedLength} characters for this activation email.` : ''}`
+          : 'Invalid User ID or password',
       });
     }
     if (usedActivationCredential) {
