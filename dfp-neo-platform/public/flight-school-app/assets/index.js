@@ -118963,6 +118963,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       eventCode: eventCode2,
       eventDescription: matchingItem.eventDescription || sourceEvent.notes,
       eventType: matchingItem.type || sourceEvent.type,
+      dashboardAssigneeName: existingReport?.dashboardAssigneeName || staff.name,
       date: sourceEvent.date || getLocalDateString2(),
       startTime: sourceEvent.startTime,
       duration: sourceEvent.duration,
@@ -129653,7 +129654,22 @@ ${error instanceof Error ? error.message : String(error)}`,
           }
           return true;
         };
-        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && reportMatchesDashboardContext(report, staff) && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
+        const reportMatchesDashboardUser = (report, staff) => {
+          const dashboardNameKeys = new Set([
+            ...sessionDashboardNameKeys,
+            normaliseDashboardName(dashboardUserName),
+            normaliseDashboardName(dashboardStaff?.name)
+          ].filter(Boolean));
+          const explicitAssignee = normaliseDashboardName(report?.dashboardAssigneeName);
+          if (explicitAssignee) return dashboardNameKeys.has(explicitAssignee);
+          const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
+          return [
+            report?.staffName,
+            staff.name,
+            report?.instructorName
+          ].some((name) => dashboardNameKeys.has(normaliseDashboardName(name))) || staffId && sessionDashboardIdKeys.includes(staffId);
+        };
+        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && reportMatchesDashboardContext(report, staff) && reportMatchesDashboardUser(report, staff)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {

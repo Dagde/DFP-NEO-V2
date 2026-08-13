@@ -32393,6 +32393,7 @@ const App: React.FC = () => {
             eventCode,
             eventDescription: matchingItem.eventDescription || sourceEvent.notes,
             eventType: matchingItem.type || sourceEvent.type,
+            dashboardAssigneeName: existingReport?.dashboardAssigneeName || staff.name,
             date: sourceEvent.date || getLocalDateString(),
             startTime: sourceEvent.startTime,
             duration: sourceEvent.duration,
@@ -45227,13 +45228,29 @@ appliedUpdates.forEach(update => {
                     }
                     return true;
                 };
+                const reportMatchesDashboardUser = (report: any, staff: Instructor): boolean => {
+                    const dashboardNameKeys = new Set([
+                        ...sessionDashboardNameKeys,
+                        normaliseDashboardName(dashboardUserName),
+                        normaliseDashboardName(dashboardStaff?.name),
+                    ].filter(Boolean));
+                    const explicitAssignee = normaliseDashboardName(report?.dashboardAssigneeName);
+                    if (explicitAssignee) return dashboardNameKeys.has(explicitAssignee);
+                    const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
+                    return [
+                        report?.staffName,
+                        staff.name,
+                        report?.instructorName,
+                    ].some(name => dashboardNameKeys.has(normaliseDashboardName(name))) ||
+                        (staffId && sessionDashboardIdKeys.includes(staffId));
+                };
                 const pendingTrainingReports = allInstructorsData.flatMap(staff => (
                     normaliseAirCombatTrainingReports(staff.preferences)
                         .filter(report => (
                             report.status !== 'Complete' &&
                             !report.dashboardAcknowledgedAt &&
                             reportMatchesDashboardContext(report, staff) &&
-                            normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)
+                            reportMatchesDashboardUser(report, staff)
                         ))
                         .map(report => ({ report, staff }))
                 ));
