@@ -27980,8 +27980,12 @@ const UpdateSummaryFlyout = ({ summary, onClose }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-amber-400 float-right", children: summary.skipped })
         ] })
       ] }),
-      summary.activation?.requested && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-3 rounded-md text-sm", children: [
+      summary.activation?.requested && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-3 rounded-md text-sm ${summary.activation.error ? "bg-amber-950/30 border border-amber-500/40" : "bg-gray-700/50"}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-white", children: "Account Activation" }),
+        summary.activation.error && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-2 text-amber-200", children: [
+          "Trainees were uploaded, but activation emails were not sent. ",
+          summary.activation.error
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Emails Sent:" }),
@@ -28331,6 +28335,21 @@ const TraineeBulkUploadFlyout = ({
       failed: Number(payload.failed || 0)
     };
   };
+  const issueCourseActivationsSafely = async (course, totalTrainees) => {
+    try {
+      return await issueCourseActivations(course);
+    } catch (error) {
+      const message = error.message || "Account activation emails could not be sent.";
+      return {
+        requested: true,
+        total: totalTrainees,
+        sent: 0,
+        skipped: 0,
+        failed: totalTrainees,
+        error: message
+      };
+    }
+  };
   const processRows = async (course) => {
     const parsedRows = rows.map(parseTraineeRow);
     const validRows = parsedRows.filter((trainee) => Boolean(trainee && trainee.idNumber && trainee.name));
@@ -28352,7 +28371,7 @@ const TraineeBulkUploadFlyout = ({
       await onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
       initialiseLmpForNewTrainees(newTrainees.filter((trainee) => !traineesData.some((existing) => existing.idNumber === trainee.idNumber)));
       if (activationRequested) {
-        activation = await issueCourseActivations(course);
+        activation = await issueCourseActivationsSafely(course, newTrainees.length);
       }
       setSummary({ type: "Bulk", replaced: newTrainees.length, added: 0, updated: 0, skipped, activation });
     } else {
@@ -28362,7 +28381,7 @@ const TraineeBulkUploadFlyout = ({
       await onBulkUpdateTrainees(newTrainees);
       initialiseLmpForNewTrainees(added);
       if (activationRequested) {
-        activation = await issueCourseActivations(course);
+        activation = await issueCourseActivationsSafely(course, newTrainees.length);
       }
       setSummary({ type: "Minor", replaced: 0, added: added.length, updated: updated.length, skipped, activation });
     }

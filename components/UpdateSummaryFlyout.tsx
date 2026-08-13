@@ -14,6 +14,7 @@ interface UpdateSummaryFlyoutProps {
       sent: number;
       skipped: number;
       failed: number;
+      error?: string;
     };
   };
   onClose: () => void;
@@ -61,8 +62,13 @@ const UpdateSummaryFlyout: React.FC<UpdateSummaryFlyoutProps> = ({ summary, onCl
                         </div>
                     </div>
                     {summary.activation?.requested && (
-                        <div className="bg-gray-700/50 p-3 rounded-md text-sm">
+                        <div className={`p-3 rounded-md text-sm ${summary.activation.error ? 'bg-amber-950/30 border border-amber-500/40' : 'bg-gray-700/50'}`}>
                             <p className="font-semibold text-white">Account Activation</p>
+                            {summary.activation.error && (
+                                <p className="mt-2 text-amber-200">
+                                    Trainees were uploaded, but activation emails were not sent. {summary.activation.error}
+                                </p>
+                            )}
                             <div className="mt-2 grid grid-cols-2 gap-2">
                                 <div>
                                     <span className="text-gray-400">Emails Sent:</span>

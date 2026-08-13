@@ -28,6 +28,7 @@ type UploadActivationSummary = {
     sent: number;
     skipped: number;
     failed: number;
+    error?: string;
 };
 
 const normaliseDiagnosticToken = (value: unknown): string => String(value || '').trim().toUpperCase();
@@ -387,6 +388,22 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         };
     };
 
+    const issueCourseActivationsSafely = async (course: string, totalTrainees: number): Promise<UploadActivationSummary> => {
+        try {
+            return await issueCourseActivations(course);
+        } catch (error) {
+            const message = (error as Error).message || 'Account activation emails could not be sent.';
+            return {
+                requested: true,
+                total: totalTrainees,
+                sent: 0,
+                skipped: 0,
+                failed: totalTrainees,
+                error: message,
+            };
+        }
+    };
+
     const processRows = async (course: string) => {
         const parsedRows = rows.map(parseTraineeRow);
         const validRows = parsedRows.filter((trainee): trainee is Partial<Trainee> => Boolean(trainee && trainee.idNumber && trainee.name));
@@ -411,7 +428,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             await onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
             initialiseLmpForNewTrainees(newTrainees.filter(trainee => !traineesData.some(existing => existing.idNumber === trainee.idNumber)));
             if (activationRequested) {
-                activation = await issueCourseActivations(course);
+                activation = await issueCourseActivationsSafely(course, newTrainees.length);
             }
             setSummary({ type: 'Bulk', replaced: newTrainees.length, added: 0, updated: 0, skipped, activation });
         } else {
@@ -421,7 +438,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             await onBulkUpdateTrainees(newTrainees);
             initialiseLmpForNewTrainees(added);
             if (activationRequested) {
-                activation = await issueCourseActivations(course);
+                activation = await issueCourseActivationsSafely(course, newTrainees.length);
             }
             setSummary({ type: 'Minor', replaced: 0, added: added.length, updated: updated.length, skipped, activation });
         }
