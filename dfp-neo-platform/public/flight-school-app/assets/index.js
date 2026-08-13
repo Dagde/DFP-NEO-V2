@@ -113897,7 +113897,8 @@ const App = () => {
     const hasCourseLocation = courseLocation.length > 0;
     if (hasConfiguredCourseUnitScope) {
       if (!hasCourseUnit) return false;
-      if (activeContextUnitCodeSet.size === 0) return true;
+    }
+    if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
       const unitMatches = courseUnits.some((unitCode) => activeContextUnitCodeSet.has(unitCode));
       if (!unitMatches) return false;
     }
