@@ -752,6 +752,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     traineesData={traineesData}
                     syllabusDetails={syllabusDetails}
                     courseColors={courseColors}
+                    courses={courses}
                     onBulkUpdateTrainees={onBulkUpdateTrainees}
                     onReplaceTrainees={onReplaceTrainees}
                     onUpdateTraineeLMPs={onUpdateTraineeLMPs}

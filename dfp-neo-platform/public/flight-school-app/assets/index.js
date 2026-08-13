@@ -28108,6 +28108,7 @@ const TraineeBulkUploadFlyout = ({
   traineesData,
   syllabusDetails,
   courseColors,
+  courses = [],
   onBulkUpdateTrainees,
   onReplaceTrainees,
   onUpdateTraineeLMPs,
@@ -28124,7 +28125,18 @@ const TraineeBulkUploadFlyout = ({
   const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
   const [summary, setSummary] = reactExports.useState(null);
   const [issueAccountActivations, setIssueAccountActivations] = reactExports.useState(false);
-  const activeCourses = reactExports.useMemo(() => Object.keys(courseColors).sort((a, b) => a.localeCompare(b)), [courseColors]);
+  const activeCourses = reactExports.useMemo(() => {
+    const courseNames = /* @__PURE__ */ new Set();
+    Object.keys(courseColors).forEach((course) => {
+      const clean = String(course || "").trim();
+      if (clean) courseNames.add(clean);
+    });
+    courses.forEach((course) => {
+      const clean = String(course?.name || course?.code || course?.number || "").trim();
+      if (clean) courseNames.add(clean);
+    });
+    return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
+  }, [courseColors, courses]);
   const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
   const handleFile = (selectedFile) => {
     if (!selectedFile) return;
@@ -28137,17 +28149,17 @@ const TraineeBulkUploadFlyout = ({
     setStatus("");
   };
   const extractCourses = (jsonRows) => {
-    const courses = /* @__PURE__ */ new Set();
+    const courses2 = /* @__PURE__ */ new Set();
     jsonRows.forEach((row) => {
       const coursePrefix = getStr(row, ["Course Prefix", "coursePrefix"]);
       const courseNumber = getStr(row, ["Course Number", "courseNumber"]);
-      if (coursePrefix && courseNumber) courses.add(`${coursePrefix}${courseNumber}`);
+      if (coursePrefix && courseNumber) courses2.add(`${coursePrefix}${courseNumber}`);
       else {
         const course = getStr(row, ["Course"]);
-        if (course) courses.add(course);
+        if (course) courses2.add(course);
       }
     });
-    return Array.from(courses);
+    return Array.from(courses2);
   };
   const handleConfirm = async (password, selectedUpdateType) => {
     try {
@@ -28927,6 +28939,7 @@ const CourseRosterView = ({
         traineesData,
         syllabusDetails,
         courseColors,
+        courses,
         onBulkUpdateTrainees,
         onReplaceTrainees,
         onUpdateTraineeLMPs,

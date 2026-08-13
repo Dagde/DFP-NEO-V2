@@ -14,6 +14,7 @@ interface TraineeBulkUploadFlyoutProps {
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
     courseColors: { [key: string]: string };
+    courses?: Array<{ name?: string; code?: string; number?: string }>;
     onBulkUpdateTrainees: (trainees: Trainee[]) => void | Promise<void>;
     onReplaceTrainees: (trainees: Trainee[]) => void | Promise<void>;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
@@ -152,6 +153,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     traineesData,
     syllabusDetails,
     courseColors,
+    courses = [],
     onBulkUpdateTrainees,
     onReplaceTrainees,
     onUpdateTraineeLMPs,
@@ -169,7 +171,18 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     const [summary, setSummary] = useState<{ added: number; updated: number; replaced: number; skipped: number; type: string; activation?: UploadActivationSummary } | null>(null);
     const [issueAccountActivations, setIssueAccountActivations] = useState(false);
 
-    const activeCourses = useMemo(() => Object.keys(courseColors).sort((a, b) => a.localeCompare(b)), [courseColors]);
+    const activeCourses = useMemo(() => {
+        const courseNames = new Set<string>();
+        Object.keys(courseColors).forEach(course => {
+            const clean = String(course || '').trim();
+            if (clean) courseNames.add(clean);
+        });
+        courses.forEach(course => {
+            const clean = String(course?.name || course?.code || course?.number || '').trim();
+            if (clean) courseNames.add(clean);
+        });
+        return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    }, [courseColors, courses]);
     const canIssueAccountActivations = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));
 
     const handleFile = (selectedFile?: File | null) => {
