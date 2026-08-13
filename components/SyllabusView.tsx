@@ -143,10 +143,7 @@ const AssessedElementsWindow: React.FC<{
     isEditing: boolean;
     onChange: (elements: string[]) => void;
     onAddElement?: () => void;
-    showAssessmentRequired?: boolean;
-    assessmentRequired?: boolean;
-    onAssessmentRequiredChange?: (required: boolean) => void;
-}> = ({ selectedElements, availableElements, isEditing, onChange, onAddElement, showAssessmentRequired = false, assessmentRequired = false, onAssessmentRequiredChange }) => {
+}> = ({ selectedElements, availableElements, isEditing, onChange, onAddElement }) => {
     const selected = normaliseAssessedElements(selectedElements, availableElements);
     const selectedSet = new Set(selected.map(item => item.toLowerCase()));
     const toggle = (element: string) => {
@@ -161,33 +158,6 @@ const AssessedElementsWindow: React.FC<{
         <fieldset className="p-4 border border-gray-700 rounded-lg">
             <legend className="px-2 text-sm font-semibold text-gray-300">Assessed Elements</legend>
             <div className="mt-2 rounded-lg bg-gray-900/45 p-3">
-                {showAssessmentRequired && (
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-950/20 px-3 py-2">
-                        <div>
-                            <div className="text-xs font-bold uppercase tracking-wide text-amber-100">Assessment required</div>
-                            <div className="mt-0.5 text-[11px] text-gray-400">Creates a draft training report after completed post-flight entry.</div>
-                        </div>
-                        {isEditing ? (
-                            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-amber-100">
-                                <input
-                                    type="checkbox"
-                                    checked={!!assessmentRequired}
-                                    onChange={(event) => onAssessmentRequiredChange?.(event.target.checked)}
-                                    className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-amber-500 focus:ring-amber-500"
-                                />
-                                <span>{assessmentRequired ? 'On' : 'Off'}</span>
-                            </label>
-                        ) : (
-                            <span className={`rounded px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${
-                                assessmentRequired
-                                    ? 'border border-emerald-500/40 bg-emerald-950/40 text-emerald-200'
-                                    : 'border border-gray-600 bg-gray-950/60 text-gray-400'
-                            }`}>
-                                {assessmentRequired ? 'On' : 'Off'}
-                            </span>
-                        )}
-                    </div>
-                )}
                 {isEditing ? (
                     <>
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -578,21 +548,43 @@ const DetailView: React.FC<{
         }
         onLinkedEventChange?.(item, linkedEventCode);
     };
+    const showAssessmentRequiredControl = operationalModel === 'flight_school' || isAirCombatModel || isFixedCrewModel;
 
     return (
     <div className="space-y-6">
-        <div>
-            {isEditing ? (
-                <EditableField label="Code" value={currentItem.code} onChange={(val) => handleFieldChange('code', val)} />
-            ) : (
-                <h2 className="text-3xl font-bold text-white">{item.code}</h2>
-            )}
-             {isEditing ? (
-                <div className="mt-2">
-                    <EditableField label="Event Description" value={currentItem.eventDescription} onChange={(val) => handleFieldChange('eventDescription', val)} />
-                </div>
-            ) : (
-                <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+                {isEditing ? (
+                    <EditableField label="Code" value={currentItem.code} onChange={(val) => handleFieldChange('code', val)} />
+                ) : (
+                    <h2 className="text-3xl font-bold text-white">{item.code}</h2>
+                )}
+                 {isEditing ? (
+                    <div className="mt-2">
+                        <EditableField label="Event Description" value={currentItem.eventDescription} onChange={(val) => handleFieldChange('eventDescription', val)} />
+                    </div>
+                ) : (
+                    <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
+                )}
+            </div>
+            {showAssessmentRequiredControl && (
+                <label
+                    className={`mt-1 flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-semibold ${
+                        isEditing
+                            ? 'cursor-pointer border-gray-600 bg-gray-900/60 text-gray-200 hover:border-sky-600/70'
+                            : 'border-gray-700 bg-gray-900/30 text-gray-400'
+                    }`}
+                    title="Creates a draft training report after completed post-flight entry."
+                >
+                    <input
+                        type="checkbox"
+                        checked={currentItem.assessmentRequired === true}
+                        disabled={!isEditing}
+                        onChange={(event) => handleFieldChange('assessmentRequired', event.target.checked)}
+                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-sky-500 focus:ring-sky-500 disabled:opacity-70"
+                    />
+                    <span>Assessment required</span>
+                </label>
             )}
         </div>
         
@@ -904,9 +896,6 @@ const DetailView: React.FC<{
             isEditing={isEditing}
             onChange={(elements) => handleFieldChange('assessedElements', elements)}
             onAddElement={onAddScoringMatrixElement}
-            showAssessmentRequired={operationalModel === 'flight_school' || isAirCombatModel || isFixedCrewModel}
-            assessmentRequired={currentItem.assessmentRequired === true}
-            onAssessmentRequiredChange={(required) => handleFieldChange('assessmentRequired', required)}
         />
 
            <fieldset className="p-4 border border-gray-700 rounded-lg">
