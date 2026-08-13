@@ -26866,17 +26866,9 @@ const App: React.FC = () => {
         const courseLocation = String(course.location || '').trim();
         const hasCourseLocation = courseLocation.length > 0;
 
-        if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
-            if (
-                activeOperationalModel !== 'flight_school' ||
-                !hasCourseLocation ||
-                !activeFlightSchoolTraineeCourseNames.has(normaliseCourseName(course.name))
-            ) {
-                return false;
-            }
-        }
-
-        if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
+        if (hasConfiguredCourseUnitScope) {
+            if (!hasCourseUnit) return false;
+            if (activeContextUnitCodeSet.size === 0) return true;
             const unitMatches = courseUnits.some(unitCode => activeContextUnitCodeSet.has(unitCode));
             if (!unitMatches) return false;
         }
@@ -26890,7 +26882,7 @@ const App: React.FC = () => {
         }
 
         return hasCourseUnit || hasCourseLocation;
-    }, [activeContextUnitCodeSet, activeFlightSchoolTraineeCourseNames, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias, normaliseCourseName]);
+    }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
 
     const scopedCourses = useMemo(
         () => courses.filter(courseMatchesActiveContext),

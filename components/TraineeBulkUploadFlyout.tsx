@@ -15,6 +15,7 @@ interface TraineeBulkUploadFlyoutProps {
     syllabusDetails: SyllabusItemDetail[];
     courseColors: { [key: string]: string };
     courses?: Array<{ name?: string; code?: string; number?: string }>;
+    allowedCourses?: string[];
     onBulkUpdateTrainees: (trainees: Trainee[]) => void | Promise<void>;
     onReplaceTrainees: (trainees: Trainee[]) => void | Promise<void>;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
@@ -152,8 +153,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
     onClose,
     traineesData,
     syllabusDetails,
-    courseColors,
     courses = [],
+    allowedCourses = [],
     onBulkUpdateTrainees,
     onReplaceTrainees,
     onUpdateTraineeLMPs,
@@ -173,7 +174,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
 
     const activeCourses = useMemo(() => {
         const courseNames = new Set<string>();
-        Object.keys(courseColors).forEach(course => {
+        allowedCourses.forEach(course => {
             const clean = String(course || '').trim();
             if (clean) courseNames.add(clean);
         });
@@ -182,17 +183,19 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             if (clean) courseNames.add(clean);
         });
         return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [courseColors, courses]);
+    }, [allowedCourses, courses]);
     const selectableCourses = useMemo(() => {
         const courseNames = new Set<string>();
         activeCourses.forEach(course => {
             const clean = String(course || '').trim();
             if (clean) courseNames.add(clean);
         });
-        coursesFromFile.forEach(course => {
-            const clean = String(course || '').trim();
-            if (clean) courseNames.add(clean);
-        });
+        if (courseNames.size === 0) {
+            coursesFromFile.forEach(course => {
+                const clean = String(course || '').trim();
+                if (clean) courseNames.add(clean);
+            });
+        }
         return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     }, [activeCourses, coursesFromFile]);
     const canIssueAccountActivations = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));

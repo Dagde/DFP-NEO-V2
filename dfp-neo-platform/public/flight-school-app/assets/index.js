@@ -28107,8 +28107,8 @@ const TraineeBulkUploadFlyout = ({
   onClose,
   traineesData,
   syllabusDetails,
-  courseColors,
   courses = [],
+  allowedCourses = [],
   onBulkUpdateTrainees,
   onReplaceTrainees,
   onUpdateTraineeLMPs,
@@ -28127,7 +28127,7 @@ const TraineeBulkUploadFlyout = ({
   const [issueAccountActivations, setIssueAccountActivations] = reactExports.useState(false);
   const activeCourses = reactExports.useMemo(() => {
     const courseNames = /* @__PURE__ */ new Set();
-    Object.keys(courseColors).forEach((course) => {
+    allowedCourses.forEach((course) => {
       const clean = String(course || "").trim();
       if (clean) courseNames.add(clean);
     });
@@ -28136,17 +28136,19 @@ const TraineeBulkUploadFlyout = ({
       if (clean) courseNames.add(clean);
     });
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
-  }, [courseColors, courses]);
+  }, [allowedCourses, courses]);
   const selectableCourses = reactExports.useMemo(() => {
     const courseNames = /* @__PURE__ */ new Set();
     activeCourses.forEach((course) => {
       const clean = String(course || "").trim();
       if (clean) courseNames.add(clean);
     });
-    coursesFromFile.forEach((course) => {
-      const clean = String(course || "").trim();
-      if (clean) courseNames.add(clean);
-    });
+    if (courseNames.size === 0) {
+      coursesFromFile.forEach((course) => {
+        const clean = String(course || "").trim();
+        if (clean) courseNames.add(clean);
+      });
+    }
     return Array.from(courseNames).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" }));
   }, [activeCourses, coursesFromFile]);
   const canIssueAccountActivations = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase().replace(/[\s-]+/g, "_"));
@@ -28952,6 +28954,7 @@ const CourseRosterView = ({
         syllabusDetails,
         courseColors,
         courses,
+        allowedCourses: activeCourseNumbers,
         onBulkUpdateTrainees,
         onReplaceTrainees,
         onUpdateTraineeLMPs,
@@ -113892,12 +113895,9 @@ const App = () => {
     const hasCourseUnit = courseUnits.length > 0;
     const courseLocation = String(course.location || "").trim();
     const hasCourseLocation = courseLocation.length > 0;
-    if (hasConfiguredCourseUnitScope && !hasCourseUnit) {
-      if (activeOperationalModel !== "flight_school" || !hasCourseLocation || !activeFlightSchoolTraineeCourseNames.has(normaliseCourseName(course.name))) {
-        return false;
-      }
-    }
-    if (hasCourseUnit && activeContextUnitCodeSet.size > 0) {
+    if (hasConfiguredCourseUnitScope) {
+      if (!hasCourseUnit) return false;
+      if (activeContextUnitCodeSet.size === 0) return true;
       const unitMatches = courseUnits.some((unitCode) => activeContextUnitCodeSet.has(unitCode));
       if (!unitMatches) return false;
     }
@@ -113908,7 +113908,7 @@ const App = () => {
       return true;
     }
     return hasCourseUnit || hasCourseLocation;
-  }, [activeContextUnitCodeSet, activeFlightSchoolTraineeCourseNames, activeOperationalModel, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias, normaliseCourseName]);
+  }, [activeContextUnitCodeSet, getCourseUnitCodes, hasConfiguredCourseUnitScope, isActiveLocationAlias]);
   const scopedCourses = reactExports.useMemo(
     () => courses.filter(courseMatchesActiveContext),
     [courseMatchesActiveContext, courses]
