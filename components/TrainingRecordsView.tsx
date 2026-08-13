@@ -122,7 +122,6 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                     <CoursesManagementView
                         courses={courses}
                         courseColors={courseColors}
-                        archivedCourses={archivedCourses}
                         onAddCourse={onAddCourse}
                         onDeleteCourse={onDeleteCourse}
                         onNavigateToCourseRoster={onNavigateToCourseRoster}
@@ -137,7 +136,6 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         syllabusDetails={syllabusDetails}
                         platformConfig={platformConfig}
                         serviceDefinitions={serviceDefinitions}
-                        traineesData={traineesData}
                     />
                 )}
                 {activeTab === 'export' && (

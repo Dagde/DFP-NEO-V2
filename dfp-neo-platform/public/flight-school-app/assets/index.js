@@ -87175,25 +87175,9 @@ const getServiceCountLabels = (serviceDefinitions = []) => {
     labels[2] || "Group 3"
   ];
 };
-const normaliseCourseScopeToken = (value) => String(value || "").trim().toUpperCase();
-const splitCourseUnitCodes = (value) => Array.from(new Set(
-  String(value || "").split(/[+,/]/).map(normaliseCourseScopeToken).filter(Boolean)
-));
-const downloadJsonFile = (filename, payload) => {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
 const CoursesManagementView = ({
   courses,
   courseColors,
-  archivedCourses,
   onAddCourse,
   onDeleteCourse,
   onNavigateToCourseRoster,
@@ -87207,15 +87191,16 @@ const CoursesManagementView = ({
   operationalModel = "flight_school",
   syllabusDetails = [],
   platformConfig = null,
-  serviceDefinitions = [],
-  traineesData = []
+  serviceDefinitions = []
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
   const [showEditFlyout, setShowEditFlyout] = reactExports.useState(false);
   const [courseToEdit, setCourseToEdit] = reactExports.useState(null);
-  const [pinInput, setPinInput] = reactExports.useState("");
-  const [showPinDialog, setShowPinDialog] = reactExports.useState(false);
+  const [deletePassword, setDeletePassword] = reactExports.useState("");
+  const [deletePasswordError, setDeletePasswordError] = reactExports.useState("");
+  const [isVerifyingDeletePassword, setIsVerifyingDeletePassword] = reactExports.useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = reactExports.useState(false);
   const [showChoiceDialog, setShowChoiceDialog] = reactExports.useState(false);
   const [courseToDelete, setCourseToDelete] = reactExports.useState(null);
   const [primaryStudentGroupLabel, secondaryStudentGroupLabel, tertiaryStudentGroupLabel] = reactExports.useMemo(
@@ -87232,138 +87217,11 @@ const CoursesManagementView = ({
     });
     return groups;
   }, [courses, courseColors]);
-  const handleDownloadCourseScopeDiagnostics = () => {
-    const activeContextUnits = splitCourseUnitCodes(activeUnitCode);
-    const activeContextUnitSet = new Set(activeContextUnits);
-    const activeCourseNames = Object.values(groupedCourses).flat().map((course) => course.name);
-    const visibleCourseSet = new Set(activeCourseNames);
-    const traineeCourseSummaries = /* @__PURE__ */ new Map();
-    traineesData.filter((trainee) => trainee?.isActive !== false).forEach((trainee) => {
-      const courseName = String(trainee?.course || "").trim();
-      if (!courseName) return;
-      const traineeUnit = normaliseCourseScopeToken(trainee?.unit);
-      const inContext = activeContextUnitSet.size === 0 || traineeUnit && activeContextUnitSet.has(traineeUnit);
-      const existing = traineeCourseSummaries.get(courseName) || {
-        totalActive: 0,
-        activeInContext: 0,
-        activeOutsideContext: 0,
-        units: /* @__PURE__ */ new Set(),
-        unitsInContext: /* @__PURE__ */ new Set(),
-        unitsOutsideContext: /* @__PURE__ */ new Set(),
-        sampleActiveInContext: [],
-        sampleActiveOutsideContext: []
-      };
-      existing.totalActive += 1;
-      if (traineeUnit) existing.units.add(traineeUnit);
-      const sample = {
-        idNumber: trainee?.idNumber,
-        name: String(trainee?.name || trainee?.fullName || "").trim(),
-        unit: String(trainee?.unit || "").trim(),
-        course: courseName
-      };
-      if (inContext) {
-        existing.activeInContext += 1;
-        if (traineeUnit) existing.unitsInContext.add(traineeUnit);
-        if (existing.sampleActiveInContext.length < 5) existing.sampleActiveInContext.push(sample);
-      } else {
-        existing.activeOutsideContext += 1;
-        if (traineeUnit) existing.unitsOutsideContext.add(traineeUnit);
-        if (existing.sampleActiveOutsideContext.length < 5) existing.sampleActiveOutsideContext.push(sample);
-      }
-      traineeCourseSummaries.set(courseName, existing);
-    });
-    const platformUnits = (platformConfig?.units || []).map((unit) => ({
-      code: String(unit?.code || "").trim(),
-      name: String(unit?.name || "").trim(),
-      status: String(unit?.status || "ACTIVE").trim(),
-      locationCode: String(unit?.locationCode || "").trim(),
-      operationalModel: String(unit?.operationalModel || unit?.settings?.operationalModel || "").trim()
-    }));
-    const courseDiagnostics = courses.map((course) => {
-      const courseUnits = splitCourseUnitCodes(course.unit);
-      const hasCourseColor = Object.prototype.hasOwnProperty.call(courseColors, course.name);
-      const unitMatchesActiveContext = courseUnits.length > 0 && activeContextUnitSet.size > 0 ? courseUnits.some((unit) => activeContextUnitSet.has(unit)) : false;
-      const traineeSummary = traineeCourseSummaries.get(course.name) || null;
-      const activeTraineesInContext = traineeSummary?.activeInContext || 0;
-      const hasValidStartDate = Boolean(course.startDate && !Number.isNaN(new Date(course.startDate).getTime()));
-      const hasValidGradDate = Boolean(course.gradDate && !Number.isNaN(new Date(course.gradDate).getTime()));
-      return {
-        name: course.name,
-        code: course.code || "",
-        location: course.location || "",
-        unit: course.unit || "",
-        parsedUnits: courseUnits,
-        lmpType: course.lmpType || "",
-        academicLmpType: course.academicLmpType || "",
-        status: course.status || "",
-        hasCourseColor,
-        visibleOnCoursesManagement: visibleCourseSet.has(course.name),
-        unitMatchesActiveContext,
-        expectedVisibleForActiveUnit: hasCourseColor && unitMatchesActiveContext,
-        visibilityMismatch: visibleCourseSet.has(course.name) !== (hasCourseColor && unitMatchesActiveContext),
-        dateHealth: {
-          startDate: course.startDate || "",
-          gradDate: course.gradDate || "",
-          hasValidStartDate,
-          hasValidGradDate
-        },
-        traineeOwnership: traineeSummary ? {
-          totalActive: traineeSummary.totalActive,
-          activeInContext: traineeSummary.activeInContext,
-          activeOutsideContext: traineeSummary.activeOutsideContext,
-          units: Array.from(traineeSummary.units).sort(),
-          unitsInContext: Array.from(traineeSummary.unitsInContext).sort(),
-          unitsOutsideContext: Array.from(traineeSummary.unitsOutsideContext).sort(),
-          sampleActiveInContext: traineeSummary.sampleActiveInContext,
-          sampleActiveOutsideContext: traineeSummary.sampleActiveOutsideContext
-        } : {
-          totalActive: 0,
-          activeInContext: 0,
-          activeOutsideContext: 0,
-          units: [],
-          unitsInContext: [],
-          unitsOutsideContext: [],
-          sampleActiveInContext: [],
-          sampleActiveOutsideContext: []
-        },
-        likelyStaleOrMisassigned: visibleCourseSet.has(course.name) && activeTraineesInContext === 0 && (!hasValidStartDate || !hasValidGradDate),
-        reasonVisibleNow: visibleCourseSet.has(course.name) ? "CoursesManagementView received this course and courseColors contains its name." : "Not visible in groupedCourses."
-      };
-    });
-    const payload = {
-      diagnostic: "courses-management-scope",
-      version: "CCH 8.148",
-      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      activeContext: {
-        activeLocationCode,
-        activeUnitCode,
-        parsedActiveUnitCodes: activeContextUnits,
-        operationalModel,
-        locations,
-        units
-      },
-      counts: {
-        coursesProp: courses.length,
-        courseColorKeys: Object.keys(courseColors).length,
-        archivedCourseKeys: Object.keys(archivedCourses).length,
-        visibleCoursesManagement: activeCourseNames.length,
-        visibilityMismatches: courseDiagnostics.filter((course) => course.visibilityMismatch).length,
-        visibleCoursesWithNoActiveTraineesInContext: courseDiagnostics.filter((course) => course.visibleOnCoursesManagement && course.traineeOwnership.activeInContext === 0).length,
-        likelyStaleOrMisassigned: courseDiagnostics.filter((course) => course.likelyStaleOrMisassigned).length
-      },
-      visibleCourseNames: activeCourseNames,
-      courseColorKeys: Object.keys(courseColors).sort((a, b) => a.localeCompare(b, void 0, { numeric: true, sensitivity: "base" })),
-      platformUnits,
-      courses: courseDiagnostics
-    };
-    const locationPart = normaliseCourseScopeToken(activeLocationCode) || "LOCATION";
-    const unitPart = (activeContextUnits.join("-") || normaliseCourseScopeToken(activeUnitCode) || "UNIT").replace(/[^A-Z0-9-]/g, "-");
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    downloadJsonFile(`dfp-course-scope-diagnostics_${locationPart}_${unitPart}_${timestamp}.json`, payload);
-  };
   const handleDeleteClick = async (courseName) => {
     setCourseToDelete(courseName);
-    setShowPinDialog(true);
+    setDeletePassword("");
+    setDeletePasswordError("");
+    setShowPasswordDialog(true);
   };
   const handleEditClick = (course) => {
     setCourseToEdit(course);
@@ -87378,20 +87236,29 @@ const CoursesManagementView = ({
       }
     }
   };
-  const handlePinSubmit = async () => {
-    if (pinInput !== "1234") {
-      await showDarkConfirm(
-        "Invalid PIN",
-        "The PIN you entered is incorrect. Please try again.",
-        "error"
-      );
-      setPinInput("");
+  const handlePasswordSubmit = async () => {
+    if (!courseToDelete) return;
+    if (!deletePassword.trim()) {
+      setDeletePasswordError("Enter your current password to continue.");
       return;
     }
-    if (!courseToDelete) return;
-    setShowPinDialog(false);
-    setPinInput("");
-    setShowChoiceDialog(true);
+    setIsVerifyingDeletePassword(true);
+    setDeletePasswordError("");
+    try {
+      const passwordAccepted = await verifyCurrentUserPassword(deletePassword);
+      if (!passwordAccepted) {
+        setDeletePasswordError("The password was not accepted. Enter the password for the account you are currently logged in with.");
+        return;
+      }
+      setShowPasswordDialog(false);
+      setDeletePassword("");
+      setShowChoiceDialog(true);
+    } catch (error) {
+      console.error("Course deletion password verification failed:", error);
+      setDeletePasswordError("The app could not verify your password. Check your connection and try again.");
+    } finally {
+      setIsVerifyingDeletePassword(false);
+    }
   };
   const handleArchiveCourse = () => {
     if (!courseToDelete) return;
@@ -87409,9 +87276,10 @@ const CoursesManagementView = ({
     setShowChoiceDialog(false);
     setCourseToDelete(null);
   };
-  const handleCancelPin = () => {
-    setShowPinDialog(false);
-    setPinInput("");
+  const handleCancelPassword = () => {
+    setShowPasswordDialog(false);
+    setDeletePassword("");
+    setDeletePasswordError("");
     setCourseToDelete(null);
   };
   const CourseCard = ({ course }) => {
@@ -87515,14 +87383,6 @@ const CoursesManagementView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: handleDownloadCourseScopeDiagnostics,
-            className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#38bdf8" }, children: "Diag" })
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
             onClick: onNavigateToArchivedCourses,
             className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
@@ -87606,43 +87466,60 @@ const CoursesManagementView = ({
         onSave: handleUpdateCourse
       }
     ),
-    showPinDialog && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Enter PIN to Delete Course" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
-        "You are about to delete ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: courseToDelete })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "input",
-        {
-          type: "password",
-          value: pinInput,
-          onChange: (e) => setPinInput(e.target.value),
-          onKeyPress: (e) => e.key === "Enter" && handlePinSubmit(),
-          placeholder: "Enter PIN",
-          className: "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 mb-4",
-          autoFocus: true
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 justify-end", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handleCancelPin,
-            className: "px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors",
-            children: "Cancel"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: handlePinSubmit,
-            className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors",
-            children: "Continue"
-          }
-        )
-      ] })
-    ] }) }),
+    showPasswordDialog && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "form",
+      {
+        className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700",
+        onSubmit: (e) => {
+          e.preventDefault();
+          if (!isVerifyingDeletePassword) handlePasswordSubmit();
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-white mb-4", children: "Confirm Course Removal" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-4", children: [
+            "Enter your current password to archive or delete ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: courseToDelete }),
+            "."
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "password",
+              value: deletePassword,
+              onChange: (e) => {
+                setDeletePassword(e.target.value);
+                if (deletePasswordError) setDeletePasswordError("");
+              },
+              placeholder: "Current password",
+              className: `w-full px-4 py-2 bg-gray-700 border rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 ${deletePasswordError ? "border-red-500" : "border-gray-600"}`,
+              autoFocus: true
+            }
+          ),
+          deletePasswordError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 mb-4 text-sm text-red-300", children: deletePasswordError }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 justify-end", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: handleCancelPassword,
+                className: "px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors",
+                disabled: isVerifyingDeletePassword,
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "submit",
+                className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors",
+                disabled: isVerifyingDeletePassword,
+                children: isVerifyingDeletePassword ? "Checking..." : "Continue"
+              }
+            )
+          ] })
+        ]
+      }
+    ) }),
     showChoiceDialog && courseToDelete && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-yellow-600/50", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-semibold text-yellow-400 mb-2", children: "Archive or Delete Course?" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 mb-6", children: [
@@ -89495,7 +89372,6 @@ const TrainingRecordsView = ({
         {
           courses,
           courseColors,
-          archivedCourses,
           onAddCourse,
           onDeleteCourse,
           onNavigateToCourseRoster,
@@ -89509,8 +89385,7 @@ const TrainingRecordsView = ({
           operationalModel,
           syllabusDetails,
           platformConfig,
-          serviceDefinitions,
-          traineesData
+          serviceDefinitions
         }
       ),
       activeTab === "export" && /* @__PURE__ */ jsxRuntimeExports.jsx(
