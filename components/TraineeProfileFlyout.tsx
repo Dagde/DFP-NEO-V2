@@ -54,6 +54,7 @@ import {
   type StaffQualificationDefinition,
 } from '../utils/staffQualifications';
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
+import AccountAccessPanel from './AccountAccessPanel';
 import { describeDuplicateNamePerson, normalisePersonName, samePersonRecord } from '../utils/personIdentity';
 import type { OperationalModelCode } from '../utils/platformConfigService';
 import {
@@ -94,6 +95,7 @@ interface TraineeProfileFlyoutProps {
   currencyRequirements?: CurrencyRequirement[];
   currentUserId?: string;
   currentUserName?: string;
+  currentUserRole?: string;
   pt051Assessments?: Map<string, Pt051Assessment>;
   pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
@@ -446,6 +448,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   currencyRequirements = [],
   currentUserId,
   currentUserName,
+  currentUserRole = '',
   pt051Assessments,
   pt051PerformanceLoading = false,
   traineeLMPs,
@@ -481,6 +484,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
+    const canManageAccountAccess = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase());
 
     // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items (DB only)
     const allAcademicLmpCourses = useMemo(() => {
@@ -2824,6 +2828,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               </div>
                             </div>
                           </div>
+
+                          <AccountAccessPanel
+                            personType="trainee"
+                            personId={(trainee as any).id || trainee.idNumber}
+                            idNumber={idNumber}
+                            name={name || trainee.fullName}
+                            email={email}
+                            canManage={canManageAccountAccess}
+                          />
 
                           <div>
                             <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2">Qualifications</div>

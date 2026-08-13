@@ -662,6 +662,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     currencyRequirements={currencyRequirements}
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
+                    currentUserRole={currentUserRole}
                     resourceDisplayNames={resourceDisplayNames}
                     personnelDisplaySettings={personnelDisplaySettings}
                     trainingReportTerminology={trainingReportTerminology}

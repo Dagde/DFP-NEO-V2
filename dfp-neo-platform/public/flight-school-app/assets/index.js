@@ -917,6 +917,7 @@ const API_USERS = "/api/admin/direct-users";
 const API_RESET_PASSWORD = "/api/admin/direct-reset-password";
 const API_CREATE_USER = "/api/admin/direct-create-user";
 const API_DELETE_USER = "/api/admin/direct-delete-user";
+const API_ISSUE_ACTIVATION = "/api/admin/direct-issue-activation";
 const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
   const [users, setUsers] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
@@ -931,6 +932,8 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
   const [deletePassword, setDeletePassword] = reactExports.useState("");
   const [deleteLoading, setDeleteLoading] = reactExports.useState(false);
   const [deleteMessage, setDeleteMessage] = reactExports.useState("");
+  const [activationTarget, setActivationTarget] = reactExports.useState(null);
+  const [activationMessage, setActivationMessage] = reactExports.useState("");
   const [newUserId, setNewUserId] = reactExports.useState("");
   const [newPassword, setNewPassword] = reactExports.useState("");
   const [newEmail, setNewEmail] = reactExports.useState("");
@@ -1067,6 +1070,28 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
       setDeleteLoading(false);
     }
   };
+  const handleIssueActivation = async (user) => {
+    setActivationTarget(user.userId);
+    setActivationMessage("");
+    try {
+      const res = await fetch(`${AUTH_SERVER}${API_ISSUE_ACTIVATION}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({ targetUserId: user.userId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Activation email failed");
+      setActivationMessage(`Activation email sent to ${data.delivery?.email || user.email || user.userId}.`);
+      await fetchUsers();
+    } catch (err) {
+      setActivationMessage(err.message || "Failed to send activation email");
+    } finally {
+      setActivationTarget(null);
+    }
+  };
   const formatDate2 = (val) => {
     if (!val) return "Never";
     try {
@@ -1085,6 +1110,13 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
       USER: "bg-gray-700/40 text-gray-300 border-gray-600/40"
     };
     return colors[role] || colors.USER;
+  };
+  const getActivationBadge = (status) => {
+    const clean = String(status || "NONE").toUpperCase();
+    if (clean === "PENDING") return "bg-amber-900/40 text-amber-300 border-amber-700/40";
+    if (clean === "USED") return "bg-green-900/40 text-green-300 border-green-700/40";
+    if (clean === "EXPIRED") return "bg-red-900/40 text-red-300 border-red-700/40";
+    return "bg-gray-700/40 text-gray-300 border-gray-600/40";
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-[700px] max-h-[85vh] rounded-xl shadow-2xl overflow-hidden flex flex-col", style: { background: "linear-gradient(135deg, #1a1f2e 0%, #2d3748 100%)" }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-6 py-4 border-b border-gray-700/50", children: [
@@ -1107,151 +1139,167 @@ const AdminPanel = ({ sessionToken, currentUserId, onClose }) => {
       tab
     )) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto p-6", children: [
-      activeTab === "users" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: loading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-gray-400 text-sm", children: "Loading users..." }) : error ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-red-400 text-sm", children: error }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700/50 p-4", style: { background: "rgba(255,255,255,0.03)" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: user.displayName || user.userId }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-medium border ${getRoleBadge(user.role)}`, children: user.role }),
-              (user.isActive === 0 || user.isActive === false) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 rounded text-[10px] font-medium bg-gray-700/40 text-gray-400 border border-gray-600/40", children: "INACTIVE" }),
-              (user.mustChangePassword === 1 || user.mustChangePassword === true) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 rounded text-[10px] font-medium bg-amber-900/40 text-amber-300 border border-amber-700/40", children: "MUST CHANGE PWD" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 text-xs text-gray-400", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                "ID: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: user.userId })
+      activeTab === "users" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        activationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mb-3 rounded-lg border px-3 py-2 text-xs ${activationMessage.toLowerCase().includes("failed") || activationMessage.toLowerCase().includes("could not") ? "border-red-700/50 bg-red-900/30 text-red-200" : "border-green-700/50 bg-green-900/30 text-green-200"}`, children: activationMessage }),
+        loading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-gray-400 text-sm", children: "Loading users..." }) : error ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-red-400 text-sm", children: error }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: users.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700/50 p-4", style: { background: "rgba(255,255,255,0.03)" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: user.displayName || user.userId }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-medium border ${getRoleBadge(user.role)}`, children: user.role }),
+                (user.isActive === 0 || user.isActive === false) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 rounded text-[10px] font-medium bg-gray-700/40 text-gray-400 border border-gray-600/40", children: "INACTIVE" }),
+                (user.mustChangePassword === 1 || user.mustChangePassword === true) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-2 py-0.5 rounded text-[10px] font-medium bg-amber-900/40 text-amber-300 border border-amber-700/40", children: "MUST CHANGE PWD" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-medium border ${getActivationBadge(user.activationStatus)}`, children: String(user.activationStatus || "NONE").toUpperCase() })
               ] }),
-              user.email && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                "Email: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: user.email })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                "Last login: ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: formatDate2(user.lastLoginAt) })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4 text-xs text-gray-400", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "ID: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: user.userId })
+                ] }),
+                user.email && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "Email: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: user.email })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "Last login: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: formatDate2(user.lastLoginAt) })
+                ] })
               ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-4 flex flex-col gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => {
+                    void handleIssueActivation(user);
+                  },
+                  disabled: activationTarget === user.userId || !user.email,
+                  className: "px-3 py-1.5 rounded-lg text-xs font-medium text-green-300 border border-green-700/40 bg-green-900/20 hover:bg-green-900/40 disabled:cursor-not-allowed disabled:opacity-40 transition-colors",
+                  title: !user.email ? "A registered email address is required before activation can be sent" : "Send activation email",
+                  children: activationTarget === user.userId ? "Sending..." : "Send Activation"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => {
+                    setDeleteTarget(null);
+                    setResetTarget(user.userId);
+                    setResetPassword("");
+                    setResetMessage("");
+                  },
+                  className: "px-3 py-1.5 rounded-lg text-xs font-medium text-amber-300 border border-amber-700/40 bg-amber-900/20 hover:bg-amber-900/40 transition-colors",
+                  children: "Reset Password"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => {
+                    setResetTarget(null);
+                    setDeleteTarget(user);
+                    setDeletePassword("");
+                    setDeleteMessage("");
+                  },
+                  disabled: user.userId === currentUserId,
+                  className: "px-3 py-1.5 rounded-lg text-xs font-medium text-red-300 border border-red-700/40 bg-red-900/20 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-40 transition-colors",
+                  title: user.userId === currentUserId ? "You cannot delete your own signed-in account" : "Delete User",
+                  children: "Delete User"
+                }
+              )
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-4 flex flex-col gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => {
-                  setDeleteTarget(null);
-                  setResetTarget(user.userId);
-                  setResetPassword("");
-                  setResetMessage("");
-                },
-                className: "px-3 py-1.5 rounded-lg text-xs font-medium text-amber-300 border border-amber-700/40 bg-amber-900/20 hover:bg-amber-900/40 transition-colors",
-                children: "Reset Password"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => {
-                  setResetTarget(null);
-                  setDeleteTarget(user);
-                  setDeletePassword("");
-                  setDeleteMessage("");
-                },
-                disabled: user.userId === currentUserId,
-                className: "px-3 py-1.5 rounded-lg text-xs font-medium text-red-300 border border-red-700/40 bg-red-900/20 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-40 transition-colors",
-                title: user.userId === currentUserId ? "You cannot delete your own signed-in account" : "Delete User",
-                children: "Delete User"
-              }
-            )
-          ] })
-        ] }),
-        resetTarget === user.userId && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleResetPassword, className: "mt-3 pt-3 border-t border-gray-700/50", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "password",
-                value: resetPassword,
-                onChange: (e) => setResetPassword(e.target.value),
-                placeholder: "New password",
-                className: "flex-1 px-3 py-2 rounded-lg text-xs text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none",
-                style: { background: "rgba(255,255,255,0.05)" },
-                autoFocus: true
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer", children: [
+          resetTarget === user.userId && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleResetPassword, className: "mt-3 pt-3 border-t border-gray-700/50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
-                  type: "checkbox",
-                  checked: resetMustChange,
-                  onChange: (e) => setResetMustChange(e.target.checked),
-                  className: "rounded"
+                  type: "password",
+                  value: resetPassword,
+                  onChange: (e) => setResetPassword(e.target.value),
+                  placeholder: "New password",
+                  className: "flex-1 px-3 py-2 rounded-lg text-xs text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none",
+                  style: { background: "rgba(255,255,255,0.05)" },
+                  autoFocus: true
                 }
               ),
-              "Must change"
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: resetMustChange,
+                    onChange: (e) => setResetMustChange(e.target.checked),
+                    className: "rounded"
+                  }
+                ),
+                "Must change"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "submit",
+                  disabled: resetLoading || !resetPassword,
+                  className: "px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors",
+                  children: resetLoading ? "..." : "Reset"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setResetTarget(null),
+                  className: "px-3 py-2 rounded-lg text-xs font-medium text-gray-400 border border-gray-600 hover:border-gray-500 transition-colors",
+                  children: "Cancel"
+                }
+              )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "submit",
-                disabled: resetLoading || !resetPassword,
-                className: "px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition-colors",
-                children: resetLoading ? "..." : "Reset"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setResetTarget(null),
-                className: "px-3 py-2 rounded-lg text-xs font-medium text-gray-400 border border-gray-600 hover:border-gray-500 transition-colors",
-                children: "Cancel"
-              }
-            )
+            resetMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs mt-2 ${resetMessage.startsWith("✅") ? "text-green-400" : "text-red-400"}`, children: resetMessage })
           ] }),
-          resetMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs mt-2 ${resetMessage.startsWith("✅") ? "text-green-400" : "text-red-400"}`, children: resetMessage })
-        ] }),
-        deleteTarget?.userId === user.userId && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleDeleteUser, className: "mt-3 pt-3 border-t border-red-700/40", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-red-700/40 bg-red-950/30 px-3 py-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-semibold text-red-200", children: [
-              "Delete ",
-              user.displayName || user.userId
+          deleteTarget?.userId === user.userId && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleDeleteUser, className: "mt-3 pt-3 border-t border-red-700/40", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 rounded-lg border border-red-700/40 bg-red-950/30 px-3 py-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-semibold text-red-200", children: [
+                "Delete ",
+                user.displayName || user.userId
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-red-200/70", children: "This removes the login account and active platform access scopes. Linked staff or trainee profile records are preserved." })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-red-200/70", children: "This removes the login account and active platform access scopes. Linked staff or trainee profile records are preserved." })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "password",
-                value: deletePassword,
-                onChange: (e) => setDeletePassword(e.target.value),
-                placeholder: "Your password",
-                className: "flex-1 px-3 py-2 rounded-lg text-xs text-white placeholder-gray-500 border border-gray-600 focus:border-red-500 focus:outline-none",
-                style: { background: "rgba(255,255,255,0.05)" },
-                autoFocus: true
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "submit",
-                disabled: deleteLoading || !deletePassword,
-                className: "px-3 py-2 rounded-lg text-xs font-medium text-white bg-red-700 hover:bg-red-600 disabled:opacity-50 transition-colors",
-                children: deleteLoading ? "..." : "Delete"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                type: "button",
-                onClick: () => setDeleteTarget(null),
-                className: "px-3 py-2 rounded-lg text-xs font-medium text-gray-400 border border-gray-600 hover:border-gray-500 transition-colors",
-                children: "Cancel"
-              }
-            )
-          ] }),
-          deleteMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs mt-2 ${deleteMessage.startsWith("✅") ? "text-green-400" : "text-red-400"}`, children: deleteMessage })
-        ] })
-      ] }, user.id)) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "password",
+                  value: deletePassword,
+                  onChange: (e) => setDeletePassword(e.target.value),
+                  placeholder: "Your password",
+                  className: "flex-1 px-3 py-2 rounded-lg text-xs text-white placeholder-gray-500 border border-gray-600 focus:border-red-500 focus:outline-none",
+                  style: { background: "rgba(255,255,255,0.05)" },
+                  autoFocus: true
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "submit",
+                  disabled: deleteLoading || !deletePassword,
+                  className: "px-3 py-2 rounded-lg text-xs font-medium text-white bg-red-700 hover:bg-red-600 disabled:opacity-50 transition-colors",
+                  children: deleteLoading ? "..." : "Delete"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setDeleteTarget(null),
+                  className: "px-3 py-2 rounded-lg text-xs font-medium text-gray-400 border border-gray-600 hover:border-gray-500 transition-colors",
+                  children: "Cancel"
+                }
+              )
+            ] }),
+            deleteMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-xs mt-2 ${deleteMessage.startsWith("✅") ? "text-green-400" : "text-red-400"}`, children: deleteMessage })
+          ] })
+        ] }, user.id)) })
+      ] }),
       activeTab === "create" && /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleCreateUser, className: "space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -7427,7 +7475,7 @@ const DropdownField = ({ label, value, onChange, children }) => /* @__PURE__ */ 
 const SystemFreezeBanner = ({ canUnfreeze = false }) => {
   const { freezeState, unfreezeSystem } = useSystemFreeze$1();
   if (!freezeState.isFrozen) return null;
-  const formatDateTime = (isoString) => {
+  const formatDateTime2 = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleString("en-GB", {
       day: "2-digit",
@@ -7469,7 +7517,7 @@ const SystemFreezeBanner = ({ canUnfreeze = false }) => {
       ] }),
       freezeState.frozenAt && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-red-200 text-sm", children: [
         "since ",
-        formatDateTime(freezeState.frozenAt)
+        formatDateTime2(freezeState.frozenAt)
       ] })
     ] }),
     canUnfreeze ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -20230,7 +20278,7 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
     if (!timeString) return "";
     return timeString.replace(":", "");
   };
-  const formatDateTime = (timeString, dateString) => {
+  const formatDateTime2 = (timeString, dateString) => {
     const t = formatMilitaryTime2(timeString);
     const d = formatDate2(dateString);
     if (!t && !d) return "";
@@ -20363,8 +20411,8 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
             const dateRange = p.startDate === lastDayStr ? startDisplayDate : `${startDisplayDate} to ${lastDayDisplay}`;
             displayString = `${dateRange} @ All Day`;
           } else {
-            const startDisplay = formatDateTime(p.startTime, p.startDate);
-            const endDisplay = formatDateTime(p.endTime, p.endDate);
+            const startDisplay = formatDateTime2(p.startTime, p.startDate);
+            const endDisplay = formatDateTime2(p.endTime, p.endDate);
             if (p.startDate === p.endDate) {
               displayString = `${startDisplay} - ${endDisplay}`;
             } else {
@@ -20842,7 +20890,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
       setEntries(data.auditEntries || []);
     }).catch((err) => setError(String(err))).finally(() => setIsLoading(false));
   }, [personId]);
-  function formatDateTime(dateStr) {
+  function formatDateTime2(dateStr) {
     try {
       const d = new Date(dateStr);
       return d.toLocaleString("en-GB", {
@@ -20901,7 +20949,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] font-semibold text-sky-300", children: entry.userName })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-400 font-mono", children: formatDateTime(entry.createdAt) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-gray-400 font-mono", children: formatDateTime2(entry.createdAt) })
             ] }),
             entry.summary && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-300 mb-2 leading-relaxed", children: entry.summary }),
             entry.details && entry.details.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: entry.details.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-0.5 text-[10px] border-l-2 border-gray-600 pl-2", children: [
@@ -24304,6 +24352,204 @@ const setTraineeSuspendedMarker = (permissions, isSuspended) => {
   const visiblePermissions = getVisiblePermissions(permissions);
   return isSuspended ? [...visiblePermissions, TRAINEE_SUSPENDED_MARKER] : visiblePermissions;
 };
+const statusBadgeClass = (status) => {
+  const clean = String(status || "").toUpperCase();
+  if (clean === "PENDING") return "border-amber-500/40 bg-amber-900/30 text-amber-200";
+  if (clean === "USED") return "border-green-500/40 bg-green-900/30 text-green-200";
+  if (clean === "EXPIRED") return "border-red-500/40 bg-red-900/30 text-red-200";
+  return "border-gray-600/50 bg-gray-800/70 text-gray-300";
+};
+const formatDateTime = (value) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+};
+const readErrorMessage = async (response, fallback) => {
+  try {
+    const data = await response.json();
+    return data?.message || data?.error || fallback;
+  } catch {
+    return fallback;
+  }
+};
+const AccountAccessPanel = ({
+  personType,
+  personId,
+  idNumber,
+  name,
+  email,
+  canManage
+}) => {
+  const [payload, setPayload] = reactExports.useState(null);
+  const [loading, setLoading] = reactExports.useState(false);
+  const [working, setWorking] = reactExports.useState(false);
+  const [message, setMessage] = reactExports.useState("");
+  const [error, setError] = reactExports.useState("");
+  const lookupId = reactExports.useMemo(() => {
+    const dbId = String(personId || "").trim();
+    if (dbId) return dbId;
+    return String(idNumber || "").trim();
+  }, [personId, idNumber]);
+  const hasSavedPerson = Boolean(lookupId) && Number(idNumber || 0) > 0;
+  const hasEmail = Boolean(String(email || payload?.person?.email || "").trim());
+  const sessionToken = typeof window !== "undefined" ? window.localStorage.getItem("dfp_session_token") || "" : "";
+  const loadAccount = async () => {
+    if (!canManage || !hasSavedPerson || !sessionToken) return;
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ personType, personId: lookupId });
+      const response = await fetch(`/api/admin/direct-person-account?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${sessionToken}` }
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response, "Failed to load account access details"));
+      setPayload(await response.json());
+    } catch (err) {
+      setError(err?.message || "Failed to load account access details");
+    } finally {
+      setLoading(false);
+    }
+  };
+  reactExports.useEffect(() => {
+    void loadAccount();
+  }, [canManage, hasSavedPerson, lookupId, personType, sessionToken]);
+  if (!canManage) return null;
+  const createOrLinkAccount = async () => {
+    const response = await fetch("/api/admin/direct-person-account", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({ personType, personId: lookupId })
+    });
+    if (!response.ok) throw new Error(await readErrorMessage(response, "Failed to create or link login account"));
+    const data = await response.json();
+    setPayload(data);
+    return data;
+  };
+  const handleCreateOrLink = async () => {
+    setWorking(true);
+    setMessage("");
+    setError("");
+    try {
+      await createOrLinkAccount();
+      setMessage("Login account is linked to this profile.");
+    } catch (err) {
+      setError(err?.message || "Failed to create or link login account");
+    } finally {
+      setWorking(false);
+    }
+  };
+  const handleSendActivation = async () => {
+    setWorking(true);
+    setMessage("");
+    setError("");
+    try {
+      const account = payload?.user ? payload : await createOrLinkAccount();
+      const targetUserId = account.user?.userId;
+      if (!targetUserId) throw new Error("No linked login account is available for activation.");
+      const response = await fetch("/api/admin/direct-issue-activation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({ targetUserId })
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response, "Failed to send activation email"));
+      const data = await response.json();
+      setPayload((current) => current ? { ...current, user: data.user } : current);
+      setMessage(`Activation email sent to ${data.delivery?.email || account.user?.email || email}.`);
+    } catch (err) {
+      setError(err?.message || "Failed to send activation email");
+    } finally {
+      setWorking(false);
+    }
+  };
+  const user = payload?.user || null;
+  const activationStatus = String(user?.activationStatus || "NONE").toUpperCase();
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-sky-700/40 bg-sky-950/20 p-3 space-y-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Account Access" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-xs text-sky-200/70", children: [
+          "Login and activation status for ",
+          name || "this profile",
+          "."
+        ] })
+      ] }),
+      user && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded border px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(activationStatus)}`, children: activationStatus })
+    ] }),
+    !hasSavedPerson ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-amber-600/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200", children: "Save this profile with a Personnel ID before creating a login." }) : !hasEmail ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-amber-600/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200", children: "Add an email address and save the profile before issuing account access." }) : loading ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Loading account access..." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-xs", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-gray-500", children: "User ID" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: user?.userId || "Not linked" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-gray-500", children: "Email" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: user?.email || payload?.person?.email || email })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-gray-500", children: "Role" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: user?.role || "N/A" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded bg-gray-900/50 px-2 py-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-gray-500", children: "Last Login" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: formatDateTime(user?.lastLoginAt) })
+        ] })
+      ] }),
+      user?.activationSentAt && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
+        "Activation sent ",
+        formatDateTime(user.activationSentAt),
+        user.activationExpiresAt ? `; expires ${formatDateTime(user.activationExpiresAt)}` : "",
+        "."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleCreateOrLink,
+            disabled: working || Boolean(user),
+            className: "rounded border border-sky-500/50 bg-sky-900/40 px-3 py-1.5 text-xs font-semibold text-sky-100 hover:bg-sky-800/60 disabled:cursor-not-allowed disabled:opacity-50",
+            children: user ? "Login Linked" : working ? "Working..." : "Create/Link Login"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: handleSendActivation,
+            disabled: working,
+            className: "rounded border border-green-500/50 bg-green-900/40 px-3 py-1.5 text-xs font-semibold text-green-100 hover:bg-green-800/60 disabled:cursor-not-allowed disabled:opacity-50",
+            children: working ? "Working..." : "Send Activation Email"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => void loadAccount(),
+            disabled: working || loading,
+            className: "rounded border border-gray-600 bg-gray-800/60 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-gray-700/70 disabled:cursor-not-allowed disabled:opacity-50",
+            children: "Refresh"
+          }
+        )
+      ] })
+    ] }),
+    message && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-green-600/40 bg-green-950/30 px-3 py-2 text-xs text-green-200", children: message }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "rounded border border-red-600/40 bg-red-950/30 px-3 py-2 text-xs text-red-200", children: error })
+  ] });
+};
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24434,6 +24680,7 @@ const TraineeProfileFlyout = ({
   currencyRequirements = [],
   currentUserId,
   currentUserName,
+  currentUserRole = "",
   pt051Assessments,
   pt051PerformanceLoading = false,
   traineeLMPs,
@@ -24470,6 +24717,7 @@ const TraineeProfileFlyout = ({
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
+  const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase());
   const allAcademicLmpCourses = reactExports.useMemo(() => {
     const courseCodes = /* @__PURE__ */ new Set();
     syllabusDetails.forEach((s) => {
@@ -26479,6 +26727,17 @@ ${errorText || `HTTP ${response.status}`}`, "Delete Failed", "error");
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) })
                     ] })
                   ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    AccountAccessPanel,
+                    {
+                      personType: "trainee",
+                      personId: trainee.id || trainee.idNumber,
+                      idNumber,
+                      name: name || trainee.fullName,
+                      email,
+                      canManage: canManageAccountAccess
+                    }
+                  ),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Qualifications" }),
                     activeQualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-2", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer text-xs text-white", children: [
@@ -28472,6 +28731,7 @@ const CourseRosterView = ({
         currencyRequirements,
         currentUserId,
         currentUserName,
+        currentUserRole,
         resourceDisplayNames,
         personnelDisplaySettings,
         trainingReportTerminology,
@@ -53837,6 +54097,7 @@ const InstructorProfileFlyout = ({
   onProfileTabConsumed,
   currentUserId,
   currentUserName,
+  currentUserRole = "",
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel: instructorLabel2 = "Instructor",
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -53853,6 +54114,7 @@ const InstructorProfileFlyout = ({
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = reactExports.useState(false);
+  const canManageAccountAccess = ["ADMIN", "SUPER_ADMIN"].includes(String(currentUserRole || "").trim().toUpperCase());
   const [idNumber, setIdNumber] = reactExports.useState(instructor.idNumber);
   const [name, setName] = reactExports.useState(instructor.name);
   const [rank, setRank] = reactExports.useState(instructor.rank);
@@ -55367,6 +55629,17 @@ Confirm the Personnel ID, unit and role are correct before saving this separate 
                 /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                AccountAccessPanel,
+                {
+                  personType: "staff",
+                  personId: instructor.id || instructor.idNumber,
+                  idNumber,
+                  name: name || instructor.name,
+                  email,
+                  canManage: canManageAccountAccess
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Qualifications" }),
                 activeQualificationOptions.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-2", children: activeQualificationOptions.map((qualification) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
@@ -56986,6 +57259,7 @@ const InstructorListView = ({
         onProfileTabConsumed,
         currentUserId,
         currentUserName,
+        currentUserRole,
         resourceDisplayNames,
         personnelDisplaySettings,
         instructorLabel: instructorLabel2,
@@ -64586,7 +64860,7 @@ const EmergencyPage = ({
       onShowSuccess("System has been unfrozen and is now fully operational");
     }
   };
-  const formatDateTime = (isoString) => {
+  const formatDateTime2 = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleString("en-GB", {
       day: "2-digit",
@@ -64618,7 +64892,7 @@ const EmergencyPage = ({
             "Reason: ",
             freezeState.freezeReason,
             " • Since: ",
-            freezeState.frozenAt && formatDateTime(freezeState.frozenAt)
+            freezeState.frozenAt && formatDateTime2(freezeState.frozenAt)
           ] })
         ] })
       ] }),

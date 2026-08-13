@@ -11,6 +11,7 @@ import { verifyCurrentUserPassword } from '../utils/passwordVerification';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import { showDarkAlert, showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
+import AccountAccessPanel from './AccountAccessPanel';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import {
   DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -122,6 +123,7 @@ interface InstructorProfileFlyoutProps {
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
+  currentUserRole?: string;
   resourceDisplayNames?: ResourceDisplayNames;
   instructorLabel?: string;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
@@ -333,7 +335,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
-  currentUserId, currentUserName,
+  currentUserId, currentUserName, currentUserRole = '',
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = 'Instructor',
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -350,6 +352,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
+  const canManageAccountAccess = ['ADMIN', 'SUPER_ADMIN'].includes(String(currentUserRole || '').trim().toUpperCase());
 
   const [idNumber, setIdNumber] = useState(instructor.idNumber);
   const [name, setName] = useState(instructor.name);
@@ -1971,6 +1974,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
                     </div>
+                    <AccountAccessPanel
+                      personType="staff"
+                      personId={(instructor as any).id || instructor.idNumber}
+                      idNumber={idNumber}
+                      name={name || instructor.name}
+                      email={email}
+                      canManage={canManageAccountAccess}
+                    />
                     {/* Qualification checkboxes */}
                     <div className="bg-gray-700/30 rounded p-3">
                       <label className="block text-xs font-medium text-gray-400 mb-2">Qualifications</label>

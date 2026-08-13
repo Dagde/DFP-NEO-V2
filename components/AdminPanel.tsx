@@ -6,6 +6,7 @@ const API_USERS = '/api/admin/direct-users';
 const API_RESET_PASSWORD = '/api/admin/direct-reset-password';
 const API_CREATE_USER = '/api/admin/direct-create-user';
 const API_DELETE_USER = '/api/admin/direct-delete-user';
+const API_ISSUE_ACTIVATION = '/api/admin/direct-issue-activation';
 
 interface AdminUser {
   id: string;
@@ -18,6 +19,10 @@ interface AdminUser {
   displayName: string;
   isActive: number | boolean;
   mustChangePassword: number | boolean;
+  activationStatus?: string;
+  activationExpiresAt?: string | null;
+  activationSentAt?: string | null;
+  activationUsedAt?: string | null;
   lastLoginAt: string | null;
   createdAt: string | number;
   permissionsRoleId: string;
@@ -47,6 +52,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState('');
+  const [activationTarget, setActivationTarget] = useState<string | null>(null);
+  const [activationMessage, setActivationMessage] = useState('');
 
   // Create user state
   const [newUserId, setNewUserId] = useState('');
@@ -191,6 +198,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
     }
   };
 
+  const handleIssueActivation = async (user: AdminUser) => {
+    setActivationTarget(user.userId);
+    setActivationMessage('');
+    try {
+      const res = await fetch(`${AUTH_SERVER}${API_ISSUE_ACTIVATION}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ targetUserId: user.userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Activation email failed');
+      setActivationMessage(`Activation email sent to ${data.delivery?.email || user.email || user.userId}.`);
+      await fetchUsers();
+    } catch (err: any) {
+      setActivationMessage(err.message || 'Failed to send activation email');
+    } finally {
+      setActivationTarget(null);
+    }
+  };
+
   const formatDate = (val: string | number | null) => {
     if (!val) return 'Never';
     try {
@@ -210,6 +240,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
       USER: 'bg-gray-700/40 text-gray-300 border-gray-600/40',
     };
     return colors[role] || colors.USER;
+  };
+
+  const getActivationBadge = (status?: string) => {
+    const clean = String(status || 'NONE').toUpperCase();
+    if (clean === 'PENDING') return 'bg-amber-900/40 text-amber-300 border-amber-700/40';
+    if (clean === 'USED') return 'bg-green-900/40 text-green-300 border-green-700/40';
+    if (clean === 'EXPIRED') return 'bg-red-900/40 text-red-300 border-red-700/40';
+    return 'bg-gray-700/40 text-gray-300 border-gray-600/40';
   };
 
   return (
@@ -259,6 +297,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div>
+              {activationMessage && (
+                <div className={`mb-3 rounded-lg border px-3 py-2 text-xs ${activationMessage.toLowerCase().includes('failed') || activationMessage.toLowerCase().includes('could not') ? 'border-red-700/50 bg-red-900/30 text-red-200' : 'border-green-700/50 bg-green-900/30 text-green-200'}`}>
+                  {activationMessage}
+                </div>
+              )}
               {loading ? (
                 <div className="text-center py-8 text-gray-400 text-sm">Loading users...</div>
               ) : error ? (
@@ -284,6 +327,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
                                 MUST CHANGE PWD
                               </span>
                             )}
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${getActivationBadge(user.activationStatus)}`}>
+                              {String(user.activationStatus || 'NONE').toUpperCase()}
+                            </span>
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-400">
                             <span>ID: <span className="text-gray-300">{user.userId}</span></span>
@@ -292,6 +338,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
                           </div>
                         </div>
                         <div className="ml-4 flex flex-col gap-2">
+                          <button
+                            onClick={() => { void handleIssueActivation(user); }}
+                            disabled={activationTarget === user.userId || !user.email}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-green-300 border border-green-700/40 bg-green-900/20 hover:bg-green-900/40 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                            title={!user.email ? 'A registered email address is required before activation can be sent' : 'Send activation email'}
+                          >
+                            {activationTarget === user.userId ? 'Sending...' : 'Send Activation'}
+                          </button>
                           <button
                             onClick={() => {
                               setDeleteTarget(null);

@@ -8375,6 +8375,81 @@ const toDirectAdminUser = (user) => ({
   permissionsRoleId: '',
 });
 
+const normalisePersonAccountType = (value) => {
+  const clean = String(value || '').trim().toLowerCase();
+  if (['staff', 'personnel', 'instructor'].includes(clean)) return 'staff';
+  if (['trainee', 'student'].includes(clean)) return 'trainee';
+  return '';
+};
+
+function splitDisplayNameForAccount(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return { firstName: '', lastName: '' };
+  if (clean.includes(',')) {
+    const [lastName, ...firstParts] = clean.split(',');
+    return {
+      firstName: firstParts.join(',').trim(),
+      lastName: lastName.trim(),
+    };
+  }
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { firstName: '', lastName: clean };
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts[parts.length - 1],
+  };
+}
+
+async function findPersonForAccount(db, personType, personId) {
+  const type = normalisePersonAccountType(personType);
+  const cleanPersonId = String(personId || '').trim();
+  if (!type || !cleanPersonId) return null;
+  const numericId = Number(cleanPersonId);
+  if (type === 'staff') {
+    const where = Number.isFinite(numericId) && cleanPersonId === String(numericId)
+      ? { OR: [{ id: cleanPersonId }, { idNumber: numericId }] }
+      : { id: cleanPersonId };
+    const record = await db.personnel.findFirst({ where });
+    return record ? { type, record } : null;
+  }
+  const where = Number.isFinite(numericId) && cleanPersonId === String(numericId)
+    ? { OR: [{ id: cleanPersonId }, { idNumber: numericId }] }
+    : { id: cleanPersonId };
+  const record = await db.trainee.findFirst({ where });
+  return record ? { type, record } : null;
+}
+
+async function getDirectPersonAccountPayload(db, personType, personId) {
+  const person = await findPersonForAccount(db, personType, personId);
+  if (!person) return null;
+  const userRows = person.record.userId
+    ? await db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "lastLogin", "createdAt"
+       FROM "User"
+       WHERE id = $1
+       LIMIT 1`,
+      person.record.userId
+    )
+    : [];
+  const user = userRows?.[0] || null;
+  return {
+    personType: person.type,
+    person: {
+      id: person.record.id,
+      idNumber: person.record.idNumber,
+      name: person.record.fullName || person.record.name,
+      rank: person.record.rank || '',
+      unit: person.record.unit || '',
+      course: person.record.course || '',
+      email: person.record.email || '',
+      userId: person.record.userId || null,
+    },
+    user: user ? toDirectAdminUser(user) : null,
+  };
+}
+
 app.get('/api/admin/direct-users', async (req, res) => {
   try {
     const context = await requireDirectAdmin(req, res);
@@ -8390,6 +8465,146 @@ app.get('/api/admin/direct-users', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/admin/direct-users error:', error);
     res.status(500).json({ error: 'Internal server error', message: 'Failed to list users' });
+  }
+});
+
+app.get('/api/admin/direct-person-account', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const payload = await getDirectPersonAccountPayload(context.db, req.query?.personType, req.query?.personId);
+    if (!payload) {
+      return res.status(404).json({ error: 'Not found', message: 'Staff or trainee record not found' });
+    }
+    res.json(payload);
+  } catch (error) {
+    console.error('❌ GET /api/admin/direct-person-account error:', error);
+    res.status(500).json({ error: 'Account lookup failed', message: 'Failed to load account access details' });
+  }
+});
+
+app.post('/api/admin/direct-person-account', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const { personType, personId, role = 'USER' } = req.body || {};
+    const person = await findPersonForAccount(context.db, personType, personId);
+    if (!person) {
+      return res.status(404).json({ error: 'Not found', message: 'Staff or trainee record not found' });
+    }
+    const record = person.record;
+    const personnelId = normalisePersonnelId(record.idNumber);
+    if (!personnelId) {
+      return res.status(400).json({ error: 'Personnel ID required', message: 'A Personnel ID is required before a login can be created' });
+    }
+    const email = String(record.email || '').trim();
+    if (!email) {
+      return res.status(400).json({ error: 'Email required', message: 'A registered email address is required before a login can be created' });
+    }
+    const safeRole = ['SUPER_ADMIN', 'ADMIN', 'INSTRUCTOR', 'PILOT', 'USER'].includes(String(role).toUpperCase())
+      ? String(role).toUpperCase()
+      : 'USER';
+    const displayName = record.fullName || record.name || '';
+    const nameParts = splitDisplayNameForAccount(displayName);
+    const existingUsers = await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "lastLogin", "createdAt"
+       FROM "User"
+       WHERE id = $1 OR "userId" = $2 OR username = $2 OR email = $3
+       ORDER BY CASE WHEN id = $1 THEN 0 WHEN "userId" = $2 OR username = $2 THEN 1 ELSE 2 END
+       LIMIT 2`,
+      record.userId || '',
+      personnelId,
+      email
+    );
+    const uniqueUsers = Array.from(new Map((existingUsers || []).map((user) => [user.id, user])).values());
+    if (uniqueUsers.length > 1) {
+      return res.status(409).json({
+        error: 'Account conflict',
+        message: 'The Personnel ID and email match different login accounts. Resolve the duplicate account before linking this profile.',
+      });
+    }
+    let user = uniqueUsers[0] || null;
+    if (user) {
+      const linkedElsewhere = await context.db.$queryRawUnsafe(
+        `SELECT 'staff' AS type, id, name, "idNumber" FROM "Personnel" WHERE "userId" = $1 AND id <> $2
+         UNION ALL
+         SELECT 'trainee' AS type, id, "fullName" AS name, "idNumber" FROM "Trainee" WHERE "userId" = $1 AND id <> $3
+         LIMIT 1`,
+        user.id,
+        person.type === 'staff' ? record.id : '',
+        person.type === 'trainee' ? record.id : ''
+      );
+      if (linkedElsewhere?.length) {
+        return res.status(409).json({
+          error: 'Account already linked',
+          message: `This login is already linked to ${linkedElsewhere[0].name || 'another person'}.`,
+        });
+      }
+      const updatedUsers = await context.db.$queryRawUnsafe(
+        `UPDATE "User"
+         SET "userId" = $1,
+             username = $1,
+             email = $2,
+             "firstName" = COALESCE(NULLIF("firstName", ''), $3),
+             "lastName" = COALESCE(NULLIF("lastName", ''), $4),
+             role = $5::"Role",
+             "updatedAt" = NOW()
+         WHERE id = $6
+         RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+                   "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+                   "lastLogin", "createdAt"`,
+        personnelId,
+        email,
+        nameParts.firstName || null,
+        nameParts.lastName || null,
+        safeRole,
+        user.id
+      );
+      user = updatedUsers[0];
+    } else {
+      const bcrypt = require('bcryptjs');
+      const blockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+      const createdUsers = await context.db.$queryRawUnsafe(
+        `INSERT INTO "User" ("id", "userId", username, email, password, role, "firstName", "lastName", "isActive", "createdById", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid()::text, $1, $1, $2, $3, $4::"Role", $5, $6, true, $7, NOW(), NOW())
+         RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+                   "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+                   "lastLogin", "createdAt"`,
+        personnelId,
+        email,
+        blockedPassword,
+        safeRole,
+        nameParts.firstName || null,
+        nameParts.lastName || null,
+        context.admin.id
+      );
+      user = createdUsers[0];
+    }
+    if (person.type === 'staff') {
+      await context.db.personnel.update({ where: { id: record.id }, data: { userId: user.id } });
+    } else {
+      await context.db.trainee.update({ where: { id: record.id }, data: { userId: user.id } });
+    }
+    await writeSecurityAuditEvent(context.db, req, 'PERSON_ACCOUNT_LINKED', 'info', 'Person profile linked to login account', {
+      personType: person.type,
+      personId: record.id,
+      personnelId,
+      targetUserId: user.userId,
+      email,
+    });
+    const payload = await getDirectPersonAccountPayload(context.db, person.type, record.id);
+    res.json({ success: true, ...payload });
+  } catch (error) {
+    const message = String(error?.message || error);
+    console.error('❌ POST /api/admin/direct-person-account error:', error);
+    res.status(message.includes('unique') || message.includes('duplicate') ? 409 : 500).json({
+      error: message.includes('unique') || message.includes('duplicate') ? 'Account conflict' : 'Account link failed',
+      message: message.includes('unique') || message.includes('duplicate')
+        ? 'A login with that Personnel ID or email already exists'
+        : 'Failed to create or link the login account',
+    });
   }
 });
 

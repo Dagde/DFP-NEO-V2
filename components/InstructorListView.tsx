@@ -895,6 +895,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     onProfileTabConsumed={onProfileTabConsumed}
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
+                    currentUserRole={currentUserRole}
                     resourceDisplayNames={resourceDisplayNames}
                     personnelDisplaySettings={personnelDisplaySettings}
                     instructorLabel={instructorLabel}
