@@ -97472,6 +97472,35 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     return refsByKey.size > 0 ? { ...event, personnelRefs: Array.from(refsByKey.values()) } : event;
   };
+  const getNeoBuildDiagnosticPersonnelRefs = (event) => {
+    const refsByKey = /* @__PURE__ */ new Map();
+    const refKey = (ref) => [
+      ref.role,
+      ref.personType,
+      ref.idNumber || ref.id || normalizeBuildPersonnelName(ref.name)
+    ].join(":");
+    [
+      ...Array.isArray(event?.personnelRefs) ? event.personnelRefs : [],
+      event?._neoBuildInstructorPersonnelRef,
+      event?._neoBuildPilotPersonnelRef
+    ].filter(Boolean).forEach((ref) => {
+      const scheduleRef = ref;
+      refsByKey.set(refKey(scheduleRef), scheduleRef);
+    });
+    return Array.from(refsByKey.values());
+  };
+  const describeNeoBuildDiagnosticPersonnelRefs = (event) => getNeoBuildDiagnosticPersonnelRefs(event).map((ref) => ({
+    role: ref.role,
+    personType: ref.personType,
+    name: ref.name,
+    idNumber: ref.idNumber ?? null,
+    id: ref.id || null,
+    rank: ref.rank || null,
+    unit: ref.unit || null,
+    course: ref.course || null
+  }));
+  const getNeoBuildDiagnosticStaffIdentity = (event) => describeNeoBuildDiagnosticPersonnelRefs(event).filter((ref) => ref.personType === "staff");
+  const getNeoBuildDiagnosticIdentityStatus = (event) => describeNeoBuildDiagnosticPersonnelRefs(event).some((ref) => ref.idNumber || ref.id) ? "stored-personnel-id" : "name-only";
   const pushGeneratedEvent = (event) => {
     const eventWithPersonnelRefs = mergeNeoBuildPersonnelRefs(event);
     generatedEvents.push(eventWithPersonnelRefs);
@@ -102104,6 +102133,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                       durationSource: scheduledDurationSource,
                       resourceId: result.resourceId,
                       instructor: result.instructor || null,
+                      personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(result),
+                      personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(result),
+                      staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(result),
                       generatedEventsCount: generatedEvents.length
                     });
                   }
@@ -109521,6 +109553,35 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   };
   annotateScheduleListUnplacedRecovery();
+  const finalPersonnelIdentityEvents = sortedEvents.map((event) => {
+    const personnelRefs = describeNeoBuildDiagnosticPersonnelRefs(event);
+    const staffIdentityRefs = personnelRefs.filter((ref) => ref.personType === "staff");
+    return {
+      id: event.id,
+      flightNumber: event.flightNumber,
+      type: event.type,
+      resourceId: event.resourceId,
+      startTime: event.startTime,
+      instructor: event.instructor || null,
+      pilot: event.pilot || null,
+      student: event.student || null,
+      traineeName: event._traineeName || null,
+      source: event._source || null,
+      personnelIdentityStatus: personnelRefs.some((ref) => ref.idNumber || ref.id) ? "stored-personnel-id" : "name-only",
+      personnelRefs,
+      staffIdentityRefs
+    };
+  });
+  const finalEventsWithStoredPersonnelId = finalPersonnelIdentityEvents.filter((event) => event.personnelIdentityStatus === "stored-personnel-id");
+  const finalNameOnlyEvents = finalPersonnelIdentityEvents.filter((event) => event.personnelIdentityStatus === "name-only");
+  const duplicateNamedStaffFinalEvents = finalPersonnelIdentityEvents.filter((event) => {
+    const staffNames = event.staffIdentityRefs.map((ref) => normalizeBuildPersonnelName(ref.name)).filter(Boolean);
+    return staffNames.some((staffName, index) => staffNames.indexOf(staffName) !== index) || event.staffIdentityRefs.some((ref) => {
+      const displayName = normalizeBuildPersonnelName(ref.name);
+      if (!displayName) return false;
+      return instructors.filter((instructor) => normalizeBuildPersonnelName(instructor.name) === displayName).length > 1;
+    });
+  });
   neoBuildDiag.final = {
     totalEvents: sortedEvents.length,
     byType: sortedEvents.reduce((acc, event) => {
@@ -109540,6 +109601,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return acc;
     }, {}),
     unplacedRecoverySummary: neoBuildDiag.unplacedRecoverySummary,
+    personnelIdentitySummary: {
+      totalEvents: sortedEvents.length,
+      eventsWithStoredPersonnelId: finalEventsWithStoredPersonnelId.length,
+      nameOnlyEvents: finalNameOnlyEvents.length,
+      duplicateNamedStaffEvents: duplicateNamedStaffFinalEvents.length,
+      duplicateNamedStaffSample: duplicateNamedStaffFinalEvents.slice(0, 40),
+      nameOnlySample: finalNameOnlyEvents.slice(0, 40)
+    },
     firstEvents: sortedEvents.slice(0, 80).map((event) => ({
       id: event.id,
       flightNumber: event.flightNumber,
@@ -109558,7 +109627,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       callsign: event.callsign,
       source: event._source,
       isNext: event._isNext,
-      traineeName: event._traineeName
+      traineeName: event._traineeName,
+      personnelIdentityStatus: getNeoBuildDiagnosticIdentityStatus(event),
+      personnelRefs: describeNeoBuildDiagnosticPersonnelRefs(event),
+      staffIdentityRefs: getNeoBuildDiagnosticStaffIdentity(event)
     }))
   };
   if (sortedEvents.length === 0) {
