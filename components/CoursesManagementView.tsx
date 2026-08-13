@@ -1,6 +1,6 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
-import { Course, SyllabusItemDetail } from '../types';
+import { Course, SyllabusItemDetail, Trainee } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
@@ -24,6 +24,7 @@ interface CoursesManagementViewProps {
     syllabusDetails?: SyllabusItemDetail[];
     platformConfig?: PlatformConfig | null;
     serviceDefinitions?: Array<{ longName?: string; shortName?: string }>;
+    traineesData?: Trainee[];
 }
 
 const getServiceCountLabels = (serviceDefinitions: Array<{ longName?: string; shortName?: string }> = []): [string, string, string] => {
@@ -78,6 +79,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     syllabusDetails = [],
     platformConfig = null,
     serviceDefinitions = [],
+    traineesData = [],
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -113,6 +115,52 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         const activeContextUnitSet = new Set(activeContextUnits);
         const activeCourseNames = Object.values(groupedCourses).flat().map(course => course.name);
         const visibleCourseSet = new Set(activeCourseNames);
+        const traineeCourseSummaries = new Map<string, {
+            totalActive: number;
+            activeInContext: number;
+            activeOutsideContext: number;
+            units: Set<string>;
+            unitsInContext: Set<string>;
+            unitsOutsideContext: Set<string>;
+            sampleActiveInContext: Array<{ idNumber?: number; name: string; unit: string; course: string }>;
+            sampleActiveOutsideContext: Array<{ idNumber?: number; name: string; unit: string; course: string }>;
+        }>();
+        traineesData
+            .filter((trainee: any) => trainee?.isActive !== false)
+            .forEach((trainee: any) => {
+                const courseName = String(trainee?.course || '').trim();
+                if (!courseName) return;
+                const traineeUnit = normaliseCourseScopeToken(trainee?.unit);
+                const inContext = activeContextUnitSet.size === 0 || (traineeUnit && activeContextUnitSet.has(traineeUnit));
+                const existing = traineeCourseSummaries.get(courseName) || {
+                    totalActive: 0,
+                    activeInContext: 0,
+                    activeOutsideContext: 0,
+                    units: new Set<string>(),
+                    unitsInContext: new Set<string>(),
+                    unitsOutsideContext: new Set<string>(),
+                    sampleActiveInContext: [],
+                    sampleActiveOutsideContext: [],
+                };
+                existing.totalActive += 1;
+                if (traineeUnit) existing.units.add(traineeUnit);
+                const sample = {
+                    idNumber: trainee?.idNumber,
+                    name: String(trainee?.name || trainee?.fullName || '').trim(),
+                    unit: String(trainee?.unit || '').trim(),
+                    course: courseName,
+                };
+                if (inContext) {
+                    existing.activeInContext += 1;
+                    if (traineeUnit) existing.unitsInContext.add(traineeUnit);
+                    if (existing.sampleActiveInContext.length < 5) existing.sampleActiveInContext.push(sample);
+                } else {
+                    existing.activeOutsideContext += 1;
+                    if (traineeUnit) existing.unitsOutsideContext.add(traineeUnit);
+                    if (existing.sampleActiveOutsideContext.length < 5) existing.sampleActiveOutsideContext.push(sample);
+                }
+                traineeCourseSummaries.set(courseName, existing);
+            });
         const platformUnits = (platformConfig?.units || []).map((unit: any) => ({
             code: String(unit?.code || '').trim(),
             name: String(unit?.name || '').trim(),
@@ -126,6 +174,10 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
             const unitMatchesActiveContext = courseUnits.length > 0 && activeContextUnitSet.size > 0
                 ? courseUnits.some(unit => activeContextUnitSet.has(unit))
                 : false;
+            const traineeSummary = traineeCourseSummaries.get(course.name) || null;
+            const activeTraineesInContext = traineeSummary?.activeInContext || 0;
+            const hasValidStartDate = Boolean(course.startDate && !Number.isNaN(new Date(course.startDate).getTime()));
+            const hasValidGradDate = Boolean(course.gradDate && !Number.isNaN(new Date(course.gradDate).getTime()));
             return {
                 name: course.name,
                 code: course.code || '',
@@ -140,6 +192,32 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                 unitMatchesActiveContext,
                 expectedVisibleForActiveUnit: hasCourseColor && unitMatchesActiveContext,
                 visibilityMismatch: visibleCourseSet.has(course.name) !== (hasCourseColor && unitMatchesActiveContext),
+                dateHealth: {
+                    startDate: course.startDate || '',
+                    gradDate: course.gradDate || '',
+                    hasValidStartDate,
+                    hasValidGradDate,
+                },
+                traineeOwnership: traineeSummary ? {
+                    totalActive: traineeSummary.totalActive,
+                    activeInContext: traineeSummary.activeInContext,
+                    activeOutsideContext: traineeSummary.activeOutsideContext,
+                    units: Array.from(traineeSummary.units).sort(),
+                    unitsInContext: Array.from(traineeSummary.unitsInContext).sort(),
+                    unitsOutsideContext: Array.from(traineeSummary.unitsOutsideContext).sort(),
+                    sampleActiveInContext: traineeSummary.sampleActiveInContext,
+                    sampleActiveOutsideContext: traineeSummary.sampleActiveOutsideContext,
+                } : {
+                    totalActive: 0,
+                    activeInContext: 0,
+                    activeOutsideContext: 0,
+                    units: [],
+                    unitsInContext: [],
+                    unitsOutsideContext: [],
+                    sampleActiveInContext: [],
+                    sampleActiveOutsideContext: [],
+                },
+                likelyStaleOrMisassigned: visibleCourseSet.has(course.name) && activeTraineesInContext === 0 && (!hasValidStartDate || !hasValidGradDate),
                 reasonVisibleNow: visibleCourseSet.has(course.name)
                     ? 'CoursesManagementView received this course and courseColors contains its name.'
                     : 'Not visible in groupedCourses.',
@@ -163,6 +241,8 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                 archivedCourseKeys: Object.keys(archivedCourses).length,
                 visibleCoursesManagement: activeCourseNames.length,
                 visibilityMismatches: courseDiagnostics.filter(course => course.visibilityMismatch).length,
+                visibleCoursesWithNoActiveTraineesInContext: courseDiagnostics.filter(course => course.visibleOnCoursesManagement && course.traineeOwnership.activeInContext === 0).length,
+                likelyStaleOrMisassigned: courseDiagnostics.filter(course => course.likelyStaleOrMisassigned).length,
             },
             visibleCourseNames: activeCourseNames,
             courseColorKeys: Object.keys(courseColors).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })),
