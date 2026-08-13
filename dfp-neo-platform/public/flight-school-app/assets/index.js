@@ -8034,6 +8034,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           onClick: () => navigateIfAllowed("MyDashboard"),
           className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active ring-2 ring-sky-400/80 text-white" : ""}`,
           "aria-current": activeView === "MyDashboard" ? "page" : void 0,
+          style: activeView === "MyDashboard" ? { background: "linear-gradient(145deg, #1d4ed8, #0284c7)", color: "#ffffff", boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.8), inset 0 1px 0 rgba(255,255,255,0.35)" } : void 0,
           children: [
             unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
@@ -38446,6 +38447,8 @@ const MyDashboard = ({
     return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
   }, [staffOptions]);
   const dashboardSelectedName = selectedStaffName || userName;
+  const dashboardSelectedIsStaffOption = staffOptions.some((staff) => staff?.name === dashboardSelectedName);
+  const dashboardSignedInLabel = `${userRank || ""} ${userName}`.trim() || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
   const dashboardActionButtonClass = "btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
   const [isMessagesOpen, setIsMessagesOpen] = reactExports.useState(false);
@@ -38752,13 +38755,16 @@ const MyDashboard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg text-gray-400", children: "Welcome," }),
-          groupedStaffOptions.length > 0 && onSelectStaffName ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          groupedStaffOptions.length > 0 && onSelectStaffName ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               value: dashboardSelectedName,
               onChange: (event) => onSelectStaffName(event.target.value),
               className: "min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30",
-              children: groupedStaffOptions.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.staff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatDashboardStaffName(staff) }, `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`)) }, group.unit))
+              children: [
+                !dashboardSelectedIsStaffOption && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: dashboardSelectedName, children: dashboardSignedInLabel }),
+                groupedStaffOptions.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.staff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatDashboardStaffName(staff) }, `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`)) }, group.unit))
+              ]
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-lg text-gray-400", children: [
             userRank,
@@ -129630,12 +129636,17 @@ ${error instanceof Error ? error.message : String(error)}`,
         });
         const dashboardUserName = dashboardTestUserName || sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
         const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
+        const dashboardTrainee = allTraineesData.find((trainee) => {
+          const traineeName = normaliseDashboardName(trainee.name || trainee.fullName);
+          const traineeId = String(trainee.idNumber || trainee.id || "").trim().toLowerCase();
+          return traineeName === normaliseDashboardName(dashboardUserName) || traineeId && sessionDashboardIdKeys.includes(traineeId);
+        });
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
             userName: dashboardUserName,
-            userRank: dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || "",
+            userRank: dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || "",
             events: eventsForDate.filter((e) => [e.instructor, e.pilot, e.fixedCrewPic, e.crew].some((name) => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))),
             onSelectEvent: handleOpenModal,
             onNavigate: handleNavigation,

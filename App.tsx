@@ -45177,6 +45177,11 @@ appliedUpdates.forEach(update => {
                 const dashboardStaff = allInstructorsData.find(staff => (
                     normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName)
                 ));
+                const dashboardTrainee = allTraineesData.find(trainee => {
+                    const traineeName = normaliseDashboardName((trainee as any).name || (trainee as any).fullName);
+                    const traineeId = String((trainee as any).idNumber || (trainee as any).id || '').trim().toLowerCase();
+                    return traineeName === normaliseDashboardName(dashboardUserName) || (traineeId && sessionDashboardIdKeys.includes(traineeId));
+                });
                 const pendingTrainingReports = allInstructorsData.flatMap(staff => (
                     normaliseAirCombatTrainingReports(staff.preferences)
                         .filter(report => (
@@ -45189,7 +45194,7 @@ appliedUpdates.forEach(update => {
 
                 return <MyDashboard
                             userName={dashboardUserName}
-                            userRank={dashboardStaff?.rank || sessionUser?.militaryRank || sessionUser?.role || ''}
+                            userRank={dashboardStaff?.rank || dashboardTrainee?.rank || sessionUser?.militaryRank || sessionUser?.role || ''}
                             events={eventsForDate.filter(e => (
                                 [e.instructor, e.pilot, e.fixedCrewPic, e.crew]
                                     .some(name => normaliseDashboardName(name) === normaliseDashboardName(dashboardUserName))

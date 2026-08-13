@@ -363,6 +363,8 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
         return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
     }, [staffOptions]);
     const dashboardSelectedName = selectedStaffName || userName;
+    const dashboardSelectedIsStaffOption = staffOptions.some(staff => staff?.name === dashboardSelectedName);
+    const dashboardSignedInLabel = `${userRank || ''} ${userName}`.trim() || userName;
     const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
     const dashboardActionButtonClass = 'btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
@@ -752,6 +754,9 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                                 onChange={(event) => onSelectStaffName(event.target.value)}
                                 className="min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
                             >
+                                {!dashboardSelectedIsStaffOption && (
+                                    <option value={dashboardSelectedName}>{dashboardSignedInLabel}</option>
+                                )}
                                 {groupedStaffOptions.map(group => (
                                     <optgroup key={group.unit} label={group.unit}>
                                         {group.staff.map(staff => (
