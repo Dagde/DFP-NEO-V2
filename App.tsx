@@ -41126,8 +41126,10 @@ appliedUpdates.forEach(update => {
         }
     }, [handleDatabaseDataChanged]);
 
-    const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[], onSaved?: () => void) => {
+    const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[], replacedCourseOrCallback?: string | (() => void), onSaved?: () => void) => {
         logRoutineAppDebug(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
+        const replacedCourse = typeof replacedCourseOrCallback === 'string' ? replacedCourseOrCallback.trim() : '';
+        const saveCallback = typeof replacedCourseOrCallback === 'function' ? replacedCourseOrCallback : onSaved;
 
         // Update in-memory state immediately with ALL trainees (other courses + new course)
         setTraineesData(newTrainees);
@@ -41165,15 +41167,19 @@ appliedUpdates.forEach(update => {
         // This is safe because the in-memory state already reflects the replace operation
 
         try {
-            logRoutineAppDebug(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
+            const traineesToPersist = replacedCourse
+                ? newTrainees.filter(trainee => String(trainee.course || '').trim() === replacedCourse)
+                : newTrainees;
+            logRoutineAppDebug(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${traineesToPersist.length} trainees, replaceAll=${Boolean(replacedCourse)}${replacedCourse ? `, course=${replacedCourse}` : ''}`);
 
             const response = await fetch(`${getApiBase()}/trainees/bulk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
-                    trainees: newTrainees,
-                    replaceAll: false  // Safe upsert — create new, update existing, don't deactivate
+                    trainees: traineesToPersist,
+                    course: replacedCourse || undefined,
+                    replaceAll: Boolean(replacedCourse)
                 })
             });
 
@@ -41185,6 +41191,7 @@ appliedUpdates.forEach(update => {
                 setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
                 // Refresh from DB so the UI shows the newly saved trainees immediately
                 await handleDatabaseDataChanged();
+                saveCallback?.();
             } else {
                 const err = await response.text();
                 console.error('❌ [handleReplaceTrainees] DB save failed. Status:', response.status, 'Body:', err);

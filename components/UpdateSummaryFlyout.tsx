@@ -15,6 +15,7 @@ interface UpdateSummaryFlyoutProps {
       skipped: number;
       failed: number;
       error?: string;
+      details?: string[];
     };
   };
   onClose: () => void;
@@ -68,6 +69,13 @@ const UpdateSummaryFlyout: React.FC<UpdateSummaryFlyoutProps> = ({ summary, onCl
                                 <p className="mt-2 text-amber-200">
                                     Trainees were uploaded, but activation emails were not sent. {summary.activation.error}
                                 </p>
+                            )}
+                            {summary.activation.details && summary.activation.details.length > 0 && (
+                                <div className="mt-2 rounded border border-amber-500/30 bg-gray-900/40 px-3 py-2 text-xs text-amber-100">
+                                    {summary.activation.details.map((detail, index) => (
+                                        <p key={`${detail}-${index}`}>{detail}</p>
+                                    ))}
+                                </div>
                             )}
                             <div className="mt-2 grid grid-cols-2 gap-2">
                                 <div>

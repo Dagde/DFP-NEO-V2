@@ -24,7 +24,7 @@ interface TraineeViewProps {
   onUpdateTrainee: (data: any) => void;
   onAddTrainee: (data: any) => void;
   onBulkUpdateTrainees?: (trainees: any[]) => void;
-  onReplaceTrainees?: (trainees: any[]) => void;
+  onReplaceTrainees?: (trainees: any[], replacedCourse?: string) => void;
   onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, any[]>) => Map<string, any[]>) => void;
   school: string;
   scores: Map<string, any[]>;

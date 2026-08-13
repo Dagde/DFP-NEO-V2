@@ -9057,7 +9057,42 @@ app.post('/api/admin/direct-course-activations', adminSensitiveRateLimit, async 
       orderBy: [{ rank: 'asc' }, { name: 'asc' }],
     });
     if (trainees.length === 0) {
-      return res.status(404).json({ error: 'No active trainees', message: `No active trainees were found in ${course}` });
+      const exactCourseRows = await context.db.trainee.findMany({
+        where: { course },
+        select: { id: true, name: true, fullName: true, course: true, isActive: true, email: true, idNumber: true },
+        take: 10,
+      });
+      const allCourseRows = await context.db.trainee.findMany({
+        select: { course: true, isActive: true },
+        take: 10000,
+      });
+      const courseToken = course.toLowerCase();
+      const nearbyCourses = allCourseRows.filter(row => String(row.course || '').toLowerCase().includes(courseToken));
+      const courseCounts = nearbyCourses.reduce((acc, row) => {
+        const key = String(row.course || '[blank]');
+        if (!acc[key]) acc[key] = { total: 0, active: 0, inactive: 0 };
+        acc[key].total += 1;
+        if (row.isActive) acc[key].active += 1;
+        else acc[key].inactive += 1;
+        return acc;
+      }, {});
+      const inactiveExact = exactCourseRows.filter(row => !row.isActive).length;
+      const activeExact = exactCourseRows.filter(row => row.isActive).length;
+      const details = [
+        `Database active trainees in ${course}: ${activeExact}`,
+        `Database inactive trainees in ${course}: ${inactiveExact}`,
+        `Course spellings found near ${course}: ${Object.entries(courseCounts).map(([name, counts]) => `${name} (${counts.active} active, ${counts.inactive} inactive)`).join('; ') || 'none'}`,
+      ];
+      return res.status(404).json({
+        error: 'No active trainees',
+        message: `Activation emails were not sent because the database did not return any active trainees for ${course}.`,
+        details,
+        diagnostic: {
+          course,
+          exactCourseSample: exactCourseRows,
+          nearbyCourseCounts: courseCounts,
+        },
+      });
     }
 
     const results = [];

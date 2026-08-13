@@ -17,7 +17,7 @@ interface TraineeBulkUploadFlyoutProps {
     courses?: Array<{ name?: string; code?: string; number?: string; unit?: string; location?: string; status?: string; lmpType?: string; academicLmpType?: string }>;
     allowedCourses?: string[];
     onBulkUpdateTrainees: (trainees: Trainee[]) => void | Promise<void>;
-    onReplaceTrainees: (trainees: Trainee[]) => void | Promise<void>;
+    onReplaceTrainees: (trainees: Trainee[], replacedCourse?: string) => void | Promise<void>;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
     currentUserRole?: string;
 }
@@ -29,6 +29,7 @@ type UploadActivationSummary = {
     skipped: number;
     failed: number;
     error?: string;
+    details?: string[];
 };
 
 const normaliseDiagnosticToken = (value: unknown): string => String(value || '').trim().toUpperCase();
@@ -377,7 +378,9 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(payload.message || 'Account activation emails could not be sent.');
+            const error = new Error(payload.message || 'Account activation emails could not be sent.') as Error & { details?: string[] };
+            error.details = Array.isArray(payload.details) ? payload.details.map((detail: unknown) => String(detail)) : [];
+            throw error;
         }
         return {
             requested: true,
@@ -385,6 +388,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             sent: Number(payload.sent || 0),
             skipped: Number(payload.skipped || 0),
             failed: Number(payload.failed || 0),
+            details: Array.isArray(payload.details) ? payload.details.map((detail: unknown) => String(detail)) : [],
         };
     };
 
@@ -392,7 +396,8 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         try {
             return await issueCourseActivations(course);
         } catch (error) {
-            const message = (error as Error).message || 'Account activation emails could not be sent.';
+            const activationError = error as Error & { details?: string[] };
+            const message = activationError.message || 'Account activation emails could not be sent.';
             return {
                 requested: true,
                 total: totalTrainees,
@@ -400,6 +405,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                 skipped: 0,
                 failed: totalTrainees,
                 error: message,
+                details: activationError.details || [],
             };
         }
     };
@@ -425,7 +431,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
 
         if (updateType === 'bulk') {
             const otherCourseTrainees = traineesData.filter(trainee => trainee.course !== course);
-            await onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
+            await onReplaceTrainees([...otherCourseTrainees, ...newTrainees], course);
             initialiseLmpForNewTrainees(newTrainees.filter(trainee => !traineesData.some(existing => existing.idNumber === trainee.idNumber)));
             if (activationRequested) {
                 activation = await issueCourseActivationsSafely(course, newTrainees.length);

@@ -27986,6 +27986,7 @@ const UpdateSummaryFlyout = ({ summary, onClose }) => {
           "Trainees were uploaded, but activation emails were not sent. ",
           summary.activation.error
         ] }),
+        summary.activation.details && summary.activation.details.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-amber-500/30 bg-gray-900/40 px-3 py-2 text-xs text-amber-100", children: summary.activation.details.map((detail, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: detail }, `${detail}-${index}`)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 grid grid-cols-2 gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Emails Sent:" }),
@@ -28325,28 +28326,33 @@ const TraineeBulkUploadFlyout = ({
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload.message || "Account activation emails could not be sent.");
+      const error = new Error(payload.message || "Account activation emails could not be sent.");
+      error.details = Array.isArray(payload.details) ? payload.details.map((detail) => String(detail)) : [];
+      throw error;
     }
     return {
       requested: true,
       total: Number(payload.total || 0),
       sent: Number(payload.sent || 0),
       skipped: Number(payload.skipped || 0),
-      failed: Number(payload.failed || 0)
+      failed: Number(payload.failed || 0),
+      details: Array.isArray(payload.details) ? payload.details.map((detail) => String(detail)) : []
     };
   };
   const issueCourseActivationsSafely = async (course, totalTrainees) => {
     try {
       return await issueCourseActivations(course);
     } catch (error) {
-      const message = error.message || "Account activation emails could not be sent.";
+      const activationError = error;
+      const message = activationError.message || "Account activation emails could not be sent.";
       return {
         requested: true,
         total: totalTrainees,
         sent: 0,
         skipped: 0,
         failed: totalTrainees,
-        error: message
+        error: message,
+        details: activationError.details || []
       };
     }
   };
@@ -28368,7 +28374,7 @@ const TraineeBulkUploadFlyout = ({
     let activation;
     if (updateType === "bulk") {
       const otherCourseTrainees = traineesData.filter((trainee) => trainee.course !== course);
-      await onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
+      await onReplaceTrainees([...otherCourseTrainees, ...newTrainees], course);
       initialiseLmpForNewTrainees(newTrainees.filter((trainee) => !traineesData.some((existing) => existing.idNumber === trainee.idNumber)));
       if (activationRequested) {
         activation = await issueCourseActivationsSafely(course, newTrainees.length);
@@ -126027,8 +126033,10 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
       setSuccessMessage(`Warning: DB save error — ${err.message}`);
     }
   }, [handleDatabaseDataChanged]);
-  const handleReplaceTrainees = reactExports.useCallback(async (newTrainees, onSaved) => {
+  const handleReplaceTrainees = reactExports.useCallback(async (newTrainees, replacedCourseOrCallback, onSaved) => {
     logRoutineAppDebug(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
+    const replacedCourse = typeof replacedCourseOrCallback === "string" ? replacedCourseOrCallback.trim() : "";
+    const saveCallback = typeof replacedCourseOrCallback === "function" ? replacedCourseOrCallback : onSaved;
     setTraineesData(newTrainees);
     setSuccessMessage("Trainees successfully replaced!");
     const courseGroups = /* @__PURE__ */ new Map();
@@ -126039,15 +126047,16 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
     });
     logRoutineAppDebug(`🔵 [handleReplaceTrainees] Course groups:`, [...courseGroups.entries()].map(([c, ts]) => `${c}:${ts.length}`).join(", "));
     try {
-      logRoutineAppDebug(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase2()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
+      const traineesToPersist = replacedCourse ? newTrainees.filter((trainee) => String(trainee.course || "").trim() === replacedCourse) : newTrainees;
+      logRoutineAppDebug(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase2()}/trainees/bulk with ${traineesToPersist.length} trainees, replaceAll=${Boolean(replacedCourse)}${replacedCourse ? `, course=${replacedCourse}` : ""}`);
       const response = await fetch(`${getApiBase2()}/trainees/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          trainees: newTrainees,
-          replaceAll: false
-          // Safe upsert — create new, update existing, don't deactivate
+          trainees: traineesToPersist,
+          course: replacedCourse || void 0,
+          replaceAll: Boolean(replacedCourse)
         })
       });
       logRoutineAppDebug(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
@@ -126056,6 +126065,7 @@ Do not hard refresh yet. Try Publish again, then confirm the save succeeds.`,
         logRoutineAppDebug(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
         setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
         await handleDatabaseDataChanged();
+        saveCallback?.();
       } else {
         const err = await response.text();
         console.error("❌ [handleReplaceTrainees] DB save failed. Status:", response.status, "Body:", err);

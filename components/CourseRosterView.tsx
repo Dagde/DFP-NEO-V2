@@ -36,7 +36,7 @@ interface CourseRosterViewProps {
     onUpdateTrainee: (data: Trainee) => void | Promise<void>;
     onAddTrainee: (data: Trainee) => void | Promise<void>;
     onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
-    onReplaceTrainees?: (trainees: Trainee[]) => void;
+    onReplaceTrainees?: (trainees: Trainee[], replacedCourse?: string) => void;
     onUpdateTraineeLMPs?: (updater: (prevLMPs: Map<string, SyllabusItemDetail[]>) => Map<string, SyllabusItemDetail[]>) => void;
     school: string;
     scores: Map<string, Score[]>;
