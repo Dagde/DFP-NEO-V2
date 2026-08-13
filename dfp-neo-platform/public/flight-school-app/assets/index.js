@@ -795,7 +795,7 @@ const ChangePasswordModal = ({
           "Content-Type": "application/json",
           "Authorization": `Bearer ${sessionToken}`
         },
-        body: JSON.stringify({ currentPassword, newPassword })
+        body: JSON.stringify({ currentPassword: isMandatory ? "" : currentPassword, newPassword })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to change password");
@@ -825,7 +825,7 @@ const ChangePasswordModal = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-green-300 font-medium", children: "Password changed successfully!" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", children: "Redirecting..." })
     ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      !isMandatory && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider", children: "Current Password" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
@@ -902,7 +902,7 @@ const ChangePasswordModal = ({
           "button",
           {
             type: "submit",
-            disabled: loading || !currentPassword || !newPassword || !confirmPassword || !passwordsMatch || passwordErrors.length > 0,
+            disabled: loading || !isMandatory && !currentPassword || !newPassword || !confirmPassword || !passwordsMatch || passwordErrors.length > 0,
             className: "flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
             style: { background: "linear-gradient(135deg, #3b82f6, #2563eb)" },
             children: loading ? "Changing..." : "Change Password"

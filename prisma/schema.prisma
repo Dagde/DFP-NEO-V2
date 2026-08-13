@@ -19,6 +19,13 @@ model User {
   updatedAt       DateTime              @updatedAt
   lastLogin       DateTime?
   isActive        Boolean               @default(true)
+  mustChangePassword Boolean             @default(false)
+  activationCodeHash String?
+  activationCodeExpiresAt DateTime?
+  activationCodeSentAt DateTime?
+  activationCodeUsedAt DateTime?
+  activationAttemptCount Int             @default(0)
+  activationLockedUntil DateTime?
   createdById     String?
   userId          String                @unique
   aircraft        Aircraft[]            @relation("Aircraft")

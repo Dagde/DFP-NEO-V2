@@ -478,6 +478,49 @@ app.get('/api/weather/taf/:icao', async (req, res) => {
 let prisma = null;
 let prismaMaintenanceStarted = false;
 let prismaMaintenancePromise = null;
+let userActivationColumnsEnsured = false;
+
+async function ensureUserActivationColumns(db) {
+  if (userActivationColumnsEnsured) return;
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "mustChangePassword" BOOLEAN NOT NULL DEFAULT false`);
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationCodeHash" TEXT`);
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationCodeExpiresAt" TIMESTAMP(3)`);
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationCodeSentAt" TIMESTAMP(3)`);
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationCodeUsedAt" TIMESTAMP(3)`);
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationAttemptCount" INTEGER NOT NULL DEFAULT 0`);
+  await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "activationLockedUntil" TIMESTAMP(3)`);
+  await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "User_activationCodeExpiresAt_idx" ON "User"("activationCodeExpiresAt")`);
+  userActivationColumnsEnsured = true;
+}
+
+const ACTIVATION_SUFFIX_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%?';
+
+function generateActivationSuffix(length = 12) {
+  const bytes = crypto.randomBytes(length);
+  return Array.from(bytes, byte => ACTIVATION_SUFFIX_CHARS[byte % ACTIVATION_SUFFIX_CHARS.length]).join('');
+}
+
+function getActivationExpiryDate() {
+  const hours = Math.max(1, Math.min(168, Number(process.env.DFP_ACTIVATION_EXPIRY_HOURS || 24) || 24));
+  return new Date(Date.now() + hours * 60 * 60 * 1000);
+}
+
+function normalisePersonnelId(value) {
+  return String(value || '').replace(/\D/g, '').trim();
+}
+
+async function findLinkedPersonnelId(db, userDbId) {
+  const rows = await db.$queryRawUnsafe(
+    `SELECT COALESCE(p."idNumber"::text, t."idNumber"::text) AS "personnelId"
+     FROM "User" u
+     LEFT JOIN "Personnel" p ON p."userId" = u.id
+     LEFT JOIN "Trainee" t ON t."userId" = u.id
+     WHERE u.id = $1
+     LIMIT 1`,
+    userDbId
+  );
+  return normalisePersonnelId(rows?.[0]?.personnelId);
+}
 
 async function runPrismaRuntimeMaintenance(db) {
   const startedAt = Date.now();
@@ -701,6 +744,7 @@ async function getPrisma() {
     prisma = new PrismaClient();
     await prisma.$connect();
     console.log(`✅ Prisma connected to database in ${Date.now() - startedAt}ms`);
+    await ensureUserActivationColumns(prisma);
     if (process.env.DFP_NEO_BLOCKING_DB_MAINTENANCE === 'true') {
       prismaMaintenanceStarted = true;
       prismaMaintenancePromise = runPrismaRuntimeMaintenance(prisma);
@@ -7890,7 +7934,9 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     }
 
     const users = await db.$queryRawUnsafe(
-      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", password
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", password,
+              "mustChangePassword", "activationCodeHash", "activationCodeExpiresAt", "activationCodeUsedAt",
+              "activationAttemptCount", "activationLockedUntil"
        FROM "User"
        WHERE "userId" = $1 OR username = $1
        LIMIT 1`,
@@ -7922,7 +7968,51 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     }
 
     const bcrypt = require('bcryptjs');
-    const validPassword = await bcrypt.compare(password, user.password);
+    let validPassword = false;
+    let usedActivationCredential = false;
+    if (user.mustChangePassword && user.activationCodeHash) {
+      if (user.activationCodeUsedAt) {
+        await writeSecurityAuditEvent(db, req, 'LOGIN_BLOCKED', 'warning', 'Activation login blocked after code use', {
+          reason: 'activation_code_already_used',
+          userId: user.userId || user.username || user.id,
+        });
+        return res.status(403).json({
+          error: 'Activation already used',
+          message: 'This activation code has already been used. Ask an administrator to reissue account activation.',
+        });
+      }
+      if (user.activationLockedUntil && new Date(user.activationLockedUntil).getTime() > Date.now()) {
+        return res.status(429).json({
+          error: 'Activation locked',
+          message: 'Too many failed activation attempts. Try again later or ask an administrator to reissue account activation.',
+        });
+      }
+      if (user.activationCodeExpiresAt && new Date(user.activationCodeExpiresAt).getTime() <= Date.now()) {
+        await writeSecurityAuditEvent(db, req, 'LOGIN_BLOCKED', 'warning', 'Activation login blocked after expiry', {
+          reason: 'activation_code_expired',
+          userId: user.userId || user.username || user.id,
+        });
+        return res.status(403).json({
+          error: 'Activation expired',
+          message: 'This activation code has expired. Ask an administrator to reissue account activation.',
+        });
+      }
+      validPassword = await bcrypt.compare(password, user.activationCodeHash);
+      usedActivationCredential = validPassword;
+      if (!validPassword) {
+        const attempts = Number(user.activationAttemptCount || 0) + 1;
+        const lockedUntil = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
+        await db.$executeRawUnsafe(
+          `UPDATE "User" SET "activationAttemptCount" = $1, "activationLockedUntil" = $2::timestamp, "updatedAt" = NOW()
+           WHERE id = $3`,
+          attempts,
+          lockedUntil,
+          user.id
+        );
+      }
+    } else {
+      validPassword = await bcrypt.compare(password, user.password);
+    }
     if (!validPassword) {
       await writeSecurityAuditEvent(db, req, 'LOGIN_FAILED', 'warning', 'Direct login failed', {
         reason: 'invalid_credentials',
@@ -7933,6 +8023,18 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
         error: 'Invalid credentials',
         message: 'Invalid User ID or password',
       });
+    }
+    if (usedActivationCredential) {
+      await db.$executeRawUnsafe(
+        `UPDATE "User"
+         SET "activationCodeHash" = NULL,
+             "activationCodeUsedAt" = NOW(),
+             "activationAttemptCount" = 0,
+             "activationLockedUntil" = NULL,
+             "updatedAt" = NOW()
+         WHERE id = $1`,
+        user.id
+      );
     }
 
     const crypto = require('crypto');
@@ -7968,7 +8070,7 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
     return res.json({
       sessionToken,
       expires: expires.toISOString(),
-      mustChangePassword: false,
+      mustChangePassword: Boolean(user.mustChangePassword),
       user: {
         id: user.id,
         userId: user.userId,
@@ -7979,7 +8081,7 @@ app.post('/api/auth/direct-login', authRateLimit, async (req, res) => {
         role: user.role,
         isActive: user.isActive,
         displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId,
-        mustChangePassword: false,
+        mustChangePassword: Boolean(user.mustChangePassword),
         permissionsRoleId: '',
       },
     });
@@ -8000,7 +8102,7 @@ app.get('/api/auth/direct-session', async (req, res) => {
 
     const db = await getPrisma();
     const sessions = await db.$queryRawUnsafe(
-      `SELECT s."sessionToken", s.expires, u.id, u."userId", u.username, u.email, u."firstName", u."lastName", u.role, u."isActive"
+      `SELECT s."sessionToken", s.expires, u.id, u."userId", u.username, u.email, u."firstName", u."lastName", u.role, u."isActive", u."mustChangePassword"
        FROM "Session" s
        JOIN "User" u ON u.id = s."userId"
        WHERE s."sessionToken" = $1
@@ -8029,7 +8131,7 @@ app.get('/api/auth/direct-session', async (req, res) => {
         role: session.role,
         isActive: session.isActive,
         displayName: `${session.firstName || ''} ${session.lastName || ''}`.trim() || session.username || session.userId,
-        mustChangePassword: false,
+        mustChangePassword: Boolean(session.mustChangePassword),
         permissionsRoleId: '',
       },
     });
@@ -8107,7 +8209,15 @@ const toDirectAdminUser = (user) => ({
   lastName: user.lastName,
   displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId,
   isActive: user.isActive,
-  mustChangePassword: false,
+  mustChangePassword: Boolean(user.mustChangePassword),
+  activationStatus: user.activationCodeUsedAt
+    ? 'USED'
+    : user.activationCodeHash
+      ? (user.activationCodeExpiresAt && new Date(user.activationCodeExpiresAt).getTime() <= Date.now() ? 'EXPIRED' : 'PENDING')
+      : 'NONE',
+  activationExpiresAt: user.activationCodeExpiresAt || null,
+  activationSentAt: user.activationCodeSentAt || null,
+  activationUsedAt: user.activationCodeUsedAt || null,
   lastLoginAt: user.lastLogin,
   createdAt: user.createdAt,
   permissionsRoleId: '',
@@ -8118,7 +8228,9 @@ app.get('/api/admin/direct-users', async (req, res) => {
     const context = await requireDirectAdmin(req, res);
     if (!context) return;
     const users = await context.db.$queryRawUnsafe(
-      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "lastLogin", "createdAt"
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+              "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+              "lastLogin", "createdAt"
        FROM "User"
        ORDER BY "lastName" NULLS LAST, "firstName" NULLS LAST, username, "userId"`
     );
@@ -8146,7 +8258,9 @@ app.post('/api/admin/direct-create-user', async (req, res) => {
     const rows = await context.db.$queryRawUnsafe(
       `INSERT INTO "User" ("id", "userId", username, email, password, role, "firstName", "lastName", "isActive", "createdById", "createdAt", "updatedAt")
        VALUES (gen_random_uuid()::text, $1, $1, $2, $3, $4::"Role", $5, $6, true, $7, NOW(), NOW())
-       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "lastLogin", "createdAt"`,
+       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+                 "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+                 "lastLogin", "createdAt"`,
       cleanUserId,
       email || null,
       hashedPassword,
@@ -8163,6 +8277,84 @@ app.post('/api/admin/direct-create-user', async (req, res) => {
       error: 'Create failed',
       message: message.includes('unique') || message.includes('duplicate') ? 'A user with that ID or email already exists' : 'Failed to create user',
     });
+  }
+});
+
+app.post('/api/admin/direct-issue-activation', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const context = await requireDirectAdmin(req, res);
+    if (!context) return;
+    const { targetUserId, personnelId } = req.body || {};
+    const cleanTargetUserId = String(targetUserId || '').trim();
+    if (!cleanTargetUserId) {
+      return res.status(400).json({ error: 'Invalid request', message: 'Target user is required' });
+    }
+    const users = await context.db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive"
+       FROM "User"
+       WHERE "userId" = $1 OR username = $1 OR id = $1
+       LIMIT 1`,
+      cleanTargetUserId
+    );
+    const target = users?.[0];
+    if (!target) {
+      return res.status(404).json({ error: 'Not found', message: 'User not found' });
+    }
+    if (!target.isActive) {
+      return res.status(403).json({ error: 'Account inactive', message: 'Account must be active before activation can be issued' });
+    }
+    if (!String(target.email || '').trim()) {
+      return res.status(400).json({ error: 'Email required', message: 'A registered email address is required before activation can be issued' });
+    }
+    const linkedPersonnelId = await findLinkedPersonnelId(context.db, target.id);
+    const cleanPersonnelId = normalisePersonnelId(personnelId) || linkedPersonnelId;
+    if (!cleanPersonnelId) {
+      return res.status(400).json({ error: 'Personnel ID required', message: 'A linked Personnel ID is required before activation can be issued' });
+    }
+    const bcrypt = require('bcryptjs');
+    const suffix = generateActivationSuffix(12);
+    const activationCredential = `${cleanPersonnelId}${suffix}`;
+    const activationCodeHash = await bcrypt.hash(activationCredential, 12);
+    const activationExpiresAt = getActivationExpiryDate();
+    const randomBlockedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);
+    const updated = await context.db.$queryRawUnsafe(
+      `UPDATE "User"
+       SET password = $1,
+           "mustChangePassword" = true,
+           "activationCodeHash" = $2,
+           "activationCodeExpiresAt" = $3::timestamp,
+           "activationCodeSentAt" = NOW(),
+           "activationCodeUsedAt" = NULL,
+           "activationAttemptCount" = 0,
+           "activationLockedUntil" = NULL,
+           "updatedAt" = NOW()
+       WHERE id = $4
+       RETURNING id, "userId", username, email, "firstName", "lastName", role, "isActive", "mustChangePassword",
+                 "activationCodeHash", "activationCodeExpiresAt", "activationCodeSentAt", "activationCodeUsedAt",
+                 "lastLogin", "createdAt"`,
+      randomBlockedPassword,
+      activationCodeHash,
+      activationExpiresAt.toISOString(),
+      target.id
+    );
+    await writeSecurityAuditEvent(context.db, req, 'ACCOUNT_ACTIVATION_ISSUED', 'info', 'Account activation issued', {
+      targetUserId: target.userId || target.username || target.id,
+      expiresAt: activationExpiresAt.toISOString(),
+    });
+    res.json({
+      success: true,
+      user: toDirectAdminUser(updated[0]),
+      delivery: {
+        method: 'email-pending',
+        email: target.email,
+        activationSuffix: process.env.DFP_EXPOSE_ACTIVATION_SUFFIX_FOR_TESTING === 'true' ? suffix : undefined,
+        expiresAt: activationExpiresAt.toISOString(),
+        instruction: 'Email delivery is implemented in the next step. The final activation credential is the Personnel ID followed immediately by this suffix.',
+      },
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/direct-issue-activation error:', error);
+    res.status(500).json({ error: 'Activation failed', message: 'Failed to issue account activation' });
   }
 });
 
@@ -8192,6 +8384,74 @@ app.post('/api/admin/direct-reset-password', adminSensitiveRateLimit, async (req
   } catch (error) {
     console.error('❌ POST /api/admin/direct-reset-password error:', error);
     res.status(500).json({ error: 'Reset failed', message: 'Failed to reset password' });
+  }
+});
+
+app.post('/api/auth/direct-change-password', adminSensitiveRateLimit, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!sessionToken) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
+    }
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({ error: 'Invalid request', message: 'New password must be at least 8 characters' });
+    }
+    const db = await getPrisma();
+    const sessions = await db.$queryRawUnsafe(
+      `SELECT s."sessionToken", s.expires, u.id, u."userId", u.username, u.email, u.password, u."mustChangePassword", u."isActive"
+       FROM "Session" s
+       JOIN "User" u ON u.id = s."userId"
+       WHERE s."sessionToken" = $1
+       LIMIT 1`,
+      sessionToken
+    );
+    const user = sessions?.[0];
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid token', message: 'Session not found' });
+    }
+    if (new Date(user.expires).getTime() <= Date.now()) {
+      await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
+      return res.status(401).json({ error: 'Token expired', message: 'Session has expired' });
+    }
+    if (!user.isActive) {
+      return res.status(403).json({ error: 'Account inactive', message: 'Your account has been deactivated' });
+    }
+
+    const bcrypt = require('bcryptjs');
+    if (!user.mustChangePassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Invalid request', message: 'Current password is required' });
+      }
+      const validCurrentPassword = await bcrypt.compare(currentPassword, user.password || '');
+      if (!validCurrentPassword) {
+        return res.status(403).json({ error: 'Forbidden', message: 'Current password was not accepted' });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await db.$executeRawUnsafe(
+      `UPDATE "User"
+       SET password = $1,
+           "mustChangePassword" = false,
+           "activationCodeHash" = NULL,
+           "activationCodeExpiresAt" = NULL,
+           "activationLockedUntil" = NULL,
+           "activationAttemptCount" = 0,
+           "updatedAt" = NOW()
+       WHERE id = $2`,
+      hashedPassword,
+      user.id
+    );
+    await writeSecurityAuditEvent(db, req, 'PASSWORD_CHANGED', 'info', 'User password changed', {
+      userId: user.userId || user.username || user.id,
+      mandatoryChange: Boolean(user.mustChangePassword),
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ POST /api/auth/direct-change-password error:', error);
+    res.status(500).json({ error: 'Change failed', message: 'Failed to change password' });
   }
 });
 

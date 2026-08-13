@@ -61,7 +61,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword: isMandatory ? '' : currentPassword, newPassword }),
       });
 
       const data = await res.json();
@@ -118,21 +118,23 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
-                  Current Password
-                </label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}
-                  autoComplete="current-password"
-                  disabled={loading}
-                />
-              </div>
+              {!isMandatory && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm text-white placeholder-gray-500 border border-gray-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}
+                    autoComplete="current-password"
+                    disabled={loading}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">
@@ -219,7 +221,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 )}
                 <button
                   type="submit"
-                  disabled={loading || !currentPassword || !newPassword || !confirmPassword || !passwordsMatch || passwordErrors.length > 0}
+                  disabled={loading || (!isMandatory && !currentPassword) || !newPassword || !confirmPassword || !passwordsMatch || passwordErrors.length > 0}
                   className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
                 >
