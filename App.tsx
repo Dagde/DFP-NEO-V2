@@ -32313,7 +32313,20 @@ const App: React.FC = () => {
         const operationalModel = normaliseOperationalModel(activeOperationalModel);
         if (operationalModel !== 'flight_school' && operationalModel !== 'air_combat' && !isFixedCrewLikeOperationalModel(operationalModel)) return;
 
-        const staffName = sourceEvent.fixedCrewPic || sourceEvent.pilot || sourceEvent.instructor || sourceEvent.crew || '';
+        const instructorRefName = sourceEvent.personnelRefs?.find(ref => (
+            ref.personType === 'staff' && ref.role === 'instructor'
+        ))?.name;
+        const fixedCrewPicRefName = sourceEvent.personnelRefs?.find(ref => (
+            ref.personType === 'staff' && ref.role === 'fixedCrewPic'
+        ))?.name;
+        const pilotStaffRefName = sourceEvent.personnelRefs?.find(ref => (
+            ref.personType === 'staff' && ref.role === 'pilot'
+        ))?.name;
+        const staffName = operationalModel === 'flight_school'
+            ? (instructorRefName || sourceEvent.instructor || fixedCrewPicRefName || sourceEvent.fixedCrewPic || pilotStaffRefName || sourceEvent.crew || '')
+            : isFixedCrewLikeOperationalModel(operationalModel)
+                ? (fixedCrewPicRefName || sourceEvent.fixedCrewPic || pilotStaffRefName || sourceEvent.pilot || instructorRefName || sourceEvent.instructor || sourceEvent.crew || '')
+                : (pilotStaffRefName || sourceEvent.pilot || fixedCrewPicRefName || sourceEvent.fixedCrewPic || instructorRefName || sourceEvent.instructor || sourceEvent.crew || '');
         const eventCode = String(sourceEvent.flightNumber || sourceEvent.eventCode || '').trim();
         if (!staffName || !eventCode) return;
 
