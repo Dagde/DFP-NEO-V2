@@ -172,7 +172,24 @@ const readWorkbookRows = async (file: File): Promise<any[]> => {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: 'buffer' });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    return XLSX.utils.sheet_to_json(worksheet);
+    const rawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+    const headerRowIndex = rawRows.findIndex(row => {
+        const cells = row.map(cell => String(cell || '').trim().toLowerCase().replace(/[\s/]/g, ''));
+        const hasName = cells.some(cell => ['name', 'fullname', 'name[surname,firstname]', 'name[surname,firstname]'].includes(cell));
+        const hasId = cells.some(cell => ['personnelid', 'serviceid', 'employeeid', 'employeenumber', 'personnelnumber', 'staffid', 'id', 'idnumber'].includes(cell));
+        const hasCourse = cells.includes('course') || (cells.includes('courseprefix') && cells.includes('coursenumber'));
+        return hasName && hasId && hasCourse;
+    });
+    if (headerRowIndex < 0) {
+        throw new Error('No valid trainee header row was found. The file must include Name, Personnel ID or ID Number, and Course columns.');
+    }
+    const header = rawRows[headerRowIndex].map(cell => String(cell || '').trim());
+    return rawRows.slice(headerRowIndex + 1)
+        .filter(row => row.some(cell => String(cell || '').trim()))
+        .map(row => header.reduce((record: any, key, index) => {
+            if (key) record[key] = row[index];
+            return record;
+        }, {}));
 };
 
 const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
