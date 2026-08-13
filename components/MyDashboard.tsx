@@ -24,8 +24,6 @@ interface MyDashboardProps {
     messageContactStaffOptions?: Instructor[];
     messageContactTraineeOptions?: Trainee[];
     messageContactUnitCodes?: string[];
-    selectedStaffName?: string;
-    onSelectStaffName?: (staffName: string) => void;
     onUnreadMessageCountChange?: (count: number) => void;
     sctTerminology?: SctTerminology;
     currentLocationCode?: string | null;
@@ -338,8 +336,6 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     messageContactStaffOptions = staffOptions,
     messageContactTraineeOptions = [],
     messageContactUnitCodes = [],
-    selectedStaffName,
-    onSelectStaffName,
     onUnreadMessageCountChange,
     sctTerminology = DEFAULT_SCT_TERMINOLOGY,
     currentLocationCode,
@@ -347,24 +343,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     const continuationTerminology = useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
     const continuationShortLabel = continuationTerminology.shortLabel;
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
-    const groupedStaffOptions = useMemo(() => {
-        const sortedStaff = [...staffOptions]
-            .filter(staff => staff?.name)
-            .sort((a, b) => (
-                String(a.unit || 'No Unit').localeCompare(String(b.unit || 'No Unit')) ||
-                compareDashboardRank(a.rank, b.rank) ||
-                String(a.name || '').localeCompare(String(b.name || ''))
-            ));
-        const groups = new Map<string, Instructor[]>();
-        sortedStaff.forEach(staff => {
-            const unit = String(staff.unit || 'No Unit');
-            groups.set(unit, [...(groups.get(unit) || []), staff]);
-        });
-        return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
-    }, [staffOptions]);
-    const dashboardSelectedName = selectedStaffName || userName;
-    const dashboardSelectedIsStaffOption = staffOptions.some(staff => staff?.name === dashboardSelectedName);
-    const dashboardSignedInLabel = `${userRank || ''} ${userName}`.trim() || userName;
+    const signedInUserLabel = `${userRank || ''} ${userName}`.trim() || userName;
     const [staffPickerEntry, setStaffPickerEntry] = useState<{ report: AirCombatTrainingReport; staff: Instructor; mode: 'open' | 'reassign' } | null>(null);
     const dashboardActionButtonClass = 'btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]';
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
@@ -748,28 +727,7 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
                     <h1 className="text-3xl font-bold text-white">My Dashboard</h1>
                     <div className="mt-2 flex flex-wrap items-center gap-3">
                         <span className="text-lg text-gray-400">Welcome,</span>
-                        {groupedStaffOptions.length > 0 && onSelectStaffName ? (
-                            <select
-                                value={dashboardSelectedName}
-                                onChange={(event) => onSelectStaffName(event.target.value)}
-                                className="min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                            >
-                                {!dashboardSelectedIsStaffOption && (
-                                    <option value={dashboardSelectedName}>{dashboardSignedInLabel}</option>
-                                )}
-                                {groupedStaffOptions.map(group => (
-                                    <optgroup key={group.unit} label={group.unit}>
-                                        {group.staff.map(staff => (
-                                            <option key={`${staff.unit || 'unit'}-${staff.idNumber}-${staff.name}`} value={staff.name}>
-                                                {formatDashboardStaffName(staff)}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
-                        ) : (
-                            <span className="text-lg text-gray-400">{userRank} {userName}</span>
-                        )}
+                        <span className="text-lg font-semibold text-gray-100">{signedInUserLabel}</span>
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-px">

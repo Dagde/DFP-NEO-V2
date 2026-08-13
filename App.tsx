@@ -24250,13 +24250,11 @@ const App: React.FC = () => {
         setAuthUser(null);
         setAuthSessionToken('');
         setCurrentUserName('Bloggs, Joe');
-        setDashboardTestUserName('');
         setSessionUser(null);
     };
 
     // Current User State (for permission checking)
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
-    const [dashboardTestUserName, setDashboardTestUserName] = useState<string>('');
     const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = useState(0);
     const matchedCurrentStaffUser = instructorsData.find(inst => inst.name === currentUserName);
     const currentUser = matchedCurrentStaffUser || instructorsData[0];
@@ -24264,9 +24262,6 @@ const App: React.FC = () => {
 
     // Session user info (populated from auth)
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
-    useEffect(() => {
-        setDashboardTestUserName('');
-    }, [authUser?.userId, sessionUser?.userId]);
     const emergencyQualificationOptions = useMemo(
         () => getQualificationsForOperationalModel(activeStaffQualificationCatalogue, activeOperationalModel),
         [activeOperationalModel, activeStaffQualificationCatalogue],
@@ -24315,8 +24310,8 @@ const App: React.FC = () => {
             const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
             return sessionNameKeys.includes(staffName) || (staffId && sessionIdKeys.includes(staffId));
         });
-        return dashboardTestUserName || sessionDashboardUserName || sessionStaff?.name || currentUserName;
-    }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
+        return sessionDashboardUserName || sessionStaff?.name || currentUserName;
+    }, [allInstructorsData, authUser, currentUserName, sessionUser]);
     useEffect(() => {
         if (!dashboardNotificationUserName || !isAuthenticated) {
             setDashboardUnreadMessageCount(0);
@@ -45173,7 +45168,7 @@ appliedUpdates.forEach(update => {
                     const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
                     return sessionDashboardNameKeys.includes(staffName) || (staffId && sessionDashboardIdKeys.includes(staffId));
                 });
-                const dashboardUserName = dashboardTestUserName || sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
+                const dashboardUserName = sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
                 const dashboardStaff = allInstructorsData.find(staff => (
                     normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName)
                 ));
@@ -45182,11 +45177,49 @@ appliedUpdates.forEach(update => {
                     const traineeId = String((trainee as any).idNumber || (trainee as any).id || '').trim().toLowerCase();
                     return traineeName === normaliseDashboardName(dashboardUserName) || (traineeId && sessionDashboardIdKeys.includes(traineeId));
                 });
+                const normaliseDashboardContextCode = (value?: string | null) => String(value || '')
+                    .trim()
+                    .toUpperCase();
+                const dashboardActiveUnitCodes = (
+                    activeContextUnitCodes.length > 0
+                        ? activeContextUnitCodes
+                        : String(activeUnitCode || '').split('+')
+                )
+                    .map(normaliseDashboardContextCode)
+                    .filter(Boolean);
+                const dashboardActiveUnitSet = new Set(dashboardActiveUnitCodes);
+                const dashboardActiveLocationSet = new Set([
+                    ...getDailySnapshotLocationAliases(school),
+                    activeLocationSolarProfile.code,
+                    school,
+                ]
+                    .map(normaliseDashboardContextCode)
+                    .filter(Boolean));
+                const reportMatchesDashboardContext = (report: any, staff: Instructor): boolean => {
+                    const reportUnitCodes = String(report?.unitCode || '')
+                        .split('+')
+                        .map(normaliseDashboardContextCode)
+                        .filter(Boolean);
+                    if (dashboardActiveUnitSet.size > 0) {
+                        if (reportUnitCodes.length > 0) {
+                            if (!reportUnitCodes.some(unitCode => dashboardActiveUnitSet.has(unitCode))) return false;
+                        } else {
+                            const staffUnitCode = normaliseDashboardContextCode(staff.unit);
+                            if (!staffUnitCode || !dashboardActiveUnitSet.has(staffUnitCode)) return false;
+                        }
+                    }
+                    const reportLocationCode = normaliseDashboardContextCode(report?.locationCode);
+                    if (reportLocationCode && dashboardActiveLocationSet.size > 0 && !dashboardActiveLocationSet.has(reportLocationCode)) {
+                        return false;
+                    }
+                    return true;
+                };
                 const pendingTrainingReports = allInstructorsData.flatMap(staff => (
                     normaliseAirCombatTrainingReports(staff.preferences)
                         .filter(report => (
                             report.status !== 'Complete' &&
                             !report.dashboardAcknowledgedAt &&
+                            reportMatchesDashboardContext(report, staff) &&
                             normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)
                         ))
                         .map(report => ({ report, staff }))
@@ -45211,8 +45244,6 @@ appliedUpdates.forEach(update => {
                             messageContactStaffOptions={instructorsData}
                             messageContactTraineeOptions={traineesData}
                             messageContactUnitCodes={activeContextUnitCodes}
-                            selectedStaffName={dashboardUserName}
-                            onSelectStaffName={setDashboardTestUserName}
                             onUnreadMessageCountChange={setDashboardUnreadMessageCount}
                             sctTerminology={getSctTerminology(platformConfig, activeUnitCode)}
                             currentLocationCode={activeLocationSolarProfile.code}

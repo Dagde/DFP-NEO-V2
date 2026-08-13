@@ -38270,11 +38270,6 @@ const formatDate$2 = (dateString) => {
   }
 };
 const compareDashboardRank = (left, right) => String(left || "").localeCompare(String(right || ""), void 0, { sensitivity: "base" });
-const formatDashboardStaffName = (staff) => {
-  const [lastName, firstName] = String(staff.name || "").split(",").map((part) => part.trim());
-  const displayName = firstName ? `${firstName} ${lastName}` : staff.name;
-  return `${staff.rank || ""} ${displayName}`.trim();
-};
 const normaliseDashboardContactName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 const toDashboardContactDisplayName = (name, rank) => {
   const [lastName, firstName] = String(name || "").split(",").map((part) => part.trim());
@@ -38427,8 +38422,6 @@ const MyDashboard = ({
   messageContactStaffOptions = staffOptions,
   messageContactTraineeOptions = [],
   messageContactUnitCodes = [],
-  selectedStaffName,
-  onSelectStaffName,
   onUnreadMessageCountChange,
   sctTerminology = DEFAULT_SCT_TERMINOLOGY$1,
   currentLocationCode
@@ -38436,18 +38429,7 @@ const MyDashboard = ({
   const continuationTerminology = reactExports.useMemo(() => normaliseSctTerminology(sctTerminology), [sctTerminology]);
   const continuationShortLabel = continuationTerminology.shortLabel;
   const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
-  const groupedStaffOptions = reactExports.useMemo(() => {
-    const sortedStaff2 = [...staffOptions].filter((staff) => staff?.name).sort((a, b) => String(a.unit || "No Unit").localeCompare(String(b.unit || "No Unit")) || compareDashboardRank(a.rank, b.rank) || String(a.name || "").localeCompare(String(b.name || "")));
-    const groups = /* @__PURE__ */ new Map();
-    sortedStaff2.forEach((staff) => {
-      const unit = String(staff.unit || "No Unit");
-      groups.set(unit, [...groups.get(unit) || [], staff]);
-    });
-    return Array.from(groups.entries()).map(([unit, staff]) => ({ unit, staff }));
-  }, [staffOptions]);
-  const dashboardSelectedName = selectedStaffName || userName;
-  const dashboardSelectedIsStaffOption = staffOptions.some((staff) => staff?.name === dashboardSelectedName);
-  const dashboardSignedInLabel = `${userRank || ""} ${userName}`.trim() || userName;
+  const signedInUserLabel = `${userRank || ""} ${userName}`.trim() || userName;
   const [staffPickerEntry, setStaffPickerEntry] = reactExports.useState(null);
   const dashboardActionButtonClass = "btn-aluminium-brushed relative flex h-[41px] w-[56px] shrink-0 items-center justify-center rounded-md px-1 py-1 text-center text-[9px] font-semibold leading-[0.95]";
   const [isMessagesOpen, setIsMessagesOpen] = reactExports.useState(false);
@@ -38754,22 +38736,7 @@ const MyDashboard = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "My Dashboard" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex flex-wrap items-center gap-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg text-gray-400", children: "Welcome," }),
-          groupedStaffOptions.length > 0 && onSelectStaffName ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "select",
-            {
-              value: dashboardSelectedName,
-              onChange: (event) => onSelectStaffName(event.target.value),
-              className: "min-w-[280px] rounded-md border border-sky-500/40 bg-gray-950 px-3 py-2 text-lg font-semibold text-white shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30",
-              children: [
-                !dashboardSelectedIsStaffOption && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: dashboardSelectedName, children: dashboardSignedInLabel }),
-                groupedStaffOptions.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsx("optgroup", { label: group.unit, children: group.staff.map((staff) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: staff.name, children: formatDashboardStaffName(staff) }, `${staff.unit || "unit"}-${staff.idNumber}-${staff.name}`)) }, group.unit))
-              ]
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-lg text-gray-400", children: [
-            userRank,
-            " ",
-            userName
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-lg font-semibold text-gray-100", children: signedInUserLabel })
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-px", children: [
@@ -112319,19 +112286,14 @@ const App = () => {
     setAuthUser(null);
     setAuthSessionToken("");
     setCurrentUserName("Bloggs, Joe");
-    setDashboardTestUserName("");
     setSessionUser(null);
   };
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
-  const [dashboardTestUserName, setDashboardTestUserName] = reactExports.useState("");
   const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = reactExports.useState(0);
   const matchedCurrentStaffUser = instructorsData.find((inst) => inst.name === currentUserName);
   const currentUser2 = matchedCurrentStaffUser || instructorsData[0];
   const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
   const [sessionUser, setSessionUser] = reactExports.useState(null);
-  reactExports.useEffect(() => {
-    setDashboardTestUserName("");
-  }, [authUser?.userId, sessionUser?.userId]);
   const emergencyQualificationOptions = reactExports.useMemo(
     () => getQualificationsForOperationalModel(activeStaffQualificationCatalogue, activeOperationalModel),
     [activeOperationalModel, activeStaffQualificationCatalogue]
@@ -112377,8 +112339,8 @@ const App = () => {
       const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
       return sessionNameKeys.includes(staffName) || staffId && sessionIdKeys.includes(staffId);
     });
-    return dashboardTestUserName || sessionDashboardUserName || sessionStaff?.name || currentUserName;
-  }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
+    return sessionDashboardUserName || sessionStaff?.name || currentUserName;
+  }, [allInstructorsData, authUser, currentUserName, sessionUser]);
   reactExports.useEffect(() => {
     if (!dashboardNotificationUserName || !isAuthenticated) {
       setDashboardUnreadMessageCount(0);
@@ -129633,14 +129595,38 @@ ${error instanceof Error ? error.message : String(error)}`,
           const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
           return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
         });
-        const dashboardUserName = dashboardTestUserName || sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
+        const dashboardUserName = sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
         const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
         const dashboardTrainee = allTraineesData.find((trainee) => {
           const traineeName = normaliseDashboardName(trainee.name || trainee.fullName);
           const traineeId = String(trainee.idNumber || trainee.id || "").trim().toLowerCase();
           return traineeName === normaliseDashboardName(dashboardUserName) || traineeId && sessionDashboardIdKeys.includes(traineeId);
         });
-        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
+        const normaliseDashboardContextCode = (value) => String(value || "").trim().toUpperCase();
+        const dashboardActiveUnitCodes = (activeContextUnitCodes.length > 0 ? activeContextUnitCodes : String(activeUnitCode || "").split("+")).map(normaliseDashboardContextCode).filter(Boolean);
+        const dashboardActiveUnitSet = new Set(dashboardActiveUnitCodes);
+        const dashboardActiveLocationSet = new Set([
+          ...getDailySnapshotLocationAliases(school),
+          activeLocationSolarProfile.code,
+          school
+        ].map(normaliseDashboardContextCode).filter(Boolean));
+        const reportMatchesDashboardContext = (report, staff) => {
+          const reportUnitCodes = String(report?.unitCode || "").split("+").map(normaliseDashboardContextCode).filter(Boolean);
+          if (dashboardActiveUnitSet.size > 0) {
+            if (reportUnitCodes.length > 0) {
+              if (!reportUnitCodes.some((unitCode) => dashboardActiveUnitSet.has(unitCode))) return false;
+            } else {
+              const staffUnitCode = normaliseDashboardContextCode(staff.unit);
+              if (!staffUnitCode || !dashboardActiveUnitSet.has(staffUnitCode)) return false;
+            }
+          }
+          const reportLocationCode = normaliseDashboardContextCode(report?.locationCode);
+          if (reportLocationCode && dashboardActiveLocationSet.size > 0 && !dashboardActiveLocationSet.has(reportLocationCode)) {
+            return false;
+          }
+          return true;
+        };
+        const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && reportMatchesDashboardContext(report, staff) && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           MyDashboard,
           {
@@ -129659,8 +129645,6 @@ ${error instanceof Error ? error.message : String(error)}`,
             messageContactStaffOptions: instructorsData,
             messageContactTraineeOptions: traineesData,
             messageContactUnitCodes: activeContextUnitCodes,
-            selectedStaffName: dashboardUserName,
-            onSelectStaffName: setDashboardTestUserName,
             onUnreadMessageCountChange: setDashboardUnreadMessageCount,
             sctTerminology: getSctTerminology(platformConfig, activeUnitCode),
             currentLocationCode: activeLocationSolarProfile.code,
