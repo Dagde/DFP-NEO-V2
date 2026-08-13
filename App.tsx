@@ -65,7 +65,7 @@ import {
     type TrainingReportTemplate,
 } from './utils/trainingReportTerminology';
 import { getSctTerminology } from './utils/sctTerminology';
-import { formatPersonOptionLabel, getPersonIdentityDedupeKey, normalisePersonName } from './utils/personIdentity';
+import { buildCompactPersonNameResolver, formatPersonOptionLabel, getPersonDisplayName, getPersonIdentityDedupeKey, normalisePersonName, type PersonIdentityRecord } from './utils/personIdentity';
 import {
     crewPositionValuesMatch,
     findCrewPositionEntry,
@@ -24634,6 +24634,222 @@ const App: React.FC = () => {
         }
     }
 
+    function buildDfpTileNameDiagnosticReport(): Record<string, any> {
+        const activeEvents: ScheduleEvent[] = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+        const contextPeople: PersonIdentityRecord[] = [
+            ...instructorsData.map(person => ({ ...(person as any), personType: 'staff' })),
+            ...traineesData.map(person => ({ ...(person as any), personType: 'trainee' })),
+        ];
+        const resolver = buildCompactPersonNameResolver(contextPeople);
+        const cleanNameKey = (value: unknown) => normalisePersonName(String(value || '')
+            .split(' – ')[0]
+            .split(' - ')[0]
+            .replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, '')
+            .replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, '')
+            .trim());
+        const compactSuffixPattern = /\s·\s*\d{1,3}(?=\s*(?:\(|$))/;
+        const serialisePerson = (person: PersonIdentityRecord | null | undefined) => {
+            if (!person) return null;
+            return {
+                id: person.id ?? null,
+                idNumber: person.idNumber ?? null,
+                name: person.name ?? null,
+                fullName: person.fullName ?? null,
+                displayName: getPersonDisplayName(person),
+                rank: person.rank ?? null,
+                role: person.role ?? null,
+                course: person.course ?? null,
+                unit: person.unit ?? null,
+                personType: person.personType ?? null,
+            };
+        };
+        const exactDuplicateGroups = Array.from(contextPeople.reduce((groups, person) => {
+            const displayName = getPersonDisplayName(person);
+            const key = cleanNameKey(displayName);
+            if (!key) return groups;
+            const current = groups.get(key) || [];
+            groups.set(key, [...current, person]);
+            return groups;
+        }, new Map<string, PersonIdentityRecord[]>()).entries())
+            .filter(([, people]) => people.length > 1)
+            .map(([key, people]) => ({
+                key,
+                count: people.length,
+                people: people.map(serialisePerson),
+            }));
+        const surnameGroups = Array.from(contextPeople.reduce((groups, person) => {
+            const displayName = getPersonDisplayName(person);
+            const surname = String(displayName || '').split(',')[0]?.trim() ||
+                String(displayName || '').trim().split(/\s+/).filter(Boolean).at(-1) || '';
+            const key = normalisePersonName(surname);
+            if (!key) return groups;
+            const current = groups.get(key) || [];
+            groups.set(key, [...current, person]);
+            return groups;
+        }, new Map<string, PersonIdentityRecord[]>()).entries())
+            .filter(([, people]) => people.length > 1)
+            .map(([key, people]) => ({
+                key,
+                count: people.length,
+                people: people.map(serialisePerson),
+            }));
+        const explainValue = (role: string, value: unknown) => {
+            if (value === undefined || value === null || value === '') return null;
+            const explanation = resolver.explainCompact(value);
+            return {
+                role,
+                rawValue: value,
+                rawHasVisualSuffix: compactSuffixPattern.test(String(value || '')),
+                outputHasVisualSuffix: compactSuffixPattern.test(explanation.output),
+                explanation: {
+                    ...explanation,
+                    matchedPerson: serialisePerson(explanation.matchedPerson),
+                    duplicateMatches: explanation.duplicateMatches.map(serialisePerson),
+                },
+                assessment: explanation.decision === 'exact-duplicate'
+                    ? 'Suffix is justified by an exact first-name and surname duplicate in the active context.'
+                    : compactSuffixPattern.test(String(value || ''))
+                        ? 'Raw event text already contains a suffix, but the active context does not justify a suffix for this value.'
+                        : 'No suffix required for this value.',
+            };
+        };
+        const collectEventRoles = (event: ScheduleEvent) => {
+            const roles: any[] = [
+                explainValue('instructor', (event as any).instructor),
+                explainValue('pilot', (event as any).pilot),
+                explainValue('student', (event as any).student),
+                explainValue('crew', (event as any).crew),
+                explainValue('_traineeName', (event as any)._traineeName),
+                explainValue('fixedCrewPic', (event as any).fixedCrewPic),
+            ].filter(Boolean);
+            if (Array.isArray((event as any).attendees)) {
+                (event as any).attendees.forEach((name: unknown, index: number) => {
+                    const explained = explainValue(`attendees[${index}]`, name);
+                    if (explained) roles.push(explained);
+                });
+            }
+            if (Array.isArray((event as any).crewSelectionOrder)) {
+                (event as any).crewSelectionOrder.forEach((name: unknown, index: number) => {
+                    const explained = explainValue(`crewSelectionOrder[${index}]`, name);
+                    if (explained) roles.push(explained);
+                });
+            }
+            if (Array.isArray((event as any).personnelRefs)) {
+                (event as any).personnelRefs.forEach((person: any, index: number) => {
+                    const displayName = getPersonDisplayName(person || {}) || person?.name || person?.fullName;
+                    const explained = explainValue(`personnelRefs[${index}]`, displayName);
+                    if (explained) {
+                        roles.push({
+                            ...explained,
+                            personnelRef: serialisePerson(person),
+                        });
+                    }
+                });
+            }
+            return roles;
+        };
+        const events = activeEvents.map(event => {
+            const roleAnalyses = collectEventRoles(event);
+            return {
+                id: event.id,
+                date: event.date,
+                type: event.type,
+                resourceId: event.resourceId,
+                startTime: event.startTime,
+                duration: event.duration,
+                flightNumber: event.flightNumber,
+                eventCode: (event as any).eventCode ?? null,
+                rawNames: {
+                    instructor: (event as any).instructor ?? null,
+                    pilot: (event as any).pilot ?? null,
+                    student: (event as any).student ?? null,
+                    crew: (event as any).crew ?? null,
+                    traineeName: (event as any)._traineeName ?? null,
+                    attendees: (event as any).attendees ?? null,
+                    crewSelectionOrder: (event as any).crewSelectionOrder ?? null,
+                },
+                personnelRefs: Array.isArray((event as any).personnelRefs)
+                    ? (event as any).personnelRefs.map(serialisePerson)
+                    : [],
+                roleAnalyses,
+                suffixAnalyses: roleAnalyses.filter(role => role.rawHasVisualSuffix || role.outputHasVisualSuffix),
+            };
+        });
+        const suspiciousSuffixes = events.flatMap(event => (
+            event.suffixAnalyses
+                .filter((role: any) => role.rawHasVisualSuffix && role.explanation?.decision !== 'exact-duplicate')
+                .map((role: any) => ({
+                    eventId: event.id,
+                    flightNumber: event.flightNumber,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId,
+                    role: role.role,
+                    rawValue: role.rawValue,
+                    formatterOutput: role.explanation?.output,
+                    decision: role.explanation?.decision,
+                    assessment: role.assessment,
+                }))
+        ));
+        const justifiedSuffixes = events.flatMap(event => (
+            event.suffixAnalyses
+                .filter((role: any) => role.explanation?.decision === 'exact-duplicate')
+                .map((role: any) => ({
+                    eventId: event.id,
+                    flightNumber: event.flightNumber,
+                    startTime: event.startTime,
+                    resourceId: event.resourceId,
+                    role: role.role,
+                    rawValue: role.rawValue,
+                    formatterOutput: role.explanation?.output,
+                    matchedPerson: role.explanation?.matchedPerson,
+                    duplicateMatches: role.explanation?.duplicateMatches,
+                }))
+        ));
+
+        return {
+            reportType: 'DFP tile name display diagnostics',
+            diagnosticVersion: 'CCH 8.137',
+            generatedAt: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            rule: 'Compact DFP tile suffixes should only appear when active personnel in the selected or combined unit have the same surname and first name.',
+            activeContext: {
+                date,
+                school,
+                activeUnitCode,
+                activeContextUnitCodes,
+                activeOperationalModel,
+                activeView,
+                eventCount: activeEvents.length,
+                staffCount: instructorsData.length,
+                traineeCount: traineesData.length,
+            },
+            summary: {
+                exactDuplicateGroupCount: exactDuplicateGroups.length,
+                surnameGroupCount: surnameGroups.length,
+                eventCount: events.length,
+                eventsWithSuffixAnalyses: events.filter(event => event.suffixAnalyses.length > 0).length,
+                suspiciousSuffixCount: suspiciousSuffixes.length,
+                justifiedSuffixCount: justifiedSuffixes.length,
+                suspiciousSuffixes,
+                justifiedSuffixes,
+            },
+            exactDuplicateGroups,
+            surnameGroups,
+            events,
+        };
+    }
+
+    function downloadDfpTileNameDiagnosticReport(): void {
+        const report = buildDfpTileNameDiagnosticReport();
+        const generatedStamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const contextStamp = [school, activeUnitCode, date].map(value => String(value || '').replace(/[^a-z0-9-]+/gi, '-')).filter(Boolean).join('_');
+        const filename = `dfp-tile-name-diagnostics_${contextStamp || 'app'}_${generatedStamp}.json`;
+        if (!downloadJsonDiagnosticFile(filename, report)) {
+            console.error('[DFP-NAME-DIAG] Could not download tile name diagnostic report:', report);
+        }
+    }
+
     useEffect(() => {
         pushDfpDataDiag('context:resolved', {
             platformLocations: (platformConfig?.locations || []).map((location: any) => ({
@@ -47935,6 +48151,14 @@ appliedUpdates.forEach(update => {
                     title="Download DFP resource row diagnostic JSON report"
                 >
                     Rows
+                </button>
+                <button
+                    type="button"
+                    onClick={downloadDfpTileNameDiagnosticReport}
+                    className="rounded border border-lime-500/30 px-1.5 py-0.5 text-lime-200 transition-colors hover:border-lime-400/60 hover:text-lime-100"
+                    title="Download DFP tile name display diagnostic JSON report"
+                >
+                    Names
                 </button>
             </div>
         )}

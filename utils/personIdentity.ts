@@ -7,6 +7,25 @@ export type PersonIdentityRecord = {
   role?: string | null;
   course?: string | null;
   unit?: string | null;
+  personType?: string | null;
+};
+
+export type CompactPersonNameExplanation = {
+  input: string;
+  cleaned: string;
+  visualSuffix: string;
+  matchedPerson: (PersonIdentityRecord & { displayName: string; lastThreeIdDigits: string }) | null;
+  resolvedDisplayName: string;
+  surname: string;
+  firstName: string;
+  firstInitial: string;
+  surnameCount: number;
+  exactNameCount: number;
+  duplicateMatches: Array<PersonIdentityRecord & { displayName: string; lastThreeIdDigits: string }>;
+  base: string;
+  suffix: string;
+  output: string;
+  decision: 'empty' | 'unique-surname' | 'same-surname-only' | 'exact-duplicate' | 'exact-duplicate-without-id';
 };
 
 export const normalisePersonName = (value: unknown): string =>
@@ -145,19 +164,114 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     });
   };
 
-  const formatCompact = (name: unknown): string => {
+  const explainCompact = (name: unknown): CompactPersonNameExplanation => {
+    const input = String(name || '');
     const cleaned = stripPersonContext(name);
-    if (!cleaned) return '';
+    const visualSuffix = getVisualIdSuffix(name);
+    if (!cleaned) {
+      return {
+        input,
+        cleaned: '',
+        visualSuffix,
+        matchedPerson: null,
+        resolvedDisplayName: '',
+        surname: '',
+        firstName: '',
+        firstInitial: '',
+        surnameCount: 0,
+        exactNameCount: 0,
+        duplicateMatches: [],
+        base: '',
+        suffix: '',
+        output: '',
+        decision: 'empty',
+      };
+    }
     const person = findPerson(name);
     const displayName = person ? getPersonDisplayName(person) : cleaned;
     const { surname, firstName, firstInitial } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
-    if (!surnameKey || (surnameCounts.get(surnameKey) || 0) <= 1) return surname || cleaned;
+    const surnameCount = surnameCounts.get(surnameKey) || 0;
+    const exactNameCount = surnameFirstNameCounts.get(firstNameKey) || 0;
     const base = [surname, firstInitial].filter(Boolean).join(' ');
-    if ((surnameFirstNameCounts.get(firstNameKey) || 0) <= 1) return base || surname || cleaned;
+    const matchedPerson = person ? {
+      ...person,
+      displayName: getPersonDisplayName(person),
+      lastThreeIdDigits: getLastThreeIdDigits(person),
+    } : null;
+    const duplicateMatches = uniquePeople
+      .filter(candidate => {
+        const parts = getNameParts(getPersonDisplayName(candidate));
+        return normalisePersonName(parts.surname) === surnameKey &&
+          normalisePersonName(parts.firstName) === normalisePersonName(firstName) &&
+          Boolean(parts.firstName);
+      })
+      .map(candidate => ({
+        ...candidate,
+        displayName: getPersonDisplayName(candidate),
+        lastThreeIdDigits: getLastThreeIdDigits(candidate),
+      }));
+    if (!surnameKey || surnameCount <= 1) {
+      return {
+        input,
+        cleaned,
+        visualSuffix,
+        matchedPerson,
+        resolvedDisplayName: displayName,
+        surname,
+        firstName,
+        firstInitial,
+        surnameCount,
+        exactNameCount,
+        duplicateMatches,
+        base,
+        suffix: '',
+        output: surname || cleaned,
+        decision: 'unique-surname',
+      };
+    }
+    if (exactNameCount <= 1) {
+      return {
+        input,
+        cleaned,
+        visualSuffix,
+        matchedPerson,
+        resolvedDisplayName: displayName,
+        surname,
+        firstName,
+        firstInitial,
+        surnameCount,
+        exactNameCount,
+        duplicateMatches,
+        base,
+        suffix: '',
+        output: base || surname || cleaned,
+        decision: 'same-surname-only',
+      };
+    }
     const suffix = getLastThreeIdDigits(person);
-    return suffix ? `${base} · ${suffix}` : base || surname || cleaned;
+    return {
+      input,
+      cleaned,
+      visualSuffix,
+      matchedPerson,
+      resolvedDisplayName: displayName,
+      surname,
+      firstName,
+      firstInitial,
+      surnameCount,
+      exactNameCount,
+      duplicateMatches,
+      base,
+      suffix,
+      output: suffix ? `${base} · ${suffix}` : base || surname || cleaned,
+      decision: suffix ? 'exact-duplicate' : 'exact-duplicate-without-id',
+    };
+  };
+
+  const formatCompact = (name: unknown): string => {
+    return explainCompact(name).output;
   };
 
   const formatList = (person: PersonIdentityRecord): string => {
@@ -170,5 +284,5 @@ export const buildCompactPersonNameResolver = (people: PersonIdentityRecord[] = 
     return suffix ? `${displayName} · ${suffix}` : displayName;
   };
 
-  return { formatCompact, formatList };
+  return { formatCompact, formatList, explainCompact };
 };

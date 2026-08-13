@@ -4953,19 +4953,109 @@ const buildCompactPersonNameResolver = (people = []) => {
       return normalisePersonName(parts.surname) === surnameKey && (!firstInitial || parts.firstInitial === firstInitial);
     });
   };
-  const formatCompact = (name) => {
+  const explainCompact = (name) => {
+    const input = String(name || "");
     const cleaned = stripPersonContext(name);
-    if (!cleaned) return "";
+    const visualSuffix = getVisualIdSuffix(name);
+    if (!cleaned) {
+      return {
+        input,
+        cleaned: "",
+        visualSuffix,
+        matchedPerson: null,
+        resolvedDisplayName: "",
+        surname: "",
+        firstName: "",
+        firstInitial: "",
+        surnameCount: 0,
+        exactNameCount: 0,
+        duplicateMatches: [],
+        base: "",
+        suffix: "",
+        output: "",
+        decision: "empty"
+      };
+    }
     const person = findPerson(name);
     const displayName = person ? getPersonDisplayName(person) : cleaned;
     const { surname, firstName, firstInitial } = getNameParts(displayName);
     const surnameKey = normalisePersonName(surname);
     const firstNameKey = `${surnameKey}|${normalisePersonName(firstName)}`;
-    if (!surnameKey || (surnameCounts.get(surnameKey) || 0) <= 1) return surname || cleaned;
+    const surnameCount = surnameCounts.get(surnameKey) || 0;
+    const exactNameCount = surnameFirstNameCounts.get(firstNameKey) || 0;
     const base = [surname, firstInitial].filter(Boolean).join(" ");
-    if ((surnameFirstNameCounts.get(firstNameKey) || 0) <= 1) return base || surname || cleaned;
+    const matchedPerson = person ? {
+      ...person,
+      displayName: getPersonDisplayName(person),
+      lastThreeIdDigits: getLastThreeIdDigits(person)
+    } : null;
+    const duplicateMatches = uniquePeople.filter((candidate) => {
+      const parts = getNameParts(getPersonDisplayName(candidate));
+      return normalisePersonName(parts.surname) === surnameKey && normalisePersonName(parts.firstName) === normalisePersonName(firstName) && Boolean(parts.firstName);
+    }).map((candidate) => ({
+      ...candidate,
+      displayName: getPersonDisplayName(candidate),
+      lastThreeIdDigits: getLastThreeIdDigits(candidate)
+    }));
+    if (!surnameKey || surnameCount <= 1) {
+      return {
+        input,
+        cleaned,
+        visualSuffix,
+        matchedPerson,
+        resolvedDisplayName: displayName,
+        surname,
+        firstName,
+        firstInitial,
+        surnameCount,
+        exactNameCount,
+        duplicateMatches,
+        base,
+        suffix: "",
+        output: surname || cleaned,
+        decision: "unique-surname"
+      };
+    }
+    if (exactNameCount <= 1) {
+      return {
+        input,
+        cleaned,
+        visualSuffix,
+        matchedPerson,
+        resolvedDisplayName: displayName,
+        surname,
+        firstName,
+        firstInitial,
+        surnameCount,
+        exactNameCount,
+        duplicateMatches,
+        base,
+        suffix: "",
+        output: base || surname || cleaned,
+        decision: "same-surname-only"
+      };
+    }
     const suffix = getLastThreeIdDigits(person);
-    return suffix ? `${base} · ${suffix}` : base || surname || cleaned;
+    return {
+      input,
+      cleaned,
+      visualSuffix,
+      matchedPerson,
+      resolvedDisplayName: displayName,
+      surname,
+      firstName,
+      firstInitial,
+      surnameCount,
+      exactNameCount,
+      duplicateMatches,
+      base,
+      suffix,
+      output: suffix ? `${base} · ${suffix}` : base || surname || cleaned,
+      decision: suffix ? "exact-duplicate" : "exact-duplicate-without-id"
+    };
+  };
+  const formatCompact = (name) => {
+    return explainCompact(name).output;
   };
   const formatList = (person) => {
     const displayName = stripPersonContext(person.name || getPersonDisplayName(person)) || "Unnamed person";
@@ -4976,7 +5066,7 @@ const buildCompactPersonNameResolver = (people = []) => {
     const suffix = getLastThreeIdDigits(person);
     return suffix ? `${displayName} · ${suffix}` : displayName;
   };
-  return { formatCompact, formatList };
+  return { formatCompact, formatList, explainCompact };
 };
 const SUPPORTED_MODELS = ["air_combat", "fixed_crew", "pooled_crew"];
 const normaliseCode$4 = (value, fallback) => {
@@ -111486,6 +111576,195 @@ const App = () => {
       console.error("[DFP-DIAG] Could not download diagnostic report:", error, report);
     }
   }
+  function buildDfpTileNameDiagnosticReport() {
+    const activeEvents = Array.isArray(publishedSchedules[date]) ? publishedSchedules[date] : [];
+    const contextPeople = [
+      ...instructorsData.map((person) => ({ ...person, personType: "staff" })),
+      ...traineesData.map((person) => ({ ...person, personType: "trainee" }))
+    ];
+    const resolver = buildCompactPersonNameResolver(contextPeople);
+    const cleanNameKey = (value) => normalisePersonName(String(value || "").split(" – ")[0].split(" - ")[0].replace(/\s*·\s*\d{1,3}(?=\s*(?:\(|$))/g, "").replace(/\s+\((?:N|F\/S|F\/L|R\/S)\)$/i, "").trim());
+    const compactSuffixPattern = /\s·\s*\d{1,3}(?=\s*(?:\(|$))/;
+    const serialisePerson = (person) => {
+      if (!person) return null;
+      return {
+        id: person.id ?? null,
+        idNumber: person.idNumber ?? null,
+        name: person.name ?? null,
+        fullName: person.fullName ?? null,
+        displayName: getPersonDisplayName(person),
+        rank: person.rank ?? null,
+        role: person.role ?? null,
+        course: person.course ?? null,
+        unit: person.unit ?? null,
+        personType: person.personType ?? null
+      };
+    };
+    const exactDuplicateGroups = Array.from(contextPeople.reduce((groups, person) => {
+      const displayName = getPersonDisplayName(person);
+      const key = cleanNameKey(displayName);
+      if (!key) return groups;
+      const current = groups.get(key) || [];
+      groups.set(key, [...current, person]);
+      return groups;
+    }, /* @__PURE__ */ new Map()).entries()).filter(([, people]) => people.length > 1).map(([key, people]) => ({
+      key,
+      count: people.length,
+      people: people.map(serialisePerson)
+    }));
+    const surnameGroups = Array.from(contextPeople.reduce((groups, person) => {
+      const displayName = getPersonDisplayName(person);
+      const surname = String(displayName || "").split(",")[0]?.trim() || String(displayName || "").trim().split(/\s+/).filter(Boolean).at(-1) || "";
+      const key = normalisePersonName(surname);
+      if (!key) return groups;
+      const current = groups.get(key) || [];
+      groups.set(key, [...current, person]);
+      return groups;
+    }, /* @__PURE__ */ new Map()).entries()).filter(([, people]) => people.length > 1).map(([key, people]) => ({
+      key,
+      count: people.length,
+      people: people.map(serialisePerson)
+    }));
+    const explainValue = (role, value) => {
+      if (value === void 0 || value === null || value === "") return null;
+      const explanation = resolver.explainCompact(value);
+      return {
+        role,
+        rawValue: value,
+        rawHasVisualSuffix: compactSuffixPattern.test(String(value || "")),
+        outputHasVisualSuffix: compactSuffixPattern.test(explanation.output),
+        explanation: {
+          ...explanation,
+          matchedPerson: serialisePerson(explanation.matchedPerson),
+          duplicateMatches: explanation.duplicateMatches.map(serialisePerson)
+        },
+        assessment: explanation.decision === "exact-duplicate" ? "Suffix is justified by an exact first-name and surname duplicate in the active context." : compactSuffixPattern.test(String(value || "")) ? "Raw event text already contains a suffix, but the active context does not justify a suffix for this value." : "No suffix required for this value."
+      };
+    };
+    const collectEventRoles = (event) => {
+      const roles = [
+        explainValue("instructor", event.instructor),
+        explainValue("pilot", event.pilot),
+        explainValue("student", event.student),
+        explainValue("crew", event.crew),
+        explainValue("_traineeName", event._traineeName),
+        explainValue("fixedCrewPic", event.fixedCrewPic)
+      ].filter(Boolean);
+      if (Array.isArray(event.attendees)) {
+        event.attendees.forEach((name, index) => {
+          const explained = explainValue(`attendees[${index}]`, name);
+          if (explained) roles.push(explained);
+        });
+      }
+      if (Array.isArray(event.crewSelectionOrder)) {
+        event.crewSelectionOrder.forEach((name, index) => {
+          const explained = explainValue(`crewSelectionOrder[${index}]`, name);
+          if (explained) roles.push(explained);
+        });
+      }
+      if (Array.isArray(event.personnelRefs)) {
+        event.personnelRefs.forEach((person, index) => {
+          const displayName = getPersonDisplayName(person || {}) || person?.name || person?.fullName;
+          const explained = explainValue(`personnelRefs[${index}]`, displayName);
+          if (explained) {
+            roles.push({
+              ...explained,
+              personnelRef: serialisePerson(person)
+            });
+          }
+        });
+      }
+      return roles;
+    };
+    const events2 = activeEvents.map((event) => {
+      const roleAnalyses = collectEventRoles(event);
+      return {
+        id: event.id,
+        date: event.date,
+        type: event.type,
+        resourceId: event.resourceId,
+        startTime: event.startTime,
+        duration: event.duration,
+        flightNumber: event.flightNumber,
+        eventCode: event.eventCode ?? null,
+        rawNames: {
+          instructor: event.instructor ?? null,
+          pilot: event.pilot ?? null,
+          student: event.student ?? null,
+          crew: event.crew ?? null,
+          traineeName: event._traineeName ?? null,
+          attendees: event.attendees ?? null,
+          crewSelectionOrder: event.crewSelectionOrder ?? null
+        },
+        personnelRefs: Array.isArray(event.personnelRefs) ? event.personnelRefs.map(serialisePerson) : [],
+        roleAnalyses,
+        suffixAnalyses: roleAnalyses.filter((role) => role.rawHasVisualSuffix || role.outputHasVisualSuffix)
+      };
+    });
+    const suspiciousSuffixes = events2.flatMap((event) => event.suffixAnalyses.filter((role) => role.rawHasVisualSuffix && role.explanation?.decision !== "exact-duplicate").map((role) => ({
+      eventId: event.id,
+      flightNumber: event.flightNumber,
+      startTime: event.startTime,
+      resourceId: event.resourceId,
+      role: role.role,
+      rawValue: role.rawValue,
+      formatterOutput: role.explanation?.output,
+      decision: role.explanation?.decision,
+      assessment: role.assessment
+    })));
+    const justifiedSuffixes = events2.flatMap((event) => event.suffixAnalyses.filter((role) => role.explanation?.decision === "exact-duplicate").map((role) => ({
+      eventId: event.id,
+      flightNumber: event.flightNumber,
+      startTime: event.startTime,
+      resourceId: event.resourceId,
+      role: role.role,
+      rawValue: role.rawValue,
+      formatterOutput: role.explanation?.output,
+      matchedPerson: role.explanation?.matchedPerson,
+      duplicateMatches: role.explanation?.duplicateMatches
+    })));
+    return {
+      reportType: "DFP tile name display diagnostics",
+      diagnosticVersion: "CCH 8.137",
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      rule: "Compact DFP tile suffixes should only appear when active personnel in the selected or combined unit have the same surname and first name.",
+      activeContext: {
+        date,
+        school,
+        activeUnitCode,
+        activeContextUnitCodes,
+        activeOperationalModel,
+        activeView,
+        eventCount: activeEvents.length,
+        staffCount: instructorsData.length,
+        traineeCount: traineesData.length
+      },
+      summary: {
+        exactDuplicateGroupCount: exactDuplicateGroups.length,
+        surnameGroupCount: surnameGroups.length,
+        eventCount: events2.length,
+        eventsWithSuffixAnalyses: events2.filter((event) => event.suffixAnalyses.length > 0).length,
+        suspiciousSuffixCount: suspiciousSuffixes.length,
+        justifiedSuffixCount: justifiedSuffixes.length,
+        suspiciousSuffixes,
+        justifiedSuffixes
+      },
+      exactDuplicateGroups,
+      surnameGroups,
+      events: events2
+    };
+  }
+  function downloadDfpTileNameDiagnosticReport() {
+    const report = buildDfpTileNameDiagnosticReport();
+    const generatedStamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    const contextStamp = [school, activeUnitCode, date].map((value) => String(value || "").replace(/[^a-z0-9-]+/gi, "-")).filter(Boolean).join("_");
+    const filename = `dfp-tile-name-diagnostics_${contextStamp || "app"}_${generatedStamp}.json`;
+    if (!downloadJsonDiagnosticFile(filename, report)) {
+      console.error("[DFP-NAME-DIAG] Could not download tile name diagnostic report:", report);
+    }
+  }
   reactExports.useEffect(() => {
     pushDfpDataDiag("context:resolved", {
       platformLocations: (platformConfig?.locations || []).map((location) => ({
@@ -131006,6 +131285,16 @@ Do you want to replace the existing entry?`,
           className: "rounded border border-amber-500/30 px-1.5 py-0.5 text-amber-200 transition-colors hover:border-amber-400/60 hover:text-amber-100",
           title: "Download DFP resource row diagnostic JSON report",
           children: "Rows"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: downloadDfpTileNameDiagnosticReport,
+          className: "rounded border border-lime-500/30 px-1.5 py-0.5 text-lime-200 transition-colors hover:border-lime-400/60 hover:text-lime-100",
+          title: "Download DFP tile name display diagnostic JSON report",
+          children: "Names"
         }
       )
     ] })
