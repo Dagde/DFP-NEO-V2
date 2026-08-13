@@ -8394,6 +8394,16 @@ const RightSidebar = ({
     ] })
   ] });
 };
+const stripCourseDetailsFromHeaderName = (value) => {
+  return String(value || "").replace(/\s*[-–—]\s*(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s+\b(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s{2,}/g, " ").trim();
+};
+const getHeaderDisplayName = (authUser) => {
+  if (!authUser) return "";
+  const firstName = stripCourseDetailsFromHeaderName(authUser.firstName);
+  const lastName = stripCourseDetailsFromHeaderName(authUser.lastName);
+  if (firstName && lastName) return `${lastName}, ${firstName}`;
+  return stripCourseDetailsFromHeaderName(authUser.displayName || authUser.userId) || authUser.userId;
+};
 const Header = ({
   onAddTile,
   onAddGroundEvent,
@@ -8436,6 +8446,7 @@ const Header = ({
   const dropdownMenuRef = reactExports.useRef(null);
   const contextSelectorRef = reactExports.useRef(null);
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
+  const authDisplayName = getHeaderDisplayName(authUser);
   const disabledActionClass = "cursor-not-allowed";
   const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeModelLabel);
   const headerButtonClass = "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md";
@@ -8782,7 +8793,7 @@ const Header = ({
           },
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 border-b border-gray-700", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-white", children: authUser.displayName }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-white", children: authDisplayName }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-gray-400", children: authUser.userId }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-blue-400", children: authUser.role }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-gray-500 font-mono", children: [
@@ -96852,6 +96863,26 @@ const PT051_STRUCTURE = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap((cat) => cat.elements);
+const stripCourseDetailsFromLoginName = (value) => {
+  return String(value || "").replace(/\s*[-–—]\s*(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s+\b(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, "").replace(/\s{2,}/g, " ").trim();
+};
+const formatAuthLoginName = (user) => {
+  if (!user) return "Unknown User";
+  const firstName = stripCourseDetailsFromLoginName(user.firstName);
+  const lastName = stripCourseDetailsFromLoginName(user.lastName);
+  if (firstName && lastName) return `${lastName}, ${firstName}`;
+  return stripCourseDetailsFromLoginName(user.displayName || user.username || user.userId) || "Unknown User";
+};
+const cleanAuthUser = (user) => {
+  const firstName = stripCourseDetailsFromLoginName(user.firstName);
+  const lastName = stripCourseDetailsFromLoginName(user.lastName);
+  return {
+    ...user,
+    firstName,
+    lastName,
+    displayName: formatAuthLoginName({ ...user, firstName, lastName })
+  };
+};
 const isOverlapping = (f1, f2) => {
   if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
   const f1_end = f1.startTime + f1.duration;
@@ -112157,7 +112188,8 @@ const App = () => {
         try {
           const ssoUser = JSON.parse(ssoUserData);
           if (ssoUser && ssoUser.userId && ssoUser.username) {
-            setAuthUser({
+            const nextAuthUser = cleanAuthUser({
+              id: ssoUser.id || ssoUser.userId,
               userId: ssoUser.userId,
               username: ssoUser.username,
               firstName: ssoUser.firstName || "",
@@ -112169,32 +112201,27 @@ const App = () => {
               mustChangePassword: false,
               permissionsRoleId: ""
             });
+            setAuthUser(nextAuthUser);
             setAuthSessionToken(localStorage.getItem("dfp_session_token") || "");
             setIsAuthenticated(true);
             authenticatedFromStoredSession = true;
             authSource = "sso-local-storage";
             setAuthLoading(false);
-            if (ssoUser.lastName && ssoUser.firstName) {
-              setCurrentUserName(`${ssoUser.lastName}, ${ssoUser.firstName}`);
-            } else if (ssoUser.displayName) {
-              setCurrentUserName(ssoUser.displayName);
-            } else {
-              setCurrentUserName(ssoUser.username);
-            }
+            setCurrentUserName(formatAuthLoginName(nextAuthUser));
             setSessionUser({
-              firstName: ssoUser.firstName || "",
-              lastName: ssoUser.lastName || "",
-              role: ssoUser.role || "USER",
+              firstName: nextAuthUser.firstName || "",
+              lastName: nextAuthUser.lastName || "",
+              role: nextAuthUser.role || "USER",
               militaryRank: "",
-              userId: ssoUser.userId,
-              username: ssoUser.username
+              userId: nextAuthUser.userId,
+              username: nextAuthUser.username
             });
-            fetchAndSetAuditUser(ssoUser.firstName || null, ssoUser.lastName || null, ssoUser.displayName);
+            fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName);
             pushDfpDataDiag("startup:auth-session:end", {
               durationMs: Math.round(performance.now() - startedAt),
               source: "sso-local-storage",
               authenticated: true,
-              userId: ssoUser.userId
+              userId: nextAuthUser.userId
             });
             return;
           }
@@ -112218,24 +112245,21 @@ const App = () => {
         });
         if (user) {
           authenticatedFromStoredSession = true;
-          setAuthUser(user);
+          const cleanUser = cleanAuthUser(user);
+          setAuthUser(cleanUser);
           setAuthSessionToken(storedToken);
           setIsAuthenticated(true);
-          if (user.lastName && user.firstName) {
-            setCurrentUserName(`${user.lastName}, ${user.firstName}`);
-          } else if (user.displayName) {
-            setCurrentUserName(user.displayName);
-          }
+          setCurrentUserName(formatAuthLoginName(cleanUser));
           setSessionUser({
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
+            firstName: cleanUser.firstName,
+            lastName: cleanUser.lastName,
+            role: cleanUser.role,
             militaryRank: "",
-            userId: user.userId,
-            username: user.username
+            userId: cleanUser.userId,
+            username: cleanUser.username
           });
-          fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
-          if (user.mustChangePassword) {
+          fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+          if (cleanUser.mustChangePassword) {
             setShowChangePassword(true);
           }
         } else {
@@ -112253,33 +112277,30 @@ const App = () => {
     checkExistingSession();
   }, [setupTestProfile]);
   const handleLoginSuccess = (user, token) => {
+    const cleanUser = cleanAuthUser(user);
     pushDfpDataDiag("startup:login-success-handler:start", {
-      userId: user.userId,
-      role: user.role,
-      mustChangePassword: user.mustChangePassword
+      userId: cleanUser.userId,
+      role: cleanUser.role,
+      mustChangePassword: cleanUser.mustChangePassword
     });
-    setAuthUser(user);
+    setAuthUser(cleanUser);
     setAuthSessionToken(token);
     setIsAuthenticated(true);
-    if (user.lastName && user.firstName) {
-      setCurrentUserName(`${user.lastName}, ${user.firstName}`);
-    } else if (user.displayName) {
-      setCurrentUserName(user.displayName);
-    }
+    setCurrentUserName(formatAuthLoginName(cleanUser));
     setSessionUser({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
+      firstName: cleanUser.firstName,
+      lastName: cleanUser.lastName,
+      role: cleanUser.role,
       militaryRank: "",
-      userId: user.userId,
-      username: user.username
+      userId: cleanUser.userId,
+      username: cleanUser.username
     });
-    fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
-    if (user.mustChangePassword) {
+    fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+    if (cleanUser.mustChangePassword) {
       setShowChangePassword(true);
     }
     pushDfpDataDiag("startup:login-success-handler:end", {
-      userId: user.userId
+      userId: cleanUser.userId
     });
   };
   const handleLogout = async () => {
@@ -112298,7 +112319,9 @@ const App = () => {
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const [dashboardTestUserName, setDashboardTestUserName] = reactExports.useState("");
   const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = reactExports.useState(0);
-  const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
+  const matchedCurrentStaffUser = instructorsData.find((inst) => inst.name === currentUserName);
+  const currentUser2 = matchedCurrentStaffUser || instructorsData[0];
+  const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
   const [sessionUser, setSessionUser] = reactExports.useState(null);
   reactExports.useEffect(() => {
     setDashboardTestUserName("");
@@ -114455,7 +114478,8 @@ const App = () => {
     }
   };
   const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
-  const combinedPermissions = [...authUserPermissions, ...currentUser2?.permissions || []];
+  const matchedStaffPermissions = matchedCurrentStaffUser?.permissions || [];
+  const combinedPermissions = [...authUserPermissions, ...matchedStaffPermissions];
   const currentUserPermission = getHighestPermission(combinedPermissions);
   const canDeactivateEmergencyFreeze = reactExports.useMemo(() => hasEmergencyFreezeAuthority({
     settings: emergencyFreezeAuthority,
@@ -129585,12 +129609,12 @@ ${error instanceof Error ? error.message : String(error)}`,
           allPublishedEvents.push(...scheduleEvents);
         });
         const normaliseDashboardName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-        const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+        const sessionDashboardUserName = signedInDisplayName || currentUserName;
         const sessionDashboardNameKeys = [
           sessionDashboardUserName,
-          authUser?.displayName,
-          authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
-          authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+          authUser ? formatAuthLoginName(authUser) : "",
+          authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
+          authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
           currentUserName
         ].map(normaliseDashboardName).filter(Boolean);
         const sessionDashboardIdKeys = [

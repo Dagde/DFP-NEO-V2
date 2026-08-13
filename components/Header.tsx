@@ -46,6 +46,22 @@ interface HeaderProps {
     onToggleFlightLinePanel?: () => void;
 }
 
+const stripCourseDetailsFromHeaderName = (value?: string | null): string => {
+    return String(value || '')
+        .replace(/\s*[-–—]\s*(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, '')
+        .replace(/\s+\b(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+};
+
+const getHeaderDisplayName = (authUser: HeaderProps['authUser']): string => {
+    if (!authUser) return '';
+    const firstName = stripCourseDetailsFromHeaderName(authUser.firstName);
+    const lastName = stripCourseDetailsFromHeaderName(authUser.lastName);
+    if (firstName && lastName) return `${lastName}, ${firstName}`;
+    return stripCourseDetailsFromHeaderName(authUser.displayName || authUser.userId) || authUser.userId;
+};
+
 const Header: React.FC<HeaderProps> = ({ 
     onAddTile, 
     onAddGroundEvent, 
@@ -88,6 +104,7 @@ const Header: React.FC<HeaderProps> = ({
     const dropdownMenuRef = useRef<HTMLDivElement>(null);
     const contextSelectorRef = useRef<HTMLDivElement>(null);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
+    const authDisplayName = getHeaderDisplayName(authUser);
     const disabledActionClass = 'cursor-not-allowed';
     const isFixedCrewModel = isFixedCrewLikeOperationalModel(activeModelLabel);
     const headerButtonClass = 'w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md';
@@ -452,7 +469,7 @@ const Header: React.FC<HeaderProps> = ({
                     }}
                 >
                     <div className="px-3 py-2 border-b border-gray-700">
-                        <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
+                        <p className="text-xs font-semibold text-white">{authDisplayName}</p>
                         <p className="text-[10px] text-gray-400">{authUser.userId}</p>
                         <p className="text-[10px] text-blue-400">{authUser.role}</p>
                         <p className="text-[10px] text-gray-500 font-mono">commit: {activeCommit}</p>

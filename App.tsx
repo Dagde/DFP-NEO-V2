@@ -5051,6 +5051,33 @@ const PT051_STRUCTURE = [
 
 const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
 
+const stripCourseDetailsFromLoginName = (value?: string | null): string => {
+    return String(value || '')
+        .replace(/\s*[-–—]\s*(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, '')
+        .replace(/\s+\b(?:ADF|FIC|IFF|CSE)\s*\d+\b.*$/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+};
+
+const formatAuthLoginName = (user?: Partial<AuthUser> | null): string => {
+    if (!user) return 'Unknown User';
+    const firstName = stripCourseDetailsFromLoginName(user.firstName);
+    const lastName = stripCourseDetailsFromLoginName(user.lastName);
+    if (firstName && lastName) return `${lastName}, ${firstName}`;
+    return stripCourseDetailsFromLoginName(user.displayName || user.username || user.userId) || 'Unknown User';
+};
+
+const cleanAuthUser = (user: AuthUser): AuthUser => {
+    const firstName = stripCourseDetailsFromLoginName(user.firstName);
+    const lastName = stripCourseDetailsFromLoginName(user.lastName);
+    return {
+        ...user,
+        firstName,
+        lastName,
+        displayName: formatAuthLoginName({ ...user, firstName, lastName }),
+    };
+};
+
 // --- UTILITY FUNCTIONS ---
 const isOverlapping = (f1: Omit<ScheduleEvent, 'date'>, f2: Omit<ScheduleEvent, 'date'>): boolean => {
     if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
@@ -24088,7 +24115,8 @@ const App: React.FC = () => {
                     const ssoUser = JSON.parse(ssoUserData);
                     if (ssoUser && ssoUser.userId && ssoUser.username) {
                         // Set authentication state from SSO data
-                        setAuthUser({
+                        const nextAuthUser = cleanAuthUser({
+                            id: ssoUser.id || ssoUser.userId,
                             userId: ssoUser.userId,
                             username: ssoUser.username,
                             firstName: ssoUser.firstName || '',
@@ -24100,35 +24128,29 @@ const App: React.FC = () => {
                             mustChangePassword: false,
                             permissionsRoleId: ''
                         });
+                        setAuthUser(nextAuthUser);
                         setAuthSessionToken(localStorage.getItem('dfp_session_token') || '');
                         setIsAuthenticated(true);
                         authenticatedFromStoredSession = true;
                         authSource = 'sso-local-storage';
                         setAuthLoading(false);
-                        // Update currentUserName from SSO user
-                        if (ssoUser.lastName && ssoUser.firstName) {
-                            setCurrentUserName(`${ssoUser.lastName}, ${ssoUser.firstName}`);
-                        } else if (ssoUser.displayName) {
-                            setCurrentUserName(ssoUser.displayName);
-                        } else {
-                            setCurrentUserName(ssoUser.username);
-                        }
+                        setCurrentUserName(formatAuthLoginName(nextAuthUser));
                         // Update sessionUser
                         setSessionUser({
-                            firstName: ssoUser.firstName || '',
-                            lastName: ssoUser.lastName || '',
-                            role: ssoUser.role || 'USER',
+                            firstName: nextAuthUser.firstName || '',
+                            lastName: nextAuthUser.lastName || '',
+                            role: nextAuthUser.role || 'USER',
                             militaryRank: '',
-                            userId: ssoUser.userId,
-                            username: ssoUser.username
+                            userId: nextAuthUser.userId,
+                            username: nextAuthUser.username
                         });
                         // Set correct user for audit logging
-                        fetchAndSetAuditUser(ssoUser.firstName || null, ssoUser.lastName || null, ssoUser.displayName);
+                        fetchAndSetAuditUser(nextAuthUser.firstName || null, nextAuthUser.lastName || null, nextAuthUser.displayName);
                         pushDfpDataDiag('startup:auth-session:end', {
                             durationMs: Math.round(performance.now() - startedAt),
                             source: 'sso-local-storage',
                             authenticated: true,
-                            userId: ssoUser.userId,
+                            userId: nextAuthUser.userId,
                         });
                         return; // Exit early - SSO user authenticated
                     }
@@ -24154,27 +24176,23 @@ const App: React.FC = () => {
                 });
                 if (user) {
                     authenticatedFromStoredSession = true;
-                    setAuthUser(user);
+                    const cleanUser = cleanAuthUser(user);
+                    setAuthUser(cleanUser);
                     setAuthSessionToken(storedToken);
                     setIsAuthenticated(true);
-                    // Update currentUserName from auth user
-                    if (user.lastName && user.firstName) {
-                        setCurrentUserName(`${user.lastName}, ${user.firstName}`);
-                    } else if (user.displayName) {
-                        setCurrentUserName(user.displayName);
-                    }
+                    setCurrentUserName(formatAuthLoginName(cleanUser));
                     // Update sessionUser
                     setSessionUser({
-                        firstName: user.firstName,
-                        lastName: user.lastName,
-                        role: user.role,
+                        firstName: cleanUser.firstName,
+                        lastName: cleanUser.lastName,
+                        role: cleanUser.role,
                         militaryRank: '',
-                        userId: user.userId,
-                        username: user.username
+                        userId: cleanUser.userId,
+                        username: cleanUser.username
                     });
                     // Set correct user for audit logging
-                    fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
-                    if (user.mustChangePassword) {
+                    fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+                    if (cleanUser.mustChangePassword) {
                         setShowChangePassword(true);
                     }
                 } else {
@@ -24193,36 +24211,32 @@ const App: React.FC = () => {
     }, [setupTestProfile]);
 
     const handleLoginSuccess = (user: AuthUser, token: string) => {
+        const cleanUser = cleanAuthUser(user);
         pushDfpDataDiag('startup:login-success-handler:start', {
-            userId: user.userId,
-            role: user.role,
-            mustChangePassword: user.mustChangePassword,
+            userId: cleanUser.userId,
+            role: cleanUser.role,
+            mustChangePassword: cleanUser.mustChangePassword,
         });
-        setAuthUser(user);
+        setAuthUser(cleanUser);
         setAuthSessionToken(token);
         setIsAuthenticated(true);
-        // Update currentUserName from auth user
-        if (user.lastName && user.firstName) {
-            setCurrentUserName(`${user.lastName}, ${user.firstName}`);
-        } else if (user.displayName) {
-            setCurrentUserName(user.displayName);
-        }
+        setCurrentUserName(formatAuthLoginName(cleanUser));
         // Update sessionUser
         setSessionUser({
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
+            firstName: cleanUser.firstName,
+            lastName: cleanUser.lastName,
+            role: cleanUser.role,
             militaryRank: '',
-            userId: user.userId,
-            username: user.username,
+            userId: cleanUser.userId,
+            username: cleanUser.username,
         });
         // Set correct user for audit logging
-        fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
-        if (user.mustChangePassword) {
+        fetchAndSetAuditUser(cleanUser.firstName, cleanUser.lastName, cleanUser.displayName);
+        if (cleanUser.mustChangePassword) {
             setShowChangePassword(true);
         }
         pushDfpDataDiag('startup:login-success-handler:end', {
-            userId: user.userId,
+            userId: cleanUser.userId,
         });
     };
 
@@ -24244,7 +24258,9 @@ const App: React.FC = () => {
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const [dashboardTestUserName, setDashboardTestUserName] = useState<string>('');
     const [dashboardUnreadMessageCount, setDashboardUnreadMessageCount] = useState(0);
-    const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
+    const matchedCurrentStaffUser = instructorsData.find(inst => inst.name === currentUserName);
+    const currentUser = matchedCurrentStaffUser || instructorsData[0];
+    const signedInDisplayName = authUser ? formatAuthLoginName(authUser) : currentUserName;
 
     // Session user info (populated from auth)
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
@@ -26764,7 +26780,8 @@ const App: React.FC = () => {
 
     // Get permissions from authUser first, fallback to currentUser
     const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
-    const combinedPermissions = [...authUserPermissions, ...(currentUser?.permissions || [])];
+    const matchedStaffPermissions = matchedCurrentStaffUser?.permissions || [];
+    const combinedPermissions = [...authUserPermissions, ...matchedStaffPermissions];
     const currentUserPermission = getHighestPermission(combinedPermissions);
     const canDeactivateEmergencyFreeze = useMemo(() => hasEmergencyFreezeAuthority({
         action: 'deactivate',
@@ -45140,12 +45157,12 @@ appliedUpdates.forEach(update => {
                     .trim()
                     .toLowerCase()
                     .replace(/\s+/g, ' ');
-                const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+                const sessionDashboardUserName = signedInDisplayName || currentUserName;
                 const sessionDashboardNameKeys = [
                     sessionDashboardUserName,
-                    authUser?.displayName,
-                    authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
-                    authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+                    authUser ? formatAuthLoginName(authUser) : '',
+                    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
+                    authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
                     currentUserName,
                 ].map(normaliseDashboardName).filter(Boolean);
                 const sessionDashboardIdKeys = [
