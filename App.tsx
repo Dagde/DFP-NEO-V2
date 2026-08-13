@@ -5302,6 +5302,21 @@ const makeNeoBuildSchedulePersonnelRef = (
     };
 };
 
+const makeNeoBuildStaffIdentityPayload = (
+    staff: Instructor | null | undefined,
+    allStaff: Instructor[] = [],
+): Record<string, any> => {
+    if (!staff) return {};
+    const identity = makeNeoBuildPersonIdentity(staff, 'staff', allStaff);
+    const instructorRef = makeNeoBuildSchedulePersonnelRef(staff, 'instructor', 'staff');
+    const pilotRef = makeNeoBuildSchedulePersonnelRef(staff, 'pilot', 'staff');
+    return {
+        ...(identity ? { _neoBuildInstructorIdentity: identity, _neoBuildPilotIdentity: identity } : {}),
+        ...(instructorRef ? { _neoBuildInstructorPersonnelRef: instructorRef } : {}),
+        ...(pilotRef ? { _neoBuildPilotPersonnelRef: pilotRef } : {}),
+    };
+};
+
 const makePersonnelIdentityRef = (
     label: string | undefined,
     role: PersonnelIdentityRole,
@@ -14819,6 +14834,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             preFlightNotes: schedulePreFlightNotes,
             trainingReportForwardedNotes: scheduleForwardedNotes,
             trainingReportNextEventExtensions: scheduleExtensionLedger,
+            ...makeNeoBuildStaffIdentityPayload(isSoloFlight ? null : instructor, instructors),
         };
         traceIndividualLmpDuration('schedule-event-placed', {
             trainee: trainee.fullName,
@@ -20022,7 +20038,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         duration: number,
         type: 'flight' | 'ftd',
         events: Omit<ScheduleEvent, 'date'>[]
-    ): string | null => {
+    ): Instructor | null => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
 
@@ -20066,7 +20082,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             `stby-instructor|${type}|${syllabusItem.code || syllabusItem.id}|${trainee.fullName}|${startTime}`,
             entry => entry.instructor.idNumber || entry.instructor.name
         )[0];
-        return selected.instructor.name;
+        return selected.instructor;
     };
 
     // Helper: Find available STBY line for event
@@ -20167,7 +20183,8 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
         rebuildGeneratedEventIndexes();
 
         if (instructor) {
-            stbyEvent.instructor = instructor;
+            stbyEvent.instructor = instructor.name;
+            Object.assign(stbyEvent, makeNeoBuildStaffIdentityPayload(instructor, instructors));
             stbyWithInstructor++;
         } else {
             stbyEvent.instructor = 'TBA';
@@ -20222,15 +20239,16 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
 
                 const isSoloStby = next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id);
                 // Solo flights on STBY: no instructor (solo PIC), correct flightType
-                const stbyInstructor = isSoloStby ? '' : (findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents) || 'TBA');
+                const stbyInstructor = isSoloStby ? null : findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
+                const stbyInstructorName = isSoloStby ? '' : (stbyInstructor?.name || 'TBA');
                 const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
 
                 pushGeneratedEvent({
                     id: uuidv4(),
                     type: 'flight',
-                    instructor: stbyInstructor,
+                    instructor: stbyInstructorName,
                     student: trainee.fullName,
-                    pilot: isSoloStby ? trainee.fullName : (stbyInstructor || 'TBA'),
+                    pilot: isSoloStby ? trainee.fullName : stbyInstructorName,
                     flightNumber: next.code,
                     duration: next.duration,
                     startTime: time,
@@ -20245,6 +20263,7 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     _source: 'stby-flight-recovery',
                     _isNext: true,
                     _traineeName: trainee.fullName,
+                    ...makeNeoBuildStaffIdentityPayload(stbyInstructor, instructors),
                 });
 
                 placed = true;
@@ -20359,9 +20378,9 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
             pushGeneratedEvent({
                 id: uuidv4(),
                 type: 'ftd',
-                instructor,
+                instructor: instructor.name,
                 student: trainee.fullName,
-                pilot: instructor,
+                pilot: instructor.name,
                 flightNumber: next.code,
                 duration: next.duration,
                 startTime: time,
@@ -20373,10 +20392,11 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                 destination: school,
                 preStart: next.preFlightTime,
                 postEnd: next.postFlightTime,
+                ...makeNeoBuildStaffIdentityPayload(instructor, instructors),
             });
 
             const tCounts = eventCounts.get(trainee.fullName);
-            const ipCounts = eventCounts.get(instructor);
+            const ipCounts = eventCounts.get(instructor.name);
             if (tCounts) tCounts.flightFtd++;
             if (ipCounts) ipCounts.flightFtd++;
 
@@ -20437,14 +20457,15 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                     if (!hasConflict) {
                         // Try to find available instructor
                         const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, 'ftd', generatedEvents);
+                        const instructorName = instructor?.name || 'TBA';
 
                         // Create STBY FTD event
                         pushGeneratedEvent({
                             id: uuidv4(),
                             type: 'ftd',
-                            instructor: instructor || 'TBA',
+                            instructor: instructorName,
                             student: trainee.fullName,
-                               pilot: instructor || 'TBA',
+                               pilot: instructorName,
                             flightNumber: next.code,
                             duration: next.duration,
                             startTime: currentTime,
@@ -20459,9 +20480,10 @@ const applyCoursePriority = (rankedList: Trainee[], diagnosticLabel = 'unlabelle
                             _source: 'stby-ftd-recovery',
                             _isNext: true,
                             _traineeName: trainee.fullName,
+                            ...makeNeoBuildStaffIdentityPayload(instructor, instructors),
                         });
 
-                        buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || 'TBA'}`);
+                        buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructorName}`);
 
                         // Move time forward for next event on this line
                         currentTime += next.duration + minSpacing;

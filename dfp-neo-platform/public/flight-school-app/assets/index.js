@@ -95757,11 +95757,11 @@ const markNeoBuildTiming = (report, name, details) => {
   report.totalElapsedMs = Math.round(now - report.startedAtMs);
   saveNeoBuildTimingReport(report);
 };
-const getNeoBuildIdentityValue = (value) => String("").trim();
+const getNeoBuildIdentityValue = (value) => String(value ?? "").trim();
 const getNeoBuildPersonDisplayLabel = (person) => String(person.fullName || person.name || "").trim();
 const getNeoBuildPersonNameKey = (label) => normalizePersonnelNameForMatch(label);
 const getNeoBuildPersonIdentityKey = (role, person, fallbackLabel) => {
-  const rawIdNumber = getNeoBuildIdentityValue();
+  const rawIdNumber = getNeoBuildIdentityValue(person?.idNumber);
   const numericIdNumber = Number(rawIdNumber);
   if (rawIdNumber && Number.isFinite(numericIdNumber)) {
     const idNumber = numericIdNumber;
@@ -95772,7 +95772,7 @@ const getNeoBuildPersonIdentityKey = (role, person, fallbackLabel) => {
       idNumber
     };
   }
-  const id = getNeoBuildIdentityValue();
+  const id = getNeoBuildIdentityValue(person?.id);
   if (id) {
     return {
       key: `${role}:id:${id}`,
@@ -95787,6 +95787,51 @@ const getNeoBuildPersonIdentityKey = (role, person, fallbackLabel) => {
     key: `${role}:${nameKey}`,
     identityKey: `${role}:name:${nameKey}`,
     source: "name"
+  };
+};
+const makeNeoBuildPersonIdentity = (person, role, allPeople = []) => {
+  const label = getNeoBuildPersonDisplayLabel(person);
+  if (isPlaceholderPersonnelName(label)) return null;
+  const nameKey = getNeoBuildPersonNameKey(label);
+  if (!nameKey) return null;
+  const identity = getNeoBuildPersonIdentityKey(role, person, label);
+  if (!identity) return null;
+  const ambiguousName = allPeople.filter((candidate) => getNeoBuildPersonNameKey(getNeoBuildPersonDisplayLabel(candidate)) === nameKey).length > 1;
+  return {
+    label,
+    role,
+    nameKey,
+    key: identity.key,
+    identityKey: identity.identityKey,
+    source: identity.source,
+    ambiguousName,
+    ...identity.id ? { id: identity.id } : {},
+    ...identity.idNumber !== void 0 ? { idNumber: identity.idNumber } : {}
+  };
+};
+const makeNeoBuildSchedulePersonnelRef = (person, role, personType) => {
+  const identity = makeNeoBuildPersonIdentity(person, personType);
+  if (!identity) return null;
+  return {
+    role,
+    personType,
+    name: identity.label,
+    ...identity.idNumber !== void 0 ? { idNumber: identity.idNumber } : {},
+    ...identity.id ? { id: identity.id } : {},
+    rank: person.rank,
+    unit: person.unit,
+    ...person.course ? { course: person.course } : {}
+  };
+};
+const makeNeoBuildStaffIdentityPayload = (staff, allStaff = []) => {
+  if (!staff) return {};
+  const identity = makeNeoBuildPersonIdentity(staff, "staff", allStaff);
+  const instructorRef = makeNeoBuildSchedulePersonnelRef(staff, "instructor", "staff");
+  const pilotRef = makeNeoBuildSchedulePersonnelRef(staff, "pilot", "staff");
+  return {
+    ...identity ? { _neoBuildInstructorIdentity: identity, _neoBuildPilotIdentity: identity } : {},
+    ...instructorRef ? { _neoBuildInstructorPersonnelRef: instructorRef } : {},
+    ...pilotRef ? { _neoBuildPilotPersonnelRef: pilotRef } : {}
   };
 };
 const makePersonnelIdentityRef = (label, role, identity, allPeople = []) => {
@@ -103221,7 +103266,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : void 0,
       preFlightNotes: schedulePreFlightNotes,
       trainingReportForwardedNotes: scheduleForwardedNotes,
-      trainingReportNextEventExtensions: scheduleExtensionLedger
+      trainingReportNextEventExtensions: scheduleExtensionLedger,
+      ...makeNeoBuildStaffIdentityPayload(isSoloFlight ? null : instructor, instructors)
     };
     traceIndividualLmpDuration("schedule-event-placed", {
       trainee: trainee.fullName,
@@ -107816,7 +107862,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         `stby-instructor|${type}|${syllabusItem.code || syllabusItem.id}|${trainee.fullName}|${startTime}`,
         (entry) => entry.instructor.idNumber || entry.instructor.name
       )[0];
-      return selected.instructor.name;
+      return selected.instructor;
     };
     const findAvailableStbyLine = (startTime, duration, stbyEvents, prefix) => {
       const eventEnd = startTime + duration;
@@ -107874,7 +107920,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       generatedEvents.splice(reinsertIdx, 0, stbyEvent);
       rebuildGeneratedEventIndexes();
       if (instructor) {
-        stbyEvent.instructor = instructor;
+        stbyEvent.instructor = instructor.name;
+        Object.assign(stbyEvent, makeNeoBuildStaffIdentityPayload(instructor, instructors));
       } else {
         stbyEvent.instructor = "TBA";
       }
@@ -107910,14 +107957,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (flightEndTime > flyingEndTime) continue;
           if (wouldViolateHourlyDispatchRule(time, generatedEvents)) continue;
           const isSoloStby = next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id);
-          const stbyInstructor = isSoloStby ? "" : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents) || "TBA";
+          const stbyInstructor = isSoloStby ? null : findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents);
+          const stbyInstructorName = isSoloStby ? "" : stbyInstructor?.name || "TBA";
           const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, "STBY");
           pushGeneratedEvent({
             id: v4(),
             type: "flight",
-            instructor: stbyInstructor,
+            instructor: stbyInstructorName,
             student: trainee.fullName,
-            pilot: isSoloStby ? trainee.fullName : stbyInstructor || "TBA",
+            pilot: isSoloStby ? trainee.fullName : stbyInstructorName,
             flightNumber: next.code,
             duration: next.duration,
             startTime: time,
@@ -107931,7 +107979,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             postEnd: next.postFlightTime,
             _source: "stby-flight-recovery",
             _isNext: true,
-            _traineeName: trainee.fullName
+            _traineeName: trainee.fullName,
+            ...makeNeoBuildStaffIdentityPayload(stbyInstructor, instructors)
           });
           break;
         }
@@ -108009,9 +108058,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         pushGeneratedEvent({
           id: v4(),
           type: "ftd",
-          instructor,
+          instructor: instructor.name,
           student: trainee.fullName,
-          pilot: instructor,
+          pilot: instructor.name,
           flightNumber: next.code,
           duration: next.duration,
           startTime: time,
@@ -108022,10 +108071,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           origin: school,
           destination: school,
           preStart: next.preFlightTime,
-          postEnd: next.postFlightTime
+          postEnd: next.postFlightTime,
+          ...makeNeoBuildStaffIdentityPayload(instructor, instructors)
         });
         const tCounts = eventCounts.get(trainee.fullName);
-        const ipCounts = eventCounts.get(instructor);
+        const ipCounts = eventCounts.get(instructor.name);
         if (tCounts) tCounts.flightFtd++;
         if (ipCounts) ipCounts.flightFtd++;
         recoveredToRealFtdBeforeStby++;
@@ -108071,12 +108121,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             });
             if (!hasConflict) {
               const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, "ftd", generatedEvents);
+              const instructorName = instructor?.name || "TBA";
               pushGeneratedEvent({
                 id: v4(),
                 type: "ftd",
-                instructor: instructor || "TBA",
+                instructor: instructorName,
                 student: trainee.fullName,
-                pilot: instructor || "TBA",
+                pilot: instructorName,
                 flightNumber: next.code,
                 duration: next.duration,
                 startTime: currentTime,
@@ -108090,9 +108141,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 postEnd: next.postFlightTime,
                 _source: "stby-ftd-recovery",
                 _isNext: true,
-                _traineeName: trainee.fullName
+                _traineeName: trainee.fullName,
+                ...makeNeoBuildStaffIdentityPayload(instructor, instructors)
               });
-              buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
+              buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructorName}`);
               currentTime += next.duration + minSpacing;
               placed = true;
             } else {
