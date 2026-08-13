@@ -8032,9 +8032,8 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         "button",
         {
           onClick: () => navigateIfAllowed("MyDashboard"),
-          className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active ring-2 ring-sky-400/80 text-white" : ""}`,
+          className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
           "aria-current": activeView === "MyDashboard" ? "page" : void 0,
-          style: activeView === "MyDashboard" ? { background: "linear-gradient(145deg, #1d4ed8, #0284c7)", color: "#ffffff", boxShadow: "0 0 0 2px rgba(125, 211, 252, 0.8), inset 0 1px 0 rgba(255,255,255,0.35)" } : void 0,
           children: [
             unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
