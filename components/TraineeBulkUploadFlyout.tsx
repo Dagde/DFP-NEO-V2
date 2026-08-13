@@ -193,12 +193,12 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
             const clean = String(course || '').trim();
             if (clean) courseNames.add(clean);
         });
-        courses.forEach(course => {
-            const clean = String(course?.name || course?.code || course?.number || '').trim();
+        Object.keys(courseColors).forEach(course => {
+            const clean = String(course || '').trim();
             if (clean) courseNames.add(clean);
         });
         return Array.from(courseNames).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-    }, [allowedCourses, courses]);
+    }, [allowedCourses, courseColors]);
     const selectableCourses = useMemo(() => {
         const courseNames = new Set<string>();
         activeCourses.forEach(course => {
@@ -220,6 +220,7 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
         const activeCourseSet = new Set(activeCourses.map(normaliseDiagnosticToken).filter(Boolean));
         const fileCourseSet = new Set(coursesFromFile.map(normaliseDiagnosticToken).filter(Boolean));
         const selectableCourseSet = new Set(selectableCourses.map(normaliseDiagnosticToken).filter(Boolean));
+        const scopedCourseColorSet = new Set(Object.keys(courseColors).map(normaliseDiagnosticToken).filter(Boolean));
         const rawCourseNames = courses
             .map(course => String(course?.name || course?.code || course?.number || '').trim())
             .filter(Boolean);
@@ -255,16 +256,19 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                 course,
                 normalisedName,
                 fromAllowedCourses: allowedCourseSet.has(normalisedName),
+                fromScopedCourseColors: scopedCourseColorSet.has(normalisedName),
                 fromCoursesProp: rawCourseSet.has(normalisedName),
                 fromUploadedFileFallback: fileCourseSet.has(normalisedName) && activeCourseSet.size === 0,
                 matchingCourseRecords: matchingRecords,
                 likelyReasonVisible: allowedCourseSet.has(normalisedName)
                     ? 'Included because CourseRosterView allowedCourses includes it.'
-                    : rawCourseSet.has(normalisedName)
-                        ? 'Included because TraineeBulkUploadFlyout merged the full courses prop into the picker.'
-                        : fileCourseSet.has(normalisedName)
-                            ? 'Included from the uploaded file because no active app courses were available.'
-                            : 'Included from an unknown course source.',
+                    : scopedCourseColorSet.has(normalisedName)
+                        ? 'Included because scoped courseColors contains it for the current unit/combined unit.'
+                        : rawCourseSet.has(normalisedName)
+                            ? 'Present in the full courses prop, but should not be visible unless allowedCourses or scoped courseColors also includes it.'
+                            : fileCourseSet.has(normalisedName)
+                                ? 'Included from the uploaded file because no active app courses were available.'
+                                : 'Included from an unknown course source.',
             };
         });
         const payload = {
@@ -280,8 +284,9 @@ const TraineeBulkUploadFlyout: React.FC<TraineeBulkUploadFlyoutProps> = ({
                 coursesFromUploadedFile: coursesFromFile.length,
                 activeCoursesAfterMerge: activeCourses.length,
                 selectableCourses: selectableCourses.length,
-                selectableCoursesNotAllowed: selectableDetails.filter(course => !course.fromAllowedCourses).length,
-                selectableCoursesFromFullCoursesPropOnly: selectableDetails.filter(course => !course.fromAllowedCourses && course.fromCoursesProp).length,
+                selectableCoursesNotInRosterAllowedCourses: selectableDetails.filter(course => !course.fromAllowedCourses).length,
+                selectableCoursesFromScopedCourseColorsOnly: selectableDetails.filter(course => !course.fromAllowedCourses && course.fromScopedCourseColors).length,
+                selectableCoursesFromFullCoursesPropOnly: selectableDetails.filter(course => !course.fromAllowedCourses && !course.fromScopedCourseColors && course.fromCoursesProp).length,
             },
             arrays: {
                 allowedCourses,
