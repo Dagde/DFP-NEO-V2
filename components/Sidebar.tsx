@@ -149,7 +149,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0">
           <button
             onClick={() => navigateIfAllowed('MyDashboard')}
-            className={`relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
+            className={`relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active ring-2 ring-sky-400/80 text-white' : ''}`}
+            aria-current={activeView === 'MyDashboard' ? 'page' : undefined}
           >
             {unreadMessageCount > 0 && (
               <span className="absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg">

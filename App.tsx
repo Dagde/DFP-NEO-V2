@@ -24297,14 +24297,12 @@ const App: React.FC = () => {
         .toLowerCase()
         .replace(/\s+/g, ' ');
     const dashboardNotificationUserName = useMemo(() => {
-        const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName
-            ? `${sessionUser.lastName}, ${sessionUser.firstName}`
-            : currentUserName;
+        const sessionDashboardUserName = signedInDisplayName || currentUserName;
         const sessionNameKeys = [
             sessionDashboardUserName,
-            authUser?.displayName,
-            authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
-            authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+            authUser ? formatAuthLoginName(authUser) : '',
+            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : '',
+            authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : '',
             currentUserName,
         ].map(normaliseDashboardNotificationName).filter(Boolean);
         const sessionIdKeys = [
@@ -24317,7 +24315,7 @@ const App: React.FC = () => {
             const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
             return sessionNameKeys.includes(staffName) || (staffId && sessionIdKeys.includes(staffId));
         });
-        return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || currentUserName;
+        return dashboardTestUserName || sessionDashboardUserName || sessionStaff?.name || currentUserName;
     }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
     useEffect(() => {
         if (!dashboardNotificationUserName || !isAuthenticated) {
@@ -45175,7 +45173,7 @@ appliedUpdates.forEach(update => {
                     const staffId = String((staff as any).idNumber || (staff as any).id || '').trim().toLowerCase();
                     return sessionDashboardNameKeys.includes(staffName) || (staffId && sessionDashboardIdKeys.includes(staffId));
                 });
-                const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || currentUserName;
+                const dashboardUserName = dashboardTestUserName || sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
                 const dashboardStaff = allInstructorsData.find(staff => (
                     normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName)
                 ));

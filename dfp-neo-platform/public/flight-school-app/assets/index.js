@@ -8032,7 +8032,8 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         "button",
         {
           onClick: () => navigateIfAllowed("MyDashboard"),
-          className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
+          className: `relative w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active ring-2 ring-sky-400/80 text-white" : ""}`,
+          "aria-current": activeView === "MyDashboard" ? "page" : void 0,
           children: [
             unreadMessageCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[11px] font-bold text-white shadow-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "translate-x-px", children: Math.min(unreadMessageCount, 9) }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
@@ -112353,12 +112354,12 @@ const App = () => {
   }, [activeStaffQualificationCatalogue, allInstructorsData, allTraineesData, authUser, currentUser2, currentUserName, sessionUser]);
   const normaliseDashboardNotificationName = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
   const dashboardNotificationUserName = reactExports.useMemo(() => {
-    const sessionDashboardUserName = sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName;
+    const sessionDashboardUserName = signedInDisplayName || currentUserName;
     const sessionNameKeys = [
       sessionDashboardUserName,
-      authUser?.displayName,
-      authUser?.firstName && authUser.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
-      authUser?.firstName && authUser.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+      authUser ? formatAuthLoginName(authUser) : "",
+      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.lastName)}, ${stripCourseDetailsFromLoginName(authUser.firstName)}` : "",
+      authUser?.firstName && authUser.lastName ? `${stripCourseDetailsFromLoginName(authUser.firstName)} ${stripCourseDetailsFromLoginName(authUser.lastName)}` : "",
       currentUserName
     ].map(normaliseDashboardNotificationName).filter(Boolean);
     const sessionIdKeys = [
@@ -112371,7 +112372,7 @@ const App = () => {
       const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
       return sessionNameKeys.includes(staffName) || staffId && sessionIdKeys.includes(staffId);
     });
-    return dashboardTestUserName || sessionStaff?.name || sessionDashboardUserName || currentUserName;
+    return dashboardTestUserName || sessionDashboardUserName || sessionStaff?.name || currentUserName;
   }, [allInstructorsData, authUser, currentUserName, dashboardTestUserName, sessionUser]);
   reactExports.useEffect(() => {
     if (!dashboardNotificationUserName || !isAuthenticated) {
@@ -129627,7 +129628,7 @@ ${error instanceof Error ? error.message : String(error)}`,
           const staffId = String(staff.idNumber || staff.id || "").trim().toLowerCase();
           return sessionDashboardNameKeys.includes(staffName) || staffId && sessionDashboardIdKeys.includes(staffId);
         });
-        const dashboardUserName = dashboardTestUserName || sessionDashboardStaff?.name || sessionDashboardUserName || currentUserName;
+        const dashboardUserName = dashboardTestUserName || sessionDashboardUserName || sessionDashboardStaff?.name || currentUserName;
         const dashboardStaff = allInstructorsData.find((staff) => normaliseDashboardName(staff.name) === normaliseDashboardName(dashboardUserName));
         const pendingTrainingReports = allInstructorsData.flatMap((staff) => normaliseAirCombatTrainingReports(staff.preferences).filter((report) => report.status !== "Complete" && !report.dashboardAcknowledgedAt && normaliseDashboardName(report.dashboardAssigneeName || report.instructorName || report.staffName) === normaliseDashboardName(dashboardUserName)).map((report) => ({ report, staff })));
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
