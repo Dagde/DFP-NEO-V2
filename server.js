@@ -877,6 +877,8 @@ async function runPrismaRuntimeMaintenance(db) {
     await migrateIntegratedCombatOperationsTiming(db);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(db);
+    // Turn on report prompts for Flight School BPC+IPC and FIC syllabus events once.
+    await migrateFlightSchoolAssessmentRequiredDefaults(db);
     console.log(`✅ Prisma runtime maintenance checks complete in ${Date.now() - startedAt}ms`);
   } catch (error) {
     console.error('❌ Prisma runtime maintenance failed:', error);
@@ -1528,6 +1530,57 @@ async function migrateAcademicsCoursesField(db) {
     }
   } catch (err) {
     console.error('❌ migrateAcademicsCoursesField failed (non-fatal):', err.message);
+  }
+}
+
+async function migrateFlightSchoolAssessmentRequiredDefaults(db) {
+  const markerKey = 'flightSchoolBpcIpcFicAssessmentRequiredEnabledAt';
+  try {
+    const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
+    const existingSettings = settingsRows?.[0]?.data && typeof settingsRows[0].data === 'object'
+      ? settingsRows[0].data
+      : {};
+    const migrationSettings = existingSettings?.maintenanceMigrations && typeof existingSettings.maintenanceMigrations === 'object'
+      ? existingSettings.maintenanceMigrations
+      : {};
+    if (migrationSettings[markerKey]) {
+      console.log('✅ migrateFlightSchoolAssessmentRequiredDefaults: already applied');
+      return;
+    }
+
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "assessmentRequired" = true,
+        "version" = "version" + 1,
+        "updatedAt" = NOW()
+      WHERE "isActive" = true
+        AND "assessmentRequired" IS DISTINCT FROM true
+        AND (
+          $1 = ANY("courses")
+          OR $2 = ANY("courses")
+        )
+    `, 'BPC+IPC', 'FIC');
+
+    const nextSettings = {
+      ...existingSettings,
+      maintenanceMigrations: {
+        ...migrationSettings,
+        [markerKey]: new Date().toISOString(),
+      },
+    };
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
+      VALUES (gen_random_uuid()::text, 'default', $1::jsonb, 'system', NOW(), NOW())
+      ON CONFLICT ("orgId") DO UPDATE SET
+        "data" = $1::jsonb,
+        "updatedBy" = 'system',
+        "updatedAt" = NOW()
+    `, JSON.stringify(nextSettings));
+
+    console.log(`✅ migrateFlightSchoolAssessmentRequiredDefaults: enabled assessmentRequired on ${result} BPC+IPC/FIC syllabus item(s)`);
+  } catch (err) {
+    console.error('❌ migrateFlightSchoolAssessmentRequiredDefaults failed (non-fatal):', err.message);
   }
 }
 
